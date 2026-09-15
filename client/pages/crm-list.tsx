@@ -29,6 +29,7 @@ import {
   Megaphone,
   Factory,
   CalendarClock,
+  Clock,
   History,
 } from 'lucide-react';
 import { Button } from '../components/ui/button.js';
@@ -931,17 +932,24 @@ function EntityList({
                           isToday ? 'bg-card' : 'bg-muted',
                         )}`}
                       >
-                        {/* The cell is the date, so the card carries only
-                            the clock time, on the title's line. */}
-                        <span className='mr-1.5 tabular-nums text-muted-foreground'>
-                          {new Intl.DateTimeFormat(language, {
-                            timeStyle: 'short',
-                            timeZone:
-                              meta?.settings.timeZone ?? 'Asia/Shanghai',
-                          }).format(new Date(toText(r.startAt)))}{' '}
-                          {meta?.users.find((u) => u.id === r.ownerId)?.name}
-                        </span>
                         <RecordLink entity={entity} record={r} />
+                        {/* The cell is the date, so the card carries only
+                            the clock time, with the owner, under the title
+                            the way the workspace's agenda cards do. */}
+                        <p className='mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-muted-foreground'>
+                          <span className='inline-flex items-center gap-1 tabular-nums'>
+                            <Clock className='size-3 shrink-0' />
+                            {new Intl.DateTimeFormat(language, {
+                              timeStyle: 'short',
+                              timeZone:
+                                meta?.settings.timeZone ?? 'Asia/Shanghai',
+                            }).format(new Date(toText(r.startAt)))}
+                          </span>
+                          <span className='inline-flex items-center gap-1'>
+                            <User className='size-3 shrink-0' />
+                            {meta?.users.find((u) => u.id === r.ownerId)?.name}
+                          </span>
+                        </p>
                       </div>
                     ))}
                     {!expandedDays.has(day) &&
