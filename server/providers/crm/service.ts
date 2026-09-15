@@ -212,11 +212,16 @@ export class CrmService {
     await conditions(actor, 'leads', 'read');
     const users = await this.authz.administration.listUsers();
     const assignments = await this.authz.permissionSets.listAssignments();
-    const prefs = await this.database
-      .query()
-      .selectFrom('crmUserPreferences')
-      .selectAll()
-      .execute();
+    const disabled = new Set(
+      (
+        await this.database
+          .query()
+          .selectFrom('user')
+          .select('id')
+          .where('disabledAt', 'is not', null)
+          .execute()
+      ).map((row) => toText(row.id)),
+    );
     return users.map((user) => {
       const userRoles = assignments
         .filter(
@@ -232,79 +237,15 @@ export class CrmService {
         username: user.username ?? null,
         email: user.email,
         roles: userRoles,
-        disabled: Boolean(prefs.find((p) => p.id === user.id)?.disabled),
+        // Disabled at the account, on the Users page: such a user cannot
+        // sign in, and is not offered as an owner or approver either.
+        disabled: disabled.has(toText(user.id)),
         // An approver is a sales manager. Administrators hold the approve
         // right for the system's sake, but deciding commercial terms is the
         // manager's job, so they are not offered and not accepted.
         canApprove: userRoles.includes('sales-manager'),
       };
     });
-  }
-  // When each user last touched an activity, for the settings page's user
-  // list: a sign of who is active. Aggregated in the database.
-  async workload(actor: Actor): Promise<Record<string, Row>> {
-    await requireCapability(actor, 'manage', 'settings');
-    const result: Record<string, Row> = {};
-    for (const row of await this.database
-      .query()
-      .selectFrom('crmActivities')
-      .select((eb) => ['ownerId', eb.fn.max('updatedAt').as('at')])
-      .groupBy('ownerId')
-      .execute())
-      result[toText(row.ownerId)] = { lastActivityAt: row.at ?? null };
-    return result;
-  }
-  async updateUser(actor: Actor, id: string, raw: unknown): Promise<void> {
-    await requireCapability(actor, 'manage', 'settings');
-    const input = object(raw);
-    const role = toText(input.role);
-    if (!roles.includes(role) || typeof input.disabled !== 'boolean')
-      throw new CrmError('invalidInput');
-    if (id === actor.id && (role !== 'system-administrator' || input.disabled))
-      throw new CrmError('cannotDisableSelf');
-    if (!(await this.authz.administration.listUsers()).some((u) => u.id === id))
-      throw new CrmError('notFound', 404);
-    const assignments = await this.authz.permissionSets.listAssignments();
-    await this.authz.permissionSets.assign({
-      permissionSet: roleKey(role),
-      subject: { type: 'user', id },
-    });
-    for (const assignment of assignments.filter(
-      (a) =>
-        a.subject.type === 'user' &&
-        a.subject.id === id &&
-        roles.some((r) => roleKey(r) === a.permissionSet) &&
-        a.permissionSet !== roleKey(role),
-    ))
-      await this.authz.permissionSets.revoke(assignment.id);
-    const existing = await this.database
-      .query()
-      .selectFrom('crmUserPreferences')
-      .select('id')
-      .where('id', '=', id)
-      .executeTakeFirst();
-    if (existing)
-      await this.database
-        .query()
-        .updateTable('crmUserPreferences')
-        .set({ disabled: Number(input.disabled) })
-        .where('id', '=', id)
-        .execute();
-    else
-      await this.database
-        .query()
-        .insertInto('crmUserPreferences')
-        .values({ id, disabled: Number(input.disabled), locale: 'en-US' })
-        .execute();
-  }
-  async ensureActive(id: string): Promise<void> {
-    const user = await this.database
-      .query()
-      .selectFrom('crmUserPreferences')
-      .select('disabled')
-      .where('id', '=', id)
-      .executeTakeFirst();
-    if (user?.disabled) throw new CrmError('disabled', 403);
   }
   async rememberLocale(actor: Actor): Promise<void> {
     const query = this.database.query();
@@ -322,7 +263,7 @@ export class CrmService {
     else if (!preference)
       await query
         .insertInto('crmUserPreferences')
-        .values({ id: actor.id, disabled: 0, locale: actor.locale })
+        .values({ id: actor.id, locale: actor.locale })
         .execute();
   }
   async list(

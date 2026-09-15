@@ -34,6 +34,7 @@ import {
   type Actor,
 } from '../../server/providers/crm/authorization.js';
 import { CrmService } from '../../server/providers/crm/service.js';
+import { createCrmUserRoleScope } from '../../server/providers/crm/user-roles.js';
 import { convertLead } from '../../server/providers/crm/conversion.js';
 import { crmToken, crmAiToken } from '../../server/providers/crm/index.js';
 import { CrmAi, previewRecords } from '../../server/providers/crm/ai.js';
@@ -76,6 +77,8 @@ beforeAll(async () => {
     c.string('name');
     c.string('username');
     c.string('email');
+    // The authentication plugin's account-level switch, read by the CRM.
+    c.datetimeTz('disabledAt').nullable();
   });
   await database
     .query()
@@ -979,6 +982,47 @@ describe('CRM API security and domain rules', () => {
       }),
     ).toBe('unanchored');
   });
+
+  it('exposes one CRM role per user to the Users page and keeps the last administrator', async () => {
+    const scope = createCrmUserRoleScope(authorization);
+    const connection = database.connection();
+    expect((await scope.options()).map((o) => o.value)).toEqual([
+      'crm-sales-representative',
+      'crm-sales-manager',
+      'crm-system-administrator',
+    ]);
+    expect(await scope.get('rep', connection)).toBe('crm-sales-representative');
+    expect(await scope.findUserIds('crm-sales-manager', connection)).toEqual([
+      'manager',
+    ]);
+    // Promotion replaces the role instead of adding a second one.
+    await scope.replace('other', 'crm-sales-manager', connection);
+    expect(await scope.get('other', connection)).toBe('crm-sales-manager');
+    await scope.replace('other', ['crm-sales-representative'], connection);
+    expect(await scope.get('other', connection)).toBe(
+      'crm-sales-representative',
+    );
+    await expect(
+      scope.replace(
+        'other',
+        ['crm-sales-manager', 'crm-sales-representative'],
+        connection,
+      ),
+    ).rejects.toMatchObject({ code: 'INVALID_ROLE_SCOPE_VALUE' });
+    await expect(
+      scope.replace('other', 'editor', connection),
+    ).rejects.toMatchObject({ code: 'INVALID_ROLE_SCOPE_VALUE' });
+    // The only administrator stays one, and stays enabled.
+    await expect(
+      scope.replace('admin', 'crm-sales-manager', connection),
+    ).rejects.toMatchObject({ code: 'LAST_ADMINISTRATOR' });
+    await expect(
+      scope.assertCanDisable?.('admin', connection),
+    ).rejects.toMatchObject({ code: 'LAST_ADMINISTRATOR' });
+    await expect(
+      scope.assertCanDisable?.('rep', connection),
+    ).resolves.toBeUndefined();
+  });
   it('requires AI confirmation and applies the current user permissions on execution', async () => {
     const ai = new CrmAi(service, {} as AIManager);
     const lead = await service.save(actor('other'), 'leads', {
@@ -1135,10 +1179,10 @@ it('reverses the CRM migration on a real SQLite database', async () => {
       directory: resolve('database/main/migrations'),
       packageName: 'crm',
     });
-    expect((await migrator.latest()).executed).toHaveLength(22);
+    expect((await migrator.latest()).executed).toHaveLength(23);
     expect(await isolated.builder().hasCollection('crmLeads')).toBe(true);
     expect((await migrator.latest()).executed).toEqual([]);
-    expect((await migrator.rollback()).rolledBack).toHaveLength(22);
+    expect((await migrator.rollback()).rolledBack).toHaveLength(23);
     expect(await isolated.builder().hasCollection('crmLeads')).toBe(false);
     expect(await isolated.builder().hasCollection('crmAccounts')).toBe(false);
   } finally {

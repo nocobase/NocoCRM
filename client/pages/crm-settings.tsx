@@ -1,6 +1,5 @@
 import { toText } from '../components/crm/api.js';
 import { useState, type ReactElement } from 'react';
-import { Link } from 'react-router';
 import { Button } from '../components/ui/button.js';
 import { Input } from '../components/ui/input.js';
 import { Textarea } from '../components/ui/textarea.js';
@@ -12,14 +11,6 @@ import {
   CardTitle,
 } from '../components/ui/card.js';
 import { CrmFrame, Loading, ErrorNotice } from '../components/crm/common.js';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../components/ui/table.js';
 import { Choice } from '../components/crm/form.js';
 import {
   useCrmApi,
@@ -27,18 +18,11 @@ import {
   useCrmText,
   useRefresh,
   rows,
-  localDate,
-  useMetadata,
   type CrmSettings,
-  type User,
   type Data,
 } from '../components/crm/api.js';
 interface SettingsResponse {
   settings: CrmSettings;
-  users: User[];
-  // Per user id: what they carry — open leads, accounts, open deals and
-  // their amounts, last activity.
-  workload: Record<string, Data>;
   models: Data[];
 }
 export default function SettingsPage(): ReactElement {
@@ -58,12 +42,10 @@ function SettingsForm({
 }: {
   initial: SettingsResponse;
 }): ReactElement {
-  const { text, language } = useCrmText();
-  const { data: meta } = useMetadata();
+  const { text } = useCrmText();
   const api = useCrmApi();
   const refresh = useRefresh();
   const [settings, setSettings] = useState(initial.settings);
-  const [users, setUsers] = useState(initial.users);
   const [error, setError] = useState<unknown>();
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -144,28 +126,26 @@ function SettingsForm({
       title={text('settings')}
       description={text('settingsDescription')}
       actions={
-        section !== 'users' && (
-          <Button
-            disabled={busy}
-            onClick={() => {
-              void (async () => {
-                setBusy(true);
-                setError(undefined);
-                try {
-                  await api('settings', 'PUT', settings);
-                  await refresh();
-                  setSaved(true);
-                } catch (e) {
-                  setError(e);
-                } finally {
-                  setBusy(false);
-                }
-              })();
-            }}
-          >
-            {busy ? text('saving') : text('save')}
-          </Button>
-        )
+        <Button
+          disabled={busy}
+          onClick={() => {
+            void (async () => {
+              setBusy(true);
+              setError(undefined);
+              try {
+                await api('settings', 'PUT', settings);
+                await refresh();
+                setSaved(true);
+              } catch (e) {
+                setError(e);
+              } finally {
+                setBusy(false);
+              }
+            })();
+          }}
+        >
+          {busy ? text('saving') : text('save')}
+        </Button>
       }
     >
       <ErrorNotice error={error} />
@@ -175,7 +155,7 @@ function SettingsForm({
         </p>
       )}
       <div className='flex flex-wrap gap-2 border-b pb-3'>
-        {['business', 'reminders', 'aiSettings', 'users'].map((key) => (
+        {['business', 'reminders', 'aiSettings'].map((key) => (
           <Button
             key={key}
             variant={section === key ? 'secondary' : 'ghost'}
@@ -246,141 +226,7 @@ function SettingsForm({
                 />
               </label>
             </>
-          ) : (
-            <>
-              <p className='text-sm text-muted-foreground'>
-                {text('userHint')}
-              </p>
-              <Link
-                className='text-sm text-primary hover:underline'
-                to='/settings/authorization/permission-sets'
-              >
-                {text('permissionSettings')} ↗
-              </Link>
-              <div className='overflow-x-auto rounded-xl border'>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{text('userColumn')}</TableHead>
-                      <TableHead>{text('role')}</TableHead>
-                      <TableHead>{text('enabled')}</TableHead>
-                      <TableHead>{text('lastActivity')}</TableHead>
-                      <TableHead />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.map((user, index) => {
-                      const load = initial.workload[toText(user.id)] ?? {};
-                      const changed =
-                        JSON.stringify([user.roles[0] ?? '', user.disabled]) !==
-                        JSON.stringify([
-                          initial.users[index]?.roles[0] ?? '',
-                          initial.users[index]?.disabled,
-                        ]);
-                      return (
-                        <TableRow
-                          key={user.id}
-                          className={user.disabled ? 'opacity-60' : ''}
-                        >
-                          <TableCell>
-                            <p className='font-medium'>
-                              {user.name}
-                              {user.id === meta?.userId && (
-                                <span className='ml-1.5 text-xs text-muted-foreground'>
-                                  {text('you')}
-                                </span>
-                              )}
-                            </p>
-                            <p className='text-xs text-muted-foreground'>
-                              {[user.username, user.email]
-                                .filter(Boolean)
-                                .map(toText)
-                                .join(' · ')}
-                            </p>
-                          </TableCell>
-                          <TableCell className='w-44'>
-                            <Choice
-                              label={text('role')}
-                              emptyLabel={text('noRole')}
-                              value={user.roles[0] ?? ''}
-                              onChange={(v) =>
-                                setUsers((all) =>
-                                  all.map((u, i) =>
-                                    i === index ? { ...u, roles: [v] } : u,
-                                  ),
-                                )
-                              }
-                              choices={[
-                                'sales-representative',
-                                'sales-manager',
-                                'system-administrator',
-                              ].map((r) => ({
-                                value: r,
-                                label: text(`options.${toText(r)}`),
-                              }))}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Checkbox
-                              aria-label={text('enabled')}
-                              checked={!user.disabled}
-                              disabled={user.id === meta?.userId}
-                              onCheckedChange={(v) =>
-                                setUsers((all) =>
-                                  all.map((u, i) =>
-                                    i === index ? { ...u, disabled: !v } : u,
-                                  ),
-                                )
-                              }
-                            />
-                          </TableCell>
-                          <TableCell className='text-muted-foreground tabular-nums'>
-                            {load.lastActivityAt
-                              ? localDate(
-                                  load.lastActivityAt,
-                                  language,
-                                  meta?.settings.timeZone ?? 'Asia/Shanghai',
-                                )
-                              : '—'}
-                          </TableCell>
-                          <TableCell className='text-right'>
-                            <Button
-                              size='sm'
-                              variant={changed ? 'default' : 'outline'}
-                              disabled={busy || !user.roles.length || !changed}
-                              onClick={() => {
-                                void (async () => {
-                                  setBusy(true);
-                                  setError(undefined);
-                                  try {
-                                    await api(
-                                      `users/${toText(user.id)}`,
-                                      'PUT',
-                                      {
-                                        role: user.roles[0],
-                                        disabled: user.disabled,
-                                      },
-                                    );
-                                    await refresh();
-                                  } catch (e) {
-                                    setError(e);
-                                  } finally {
-                                    setBusy(false);
-                                  }
-                                })();
-                              }}
-                            >
-                              {text('save')}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </>
-          )}
+          ) : null}
         </CardContent>
       </Card>
     </CrmFrame>

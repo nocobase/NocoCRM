@@ -21,7 +21,7 @@ The interface follows the browser language on a first visit and remembers whatev
 
 ### Accounts and roles
 
-Accounts are created, disabled, and given new passwords by an administrator in **Settings → Users**. The installer account holds the CRM administrator preset. Every other account needs a role in **Settings → CRM settings → Users** before it can use the CRM, and each user holds exactly one role:
+Accounts are created, disabled, given new passwords, and assigned their CRM role by an administrator in **Settings → Users**. The installer account holds the CRM administrator preset. Every other account needs a role before it can use the CRM, and each user holds exactly one:
 
 | Role          | What it can do                                                                                      |
 | ------------- | --------------------------------------------------------------------------------------------------- |
@@ -29,7 +29,7 @@ Accounts are created, disabled, and given new passwords by an administrator in *
 | Sales manager | Manages all sales data, assigns owners, approves requests, exports; deletes only records it created |
 | Salesperson   | Reads shared sales data, edits and deletes its own records, raises approvals; cannot export         |
 
-Disabling a user in CRM settings denies the CRM APIs for that account. Record and field permissions can be refined further on the **Authorization → Permission sets** pages, and the APIs enforce them independently of navigation.
+Disabling a user ends their sign-in, and they stop being offered as an owner or approver. The last administrator can neither be disabled nor lose the role. Record and field permissions can be refined further on the **Authorization → Permission sets** pages, and the APIs enforce them independently of navigation.
 
 ### Demo data
 
@@ -37,7 +37,7 @@ Disabling a user in CRM settings denies the CRM APIs for that account. Record an
 
 | Username                                     | Name                   | Role          |
 | -------------------------------------------- | ---------------------- | ------------- |
-| `nocobase`                                   | Admin                  | Administrator |
+| `nocobase`                                   | NocoBase               | Administrator |
 | `liming`, `zhaomin`                          | 李明, 赵敏             | Sales manager |
 | `wangxiaofang`, `chenxiaohao`, `liuxiaoyang` | 王小芳, 陈小浩, 刘小洋 | Salesperson   |
 
@@ -49,7 +49,7 @@ The script refuses to run twice; `node --import tsx storage/reset-demo-crm.mjs` 
 
 ### Configure AI
 
-No model credentials are bundled. Declare an LLM service under `ai.llmServices` in `config.yml` (`config.example.yml` shows the shape, with the API key read from an environment variable), then select the service and model in **Settings → CRM settings → AI configuration**. Until then the assistant reports that a model is required.
+No model credentials are bundled. Declare an LLM service under `ai.llmServices` in `config.yml` (`config.example.yml` shows the shape, with the API key read from an environment variable), then select the service and model in **Settings → System settings → AI configuration**. Until then the assistant reports that a model is required.
 
 The assistant reads authorized records, drafts recommendations, and proposes creates, updates, conversions, and approval actions as cards that the user confirms one by one; it never writes without confirmation, and it screens every proposal against the user's permissions and the record's state before offering it. The company research shortcut uses the provider's own web search, so it needs a provider that offers one. Model-generated dates, amounts, and identities still need review, and AI context is bounded to the most recent records per object.
 

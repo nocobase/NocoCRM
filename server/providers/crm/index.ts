@@ -18,6 +18,9 @@ import {
   type Actor,
 } from './authorization.js';
 import { CrmService, array } from './service.js';
+import { CrmError } from './schema.js';
+import { createCrmUserRoleScope } from './user-roles.js';
+import { userRoleScopeRegistryToken } from '@nocobase/app-plugin-users/server/tokens';
 import { CrmAi } from './ai.js';
 
 export const crmToken: ServiceToken<CrmService> =
@@ -27,6 +30,7 @@ export const crmAiToken: ServiceToken<CrmAi> =
 export default class CrmProvider extends ServiceProvider<Application> {
   public readonly name: string = 'crm/provider';
   private cron?: CronJobManager;
+  private unregisterRoleScope?: () => void;
   private scanning = false;
   public override register(): void {
     this.app.container
@@ -55,6 +59,15 @@ export default class CrmProvider extends ServiceProvider<Application> {
       this.app.container.resolve(authorizationToken),
       this.app.container.resolve(databaseManagerToken),
     );
+    // The Users page shows and assigns the CRM's roles through this scope.
+    if (this.app.container.has(userRoleScopeRegistryToken))
+      this.unregisterRoleScope = this.app.container
+        .resolve(userRoleScopeRegistryToken)
+        .register(
+          createCrmUserRoleScope(
+            this.app.container.resolve(authorizationToken),
+          ),
+        );
   }
   public override async start(): Promise<void> {
     // Replies awaited when the previous process stopped will never arrive.
@@ -64,6 +77,8 @@ export default class CrmProvider extends ServiceProvider<Application> {
     this.cron.start();
   }
   public override async shutdown(): Promise<void> {
+    this.unregisterRoleScope?.();
+    this.unregisterRoleScope = undefined;
     this.cron?.close();
   }
   private async scan(): Promise<void> {
@@ -121,7 +136,13 @@ export default class CrmProvider extends ServiceProvider<Application> {
           .execute();
         if (!claim.updatedCount) continue;
         try {
-          await service.ensureActive(toText(row.recipientId));
+          // A disabled account gets nothing: the row fails with the reason.
+          const account = await query
+            .selectFrom('user')
+            .select('disabledAt')
+            .where('id', '=', row.recipientId)
+            .executeTakeFirst();
+          if (account?.disabledAt != null) throw new CrmError('disabled', 403);
           const preference = await query
             .selectFrom('crmUserPreferences')
             .select('locale')

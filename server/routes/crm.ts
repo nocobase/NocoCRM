@@ -59,7 +59,6 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
       const scope = c.get('authz');
       const id = scope.identity.principal?.id;
       if (!id) return c.json({ code: 'unauthorized' }, 401);
-      await service.ensureActive(id);
       if (
         !['GET', 'HEAD'].includes(c.req.method) &&
         c.req.header('x-crm-request') !== '1'
@@ -149,7 +148,6 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         data: {
           settings: await service.settings(),
           users: await service.users(c.get('actor')),
-          workload: await service.workload(c.get('actor')),
           models: await ai.models(),
         },
       });
@@ -159,14 +157,6 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         data: await service.saveSettings(c.get('actor'), await c.req.json()),
       }),
     );
-    routes.put('/users/:id', async (c) => {
-      await service.updateUser(
-        c.get('actor'),
-        c.req.param('id'),
-        await c.req.json(),
-      );
-      return c.json({ data: true });
-    });
     routes.get('/ai/history', async (c) => {
       await conditions(c.get('actor'), 'leads', 'read');
       return c.json({ data: await ai.history(c.get('actor')) });
