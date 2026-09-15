@@ -38,7 +38,8 @@ const sellers = [byUsername('wangxiaofang'), byUsername('chenxiaohao')];
 await mkdir(`${root}/storage/backups`, { recursive: true });
 const backup = `${root}/storage/backups/pre-demo-${new Date().toISOString().replaceAll(':','-')}.sqlite`;
 await sqlite.backup(backup); await chmod(backup, 0o600); sqlite.close();
-const db = createDatabaseManager(defineDatabase({default:'main',connections:{main:{dialect:'sqlite',filename,schemaManagement:'managed'}}}));
+const { default: sqlite } = await import('@nocobase/db-sqlite');
+const db = createDatabaseManager(defineDatabase({drivers:{sqlite},default:'main',connections:{main:{dialect:'sqlite',filename,schemaManagement:'managed'}}}));
 await db.connect();
 try {
  const authz = createAppAuthorization({connection:db.connection()}); registerCrmResources(authz);

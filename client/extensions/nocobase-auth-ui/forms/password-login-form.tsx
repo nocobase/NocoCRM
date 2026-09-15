@@ -1,6 +1,6 @@
+import { useTranslation } from '@nocobase/i18n/client';
 import { usePasswordLogin } from '@nocobase/app-plugin-authentication/client/actions';
 import { Eye, EyeOff } from 'lucide-react';
-import { useTranslation } from '@nocobase/i18n/client';
 import { useState, type FormEvent, type ReactElement } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -9,12 +9,38 @@ import { Label } from '@/components/ui/label';
 
 import { FormStatus } from '../components/form-status';
 
-export function PasswordLoginForm(): ReactElement {
+export interface PasswordLoginAction {
+  readonly error?: { readonly message: string };
+  readonly isPending: boolean;
+  readonly submit: (input: {
+    readonly identifier: string;
+    readonly password: string;
+  }) => Promise<void>;
+}
+
+export interface PasswordLoginFormProps {
+  readonly action?: PasswordLoginAction;
+  readonly className?: string;
+  readonly identifierLabel?: string;
+  readonly passwordLabel?: string;
+  readonly submitLabel?: string;
+  readonly pendingLabel?: string;
+}
+
+export function PasswordLoginForm({
+  action: actionOverride,
+  className,
+  identifierLabel,
+  passwordLabel,
+  submitLabel,
+  pendingLabel,
+}: PasswordLoginFormProps = {}): ReactElement {
+  const { t } = useTranslation();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const action = usePasswordLogin();
-  const { t } = useTranslation();
+  const defaultAction = usePasswordLogin();
+  const action = actionOverride ?? defaultAction;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -22,9 +48,11 @@ export function PasswordLoginForm(): ReactElement {
   };
 
   return (
-    <form className='space-y-5' onSubmit={handleSubmit}>
+    <form className={className ?? 'space-y-5'} onSubmit={handleSubmit}>
       <div className='space-y-2'>
-        <Label htmlFor='identifier'>{t('auth.login.identifier')}</Label>
+        <Label htmlFor='identifier'>
+          {identifierLabel ?? t('auth.login.identifier')}
+        </Label>
         <Input
           id='identifier'
           autoComplete='username'
@@ -35,7 +63,9 @@ export function PasswordLoginForm(): ReactElement {
         />
       </div>
       <div className='space-y-2'>
-        <Label htmlFor='password'>{t('auth.login.password')}</Label>
+        <Label htmlFor='password'>
+          {passwordLabel ?? t('auth.login.password')}
+        </Label>
         <div className='relative'>
           <Input
             id='password'
@@ -69,8 +99,26 @@ export function PasswordLoginForm(): ReactElement {
         <FormStatus type='error'>{action.error.message}</FormStatus>
       ) : null}
       <Button className='w-full' disabled={action.isPending} type='submit'>
-        {action.isPending ? t('auth.login.submitting') : t('auth.login.submit')}
+        {action.isPending
+          ? (pendingLabel ?? t('auth.login.submitting'))
+          : (submitLabel ?? t('auth.login.submit'))}
       </Button>
+      <div className='pt-3 text-sm'>
+        <nav className='flex items-center justify-between text-muted-foreground'>
+          <a
+            className='hover:text-foreground hover:underline'
+            href='forgot-password'
+          >
+            {t('auth.login.forgot')}
+          </a>
+          <a
+            className='font-semibold text-foreground underline underline-offset-4'
+            href='register'
+          >
+            {t('auth.login.register')}
+          </a>
+        </nav>
+      </div>
     </form>
   );
 }

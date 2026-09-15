@@ -1,5 +1,5 @@
-import { usePasswordResetRequest } from '@nocobase/app-plugin-authentication/client/actions';
 import { useTranslation } from '@nocobase/i18n/client';
+import { usePasswordResetRequest } from '@nocobase/app-plugin-authentication/client/actions';
 import { useState, type FormEvent, type ReactElement } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -8,10 +8,32 @@ import { Label } from '@/components/ui/label';
 
 import { FormStatus } from '../components/form-status';
 
-export function PasswordResetRequestForm(): ReactElement {
-  const [email, setEmail] = useState('');
-  const action = usePasswordResetRequest();
+export interface PasswordResetRequestAction {
+  readonly error?: { readonly message: string };
+  readonly isPending: boolean;
+  readonly isSuccess: boolean;
+  readonly submit: (input: { readonly email: string }) => Promise<void>;
+}
+
+export interface PasswordResetRequestFormProps {
+  readonly action?: PasswordResetRequestAction;
+  readonly className?: string;
+  readonly submitLabel?: string;
+  readonly pendingLabel?: string;
+  readonly successMessage?: string;
+}
+
+export function PasswordResetRequestForm({
+  action: actionOverride,
+  className,
+  submitLabel,
+  pendingLabel,
+  successMessage,
+}: PasswordResetRequestFormProps = {}): ReactElement {
   const { t } = useTranslation();
+  const [email, setEmail] = useState('');
+  const defaultAction = usePasswordResetRequest();
+  const action = actionOverride ?? defaultAction;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -19,7 +41,7 @@ export function PasswordResetRequestForm(): ReactElement {
   };
 
   return (
-    <form className='space-y-5' onSubmit={handleSubmit}>
+    <form className={className ?? 'space-y-5'} onSubmit={handleSubmit}>
       <div className='space-y-2'>
         <Label htmlFor='email'>{t('auth.forgot.email')}</Label>
         <Input
@@ -35,13 +57,26 @@ export function PasswordResetRequestForm(): ReactElement {
       {action.error ? (
         <FormStatus type='error'>{action.error.message}</FormStatus>
       ) : action.isSuccess ? (
-        <FormStatus type='success'>{t('auth.forgot.sent')}</FormStatus>
+        <FormStatus type='success'>
+          {successMessage ?? t('auth.forgot.sent')}
+        </FormStatus>
       ) : null}
       <Button className='w-full' disabled={action.isPending} type='submit'>
         {action.isPending
-          ? t('auth.forgot.submitting')
-          : t('auth.forgot.submit')}
+          ? (pendingLabel ?? t('auth.forgot.submitting'))
+          : (submitLabel ?? t('auth.forgot.submit'))}
       </Button>
+      <div className='pt-3 text-sm'>
+        <p className='text-center text-muted-foreground'>
+          {t('auth.forgot.remember')}{' '}
+          <a
+            className='font-semibold text-foreground underline underline-offset-4'
+            href='login'
+          >
+            {t('auth.forgot.signIn')}
+          </a>
+        </p>
+      </div>
     </form>
   );
 }

@@ -21,7 +21,7 @@ The interface follows the browser language on a first visit and remembers whatev
 
 ### Accounts and roles
 
-The installer account holds the CRM administrator preset. Every other account needs a role in **Settings → CRM settings → Users** before it can use the CRM, and each user holds exactly one role:
+Accounts are created, disabled, and given new passwords by an administrator in **Settings → Users**. The installer account holds the CRM administrator preset. Every other account needs a role in **Settings → CRM settings → Users** before it can use the CRM, and each user holds exactly one role:
 
 | Role          | What it can do                                                                                      |
 | ------------- | --------------------------------------------------------------------------------------------------- |
@@ -125,18 +125,20 @@ The three files named `runtime.ts`, `plugins.ts`, and `routes.ts` are compositio
 
 ### Everyday development
 
-| Script       | What it does                                      |
-| ------------ | ------------------------------------------------- |
-| `pnpm dev`   | Start the API server and client with hot reload   |
-| `pnpm build` | Build the client and server into `dist/`          |
-| `pnpm start` | Run the built server; requires `pnpm build` first |
+| Script             | What it does                                                                 |
+| ------------------ | ---------------------------------------------------------------------------- |
+| `pnpm dev`         | Start the API server and client with hot reload                              |
+| `pnpm build`       | Build the client and server into `dist/`                                     |
+| `pnpm start`       | Run the built server; requires `pnpm build` first                            |
+| `pnpm build --tar` | Build, then pack `dist/` and `config.example.yml` into `storage/dist.tar.gz` |
 
 ### Database
 
-| Script         | What it does                                                                                    |
-| -------------- | ----------------------------------------------------------------------------------------------- |
-| `pnpm migrate` | Apply pending migrations from your `database/main/migrations/` and from every registered plugin |
-| `pnpm seed`    | Run seeds from `database/main/seeds/` and from registered plugins                               |
+| Script                      | What it does                                                                                                                                                                                        |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm migrate`              | Apply pending migrations from your `database/main/migrations/` and from every registered plugin; `pnpm migrate --fresh --force` clears managed schema objects and rebuilds them from migrations     |
+| `pnpm seed`                 | Run seeds from `database/main/seeds/` and from registered plugins                                                                                                                                   |
+| `pnpm collections:generate` | Write `collection.json`, `metadata.json` and `schema.json` for every Collection under `database/<connection>/collections/`, plus a `_manifest.json`; `--check` fails when the files are out of date |
 
 Migrations also run automatically on startup while `database.connections.main.migrations.autoRun` is `true` in `config.yml`. Run `pnpm migrate` explicitly when you want to apply a schema change without restarting.
 
@@ -154,17 +156,30 @@ Database tasks support `--connection <name>` and `--all`; no argument targets `d
 | `pnpm fix`           | Fix lint problems, then format                               |
 | `pnpm check`         | Everything above plus a build; what to run before committing |
 
+`pnpm nocobase app i18n:check` reports a language declared in `client/locales/` but not `server/locales/`, or the reverse. The browser builds its language picker from one and the server decides what it answers in from the other, so a language on only one side is one the interface offers and the server then rejects.
+
 ### Plugins
 
 Plugins add features to your application. Let these commands edit `package.json`, `client/plugins.ts`, and `server/plugins.ts` for you rather than editing those files by hand.
 
-| Script                          | What it does                                              |
-| ------------------------------- | --------------------------------------------------------- |
-| `pnpm plugin:register <name>`   | Install a plugin and wire it into the client and server   |
-| `pnpm plugin:unregister <name>` | Remove a plugin and its wiring                            |
-| `pnpm plugin:update`            | Upgrade registered plugins and re-sync their agent skills |
-| `pnpm plugin:inspect <name>`    | Report a plugin's registration state; read-only           |
-| `pnpm plugin:skills:sync`       | Re-copy plugin agent skills into `.agents/skills/`        |
+| Script                          | What it does                                             |
+| ------------------------------- | -------------------------------------------------------- |
+| `pnpm plugin:register <name>`   | Install a plugin and wire it into the client and server  |
+| `pnpm plugin:unregister <name>` | Remove a plugin and its wiring                           |
+| `pnpm plugin:update [name]`     | Upgrade one or all registered plugins and re-sync skills |
+| `pnpm plugin:inspect <name>`    | Report a plugin's registration state; read-only          |
+| `pnpm plugin:skills:sync`       | Re-copy plugin agent skills into `.agents/skills/`       |
+
+Use a full package name, as with `plugin:register` and `plugin:unregister`; short names such as `authentication` also work. The optional name is a positional argument, not `--plugin`.
+
+```bash
+pnpm plugin:update @nocobase/app-plugin-authentication  # Update one registered plugin
+pnpm plugin:update authentication                      # Equivalent short name
+pnpm plugin:update                                     # Update all registered plugins
+pnpm plugin:update @nocobase/app-plugin-authentication --dry-run  # Preview only
+```
+
+Without a name, the command collects registered plugins from `client/plugins.ts`, `server/plugins.ts`, and `cli/plugins.ts`. It uses the application's package manager; with pnpm, `update` follows the declared version ranges without `--latest`. An unregistered name is rejected, and an application with no registered plugins is left unchanged. After a successful package update, all registered plugins' agent skills are re-synchronized, even when only one package was selected.
 
 Ordering in `client/plugins.ts` and `server/plugins.ts` is contribution order, and a plugin is enabled by appearing in the array. Reorder entries or pass a plugin its options by hand; leave adding and removing entries to the commands.
 
@@ -202,6 +217,30 @@ A `.node` binary is compiled for one platform, architecture, C library, and Node
 Every build prints the platform it produced and records it in `dist/package.json` under `nocobase.buildTarget`, so a `dist/` built for the wrong machine can be identified rather than guessed at.
 
 If your application has no native modules — `pg`, `mysql2`, and `tedious` are all plain JavaScript — none of this applies and `dist/` is portable as built.
+
+#### Packing the build
+
+`pnpm build --tar` writes `storage/dist.tar.gz`, the artifact you upload to a Hub to deploy this application.
+
+The archive has two levels: `config.example.yml` and `dist/` sit at the root, and the build is inside `dist/`. What `dist/` holds varies with the application; this is the shape:
+
+```text
+dist.tar.gz
+├── config.example.yml
+└── dist/
+    ├── cli/
+    ├── client/
+    ├── node_modules/
+    ├── server/
+    ├── package.json
+    └── pnpm-workspace.yaml
+```
+
+Combine it with `--target` when the archive is for another machine:
+
+```bash
+pnpm build --target linux-x64 --tar
+```
 
 #### Adding a dependency
 
@@ -244,7 +283,7 @@ Rebuild with a matching `--target` and `--node-version`. ABI 115 is Node 20, 127
 
 ## Configuration
 
-`config.yml` is the single source of configuration, written for you at generation time and yours to edit from there. It is gitignored because it carries your `auth.secret`; deploy it through your secret management rather than committing it. `config.example.yml` documents every available option, including sections the generated file leaves out.
+`server/config/` and `client/config/` contain editable TypeScript defaults. `config.yml` holds environment-specific overrides, written for you at generation time and yours to edit from there. It is gitignored because it carries your `auth.secret`; deploy it through your secret management rather than committing it. `config.example.yml` documents common deployment options, including sections the generated file leaves out.
 
 Two settings decide where the application is reachable:
 
@@ -263,9 +302,9 @@ After signing in with the `notification:test` `send` permission, use the
 notification logs settings page to send a real message through the durable
 Notification Manager. The form is generated from safe Channel test metadata;
 Email tests require an address and IM tests use the configured logical target.
-The button is unavailable unless the protected targets endpoint is authorized,
-and testing is disabled unless `notification.test.enabled` is explicitly set
-to `true` in `config.yml`.
+The button remains visible so configuration problems are discoverable. The
+server enforces the `notification:test` `send` permission only when the message
+is submitted.
 
 ## Working with an AI agent
 

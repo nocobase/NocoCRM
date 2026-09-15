@@ -1,6 +1,6 @@
 import { MonitorCog, Settings, Sparkles } from 'lucide-react';
 import type { ReactElement } from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 
 import { ThemeSettings } from '../theme/index.js';
 import { UserMenu } from './user-menu.js';
@@ -13,21 +13,17 @@ const ACTION_LINK_CLASS =
   'inline-flex size-10 items-center justify-center rounded-xl border border-border/70 bg-background/60 text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50';
 
 /**
- * The surface the header is being rendered inside, or `app` for the application shell. The CRM entries (bell,
- * assistant) belong to the application surface only; the settings and dev links stay on every surface — application
- * change to the template, which dropped a surface's own link: keeping it marks where the user is, and the four icons
- * then never shift position between surfaces.
+ * Keep header entries visible on their destination pages so navigation stays consistent across surfaces. The CRM
+ * entries (bell, assistant) belong to the application surface only; the current surface's own link is marked, so the
+ * four icons never shift position between surfaces.
  */
-export type HeaderSurface = 'app' | 'settings' | 'dev';
-
-export interface HeaderActionsProps {
-  readonly surface?: HeaderSurface;
-}
-
-/** The controls in the top-right of every header, so every surface matches the application shell. */
-export function HeaderActions({
-  surface = 'app',
-}: HeaderActionsProps): ReactElement {
+export function HeaderActions(): ReactElement {
+  const { pathname } = useLocation();
+  const surface = pathname.startsWith('/settings')
+    ? 'settings'
+    : pathname.startsWith('/dev')
+      ? 'dev'
+      : 'app';
   return (
     <div className='flex shrink-0 items-center gap-2'>
       {surface === 'app' ? (
