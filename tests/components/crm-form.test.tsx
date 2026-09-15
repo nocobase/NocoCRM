@@ -6,7 +6,7 @@ import {
   definitions,
   defaultSettings,
 } from '../../server/providers/crm/schema.js';
-import { crmEn, crmZh } from '../../client/locales/crm.js';
+import { crmEn, crmZh } from '../../client/locales/crm/index.js';
 import { csvCell, parseCsv } from '../../client/components/crm/csv.js';
 const state = vi.hoisted(() => ({
   api: vi.fn(),

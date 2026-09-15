@@ -107,7 +107,7 @@ async function inspectLoadedAppClient({
     application,
     clientPlugins.plugins,
   );
-  const configs = configSnapshots(appPackageName, clientPlugins.plugins);
+  const configs = configSnapshots(appPackageName);
   const serviceProviders = serviceProviderSnapshots(
     appPackageName,
     application,
@@ -196,7 +196,9 @@ async function inspectLoadedAppClient({
     before: provider.before ?? [],
     after: provider.after ?? [],
   }));
-  const routeSnapshots = routes.map((route, index) => {
+  const flattenRoutes = (nodes) =>
+    nodes.flatMap((node) => [node, ...flattenRoutes(node.children ?? [])]);
+  const routeSnapshots = flattenRoutes(routes).map((route, index) => {
     const override = overrides.find((entry) => entry.routeId === route.id);
     return {
       order: index + 1,
@@ -301,26 +303,15 @@ function resolveDeclaration(declaration) {
     : declaration;
 }
 
-function configSnapshots(appPackageName, plugins) {
-  let order = 1;
+function configSnapshots(appPackageName) {
   return [
     {
-      order,
+      order: 1,
       packageName: appPackageName,
       source: 'application',
       entry: './client/runtime',
       kind: 'factory',
     },
-    ...plugins.flatMap((plugin) =>
-      plugin.config.map((config) => ({
-        order: (order += 1),
-        packageName: plugin.packageName,
-        source: 'plugin',
-        entry: `${plugin.packageName}/client/plugin`,
-        kind: 'contribution',
-        namespace: config.namespace,
-      })),
-    ),
   ];
 }
 

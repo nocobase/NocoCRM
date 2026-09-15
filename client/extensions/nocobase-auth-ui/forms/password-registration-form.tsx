@@ -1,5 +1,5 @@
-import { usePasswordRegistration } from '@nocobase/app-plugin-authentication/client/actions';
 import { useTranslation } from '@nocobase/i18n/client';
+import { usePasswordRegistration } from '@nocobase/app-plugin-authentication/client/actions';
 import { useState, type FormEvent, type ReactElement } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -8,15 +8,39 @@ import { Label } from '@/components/ui/label';
 
 import { FormStatus } from '../components/form-status';
 
-export function PasswordRegistrationForm(): ReactElement {
+export interface PasswordRegistrationAction {
+  readonly error?: { readonly message: string };
+  readonly isPending: boolean;
+  readonly submit: (input: {
+    readonly email: string;
+    readonly name: string;
+    readonly password: string;
+    readonly username: string;
+  }) => Promise<void>;
+}
+
+export interface PasswordRegistrationFormProps {
+  readonly action?: PasswordRegistrationAction;
+  readonly className?: string;
+  readonly submitLabel?: string;
+  readonly pendingLabel?: string;
+}
+
+export function PasswordRegistrationForm({
+  action: actionOverride,
+  className,
+  submitLabel,
+  pendingLabel,
+}: PasswordRegistrationFormProps = {}): ReactElement {
+  const { t } = useTranslation();
   const [confirmation, setConfirmation] = useState('');
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [validationError, setValidationError] = useState<string>();
-  const action = usePasswordRegistration();
-  const { t } = useTranslation();
+  const defaultAction = usePasswordRegistration();
+  const action = actionOverride ?? defaultAction;
   const errorMessage = validationError ?? action.error?.message;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
@@ -30,7 +54,7 @@ export function PasswordRegistrationForm(): ReactElement {
   };
 
   return (
-    <form className='space-y-5' onSubmit={handleSubmit}>
+    <form className={className ?? 'space-y-5'} onSubmit={handleSubmit}>
       <div className='space-y-2'>
         <Label htmlFor='name'>{t('auth.register.name')}</Label>
         <Input
@@ -88,9 +112,20 @@ export function PasswordRegistrationForm(): ReactElement {
       ) : null}
       <Button className='w-full' disabled={action.isPending} type='submit'>
         {action.isPending
-          ? t('auth.register.submitting')
-          : t('auth.register.submit')}
+          ? (pendingLabel ?? t('auth.register.submitting'))
+          : (submitLabel ?? t('auth.register.submit'))}
       </Button>
+      <div className='pt-3 text-sm'>
+        <p className='text-center text-muted-foreground'>
+          {t('auth.register.haveAccount')}{' '}
+          <a
+            className='font-semibold text-foreground underline underline-offset-4'
+            href='login'
+          >
+            {t('auth.register.signIn')}
+          </a>
+        </p>
+      </div>
     </form>
   );
 }

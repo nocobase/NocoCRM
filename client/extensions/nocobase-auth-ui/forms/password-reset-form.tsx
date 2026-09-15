@@ -1,5 +1,5 @@
-import { usePasswordReset } from '@nocobase/app-plugin-authentication/client/actions';
 import { useTranslation } from '@nocobase/i18n/client';
+import { usePasswordReset } from '@nocobase/app-plugin-authentication/client/actions';
 import { useState, type FormEvent, type ReactElement } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -9,17 +9,35 @@ import { Label } from '@/components/ui/label';
 import { FormStatus } from '../components/form-status';
 
 export interface PasswordResetFormProps {
+  readonly action?: PasswordResetAction;
+  readonly className?: string;
   readonly token: string;
+  readonly submitLabel?: string;
+  readonly pendingLabel?: string;
+}
+
+export interface PasswordResetAction {
+  readonly error?: { readonly message: string };
+  readonly isPending: boolean;
+  readonly submit: (input: {
+    readonly password: string;
+    readonly token: string;
+  }) => Promise<void>;
 }
 
 export function PasswordResetForm({
+  action: actionOverride,
+  className,
   token,
+  submitLabel,
+  pendingLabel,
 }: PasswordResetFormProps): ReactElement {
+  const { t } = useTranslation();
   const [confirmation, setConfirmation] = useState('');
   const [password, setPassword] = useState('');
   const [validationError, setValidationError] = useState<string>();
-  const action = usePasswordReset();
-  const { t } = useTranslation();
+  const defaultAction = usePasswordReset();
+  const action = actionOverride ?? defaultAction;
   const errorMessage =
     validationError ??
     (!token ? t('auth.reset.invalid') : undefined) ??
@@ -37,7 +55,7 @@ export function PasswordResetForm({
   };
 
   return (
-    <form className='space-y-5' onSubmit={handleSubmit}>
+    <form className={className ?? 'space-y-5'} onSubmit={handleSubmit}>
       <div className='space-y-2'>
         <Label htmlFor='new-password'>{t('auth.reset.password')}</Label>
         <Input
@@ -70,8 +88,21 @@ export function PasswordResetForm({
         disabled={!token || action.isPending}
         type='submit'
       >
-        {action.isPending ? t('auth.reset.submitting') : t('auth.reset.submit')}
+        {action.isPending
+          ? (pendingLabel ?? t('auth.reset.submitting'))
+          : (submitLabel ?? t('auth.reset.submit'))}
       </Button>
+      <div className='pt-3 text-sm'>
+        <p className='text-center text-muted-foreground'>
+          {t('auth.reset.back')}{' '}
+          <a
+            className='font-semibold text-foreground underline underline-offset-4'
+            href='login'
+          >
+            {t('auth.reset.signIn')}
+          </a>
+        </p>
+      </div>
     </form>
   );
 }

@@ -14,10 +14,14 @@ import { describeRoutePage, type ClientPageDescriptor } from './client-page.js';
 
 export interface ClientRouteProps {
   readonly route: AppClientRegisteredRoute;
+  readonly defaultAccess?: boolean;
 }
 
-export function ClientRoute({ route }: ClientRouteProps): ReactElement {
-  return <ClientPage page={describeRoutePage(route)} />;
+export function ClientRoute({
+  route,
+  defaultAccess,
+}: ClientRouteProps): ReactElement {
+  return <ClientPage page={describeRoutePage(route, defaultAccess)} />;
 }
 
 export interface ClientPageProps {
@@ -47,7 +51,9 @@ export function ClientPage({ page }: ClientPageProps): ReactElement {
     componentLoader().then(
       (module) => {
         if (active) {
-          window.sessionStorage.removeItem(`nb-route-retry:${window.location.pathname}`);
+          window.sessionStorage.removeItem(
+            `nb-route-retry:${window.location.pathname}`,
+          );
           setComponentModule(module);
         }
       },

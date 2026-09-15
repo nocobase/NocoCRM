@@ -1,5 +1,5 @@
 import type { AppResource } from './en-US.js';
-import { crmZh } from './crm.js';
+import { crmZh } from './crm/index.js';
 
 const zhCN: AppResource = {
   crm: crmZh,

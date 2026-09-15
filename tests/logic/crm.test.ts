@@ -2,12 +2,13 @@ import CrmProvider from '../../server/providers/crm/index.js';
 import { i18nToken } from '@nocobase/app-server/i18n';
 import { I18nRuntime } from '@nocobase/i18n';
 import { notificationServiceToken } from '@nocobase/app-plugin-notification/server';
-import { notificationLocales } from '../../server/locales/crm-notifications.js';
+import { notificationLocales } from '../../server/locales/crm-notifications/index.js';
 import { statistics } from '../../server/providers/crm/statistics.js';
 import { dashboard } from '../../server/providers/crm/dashboard.js';
 import { fieldsFor, toText } from '../../server/providers/crm/schema.js';
 import geographyMigration from '../../database/main/migrations/202609100001_crm_geography_codes.js';
 // @vitest-environment node
+import sqlite from '@nocobase/db-sqlite';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -57,6 +58,7 @@ beforeAll(async () => {
   folder = await mkdtemp(resolve(tmpdir(), 'crm-test-'));
   database = createDatabaseManager(
     defineDatabase({
+      drivers: { sqlite },
       default: 'main',
       connections: {
         main: {
@@ -1021,6 +1023,7 @@ describe('CRM API security and domain rules', () => {
 it('maps legacy industry and country text to codes and back', async () => {
   const isolated = createDatabaseManager(
     defineDatabase({
+      drivers: { sqlite },
       default: 'main',
       connections: {
         main: {
@@ -1115,6 +1118,7 @@ it('rejects country and subdivision values outside ISO 3166', async () => {
 it('reverses the CRM migration on a real SQLite database', async () => {
   const isolated = createDatabaseManager(
     defineDatabase({
+      drivers: { sqlite },
       default: 'main',
       connections: {
         main: {
@@ -1131,10 +1135,10 @@ it('reverses the CRM migration on a real SQLite database', async () => {
       directory: resolve('database/main/migrations'),
       packageName: 'crm',
     });
-    expect((await migrator.latest()).executed).toHaveLength(21);
+    expect((await migrator.latest()).executed).toHaveLength(22);
     expect(await isolated.builder().hasCollection('crmLeads')).toBe(true);
     expect((await migrator.latest()).executed).toEqual([]);
-    expect((await migrator.rollback()).rolledBack).toHaveLength(21);
+    expect((await migrator.rollback()).rolledBack).toHaveLength(22);
     expect(await isolated.builder().hasCollection('crmLeads')).toBe(false);
     expect(await isolated.builder().hasCollection('crmAccounts')).toBe(false);
   } finally {

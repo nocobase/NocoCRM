@@ -4,10 +4,18 @@
 #   Public origin used for callbacks and redirects in production.
 #   publicOrigin: https://apps.example.com
 
+# The language the application starts in, for the browser and the server alike. Which languages it offers follows
+# from the files in client/locales and server/locales, not from configuration.
+# i18n:
+#   defaultLocale: zh-CN
+
 # Values under client are public and embedded in the SPA HTML.
 client:
   app:
     title: NocoBase
+    # Defaults apply only when no valid browser-local choice is saved.
+    # defaultColorScheme: system # light | dark | system
+    # defaultTheme: compact # ID from client/theme/theme-presets.ts
 
 auth:
   # Generate a unique secret, for example with: openssl rand -hex 32
@@ -22,21 +30,13 @@ auth:
 #   # Use the same generated value as auth.secret, or another unique secret.
 #   secret: replace-with-a-unique-secret
 
-# Locale used before a visitor picks a language, and the server's fallback for
-# translated messages such as notifications. Every listed locale can be chosen.
-i18n:
-  defaultLocale: zh-CN
-  locales:
-    - zh-CN
-    - en-US
-
 notification:
   channels:
     - type: in-app
       enabled: true
       providers:
         - type: database
-          name: primary
+          name: default
 
     # Uncomment and configure this channel to send email notifications.
     # - type: email
@@ -63,13 +63,11 @@ notification:
     #   providers:
     #     - type: feishu-webhook
     #       name: feishu
-    #       target: default
     #       webhookUrl: https://open.feishu.cn/open-apis/bot/v2/hook/replace-me
     #       secret: replace-with-the-feishu-secret
     #
     #     - type: dingtalk-webhook
     #       name: dingtalk
-    #       target: default
     #       webhookUrl: https://oapi.dingtalk.com/robot/send?access_token=replace-me
     #       secret: replace-with-the-dingtalk-secret
 

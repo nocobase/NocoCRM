@@ -7,7 +7,7 @@ import {
   authorizationToken,
   type AuthorizationEnv,
 } from '@nocobase/app-plugin-authorization';
-import { serverFileRepositoryManagerToken } from '@nocobase/app-plugin-file-repository/server';
+import { serverFileRepositoryManagerToken } from '@nocobase/app-plugin-file/server';
 import { driveManagerToken } from '@nocobase/app-server/drive';
 import type { Application } from '@nocobase/app-server/application';
 import {
@@ -232,6 +232,10 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           connection: 'main',
           disk: 'local',
           accessPath: '/crm/files',
+          // Only the upload path binds this; access was already checked
+          // above against the CRM's own permissions, and reads go through
+          // the CRM's file route rather than the plugin's.
+          policy: { read: true, create: true, update: false, delete: false },
         });
       const uploaded = await repository.uploadMany({ files: files as File[] });
       for (const file of uploaded.records)

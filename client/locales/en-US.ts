@@ -1,5 +1,5 @@
 import type { LocaleResource } from '@nocobase/i18n';
-import { crmEn } from './crm.js';
+import { crmEn } from './crm/index.js';
 
 const enUS = {
   crm: crmEn,

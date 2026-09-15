@@ -1,5 +1,5 @@
 import { i18nToken } from '@nocobase/app-server/i18n';
-import { notificationLocales } from '../../locales/crm-notifications.js';
+import { notificationLocales } from '../../locales/crm-notifications/index.js';
 import { asEntity, toText } from './schema.js';
 import type { Application } from '@nocobase/app-server/application';
 import { databaseManagerToken } from '@nocobase/db';
@@ -153,6 +153,9 @@ export default class CrmProvider extends ServiceProvider<Application> {
           const sent = await this.app.container
             .resolve(notificationServiceToken)
             .send({
+              // One outbox row is one notification: a retry after a crash
+              // is deduplicated by the service instead of sent twice.
+              idempotencyKey: `crm:${toText(row.id)}`,
               source: { type: 'crm', referenceId: toText(row.id) },
               to: { type: 'user', id: toText(row.recipientId) },
               channels: ['in-app'],

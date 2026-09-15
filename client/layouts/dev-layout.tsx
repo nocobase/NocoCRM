@@ -1,14 +1,9 @@
-import type {
-  AppClientRegisteredDevRoute,
-  AppClientRegisteredDevRouteGroup,
-  AppClientRegisteredRoute,
-} from '@nocobase/app-client/plugins';
+import type { AppClientRegisteredRoute } from '@nocobase/app-client/plugins';
 import type { ReactElement } from 'react';
 
 import { SurfaceLayout, type SurfaceCopy } from './surface-layout.js';
 
 const DEV_COPY: SurfaceCopy = {
-  surface: 'dev',
   title: 'Dev tools',
   pathPrefix: '/dev',
   emptyTitle: 'No dev tools available',
@@ -17,8 +12,7 @@ const DEV_COPY: SurfaceCopy = {
 };
 
 export interface DevLayoutProps {
-  readonly devRoutes: readonly AppClientRegisteredDevRoute[];
-  readonly groups: readonly AppClientRegisteredDevRouteGroup[];
+  readonly routeTree: readonly AppClientRegisteredRoute[];
   /** Authenticated plugin routes nested below a dev page. */
   readonly routes?: readonly AppClientRegisteredRoute[];
 }
@@ -30,16 +24,10 @@ export interface DevLayoutProps {
  * along with every page it would have rendered.
  */
 export function DevLayout({
-  devRoutes,
-  groups,
+  routeTree,
   routes = [],
 }: DevLayoutProps): ReactElement {
   return (
-    <SurfaceLayout
-      copy={DEV_COPY}
-      groups={groups}
-      routes={routes}
-      settings={devRoutes}
-    />
+    <SurfaceLayout copy={DEV_COPY} routes={routes} routeTree={routeTree} />
   );
 }
