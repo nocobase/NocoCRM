@@ -1,4 +1,5 @@
 import { usePasswordReset } from '@nocobase/app-plugin-authentication/client/actions';
+import { useTranslation } from '@nocobase/i18n/client';
 import { useState, type FormEvent, type ReactElement } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -18,18 +19,17 @@ export function PasswordResetForm({
   const [password, setPassword] = useState('');
   const [validationError, setValidationError] = useState<string>();
   const action = usePasswordReset();
+  const { t } = useTranslation();
   const errorMessage =
     validationError ??
-    (!token
-      ? 'This password reset link is invalid or has expired.'
-      : undefined) ??
+    (!token ? t('auth.reset.invalid') : undefined) ??
     action.error?.message;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     if (!token) return;
     if (password !== confirmation) {
-      setValidationError("Passwords don't match.");
+      setValidationError(t('auth.reset.mismatch'));
       return;
     }
     setValidationError(undefined);
@@ -39,7 +39,7 @@ export function PasswordResetForm({
   return (
     <form className='space-y-5' onSubmit={handleSubmit}>
       <div className='space-y-2'>
-        <Label htmlFor='new-password'>New password</Label>
+        <Label htmlFor='new-password'>{t('auth.reset.password')}</Label>
         <Input
           id='new-password'
           autoComplete='new-password'
@@ -51,7 +51,7 @@ export function PasswordResetForm({
         />
       </div>
       <div className='space-y-2'>
-        <Label htmlFor='confirm-new-password'>Confirm new password</Label>
+        <Label htmlFor='confirm-new-password'>{t('auth.reset.confirm')}</Label>
         <Input
           id='confirm-new-password'
           autoComplete='new-password'
@@ -70,7 +70,7 @@ export function PasswordResetForm({
         disabled={!token || action.isPending}
         type='submit'
       >
-        {action.isPending ? 'Resetting…' : 'Reset password'}
+        {action.isPending ? t('auth.reset.submitting') : t('auth.reset.submit')}
       </Button>
     </form>
   );

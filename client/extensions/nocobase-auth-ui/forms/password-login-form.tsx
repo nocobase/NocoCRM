@@ -1,5 +1,6 @@
 import { usePasswordLogin } from '@nocobase/app-plugin-authentication/client/actions';
 import { Eye, EyeOff } from 'lucide-react';
+import { useTranslation } from '@nocobase/i18n/client';
 import { useState, type FormEvent, type ReactElement } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ export function PasswordLoginForm(): ReactElement {
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const action = usePasswordLogin();
+  const { t } = useTranslation();
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -22,7 +24,7 @@ export function PasswordLoginForm(): ReactElement {
   return (
     <form className='space-y-5' onSubmit={handleSubmit}>
       <div className='space-y-2'>
-        <Label htmlFor='identifier'>Username or email</Label>
+        <Label htmlFor='identifier'>{t('auth.login.identifier')}</Label>
         <Input
           id='identifier'
           autoComplete='username'
@@ -33,7 +35,7 @@ export function PasswordLoginForm(): ReactElement {
         />
       </div>
       <div className='space-y-2'>
-        <Label htmlFor='password'>Password</Label>
+        <Label htmlFor='password'>{t('auth.login.password')}</Label>
         <div className='relative'>
           <Input
             id='password'
@@ -45,7 +47,11 @@ export function PasswordLoginForm(): ReactElement {
             value={password}
           />
           <button
-            aria-label={isPasswordVisible ? 'Hide password' : 'Show password'}
+            aria-label={
+              isPasswordVisible
+                ? t('auth.login.hidePassword')
+                : t('auth.login.showPassword')
+            }
             aria-pressed={isPasswordVisible}
             className='absolute inset-y-0 right-0 inline-flex w-10 items-center justify-center rounded-r-lg text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50'
             onClick={() => setIsPasswordVisible((visible) => !visible)}
@@ -63,7 +69,7 @@ export function PasswordLoginForm(): ReactElement {
         <FormStatus type='error'>{action.error.message}</FormStatus>
       ) : null}
       <Button className='w-full' disabled={action.isPending} type='submit'>
-        {action.isPending ? 'Signing in…' : 'Sign in'}
+        {action.isPending ? t('auth.login.submitting') : t('auth.login.submit')}
       </Button>
     </form>
   );

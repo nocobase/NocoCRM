@@ -1,10 +1,12 @@
 import { resolveAppUrl } from '@nocobase/app-client';
+import { useTranslation } from '@nocobase/i18n/client';
 import type { ReactElement } from 'react';
 
 export function AuthBrand(): ReactElement {
+  const { t } = useTranslation();
   return (
     <div
-      aria-label='NocoBase'
+      aria-label={t('auth.brand')}
       className='flex h-10 w-full items-center justify-center'
       role='img'
     >

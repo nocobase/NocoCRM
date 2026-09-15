@@ -1,4 +1,5 @@
 import { usePasswordRegistration } from '@nocobase/app-plugin-authentication/client/actions';
+import { useTranslation } from '@nocobase/i18n/client';
 import { useState, type FormEvent, type ReactElement } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -15,12 +16,13 @@ export function PasswordRegistrationForm(): ReactElement {
   const [username, setUsername] = useState('');
   const [validationError, setValidationError] = useState<string>();
   const action = usePasswordRegistration();
+  const { t } = useTranslation();
   const errorMessage = validationError ?? action.error?.message;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     if (password !== confirmation) {
-      setValidationError("Passwords don't match.");
+      setValidationError(t('auth.register.mismatch'));
       return;
     }
     setValidationError(undefined);
@@ -30,7 +32,7 @@ export function PasswordRegistrationForm(): ReactElement {
   return (
     <form className='space-y-5' onSubmit={handleSubmit}>
       <div className='space-y-2'>
-        <Label htmlFor='name'>Name</Label>
+        <Label htmlFor='name'>{t('auth.register.name')}</Label>
         <Input
           id='name'
           onChange={(event) => setName(event.target.value)}
@@ -39,7 +41,7 @@ export function PasswordRegistrationForm(): ReactElement {
         />
       </div>
       <div className='space-y-2'>
-        <Label htmlFor='username'>Username</Label>
+        <Label htmlFor='username'>{t('auth.register.username')}</Label>
         <Input
           id='username'
           autoComplete='username'
@@ -49,7 +51,7 @@ export function PasswordRegistrationForm(): ReactElement {
         />
       </div>
       <div className='space-y-2'>
-        <Label htmlFor='register-email'>Email</Label>
+        <Label htmlFor='register-email'>{t('auth.register.email')}</Label>
         <Input
           id='register-email'
           autoComplete='email'
@@ -60,7 +62,7 @@ export function PasswordRegistrationForm(): ReactElement {
         />
       </div>
       <div className='space-y-2'>
-        <Label htmlFor='register-password'>Password</Label>
+        <Label htmlFor='register-password'>{t('auth.register.password')}</Label>
         <Input
           id='register-password'
           autoComplete='new-password'
@@ -71,7 +73,7 @@ export function PasswordRegistrationForm(): ReactElement {
         />
       </div>
       <div className='space-y-2'>
-        <Label htmlFor='confirm-password'>Confirm password</Label>
+        <Label htmlFor='confirm-password'>{t('auth.register.confirm')}</Label>
         <Input
           id='confirm-password'
           autoComplete='new-password'
@@ -85,7 +87,9 @@ export function PasswordRegistrationForm(): ReactElement {
         <FormStatus type='error'>{errorMessage}</FormStatus>
       ) : null}
       <Button className='w-full' disabled={action.isPending} type='submit'>
-        {action.isPending ? 'Creating account…' : 'Create account'}
+        {action.isPending
+          ? t('auth.register.submitting')
+          : t('auth.register.submit')}
       </Button>
     </form>
   );

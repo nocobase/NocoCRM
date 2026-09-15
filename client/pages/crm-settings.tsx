@@ -205,30 +205,38 @@ function SettingsForm({
               <p className='text-sm text-muted-foreground'>
                 {text('modelHint')}
               </p>
-              <Choice
-                label={text('fields.aiService')}
-                value={settings.aiService}
-                onChange={(v) => {
-                  set('aiService', v);
-                  set('aiModel', '');
-                }}
-                choices={initial.models.map((m) => ({
-                  value: toText(m.name),
-                  label: toText(m.title ?? m.name),
-                }))}
-              />
-              <Choice
-                label={text('fields.aiModel')}
-                value={settings.aiModel}
-                onChange={(v) => set('aiModel', v)}
-                choices={rows(
-                  initial.models.find((m) => m.name === settings.aiService)
-                    ?.models,
-                ).map((m) => ({
-                  value: toText(m.value),
-                  label: toText(m.label),
-                }))}
-              />
+              <div className='grid gap-4 sm:grid-cols-2'>
+                <label className='grid gap-2 text-sm'>
+                  {text('fields.aiService')}
+                  <Choice
+                    label={text('fields.aiService')}
+                    value={settings.aiService}
+                    onChange={(v) => {
+                      set('aiService', v);
+                      set('aiModel', '');
+                    }}
+                    choices={initial.models.map((m) => ({
+                      value: toText(m.name),
+                      label: toText(m.title ?? m.name),
+                    }))}
+                  />
+                </label>
+                <label className='grid gap-2 text-sm'>
+                  {text('fields.aiModel')}
+                  <Choice
+                    label={text('fields.aiModel')}
+                    value={settings.aiModel}
+                    onChange={(v) => set('aiModel', v)}
+                    choices={rows(
+                      initial.models.find((m) => m.name === settings.aiService)
+                        ?.models,
+                    ).map((m) => ({
+                      value: toText(m.value),
+                      label: toText(m.label),
+                    }))}
+                  />
+                </label>
+              </div>
               <label className='grid gap-2 text-sm'>
                 {text('fields.aiInstructions')}
                 <Textarea

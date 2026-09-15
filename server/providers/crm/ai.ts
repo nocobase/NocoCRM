@@ -227,14 +227,22 @@ export class CrmAi {
       .execute();
     return this.history(actor);
   }
+  // Only services switched on in config. The provider manager's own list
+  // drops a service whose flag is boolean false, but SQLite hands the flag
+  // back as 0, so a disabled service would still be offered here.
   async models(): Promise<Row[]> {
-    return (await this.ai.llmProviderManager.listAllEnabledModels()).map(
-      (s) => ({
+    const enabled = new Set(
+      (await this.ai.llmServiceManager.listLLMServices())
+        .filter((s) => Boolean(s.enabled))
+        .map((s) => s.name),
+    );
+    return (await this.ai.llmProviderManager.listAllEnabledModels())
+      .filter((s) => enabled.has(s.llmService))
+      .map((s) => ({
         name: s.llmService,
         title: s.llmServiceTitle,
         models: s.enabledModels,
-      }),
-    );
+      }));
   }
   // `role` is internal: the route never passes it. An "event" message is a
   // note the system writes into the transcript, such as "action X executed",

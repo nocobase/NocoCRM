@@ -1,30 +1,32 @@
 import { AuthLink } from '@nocobase/app-plugin-authentication/client/ui';
+import { useTranslation } from '@nocobase/i18n/client';
 import type { ReactElement } from 'react';
 
 import { AuthLayout } from '../components/auth-layout';
 import { PasswordLoginForm } from '../forms/password-login-form';
 
 export default function LoginPage(): ReactElement {
+  const { t } = useTranslation();
   return (
     <AuthLayout
-      description='Sign in with your username or email and password.'
+      description={t('auth.login.description')}
       footer={
         <nav className='flex items-center justify-between text-muted-foreground'>
           <AuthLink
             className='hover:text-foreground hover:underline'
             to='/forgot-password'
           >
-            Forgot password?
+            {t('auth.login.forgot')}
           </AuthLink>
           <AuthLink
             className='font-semibold text-foreground underline underline-offset-4'
             to='/register'
           >
-            Sign up
+            {t('auth.login.register')}
           </AuthLink>
         </nav>
       }
-      title='Welcome back'
+      title={t('auth.login.title')}
     >
       <PasswordLoginForm />
     </AuthLayout>

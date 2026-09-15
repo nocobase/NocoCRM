@@ -17,6 +17,8 @@ pnpm dev
 
 The database is `storage/crm.sqlite` and uploads use the configured local drive. Run only one development instance against that file at a time, and back up the database and uploads together. Pending migrations are applied on startup; `pnpm migrate` applies them without restarting. Applied migration files are checksummed, so never reformat them.
 
+The interface follows the browser language on a first visit and remembers whatever language the visitor picks in the account menu. `i18n.defaultLocale` in `config.yml` sets the server's own default and fallback language.
+
 ### Accounts and roles
 
 The installer account holds the CRM administrator preset. Every other account needs a role in **Settings → CRM settings → Users** before it can use the CRM, and each user holds exactly one role:

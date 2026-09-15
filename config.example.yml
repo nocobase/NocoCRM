@@ -22,6 +22,14 @@ auth:
 #   # Use the same generated value as auth.secret, or another unique secret.
 #   secret: replace-with-a-unique-secret
 
+# Locale used before a visitor picks a language, and the server's fallback for
+# translated messages such as notifications. Every listed locale can be chosen.
+i18n:
+  defaultLocale: zh-CN
+  locales:
+    - zh-CN
+    - en-US
+
 notification:
   channels:
     - type: in-app
