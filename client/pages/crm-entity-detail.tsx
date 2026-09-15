@@ -488,6 +488,17 @@ export default function EntityDetail({
   // text itself flush with the description below.
   const heading = (
     <span className='-mx-2 flex flex-wrap items-center'>
+      {entity === 'opportunities' && record.accountId ? (
+        <>
+          <Link
+            className='px-2 hover:text-primary hover:underline'
+            to={`/crm/accounts/${toText(record.accountId)}`}
+          >
+            {names[toText(record.accountId)] ?? text('entities.accounts')}
+          </Link>
+          <span className='text-muted-foreground/60'>/</span>
+        </>
+      ) : null}
       <InlineField
         entity={entity}
         record={record}

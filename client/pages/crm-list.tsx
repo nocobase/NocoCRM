@@ -610,7 +610,7 @@ function EntityList({
                                 name:
                                   entity === 'contacts'
                                     ? toText(record.name)
-                                    : recordTitle(entity, record, lookup),
+                                    : recordTitle(entity, record, lookups),
                               }}
                             />
                           ) : key === 'opportunityAmount' ? (
@@ -735,19 +735,9 @@ function EntityList({
                       entity={entity}
                       record={{
                         id: record.id,
-                        name: recordTitle(entity, record, lookup),
+                        name: recordTitle(entity, record, lookups),
                       }}
                     />
-                    {entity === 'opportunities' && (
-                      <>
-                        <p className='text-sm text-muted-foreground'>
-                          {toText(lookup[toText(record.accountId)] ?? '')}
-                        </p>
-                        <p className='font-semibold'>
-                          <Value record={record} field={{ key: 'amount' }} />
-                        </p>
-                      </>
-                    )}
                     <div className='space-y-0.5 text-xs text-muted-foreground'>
                       {/* Same icons as the detail pages' field labels, so
                           the card reads without headings. */}

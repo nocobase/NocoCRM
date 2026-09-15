@@ -38,8 +38,8 @@ const sellers = [byUsername('wangxiaofang'), byUsername('chenxiaohao')];
 await mkdir(`${root}/storage/backups`, { recursive: true });
 const backup = `${root}/storage/backups/pre-demo-${new Date().toISOString().replaceAll(':','-')}.sqlite`;
 await sqlite.backup(backup); await chmod(backup, 0o600); sqlite.close();
-const { default: sqlite } = await import('@nocobase/db-sqlite');
-const db = createDatabaseManager(defineDatabase({drivers:{sqlite},default:'main',connections:{main:{dialect:'sqlite',filename,schemaManagement:'managed'}}}));
+const { default: sqliteDriver } = await import('@nocobase/db-sqlite');
+const db = createDatabaseManager(defineDatabase({drivers:{sqlite:sqliteDriver},default:'main',connections:{main:{dialect:'sqlite',filename,schemaManagement:'managed'}}}));
 await db.connect();
 try {
  const authz = createAppAuthorization({connection:db.connection()}); registerCrmResources(authz);
@@ -48,7 +48,6 @@ try {
  const actor = actorFor(owner);
  const managerActor = actorFor(manager);
  const sellerActors = sellers.map(actorFor);
- for (const a of [actor, managerActor, ...sellerActors]) await service.ensureActive(a.id);
  const settings = await service.settings();
  const calendarDay = new Intl.DateTimeFormat('en-CA',{timeZone:settings.timeZone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  // Scenarios are built in the installation's business timezone.
@@ -116,32 +115,39 @@ try {
   [['黄雅雯','huang.yawen'],['何威','he.wei']],[['邓晓萱','deng.xiaoxuan'],['钱佳明','qian.jiaming']],
  ];
  const deals=[
-  [0,'华东智造 生产数据与报表整合项目',320000,'proposal',28,'newBusiness',-28,-4],
-  [1,'星桥零售 多门店客户数据平台',480000,'contract',5,'expansion',-25,-2],
-  [2,'安康医疗 服务流程数字化项目',240000,'negotiation',-3,'newBusiness',-22,-3],
-  [3,'远航物流 调度流程优化试点',125000,'validation',20,'newBusiness',-18,-5],
-  [4,'知行教育 业务流程数字化项目',78000,'contact',45,'newBusiness',-5,-5],
-  [5,'视界数据 数据治理与管理报表项目',145000,'won',-18,'newBusiness',-42,-18],
-  [1,'星桥零售 经营分析项目',88000,'won',-3,'crossSell',-30,-3],
-  [6,'昊阳能源 现场服务与巡检数字化项目',260000,'paused',60,'tender',-26,-8],
-  [7,'丰味食品 区域销售流程优化项目',65000,'lost',-22,'newBusiness',-48,-22],
-  [0,'华东智造 数字化平台持续服务续约',42000,'lost',-4,'renewal',-20,-4],
+  [0,'生产数据与报表整合项目',320000,'proposal',28,'newBusiness',-28,-4],
+  [1,'多门店客户数据平台',480000,'contract',5,'expansion',-25,-2],
+  [2,'服务流程数字化项目',240000,'negotiation',-3,'newBusiness',-22,-3],
+  [3,'调度流程优化试点',125000,'validation',20,'newBusiness',-18,-5],
+  [4,'业务流程数字化项目',78000,'contact',45,'newBusiness',-5,-5],
+  [5,'数据治理与管理报表项目',145000,'won',-18,'newBusiness',-42,-18],
+  [1,'经营分析项目',88000,'won',-3,'crossSell',-30,-3],
+  [6,'现场服务与巡检数字化项目',260000,'paused',60,'tender',-26,-8],
+  [7,'区域销售流程优化项目',65000,'lost',-22,'newBusiness',-48,-22],
+  [0,'数字化平台持续服务续约',42000,'lost',-4,'renewal',-20,-4],
   // Closed in the five months before: enough won and lost each month for the
   // workspace's trend to have a shape. Appended so the indexes above hold.
-  [5,'视界数据 客户数据平台咨询',96000,'won',-152,'newBusiness',-185,-152],
-  [3,'远航物流 车队管理报表试点',58000,'lost',-148,'newBusiness',-178,-148,'price'],
-  [1,'星桥零售 会员系统集成',210000,'won',-140,'expansion',-172,-140],
-  [2,'安康医疗 门诊预约流程优化',132000,'won',-122,'newBusiness',-160,-122],
-  [7,'丰味食品 渠道数据看板',47000,'lost',-118,'newBusiness',-150,-118,'noBudget'],
-  [4,'知行教育 校区管理系统',86000,'lost',-112,'newBusiness',-145,-112,'timing'],
-  [0,'华东智造 设备巡检 App',175000,'won',-95,'newBusiness',-130,-95],
-  [6,'昊阳能源 项目协同平台一期',230000,'won',-88,'tender',-125,-88],
-  [3,'远航物流 客户协同门户',72000,'won',-84,'crossSell',-115,-84],
-  [5,'视界数据 报表自动化',39000,'lost',-80,'expansion',-110,-80,'noDecision'],
-  [1,'星桥零售 门店排班系统',118000,'lost',-62,'newBusiness',-95,-62,'requirementMismatch'],
-  [2,'安康医疗 数据安全加固',64000,'won',-55,'expansion',-90,-55],
-  [7,'丰味食品 经销商门户',150000,'won',-40,'newBusiness',-75,-40],
-  [0,'华东智造 供应链协同试点',98000,'lost',-36,'newBusiness',-70,-36,'toCompetitor'],
+  [5,'客户数据平台咨询',96000,'won',-152,'newBusiness',-185,-152],
+  [3,'车队管理报表试点',58000,'lost',-148,'newBusiness',-178,-148,'price'],
+  [1,'会员系统集成',210000,'won',-140,'expansion',-172,-140],
+  [2,'门诊预约流程优化',132000,'won',-122,'newBusiness',-160,-122],
+  [7,'渠道数据看板',47000,'lost',-118,'newBusiness',-150,-118,'noBudget'],
+  [4,'校区管理系统',86000,'lost',-112,'newBusiness',-145,-112,'timing'],
+  [0,'设备巡检 App',175000,'won',-95,'newBusiness',-130,-95],
+  [6,'项目协同平台一期',230000,'won',-88,'tender',-125,-88],
+  [3,'客户协同门户',72000,'won',-84,'crossSell',-115,-84],
+  [5,'报表自动化',39000,'lost',-80,'expansion',-110,-80,'noDecision'],
+  [1,'门店排班系统',118000,'lost',-62,'newBusiness',-95,-62,'requirementMismatch'],
+  [2,'数据安全加固',64000,'won',-55,'expansion',-90,-55],
+  [7,'经销商门户',150000,'won',-40,'newBusiness',-75,-40],
+  [0,'供应链协同试点',98000,'lost',-36,'newBusiness',-70,-36,'toCompetitor'],
+  // Early-stage deals, so the first board columns carry more than one card.
+  [6,'巡检数据分析咨询',56000,'qualification',35,'newBusiness',-6,-2],
+  [6,'安全培训管理咨询',48000,'contact',55,'newBusiness',-2,-2],
+  [2,'患者随访流程咨询',68000,'contact',50,'newBusiness',-3,-3],
+  [4,'招生数据看板',52000,'qualification',40,'crossSell',-9,-4],
+  [3,'网点绩效看板',73000,'validation',32,'crossSell',-14,-6],
+  [1,'供应商协同门户',156000,'proposal',24,'newBusiness',-20,-5],
  ];
  const leadSpecs=[
   ['李佳恩','华东智造集团','new','exhibition',-16,'希望打通三家工厂的生产报表。','li.jiaen'],

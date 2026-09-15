@@ -28,6 +28,12 @@ export function recordTitle(
     const account = lookups.accounts?.find((a) => a.id === record.accountId);
     return [record.name, account?.name].map(toText).filter(Boolean).join(' / ');
   }
+  // An opportunity is named for what it delivers, so the account comes
+  // first: which customer, then which deal.
+  if (entity === 'opportunities' && lookups) {
+    const account = lookups.accounts?.find((a) => a.id === record.accountId);
+    return [account?.name, record.name].map(toText).filter(Boolean).join(' / ');
+  }
   return toText(record.name);
 }
 
