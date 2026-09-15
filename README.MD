@@ -1,24 +1,59 @@
-# NocoBase 3 Application
+# NocoCRM
 
-A full-stack NocoBase 3 application. The server runs on `@nocobase/app-server` and the browser client is React with Refine, shadcn/ui, and Tailwind CSS.
+A CRM built as a NocoBase 3 application: leads, accounts, contacts, opportunities, activities, approvals, a team workspace, in-app notifications, and an AI assistant that reads the records a user may see and proposes changes as confirmable action cards. The server runs on `@nocobase/app-server` and the browser client is React with Refine, shadcn/ui, and Tailwind CSS.
 
-You own everything in this directory. Add pages, API routes, database tables, and business logic directly here — this is your application's source code, not a framework you extend from the outside.
-
-## Default and Examples
-
-Default provides the application shell and product capabilities without example plugins or business demo pages. Its application-owned server route/provider lists start empty, and new databases receive no article sample data. Use `app-template-examples` for article management and runnable plugin demonstrations.
-
-Existing Default installations retain their data when example plugins are unregistered. If an installation already ran the article migration, retain its original migration sources as described in `MIGRATION.md` before upgrading. Do not erase migration history or delete existing data to make an upgrade start.
+`SPEC.md` is the product specification the application implements. Everything in this directory is application-owned source code: pages, API routes, database tables, and business logic live here, not in a plugin.
 
 ## Getting started
 
-Start the development server:
+Use Node 24 or later and the pnpm version pinned in `package.json`:
 
 ```bash
+pnpm install
 pnpm dev
 ```
 
-`pnpm dev` starts the API server and the Vite client together, picks free ports if the defaults are taken, and prints the URL to open. Use the printed URL rather than assuming a port.
+`pnpm dev` starts the API server and the Vite client together, picks free ports if the defaults are taken, and prints the URL to open, `http://127.0.0.1:13000/main/` by default. Use the printed URL rather than assuming a port; `APP_SERVER_PORT` moves the server when the default is taken by something else. Keep the terminal running; `Ctrl+C` stops the development server.
+
+The database is `storage/crm.sqlite` and uploads use the configured local drive. Run only one development instance against that file at a time, and back up the database and uploads together. Pending migrations are applied on startup; `pnpm migrate` applies them without restarting. Applied migration files are checksummed, so never reformat them.
+
+### Accounts and roles
+
+The installer account holds the CRM administrator preset. Every other account needs a role in **Settings → CRM settings → Users** before it can use the CRM, and each user holds exactly one role:
+
+| Role          | What it can do                                                                                      |
+| ------------- | --------------------------------------------------------------------------------------------------- |
+| Administrator | Configures the CRM and sees everything, but owns no records and never acts as an approver           |
+| Sales manager | Manages all sales data, assigns owners, approves requests, exports; deletes only records it created |
+| Salesperson   | Reads shared sales data, edits and deletes its own records, raises approvals; cannot export         |
+
+Disabling a user in CRM settings denies the CRM APIs for that account. Record and field permissions can be refined further on the **Authorization → Permission sets** pages, and the APIs enforce them independently of navigation.
+
+### Demo data
+
+`storage/populate-demo-crm.mjs` loads a Chinese dataset for a fictional consulting firm (云策数字咨询): related leads, accounts, contacts, opportunities across six months, activities including some due today, and approvals raised by their applicants. Dates are relative to the day the script runs. It expects these accounts to exist, with the password equal to the username:
+
+| Username                                     | Name                   | Role          |
+| -------------------------------------------- | ---------------------- | ------------- |
+| `admin`                                      | Admin                  | Administrator |
+| `liming`, `zhaomin`                          | 李明, 赵敏             | Sales manager |
+| `wangxiaofang`, `chenxiaohao`, `liuxiaoyang` | 王小芳, 陈小浩, 刘小洋 | Salesperson   |
+
+```bash
+node --import tsx storage/populate-demo-crm.mjs
+```
+
+The script refuses to run twice; `node --import tsx storage/reset-demo-crm.mjs` removes what it created, using the manifest it wrote to `storage/demo-crm-manifest.json`. Both scripts copy the database into `storage/backups/` first.
+
+### Configure AI
+
+No model credentials are bundled. Declare an LLM service under `ai.llmServices` in `config.yml` (`config.example.yml` shows the shape, with the API key read from an environment variable), then select the service and model in **Settings → CRM settings → AI configuration**. Until then the assistant reports that a model is required.
+
+The assistant reads authorized records, drafts recommendations, and proposes creates, updates, conversions, and approval actions as cards that the user confirms one by one; it never writes without confirmation, and it screens every proposal against the user's permissions and the record's state before offering it. The company research shortcut uses the provider's own web search, so it needs a provider that offers one. Model-generated dates, amounts, and identities still need review, and AI context is bounded to the most recent records per object.
+
+### Notifications
+
+In-app notifications for assignments, activity participation, activity reminders, and approvals are queued in an outbox and delivered every 30 seconds. Delivery needs the in-app channel enabled under `notification.channels` in `config.yml`, as in `config.example.yml`; without it every queued event fails with `Notification Channel "in-app" is not enabled`, recorded on the outbox row. Outbox states are `pending`, `sending`, `submitted`, and `failed`. A crashed process can leave `sending` rows that an operator reconciles against the notification service before retrying; they are not blindly resent.
 
 ### Review your configuration
 
@@ -26,9 +61,9 @@ pnpm dev
 
 - **Database.** Point the connection at the database you actually intend to use — dialect, host, port, and credentials.
 - **Where the application is served.** `APP_BASE_PATH` is the public mount path, `/main` by default, so the development URL looks like `http://127.0.0.1:13000/main/`. `APP_SERVER_PORT` and `APP_SERVER_HOST` change what the server binds to.
-- **Anything a feature you enable requires** — mail delivery, IM webhooks, storage. `config.example.yml` documents every available option, including sections your `config.yml` does not yet have.
+- **Anything a feature you enable requires** — AI services, mail delivery, IM webhooks, storage. `config.example.yml` documents every available option, including sections your `config.yml` does not yet have.
 
-`config.yml` is gitignored because it holds your `auth.secret`. Deploy it through your secret management rather than committing it.
+`config.yml` is gitignored because it holds your `auth.secret` and API keys. Deploy it through your secret management rather than committing it.
 
 To run against a production build instead:
 
@@ -36,6 +71,8 @@ To run against a production build instead:
 pnpm build
 pnpm start
 ```
+
+Build targets the local platform by default; use `pnpm build --target linux-x64 --node-version 24` (or your actual target) for deployment elsewhere, as described under [Deploying to a different machine](#deploying-to-a-different-machine). Supply production configuration separately and never run development and production against the same SQLite database at once. External mail and calendar integrations and automatic lead ingestion are outside this implementation.
 
 ## Project structure
 
@@ -68,13 +105,15 @@ server/                  API server
 
 database/
 └── main/
-    ├── migrations/      Your schema history (initially empty)
-    └── seeds/           Your required initial data (initially empty)
+    ├── migrations/      CRM schema history; applied files are checksummed, never reformat them
+    └── seeds/           Required initial data
 
 tests/                   Unit and integration tests
 e2e/                     Browser tests needing a real server
+storage/                 SQLite database, uploads, and the demo data scripts; only the scripts are committed
 config.yml               Your configuration, generated at setup; gitignored
 config.example.yml       Documented configuration template
+SPEC.md                  Product specification the CRM implements
 skills/                  In-depth development guides for AI agents
 ```
 

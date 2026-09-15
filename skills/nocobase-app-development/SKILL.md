@@ -131,4 +131,4 @@ Verify observable behavior, not just that the commands passed. [Testing and veri
 
 ## CRM application additions
 
-This application implements `spec.md` in `client/pages/crm-*.tsx`, `client/components/crm/`, `server/providers/crm/`, and `server/routes/crm.ts`. CRM migrations are checksummed history; do not reformat applied files. The Vitest configuration resolves the installed `@nocobase/app-client` package rather than the template monorepo alias, so component tests work in this standalone checkout. See `CRM.md` for operation and verification.
+This application implements `SPEC.md` in `client/pages/crm-*.tsx`, `client/components/crm/`, `server/providers/crm/`, and `server/routes/crm.ts`. CRM migrations are checksummed history; do not reformat applied files. The Vitest configuration resolves the installed `@nocobase/app-client` package rather than the template monorepo alias, so component tests work in this standalone checkout. See `README.MD` for running the application, demo data, and configuration.
