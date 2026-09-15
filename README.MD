@@ -31,11 +31,11 @@ Disabling a user in CRM settings denies the CRM APIs for that account. Record an
 
 ### Demo data
 
-`storage/populate-demo-crm.mjs` loads a Chinese dataset for a fictional consulting firm (云策数字咨询): related leads, accounts, contacts, opportunities across six months, activities including some due today, and approvals raised by their applicants. Dates are relative to the day the script runs. It expects these accounts to exist, with the password equal to the username:
+`storage/populate-demo-crm.mjs` loads a Chinese dataset for a fictional consulting firm (云策数字咨询): related leads, accounts, contacts, opportunities across six months, activities including some due today, and approvals raised by their applicants. Dates are relative to the day the script runs. It expects these accounts to exist. The administrator keeps the platform default password, `admin123`; every other account's password equals its username:
 
 | Username                                     | Name                   | Role          |
 | -------------------------------------------- | ---------------------- | ------------- |
-| `admin`                                      | Admin                  | Administrator |
+| `nocobase`                                   | Admin                  | Administrator |
 | `liming`, `zhaomin`                          | 李明, 赵敏             | Sales manager |
 | `wangxiaofang`, `chenxiaohao`, `liuxiaoyang` | 王小芳, 陈小浩, 刘小洋 | Salesperson   |
 

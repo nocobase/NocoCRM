@@ -4,7 +4,7 @@
 // what reset-demo-crm.mjs uses to find them again.
 //
 // Records belong to the sales team — manager 李明 and salespeople 王小芳, 陈小浩 —
-// and the administrator (admin) owns nothing, so every role's view has the
+// and the administrator (nocobase) owns nothing, so every role's view has the
 // right shape: sellers see their own book, the manager the team, the admin
 // everything. Approvals are raised by the applicant's own account.
 import { createRequire } from 'node:module';
@@ -28,10 +28,10 @@ if (existing) { console.log('Demo dataset already exists:', existing.value); sql
 const users = sqlite.prepare('SELECT id, name, username FROM user').all();
 const byUsername = (username) => {
   const user = users.find((u) => u.username === username);
-  if (!user) throw new Error(`User "${username}" is missing; create the demo accounts first (admin, liming, zhaomin, wangxiaofang, chenxiaohao).`);
+  if (!user) throw new Error(`User "${username}" is missing; create the demo accounts first (nocobase, liming, zhaomin, wangxiaofang, chenxiaohao).`);
   return user;
 };
-const owner = byUsername('admin');
+const owner = byUsername('nocobase');
 const manager = byUsername('liming');
 const manager2 = byUsername('zhaomin');
 const sellers = [byUsername('wangxiaofang'), byUsername('chenxiaohao')];
