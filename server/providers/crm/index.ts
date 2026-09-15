@@ -1,0 +1,188 @@
+import { i18nToken } from '@nocobase/app-server/i18n';
+import { notificationLocales } from '../../locales/crm-notifications.js';
+import { asEntity, toText } from './schema.js';
+import type { Application } from '@nocobase/app-server/application';
+import { databaseManagerToken } from '@nocobase/db';
+import {
+  createServiceToken,
+  ServiceProvider,
+  type ServiceToken,
+} from '@nocobase/service-provider';
+import { createCronJobManager, type CronJobManager } from '@nocobase/cron';
+import { authorizationToken } from '@nocobase/app-plugin-authorization';
+import { aiManagerToken } from '@nocobase/app-plugin-ai-employee/server';
+import { notificationServiceToken } from '@nocobase/app-plugin-notification/server';
+import {
+  provisionCrm,
+  registerCrmResources,
+  type Actor,
+} from './authorization.js';
+import { CrmService, array } from './service.js';
+import { CrmAi } from './ai.js';
+
+export const crmToken: ServiceToken<CrmService> =
+  createServiceToken<CrmService>('crm/service');
+export const crmAiToken: ServiceToken<CrmAi> =
+  createServiceToken<CrmAi>('crm/ai');
+export default class CrmProvider extends ServiceProvider<Application> {
+  public readonly name: string = 'crm/provider';
+  private cron?: CronJobManager;
+  private scanning = false;
+  public override register(): void {
+    this.app.container
+      .resolve(i18nToken)
+      .registry.register('crm-notifications', notificationLocales);
+    this.app.container.singleton(
+      crmToken,
+      () =>
+        new CrmService(
+          this.app.container.resolve(databaseManagerToken),
+          this.app.container.resolve(authorizationToken),
+        ),
+    );
+    this.app.container.singleton(
+      crmAiToken,
+      () =>
+        new CrmAi(
+          this.app.container.resolve(crmToken),
+          this.app.container.resolve(aiManagerToken),
+        ),
+    );
+    registerCrmResources(this.app.container.resolve(authorizationToken));
+  }
+  public override async boot(): Promise<void> {
+    await provisionCrm(
+      this.app.container.resolve(authorizationToken),
+      this.app.container.resolve(databaseManagerToken),
+    );
+  }
+  public override async start(): Promise<void> {
+    // Replies awaited when the previous process stopped will never arrive.
+    await this.app.container.resolve(crmAiToken).failAbandoned();
+    this.cron = createCronJobManager();
+    this.cron.addJob({ cronTime: '*/30 * * * * *', onTick: () => this.scan() });
+    this.cron.start();
+  }
+  public override async shutdown(): Promise<void> {
+    this.cron?.close();
+  }
+  private async scan(): Promise<void> {
+    if (this.scanning) return;
+    this.scanning = true;
+    try {
+      const service = this.app.container.resolve(crmToken);
+      const query = service.database.query();
+      const settings = await service.settings();
+      const now = new Date();
+      const system: Actor = {
+        id: 'system',
+        locale: 'en-US',
+        scope: service.authz.for({ principal: { type: 'system', id: 'crm' } }),
+      };
+      const activities = await query
+        .selectFrom('crmActivities')
+        .selectAll()
+        .where('status', '=', 'planned')
+        .where('startAt', '>=', now.toISOString())
+        .where(
+          'startAt',
+          '<=',
+          new Date(
+            now.getTime() + settings.activityReminderMinutes * 60000,
+          ).toISOString(),
+        )
+        .execute();
+      for (const activity of activities)
+        for (const user of new Set([
+          activity.ownerId,
+          ...array(activity.internalParticipants),
+        ]))
+          await service.enqueue(
+            query,
+            system,
+            'activities',
+            activity,
+            toText(user),
+            'starting',
+            `activity:${toText(activity.id)}:${toText(activity.startAt)}:${toText(user)}`,
+          );
+      const pending = await query
+        .selectFrom('crmOutbox')
+        .selectAll()
+        .where('status', '=', 'pending')
+        .limit(50)
+        .execute();
+      for (const row of pending) {
+        const claim = await query
+          .updateTable('crmOutbox')
+          .set({ status: 'sending', claimedAt: now.toISOString() })
+          .where('id', '=', row.id)
+          .where('status', '=', 'pending')
+          .execute();
+        if (!claim.updatedCount) continue;
+        try {
+          await service.ensureActive(toText(row.recipientId));
+          const preference = await query
+            .selectFrom('crmUserPreferences')
+            .select('locale')
+            .where('id', '=', row.recipientId)
+            .executeTakeFirst();
+          const recipient: Actor = {
+            id: toText(row.recipientId),
+            locale: preference?.locale === 'zh-CN' ? 'zh-CN' : 'en-US',
+            scope: service.authz.for({
+              principal: { type: 'user', id: toText(row.recipientId) },
+              subjects: [{ type: 'authenticated', id: '*' }],
+            }),
+          };
+          const record = await service.get(
+            recipient,
+            asEntity(toText(row.entity)),
+            toText(row.recordId),
+          );
+          const i18n = this.app.container.resolve(i18nToken);
+          await i18n.ensureLocaleLoaded(recipient.locale);
+          const t = i18n.getFixedT('crm-notifications', recipient.locale);
+          const title = t(`titles.${toText(row.event)}`, {
+            entity: t(`entities.${toText(row.entity)}`),
+          });
+          const content = {
+            title,
+            body: t('body', { title, name: record.name ?? '' }),
+          };
+          const sent = await this.app.container
+            .resolve(notificationServiceToken)
+            .send({
+              source: { type: 'crm', referenceId: toText(row.id) },
+              to: { type: 'user', id: toText(row.recipientId) },
+              channels: ['in-app'],
+              content: {
+                ...content,
+                actionUrl: `${toText(this.app.publicBasePath)}/crm/${toText(row.entity)}/${toText(row.recordId)}`,
+              },
+            });
+          await query
+            .updateTable('crmOutbox')
+            .set({ status: 'submitted', notificationId: sent.notificationId })
+            .where('id', '=', row.id)
+            .execute();
+        } catch (error) {
+          // The reason stays with the row: a failed delivery that says only
+          // "failed" cannot be diagnosed later.
+          await query
+            .updateTable('crmOutbox')
+            .set({
+              status: 'failed',
+              error: `notificationSubmissionFailed: ${
+                error instanceof Error ? error.message : String(error)
+              }`.slice(0, 500),
+            })
+            .where('id', '=', row.id)
+            .execute();
+        }
+      }
+    } finally {
+      this.scanning = false;
+    }
+  }
+}

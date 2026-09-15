@@ -1,0 +1,262 @@
+import { useGetIdentity } from '@refinedev/core';
+import {
+  apiClientToken,
+  useService,
+  ApiClientError,
+} from '@nocobase/app-client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from '@nocobase/i18n/client';
+import { useCallback } from 'react';
+import type {
+  CrmRecord,
+  Entity,
+  EntityDefinition,
+  CrmSettings,
+  Field,
+} from '../../../server/providers/crm/schema.js';
+export type { CrmRecord, Entity, EntityDefinition, CrmSettings, Field };
+export type Data = Record<string, unknown>;
+export interface User {
+  id: string;
+  name: string;
+  username?: string | null;
+  email?: string;
+  roles: string[];
+  disabled: boolean;
+  canApprove: boolean;
+}
+export interface Metadata {
+  definitions: Record<Entity, EntityDefinition>;
+  probabilities: Record<string, number>;
+  permissions: Record<
+    Entity,
+    Record<string, false | { fields: string[] | '*' }>
+  >;
+  settings: CrmSettings;
+  userId: string;
+  users: User[];
+  manage: boolean;
+  assign: boolean;
+  approve: boolean;
+  settingsAccess: boolean;
+}
+export interface ListData {
+  data: CrmRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+export interface Detail {
+  record: CrmRecord;
+  history: Data[];
+  related: Partial<Record<Entity, CrmRecord[]>>;
+  // What a delete would orphan, counted per child object; empty when clear.
+  blockers?: Partial<Record<Entity, number>>;
+  // Records a delete would edit (a contact taken out of their lists).
+  unlinks?: Partial<Record<Entity, number>>;
+  permissions: { edit: boolean; delete: boolean; approve: boolean };
+}
+export function useCrmApi() {
+  const api = useService(apiClientToken);
+  const { i18n } = useTranslation('crm');
+  return useCallback(
+    async <T>(
+      path: string,
+      method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET',
+      input?: unknown,
+    ): Promise<T> =>
+      api.request<T>({
+        path: `crm/${toText(path)}`,
+        method,
+        headers: { 'X-CRM-Request': '1', 'Accept-Language': i18n.language },
+        ...(input instanceof FormData
+          ? { body: input }
+          : input !== undefined
+            ? { json: input }
+            : {}),
+      }),
+    [api, i18n.language],
+  );
+}
+// One page, everywhere the CRM pages or reveals more: list pages, board
+// columns, the lists on a record's tabs, the action centre.
+export const PAGE_SIZE = 20;
+
+export function useCrmScopeKey(): readonly string[] {
+  const { data: identity } = useGetIdentity<{ id: string }>();
+  const { i18n } = useTranslation('crm');
+  return ['crm', identity?.id ?? 'anonymous', i18n.language];
+}
+export function useCrmQuery<T>(
+  path: string,
+  enabled = true,
+  // refetchInterval may look at the latest data, so a poll can stop itself.
+  options: { refetchInterval?: (data: T | undefined) => number | false } = {},
+) {
+  const api = useCrmApi();
+  const scopeKey = useCrmScopeKey();
+  const interval = options.refetchInterval;
+  return useQuery({
+    queryKey: [...scopeKey, path],
+    queryFn: () => api<{ data: T }>(path).then((r) => r.data),
+    enabled,
+    staleTime: 15000,
+    refetchInterval: interval ? (query) => interval(query.state.data) : false,
+    // A 4xx answer (missing, forbidden, invalid) will not change on a retry;
+    // retrying it only delays the caller — a deleted record's page waited
+    // out three backed-off retries before it could leave.
+    retry: (failureCount, error) =>
+      !(
+        error instanceof ApiClientError &&
+        error.status >= 400 &&
+        error.status < 500
+      ) && failureCount < 3,
+  });
+}
+export function useMetadata() {
+  return useCrmQuery<Metadata>('metadata');
+}
+export function useRefresh() {
+  const client = useQueryClient();
+  return useCallback(
+    () => client.invalidateQueries({ queryKey: ['crm'] }),
+    [client],
+  );
+}
+export function useCrmText() {
+  const { t, i18n } = useTranslation('crm');
+  const text = (key: string, options: Record<string, unknown> = {}): string =>
+    t(`crm.${toText(key)}`, { ns: 'crm', ...options });
+  return { text, language: i18n.language };
+}
+export function errorCode(error: unknown): {
+  code: string;
+  field?: string;
+  detail?: string;
+} {
+  if (error instanceof ApiClientError) {
+    const body = error.payload as
+      { code?: string; field?: string; detail?: string } | undefined;
+    return {
+      code: body?.code ?? 'serverError',
+      field: body?.field,
+      detail: body?.detail,
+    };
+  }
+  // A client-side validation result, shaped like a server error body so the
+  // same notice renders it.
+  if (error && typeof error === 'object' && 'code' in error) {
+    const local = error as { code: unknown; field?: string; detail?: string };
+    return {
+      code: toText(local.code),
+      field: local.field,
+      detail: local.detail,
+    };
+  }
+  return { code: 'serverError' };
+}
+export function rows(value: unknown): Data[] {
+  return Array.isArray(value) ? (value as Data[]) : [];
+}
+export function money(
+  value: unknown,
+  currency = 'CNY',
+  language = 'en-US',
+): string {
+  try {
+    return new Intl.NumberFormat(language, {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 0,
+    }).format(Number(value ?? 0));
+  } catch {
+    return `${toText(currency)} ${toText(Number(value ?? 0).toLocaleString(language))}`;
+  }
+}
+export function moneyTotals(value: unknown, language: string): string {
+  const pairs = Object.entries((value ?? {}) as Data);
+  return pairs.length
+    ? pairs
+        .map(([currency, amount]) => money(amount, currency, language))
+        .join(' · ')
+    : '—';
+}
+export function localDate(
+  value: unknown,
+  language: string,
+  timeZone: string,
+  time = true,
+): string {
+  if (!value) return '—';
+  try {
+    return new Intl.DateTimeFormat(language, {
+      dateStyle: 'medium',
+      ...(time ? { timeStyle: 'short' as const } : {}),
+      timeZone,
+    }).format(new Date(toText(value)));
+  } catch {
+    return '—';
+  }
+}
+
+// A composed heading ("lead information") starts with a capital, whatever
+// the piece it was built from; harmless on languages without case.
+export function sentence(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+export function toText(value: unknown): string {
+  if (value == null) return '';
+  if (typeof value === 'object')
+    return value instanceof Date ? value.toISOString() : JSON.stringify(value);
+  return typeof value === 'string'
+    ? value
+    : typeof value === 'number' ||
+        typeof value === 'boolean' ||
+        typeof value === 'bigint' ||
+        typeof value === 'symbol'
+      ? String(value)
+      : '';
+}
+
+export function fieldLabelKey(entity: Entity, field: string): string {
+  if (entity === 'leads' && field === 'name') return 'fields.leadName';
+  if (entity === 'contacts' && field === 'name') return 'fields.contactName';
+  if (entity === 'activities' && field === 'name') return 'fields.activityName';
+  // On an approval the owner is the person asking.
+  if (entity === 'approvals' && field === 'ownerId') return 'fields.applicant';
+  if (entity === 'approvals' && field === 'name')
+    return 'fields.approvalSubject';
+  // The specification calls an account's description its introduction.
+  if (entity === 'accounts' && field === 'description')
+    return 'fields.accountDescription';
+  // On an activity the record links are "related lead / account /
+  // opportunity", not the bare object names.
+  if (
+    entity === 'activities' &&
+    ['leadId', 'accountId', 'opportunityId'].includes(field)
+  )
+    return `fields.related.${field}`;
+  return `fields.${field}`;
+}
+
+export function arrayValues(value: unknown): unknown[] {
+  return Array.isArray(value) ? (value as unknown[]) : [];
+}
+
+// The href for a value that looks like a web address, or undefined. A bare
+// domain ("example.com", "www.example.com/path") gets https://; anything with
+// spaces or no dot is not a link. Nothing is required of what the user typed.
+export function linkOf(value: unknown): string | undefined {
+  const raw = toText(value ?? '').trim();
+  if (!raw || /\s/.test(raw)) return undefined;
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      return new URL(raw).href;
+    } catch {
+      return undefined;
+    }
+  }
+  return /^[\w-]+(\.[\w-]+)+(:\d+)?(\/\S*)?$/.test(raw)
+    ? `https://${raw}`
+    : undefined;
+}

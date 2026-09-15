@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "crm-dev",
+      "runtimeExecutable": "env",
+      "runtimeArgs": ["APP_SERVER_PORT=13100", "pnpm", "dev"],
+      "port": 13100,
+      "url": "http://127.0.0.1:13100"
+    }
+  ]
+}

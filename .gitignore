@@ -1,0 +1,30 @@
+node_modules/
+dist/
+coverage/
+
+# Local configuration, including the generated AUTH_SECRET.
+/config.yml
+
+# Local environment secrets.
+.env
+.env.*
+!.env.example
+
+# Local application state. The demo data scripts are source, not state.
+/storage/*
+!/storage/populate-demo-crm.mjs
+!/storage/reset-demo-crm.mjs
+/.agents/
+/.agent-annotations/
+/.nocobase/
+*.log
+
+# Personal editor/agent settings.
+/.claude/settings.local.json
+
+# SQLite databases anywhere (the application state lives under storage/).
+*.sqlite
+*.sqlite-journal
+
+# pnpm's local content store.
+/.pnpm-store
