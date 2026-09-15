@@ -412,7 +412,13 @@ export const extraFields: Partial<Record<Entity, string[]>> = {
     'convertedOpportunityId',
   ],
   opportunities: ['closedAt'],
-  activities: ['completedAt'],
+  activities: [
+    'completedAt',
+    'emailSentAt',
+    'emailSentTo',
+    'emailSubject',
+    'emailBody',
+  ],
   approvals: ['status', 'decisionComment', 'submittedAt', 'decidedAt'],
 };
 export function fieldsFor(entity: Entity): string[] {

@@ -273,6 +273,18 @@ const wording = {
     '分析客户、准备跟进计划，或复盘商机…',
   ],
   send: ['Send', '发送'],
+  sending: ['Sending…', '正在发送…'],
+  sendEmail: ['Send email', '发送邮件'],
+  sendEmailAgain: ['Send again', '再次发送'],
+  emailTitle: ['Send "{{name}}" by email?', '通过邮件发送「{{name}}」？'],
+  emailHint: [
+    'It goes from the CRM mailbox to the contacts below. The subject and body start from the activity name and description; edit them here if needed. Once the mail server accepts it, the activity keeps the message as sent and is marked completed.',
+    '由 CRM 邮箱发送给以下联系人。主题和正文已按活动名称和描述预填，可在此修改。邮件服务器接收后，活动保存实际发出的内容并记为已完成。',
+  ],
+  emailSentCard: ['Email sent', '已发送的邮件'],
+  emailRecipients: ['Recipients', '收件人'],
+  emailSubject: ['Subject', '主题'],
+  emailBody: ['Body', '正文'],
   thinking: ['Thinking…', '正在思考…'],
   assistantHint: [
     'Suggestions use the records you can access. Review assumptions before confirming changes.',
@@ -703,6 +715,10 @@ const wording = {
     updatedAt: ['Updated', '更新时间'],
     closedAt: ['Closed', '关闭时间'],
     completedAt: ['Completed', '完成时间'],
+    emailSentAt: ['Sent', '发送时间'],
+    emailSentTo: ['Sent to', '收件人'],
+    emailSubject: ['Subject', '主题'],
+    emailBody: ['Body', '正文'],
     submittedAt: ['Submitted', '提交时间'],
     decidedAt: ['Decided', '审批时间'],
     decisionComment: ['Decision comment', '审批意见'],
@@ -856,6 +872,7 @@ const wording = {
     stage: ['Stage changed', '阶段变更'],
     status: ['Status changed', '状态变更'],
     converted: ['Lead converted', '线索转化'],
+    emailSent: ['Email sent', '邮件已发送'],
   },
   errors: {
     serverError: [
@@ -881,6 +898,19 @@ const wording = {
     convertedReadOnly: [
       'Converted leads are read-only.',
       '已转化线索为只读状态。',
+    ],
+    noRecipient: [
+      'No external participant has an email address.',
+      '外部参与人都没有邮箱地址。',
+    ],
+    emailBodyRequired: ['The email needs a body.', '邮件正文不能为空。'],
+    emailNotApplicable: [
+      'Only an email activity can be sent.',
+      '只有邮件类型的活动可以发送。',
+    ],
+    emailFailed: [
+      'The mail server did not accept the message. Check the email channel in config.yml.',
+      '邮件服务器未接受该邮件，请检查 config.yml 中的邮件通道。',
     ],
     approvalLocked: [
       'This approval cannot be changed in its current state.',

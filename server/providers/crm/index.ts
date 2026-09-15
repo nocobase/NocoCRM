@@ -176,8 +176,8 @@ export default class CrmProvider extends ServiceProvider<Application> {
             .send({
               // One outbox row is one notification: a retry after a crash
               // is deduplicated by the service instead of sent twice.
-              idempotencyKey: `crm:${toText(row.id)}`,
-              source: { type: 'crm', referenceId: toText(row.id) },
+              idempotencyKey: `crm-notification:${toText(row.id)}`,
+              source: { type: 'crm-notification', referenceId: toText(row.id) },
               to: { type: 'user', id: toText(row.recipientId) },
               channels: ['in-app'],
               content: {

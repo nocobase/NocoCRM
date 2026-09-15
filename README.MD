@@ -55,7 +55,7 @@ The assistant reads authorized records, drafts recommendations, and proposes cre
 
 ### Notifications
 
-In-app notifications for assignments, activity participation, activity reminders, and approvals are queued in an outbox and delivered every 30 seconds. Delivery needs the in-app channel enabled under `notification.channels` in `config.yml`, as in `config.example.yml`; without it every queued event fails with `Notification Channel "in-app" is not enabled`, recorded on the outbox row. Outbox states are `pending`, `sending`, `submitted`, and `failed`. A crashed process can leave `sending` rows that an operator reconciles against the notification service before retrying; they are not blindly resent.
+In-app notifications for assignments, activity participation, activity reminders, and approvals are queued in an outbox and delivered every 30 seconds. Delivery needs the in-app channel enabled under `notification.channels` in `config.yml`, as in `config.example.yml`; without it every queued event fails with `Notification Channel "in-app" is not enabled`, recorded on the outbox row. Enabling the `email` channel as well (SMTP or Resend, shown in `config.example.yml`) lets an email activity be sent to its external participants from the activity page; the mail goes out from that mailbox, and the activity records when and to whom it was sent. Outbox states are `pending`, `sending`, `submitted`, and `failed`. A crashed process can leave `sending` rows that an operator reconciles against the notification service before retrying; they are not blindly resent.
 
 ### Review your configuration
 

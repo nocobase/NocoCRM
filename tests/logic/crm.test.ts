@@ -47,6 +47,7 @@ let authorization: AppAuthorization;
 let service: CrmService;
 let folder: string;
 let router: Hono;
+let container: ServiceContainer;
 const actor = (id: string): Actor => ({
   id,
   locale: 'en-US',
@@ -120,7 +121,7 @@ beforeAll(async () => {
       subject: { type: 'user', id },
     });
   service = new CrmService(database, authorization);
-  const container = new ServiceContainer();
+  container = new ServiceContainer();
   const required = (): MiddlewareHandler => async (c, next) => {
     const id = c.req.header('x-test-user');
     if (!id) return c.json({ code: 'unauthorized' }, 401);
@@ -1023,6 +1024,130 @@ describe('CRM API security and domain rules', () => {
       scope.assertCanDisable?.('rep', connection),
     ).resolves.toBeUndefined();
   });
+
+  it('sends an email activity to its contacts and records the send', async () => {
+    const account = await service.save(actor('rep'), 'accounts', {
+      name: '邮件客户',
+    });
+    const contact = await service.save(actor('rep'), 'contacts', {
+      name: '王收件',
+      accountId: account.id,
+      email: 'wang@example.com',
+    });
+    const silent = await service.save(actor('rep'), 'contacts', {
+      name: '无邮箱',
+      accountId: account.id,
+    });
+    const activity = await service.save(actor('rep'), 'activities', {
+      name: '报价说明',
+      type: 'email',
+      accountId: account.id,
+      description: '附上本周报价，请查收。',
+      externalParticipants: [contact.id, silent.id],
+      startAt: '2026-09-15T09:00:00.000Z',
+      endAt: '2026-09-15T09:30:00.000Z',
+    });
+    const send = vi.fn().mockResolvedValue({ notificationId: 'mail-1' });
+    container.instance(notificationServiceToken, {
+      send,
+    } as unknown as ReturnType<
+      typeof container.resolve<typeof notificationServiceToken>
+    >);
+    const preview = (await (
+      await request(`/activities/${activity.id}/email`, 'rep')
+    ).json()) as { data: { recipients: { email: string }[]; subject: string } };
+    expect(preview.data.subject).toBe('报价说明');
+    expect(preview.data.recipients.map((r) => r.email)).toEqual([
+      'wang@example.com',
+    ]);
+    // Another salesperson may read the activity but not send in its name.
+    expect(
+      (await request(`/activities/${activity.id}/email`, 'other', 'POST', {}))
+        .status,
+    ).toBe(404);
+    expect(send).not.toHaveBeenCalled();
+    // Reworded in the dialog: the sent wording is what the activity keeps,
+    // while its name and description stay as drafted.
+    const sent = await request(
+      `/activities/${activity.id}/email`,
+      'rep',
+      'POST',
+      { subject: '本周报价', body: '王总您好，附上本周报价，请查收。' },
+    );
+    expect(sent.status).toBe(200);
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0]?.[0]).toMatchObject({
+      to: [{ type: 'email', address: 'wang@example.com' }],
+      channels: ['email'],
+      content: { title: '本周报价', body: '王总您好，附上本周报价，请查收。' },
+    });
+    const after = await service.get(actor('rep'), 'activities', activity.id);
+    expect(after.status).toBe('completed');
+    expect(after.completedAt).toBeTruthy();
+    expect(after.name).toBe('报价说明');
+    expect(after.emailSentTo).toBe('wang@example.com');
+    expect(after.emailSentAt).toBeTruthy();
+    expect(after.emailSubject).toBe('本周报价');
+    expect(after.emailBody).toBe('王总您好，附上本周报价，请查收。');
+    // An empty body is refused before anything goes out.
+    expect(
+      (
+        await request(`/activities/${activity.id}/email`, 'rep', 'POST', {
+          body: ' ',
+        })
+      ).status,
+    ).toBe(400);
+    expect(send).toHaveBeenCalledTimes(1);
+    const history = await database
+      .query()
+      .selectFrom('crmHistory')
+      .select(['action', 'toValue'])
+      .where('recordId', '=', activity.id)
+      .execute();
+    expect(history).toContainEqual({
+      action: 'emailSent',
+      toValue: 'wang@example.com',
+    });
+    // Not an email, or nobody to send to: refused before anything goes out.
+    const call = await service.save(actor('rep'), 'activities', {
+      name: '电话跟进',
+      type: 'call',
+      accountId: account.id,
+      startAt: '2026-09-15T10:00:00.000Z',
+      endAt: '2026-09-15T10:30:00.000Z',
+    });
+    expect(
+      (await request(`/activities/${call.id}/email`, 'rep', 'POST', {})).status,
+    ).toBe(409);
+    const lonely = await service.save(actor('rep'), 'activities', {
+      name: '无人可发',
+      type: 'email',
+      accountId: account.id,
+      description: '正文',
+      externalParticipants: [silent.id],
+      startAt: '2026-09-15T11:00:00.000Z',
+      endAt: '2026-09-15T11:30:00.000Z',
+    });
+    expect(
+      (await request(`/activities/${lonely.id}/email`, 'rep', 'POST', {}))
+        .status,
+    ).toBe(400);
+    // A refusal from the mail server is reported with its reason.
+    send.mockRejectedValueOnce(
+      new Error('Notification Channel "email" is not enabled'),
+    );
+    const failed = await request(
+      `/activities/${activity.id}/email`,
+      'rep',
+      'POST',
+      {},
+    );
+    expect(failed.status).toBe(502);
+    expect(((await failed.json()) as { detail: string }).detail).toContain(
+      'not enabled',
+    );
+    expect(send).toHaveBeenCalledTimes(2);
+  });
   it('requires AI confirmation and applies the current user permissions on execution', async () => {
     const ai = new CrmAi(service, {} as AIManager);
     const lead = await service.save(actor('other'), 'leads', {
@@ -1179,10 +1304,10 @@ it('reverses the CRM migration on a real SQLite database', async () => {
       directory: resolve('database/main/migrations'),
       packageName: 'crm',
     });
-    expect((await migrator.latest()).executed).toHaveLength(23);
+    expect((await migrator.latest()).executed).toHaveLength(24);
     expect(await isolated.builder().hasCollection('crmLeads')).toBe(true);
     expect((await migrator.latest()).executed).toEqual([]);
-    expect((await migrator.rollback()).rolledBack).toHaveLength(23);
+    expect((await migrator.rollback()).rolledBack).toHaveLength(24);
     expect(await isolated.builder().hasCollection('crmLeads')).toBe(false);
     expect(await isolated.builder().hasCollection('crmAccounts')).toBe(false);
   } finally {

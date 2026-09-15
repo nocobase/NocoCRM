@@ -18,6 +18,8 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { crmToken, crmAiToken } from '../providers/crm/index.js';
+import { activityEmail, sendActivityEmail } from '../providers/crm/email.js';
+import { notificationServiceToken } from '@nocobase/app-plugin-notification/server';
 import {
   capability,
   conditions,
@@ -381,6 +383,26 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           c.get('actor'),
           c.req.param('id'),
           await c.req.json(),
+        ),
+      }),
+    );
+    // What an email activity would send, and the send itself. The mail goes
+    // through the notification plugin's email channel; the service is looked
+    // up per request so a test can stand in for it.
+    routes.get('/activities/:id/email', async (c) =>
+      c.json({
+        data: (await activityEmail(service, c.get('actor'), c.req.param('id')))
+          .preview,
+      }),
+    );
+    routes.post('/activities/:id/email', async (c) =>
+      c.json({
+        data: await sendActivityEmail(
+          service,
+          app.container.resolve(notificationServiceToken),
+          c.get('actor'),
+          c.req.param('id'),
+          object(await c.req.json()),
         ),
       }),
     );

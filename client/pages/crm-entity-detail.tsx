@@ -100,6 +100,7 @@ import { Choice, RecordForm } from '../components/crm/form.js';
 import { StageField } from '../components/crm/reasons.js';
 import { StageStepper } from '../components/crm/stage-stepper.js';
 import { ApprovalActions } from '../components/crm/approval-actions.js';
+import { ActivityEmailAction } from '../components/crm/activity-email.js';
 import {
   ActivityItem,
   Attachments,
@@ -559,6 +560,9 @@ export default function EntityDetail({
           {entity === 'approvals' && (
             <ApprovalActions approval={record} names={names} />
           )}
+          {entity === 'activities' && record.type === 'email' && editable && (
+            <ActivityEmailAction record={record} />
+          )}
           {shortcuts[entity] && (
             <div className='flex items-center'>
               {shortcuts[entity].map((key) => (
@@ -635,6 +639,14 @@ export default function EntityDetail({
             </span>
           </LeadRow>
         )}
+        {entity === 'activities' && record.emailSentAt ? (
+          <LeadRow label={text('fields.emailSentAt')} icon={Mail}>
+            <span className='px-2 py-1.5 text-sm'>
+              {localDate(record.emailSentAt, language, meta.settings.timeZone)}
+              {record.emailSentTo ? ` · ${toText(record.emailSentTo)}` : ''}
+            </span>
+          </LeadRow>
+        ) : null}
         {entity === 'approvals' && record.submittedAt ? (
           <LeadRow label={text('fields.submittedAt')} icon={Send}>
             <span className='px-2 py-1.5 text-sm'>
@@ -812,6 +824,32 @@ export default function EntityDetail({
                 </dl>
               </CardContent>
             </Card>
+            {entity === 'activities' && record.emailSentAt ? (
+              // The message as it went out, kept apart from the editable
+              // name and description it was drafted from.
+              <Card className='shadow-none'>
+                <CardHeader>
+                  <CardTitle>{text('emailSentCard')}</CardTitle>
+                </CardHeader>
+                <CardContent className='space-y-3 text-sm'>
+                  <div className='text-muted-foreground'>
+                    {localDate(
+                      record.emailSentAt,
+                      language,
+                      meta.settings.timeZone,
+                    )}
+                    {' · '}
+                    {toText(record.emailSentTo)}
+                  </div>
+                  <div className='font-medium'>
+                    {toText(record.emailSubject)}
+                  </div>
+                  <div className='whitespace-pre-wrap'>
+                    {toText(record.emailBody)}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
           </div>
           <Card className='shadow-none'>
             <CardHeader className='gap-3'>
