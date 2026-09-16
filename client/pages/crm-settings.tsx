@@ -1,3 +1,6 @@
+import { Sparkles } from 'lucide-react';
+import { PageContainer } from '../components/page-container.js';
+import { PageHeader } from '../components/page-header.js';
 import { toText } from '../components/crm/api.js';
 import { useState, type ReactElement } from 'react';
 import { Button } from '../components/ui/button.js';
@@ -10,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from '../components/ui/card.js';
-import { CrmFrame, Loading, ErrorNotice } from '../components/crm/common.js';
+import { Loading, ErrorNotice } from '../components/crm/common.js';
 import { Choice } from '../components/crm/form.js';
 import { ConfirmDialog } from './crm-detail.js';
 import {
@@ -40,11 +43,26 @@ export default function SettingsPage(): ReactElement {
   if (query.isLoading) return <Loading />;
   if (!query.data)
     return (
-      <CrmFrame title={text('settings')}>
+      <PageContainer>
+        <PageHeader title={text('settings')} actions={<AssistantAction />} />
         <ErrorNotice error={query.error} />
-      </CrmFrame>
+      </PageContainer>
     );
   return <SettingsForm initial={query.data} />;
+}
+function AssistantAction(): ReactElement {
+  const { text } = useCrmText();
+  return (
+    <Button
+      variant='outline'
+      onClick={() =>
+        window.dispatchEvent(new CustomEvent('crm-assistant', { detail: {} }))
+      }
+    >
+      <Sparkles />
+      {text('assistant')}
+    </Button>
+  );
 }
 function SettingsForm({
   initial,
@@ -155,32 +173,36 @@ function SettingsForm({
     </div>
   );
   return (
-    <CrmFrame
-      title={text('settings')}
-      description={text('settingsDescription')}
-      actions={
-        <Button
-          disabled={busy}
-          onClick={() => {
-            void (async () => {
-              setBusy(true);
-              setError(undefined);
-              try {
-                await api('settings', 'PUT', settings);
-                await refresh();
-                setSaved(true);
-              } catch (e) {
-                setError(e);
-              } finally {
-                setBusy(false);
-              }
-            })();
-          }}
-        >
-          {busy ? text('saving') : text('save')}
-        </Button>
-      }
-    >
+    <PageContainer>
+      <PageHeader
+        title={text('settings')}
+        description={text('settingsDescription')}
+        actions={
+          <>
+            <Button
+              disabled={busy}
+              onClick={() => {
+                void (async () => {
+                  setBusy(true);
+                  setError(undefined);
+                  try {
+                    await api('settings', 'PUT', settings);
+                    await refresh();
+                    setSaved(true);
+                  } catch (e) {
+                    setError(e);
+                  } finally {
+                    setBusy(false);
+                  }
+                })();
+              }}
+            >
+              {busy ? text('saving') : text('save')}
+            </Button>
+            <AssistantAction />
+          </>
+        }
+      />
       <ErrorNotice error={error} />
       {saved && (
         <p role='status' className='rounded-lg bg-primary/10 p-3 text-sm'>
@@ -333,6 +355,6 @@ function SettingsForm({
           ) : null}
         </CardContent>
       </Card>
-    </CrmFrame>
+    </PageContainer>
   );
 }
