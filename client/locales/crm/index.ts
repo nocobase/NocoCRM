@@ -290,6 +290,31 @@ const wording = {
   reminders: ['Reminders', '提醒设置'],
   aiSettings: ['AI configuration', 'AI 配置'],
   settingsSaved: ['Settings saved', '设置已保存'],
+  demoData: ['Demo data', '演示数据'],
+  demoDescription: [
+    'A Chinese dataset for a fictional consulting firm, 云策数字咨询: leads, accounts, contacts, opportunities, activities and approvals, dated relative to the day it is imported. Importing creates the demo accounts below when they do not exist; their password equals the username.',
+    '一套以虚构的「云策数字咨询」为背景的中文演示数据，包含线索、客户、联系人、商机、活动和审批，日期以导入当天为基准。导入时会自动创建下列演示账号（已存在的直接使用），密码与用户名相同。',
+  ],
+  demoAbsent: ['No demo data has been imported.', '尚未导入演示数据。'],
+  demoPresent: [
+    'Demo data imported on {{date}}: {{count}} records.',
+    '演示数据已于 {{date}} 导入，共 {{count}} 条记录。',
+  ],
+  demoAccounts: ['Demo accounts', '演示账号'],
+  demoImport: ['Import demo data', '导入演示数据'],
+  demoImportTitle: ['Import the demo data?', '导入演示数据？'],
+  demoImportHint: [
+    'The records are added to the current database and belong to the demo accounts. Nothing existing is changed, and the import can be removed again from here.',
+    '演示记录将加入当前数据库，负责人为演示账号；现有数据不会被修改，之后可以在此清除。',
+  ],
+  demoImported: ['Demo data imported', '演示数据已导入'],
+  demoReset: ['Remove demo data', '清除演示数据'],
+  demoResetTitle: ['Remove the demo data?', '清除演示数据？'],
+  demoResetHint: [
+    'Every record the import created is deleted, including changes made to them since. Records created by hand and the demo accounts stay.',
+    '导入创建的全部记录（含之后对它们的修改）都会被删除；手工创建的记录和演示账号保留。',
+  ],
+  demoRemoved: ['Demo data removed', '演示数据已清除'],
   enabled: ['Enabled', '启用'],
   disabled: ['Disabled', '停用'],
   role: ['Sales role', '销售角色'],
@@ -954,6 +979,15 @@ const wording = {
     importLimit: [
       'Import between 1 and 500 records at a time.',
       '每次可导入 1 至 500 条记录。',
+    ],
+    demoExists: [
+      'The demo data is already imported. Remove it before importing again.',
+      '演示数据已导入，请先清除后再导入。',
+    ],
+    demoMissing: ['There is no demo data to remove.', '没有可清除的演示数据。'],
+    demoAccounts: [
+      'The demo accounts could not be created because user management is unavailable.',
+      '用户管理不可用，无法创建演示账号。',
     ],
   },
 } as const;

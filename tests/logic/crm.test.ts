@@ -39,6 +39,12 @@ import { convertLead } from '../../server/providers/crm/conversion.js';
 import { crmToken, crmAiToken } from '../../server/providers/crm/index.js';
 import { CrmAi, previewRecords } from '../../server/providers/crm/ai.js';
 import { crmRoutes } from '../../server/routes/crm.js';
+import { userManagementServiceToken } from '@nocobase/app-plugin-users/server/tokens';
+import {
+  DEMO_MARKER,
+  demoAccounts,
+  demoStatus,
+} from '../../server/providers/crm/demo.js';
 import type { Application } from '@nocobase/app-server/application';
 import type { AIManager } from '@nocobase/ai-employee';
 
@@ -133,6 +139,34 @@ beforeAll(async () => {
   container.instance(authorizationToken, authorization);
   container.instance(crmToken, service);
   container.instance(crmAiToken, new CrmAi(service, {} as AIManager));
+  // What the demo import needs from the users plugin: an account with a role.
+  container.instance(userManagementServiceToken, {
+    async create(input: {
+      name: string;
+      username: string;
+      email: string;
+      roleScopes: Record<string, string>;
+    }) {
+      const id = `demo-${input.username}`;
+      await database
+        .query()
+        .insertInto('user')
+        .values({
+          id,
+          name: input.name,
+          username: input.username,
+          email: input.email,
+        })
+        .execute();
+      await authorization.permissionSets.assign({
+        permissionSet: input.roleScopes.app,
+        subject: { type: 'user', id },
+      });
+      return { id };
+    },
+  } as unknown as ReturnType<
+    typeof container.resolve<typeof userManagementServiceToken>
+  >);
   router = await crmRoutes.createRouter({
     container,
     publicBasePath: '/test',
@@ -1062,6 +1096,87 @@ describe('CRM API security and domain rules', () => {
       )?.status,
     ).toBe('pending');
   });
+});
+
+describe('demo dataset', () => {
+  const count = async (entity: string): Promise<number> =>
+    (await service.list(actor('admin'), entity as never, { pageSize: 1 }))
+      .total;
+  it('imports once for an administrator, creating the demo accounts', async () => {
+    expect(
+      (await request('/demo/populate', 'manager', 'POST', {})).status,
+    ).toBe(403);
+    const before = Object.fromEntries(
+      await Promise.all(
+        [
+          'leads',
+          'accounts',
+          'contacts',
+          'opportunities',
+          'activities',
+          'approvals',
+        ].map(async (entity) => [entity, await count(entity)]),
+      ),
+    );
+    expect(await demoStatus(service, actor('admin'))).toMatchObject({
+      present: false,
+      records: 0,
+    });
+    const populated = await request('/demo/populate', 'admin', 'POST', {});
+    expect(populated.status).toBe(200);
+    const status = (await populated.json()).data;
+    expect(status.present).toBe(true);
+    expect(status.records).toBeGreaterThan(100);
+    expect(await count('accounts')).toBe(before.accounts + 8);
+    expect(await count('opportunities')).toBe(before.opportunities + 30);
+    expect(await count('leads')).toBe(before.leads + 16);
+    expect(await count('approvals')).toBe(before.approvals + 3);
+    const users = await service.users(actor('admin'));
+    for (const account of demoAccounts) {
+      const user = users.find((u) => u.username === account.username);
+      expect(user).toBeDefined();
+      expect(user?.roles).toEqual([account.role]);
+    }
+    // The manager owns records; the administrator who imported owns none.
+    const owned = await service.list(actor('admin'), 'opportunities', {
+      pageSize: 1,
+      ownerId: 'admin',
+    });
+    expect(owned.total).toBe(0);
+    const again = await request('/demo/populate', 'admin', 'POST', {});
+    expect(again.status).toBe(409);
+    expect((await again.json()).code).toBe('demoExists');
+    // The assignment notifications the import produced do not reach anyone.
+    const queued = await database
+      .query()
+      .selectFrom('crmOutbox')
+      .select('id')
+      .where('recipientId', '=', 'demo-liming')
+      .execute();
+    expect(queued).toEqual([]);
+    expect((await request('/demo/reset', 'rep', 'POST', {})).status).toBe(403);
+    const reset = await request('/demo/reset', 'admin', 'POST', {});
+    expect(reset.status).toBe(200);
+    expect((await reset.json()).data.present).toBe(false);
+    for (const [entity, total] of Object.entries(before))
+      expect([entity, await count(entity)]).toEqual([entity, total]);
+    expect(
+      await database
+        .query()
+        .selectFrom('crmSettings')
+        .select('id')
+        .where('id', '=', DEMO_MARKER)
+        .executeTakeFirst(),
+    ).toBeUndefined();
+    // The accounts are ordinary accounts now and stay.
+    expect(
+      (await service.users(actor('admin'))).some(
+        (u) => u.username === 'liming',
+      ),
+    ).toBe(true);
+    const missing = await request('/demo/reset', 'admin', 'POST', {});
+    expect(missing.status).toBe(404);
+  }, 120000);
 });
 
 it('maps legacy industry and country text to codes and back', async () => {

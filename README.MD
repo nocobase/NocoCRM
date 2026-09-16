@@ -33,19 +33,14 @@ Disabling a user ends their sign-in, and they stop being offered as an owner or 
 
 ### Demo data
 
-`storage/populate-demo-crm.mjs` loads a Chinese dataset for a fictional consulting firm (云策数字咨询): related leads, accounts, contacts, opportunities across six months, activities including some due today, and approvals raised by their applicants. Dates are relative to the day the script runs. It expects these accounts to exist. The administrator keeps the platform default password, `admin123`; every other account's password equals its username:
+**Settings → System settings → Demo data** imports a Chinese dataset for a fictional consulting firm (云策数字咨询): related leads, accounts, contacts, opportunities across six months, activities including some due today, and approvals raised by their applicants. Dates are relative to the day of the import, in the business time zone. The import creates the demo accounts when they do not exist and gives each its role; their password equals the username. The administrator who runs the import owns nothing:
 
 | Username                                     | Name                   | Role          |
 | -------------------------------------------- | ---------------------- | ------------- |
-| `nocobase`                                   | NocoBase               | Administrator |
 | `liming`, `zhaomin`                          | 李明, 赵敏             | Sales manager |
 | `wangxiaofang`, `chenxiaohao`, `liuxiaoyang` | 王小芳, 陈小浩, 刘小洋 | Salesperson   |
 
-```bash
-node --import tsx storage/populate-demo-crm.mjs
-```
-
-The script refuses to run twice; `node --import tsx storage/reset-demo-crm.mjs` removes what it created, using the manifest it wrote to `storage/demo-crm-manifest.json`. Both scripts copy the database into `storage/backups/` first.
+The import runs once; **Remove demo data** on the same page deletes exactly the records it created, using the manifest it keeps in the settings table, and leaves the accounts and anything created by hand. When the AI business guidance is empty, the import fills in the firm's example guidance. The server side lives in `server/providers/crm/demo.ts`.
 
 ### Configure AI
 
@@ -165,7 +160,7 @@ database/
 
 tests/                   Unit and integration tests
 e2e/                     Browser tests needing a real server
-storage/                 SQLite database, uploads, and the demo data scripts; only the scripts are committed
+storage/                 SQLite database and uploads; gitignored
 config.yml               Your configuration, generated at setup; gitignored
 config.example.yml       Documented configuration template
 SPEC.md                  Product specification the CRM implements

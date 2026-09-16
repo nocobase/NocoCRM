@@ -12,7 +12,9 @@ import {
 } from '../components/ui/card.js';
 import { CrmFrame, Loading, ErrorNotice } from '../components/crm/common.js';
 import { Choice } from '../components/crm/form.js';
+import { ConfirmDialog } from './crm-detail.js';
 import {
+  localDate,
   useCrmApi,
   useCrmQuery,
   useCrmText,
@@ -21,9 +23,16 @@ import {
   type CrmSettings,
   type Data,
 } from '../components/crm/api.js';
+interface DemoStatus {
+  present: boolean;
+  createdAt: string | null;
+  records: number;
+  accounts: { username: string; name: string; role: string }[];
+}
 interface SettingsResponse {
   settings: CrmSettings;
   models: Data[];
+  demo: DemoStatus;
 }
 export default function SettingsPage(): ReactElement {
   const query = useCrmQuery<SettingsResponse>('settings');
@@ -42,7 +51,7 @@ function SettingsForm({
 }: {
   initial: SettingsResponse;
 }): ReactElement {
-  const { text } = useCrmText();
+  const { text, language } = useCrmText();
   const api = useCrmApi();
   const refresh = useRefresh();
   const [settings, setSettings] = useState(initial.settings);
@@ -50,6 +59,30 @@ function SettingsForm({
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [section, setSection] = useState('business');
+  // The demo dataset: imported and removed from here, never saved with the
+  // settings form, so it keeps its own state and confirmation.
+  const [demo, setDemo] = useState(initial.demo);
+  const [demoAction, setDemoAction] = useState<'populate' | 'reset'>();
+  const [demoNotice, setDemoNotice] = useState<string>();
+  const runDemo = async (action: 'populate' | 'reset'): Promise<void> => {
+    setBusy(true);
+    setError(undefined);
+    setDemoNotice(undefined);
+    try {
+      setDemo(
+        (await api<{ data: DemoStatus }>(`demo/${action}`, 'POST', {})).data,
+      );
+      await refresh();
+      setDemoNotice(
+        text(action === 'populate' ? 'demoImported' : 'demoRemoved'),
+      );
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+      setDemoAction(undefined);
+    }
+  };
   const set = (key: keyof CrmSettings, value: unknown): void => {
     setSettings((s) => ({ ...s, [key]: value }));
     setSaved(false);
@@ -155,7 +188,7 @@ function SettingsForm({
         </p>
       )}
       <div className='flex flex-wrap gap-2 border-b pb-3'>
-        {['business', 'reminders', 'aiSettings'].map((key) => (
+        {['business', 'reminders', 'aiSettings', 'demoData'].map((key) => (
           <Button
             key={key}
             variant={section === key ? 'secondary' : 'ghost'}
@@ -170,7 +203,78 @@ function SettingsForm({
           <CardTitle>{text(section)}</CardTitle>
         </CardHeader>
         <CardContent className='space-y-6'>
-          {section === 'business' ? (
+          {section === 'demoData' ? (
+            <>
+              <p className='text-sm text-muted-foreground'>
+                {text('demoDescription')}
+              </p>
+              <ul className='grid gap-1 text-sm sm:grid-cols-2'>
+                {demo.accounts.map((account) => (
+                  <li key={account.username} className='flex gap-2'>
+                    <code className='rounded bg-muted px-1.5 py-0.5 text-xs'>
+                      {account.username}
+                    </code>
+                    <span>{account.name}</span>
+                    <span className='text-muted-foreground'>
+                      {text(`options.${account.role}`)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {demoNotice && (
+                <p
+                  role='status'
+                  className='rounded-lg bg-primary/10 p-3 text-sm'
+                >
+                  {demoNotice}
+                </p>
+              )}
+              <p className='text-sm'>
+                {demo.present
+                  ? text('demoPresent', {
+                      date: localDate(
+                        demo.createdAt,
+                        language,
+                        settings.timeZone,
+                      ),
+                      count: demo.records,
+                    })
+                  : text('demoAbsent')}
+              </p>
+              <div className='flex flex-wrap gap-2'>
+                <Button
+                  disabled={busy || demo.present}
+                  onClick={() => setDemoAction('populate')}
+                >
+                  {text('demoImport')}
+                </Button>
+                <Button
+                  variant='outline'
+                  disabled={busy || !demo.present}
+                  onClick={() => setDemoAction('reset')}
+                >
+                  {text('demoReset')}
+                </Button>
+              </div>
+              {demoAction && (
+                <ConfirmDialog
+                  title={text(
+                    demoAction === 'populate'
+                      ? 'demoImportTitle'
+                      : 'demoResetTitle',
+                  )}
+                  description={text(
+                    demoAction === 'populate'
+                      ? 'demoImportHint'
+                      : 'demoResetHint',
+                  )}
+                  busy={busy}
+                  onCancel={() => setDemoAction(undefined)}
+                  onConfirm={() => void runDemo(demoAction)}
+                />
+              )}
+            </>
+          ) : section === 'business' ? (
             fields(['currency', 'timeZone'])
           ) : section === 'reminders' ? (
             fields([

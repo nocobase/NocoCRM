@@ -34,6 +34,13 @@ import {
 } from '../providers/crm/schema.js';
 import { type ListOptions } from '../providers/crm/service.js';
 import { conversionPreview, convertLead } from '../providers/crm/conversion.js';
+import {
+  demoStatus,
+  populateDemo,
+  resetDemo,
+  type DemoAccountCreator,
+} from '../providers/crm/demo.js';
+import { userManagementServiceToken } from '@nocobase/app-plugin-users/server/tokens';
 import { allRecords, dashboard } from '../providers/crm/dashboard.js';
 
 type CrmEnv = { Variables: AuthorizationEnv['Variables'] & { actor: Actor } };
@@ -149,9 +156,41 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           settings: await service.settings(),
           users: await service.users(c.get('actor')),
           models: await ai.models(),
+          demo: await demoStatus(service, c.get('actor')),
         },
       });
     });
+    // The demo dataset creates its own accounts through the users plugin, so
+    // they appear on the Users page like any account an administrator adds.
+    const demoAccounts: DemoAccountCreator = {
+      async create(input) {
+        if (!app.container.has(userManagementServiceToken))
+          throw new CrmError('demoAccounts', 500);
+        const created = await app.container
+          .resolve(userManagementServiceToken)
+          .create({
+            name: input.name,
+            username: input.username,
+            email: input.email,
+            password: input.password,
+            roleScopes: { app: input.role },
+          });
+        return { id: created.id };
+      },
+    };
+    routes.post('/demo/populate', async (c) =>
+      c.json({
+        data: await populateDemo(
+          service,
+          service.authz,
+          c.get('actor'),
+          demoAccounts,
+        ),
+      }),
+    );
+    routes.post('/demo/reset', async (c) =>
+      c.json({ data: await resetDemo(service, c.get('actor')) }),
+    );
     routes.put('/settings', async (c) =>
       c.json({
         data: await service.saveSettings(c.get('actor'), await c.req.json()),

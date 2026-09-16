@@ -11,10 +11,8 @@ coverage/
 .env.*
 !.env.example
 
-# Local application state. The demo data scripts are source, not state.
+# Local application state.
 /storage/*
-!/storage/populate-demo-crm.mjs
-!/storage/reset-demo-crm.mjs
 /.agents/
 /.agent-annotations/
 /.nocobase/
