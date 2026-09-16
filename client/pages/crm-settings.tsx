@@ -209,11 +209,16 @@ function SettingsForm({
           {text('settingsSaved')}
         </p>
       )}
-      <div className='flex flex-wrap gap-2 border-b pb-3'>
+      <div className='flex gap-1 overflow-x-auto border-b'>
         {['business', 'reminders', 'aiSettings', 'demoData'].map((key) => (
           <Button
             key={key}
-            variant={section === key ? 'secondary' : 'ghost'}
+            variant='ghost'
+            className={`h-auto rounded-none border-0 border-b-2 px-3 py-2 transition-colors hover:bg-transparent dark:hover:bg-transparent ${
+              section === key
+                ? 'border-primary text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
             onClick={() => setSection(key)}
           >
             {text(key)}
