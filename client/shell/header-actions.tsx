@@ -1,6 +1,12 @@
 import { MonitorCog, Settings, Sparkles } from 'lucide-react';
-import type { ReactElement } from 'react';
+import { useContext, type ReactElement } from 'react';
 import { Link, useLocation } from 'react-router';
+
+import { SettingsRouteTreeContext } from '../routing/settings-route-context.js';
+import {
+  navigationPages,
+  useRouteNavigation,
+} from '../routing/route-navigation.js';
 
 import { ThemeSettings } from '../theme/index.js';
 import { UserMenu } from './user-menu.js';
@@ -15,9 +21,13 @@ const ACTION_LINK_CLASS =
 /**
  * Keep header entries visible on their destination pages so navigation stays consistent across surfaces. The CRM
  * entries (bell, assistant) belong to the application surface only; the current surface's own link is marked, so the
- * four icons never shift position between surfaces.
+ * settings entry is shown only when its navigation contains an accessible page.
  */
 export function HeaderActions(): ReactElement {
+  const routes = useContext(SettingsRouteTreeContext);
+  // Share the Settings navigation checks instead of opening an empty surface.
+  const { items } = useRouteNavigation(routes, true);
+  const hasSettings = navigationPages(items).length > 0;
   const { pathname } = useLocation();
   const surface = pathname.startsWith('/settings')
     ? 'settings'
@@ -57,15 +67,17 @@ export function HeaderActions(): ReactElement {
           <MonitorCog className='size-5' />
         </Link>
       ) : null}
-      <Link
-        aria-current={surface === 'settings' ? 'page' : undefined}
-        aria-label='Settings'
-        className={`${ACTION_LINK_CLASS} ${surface === 'settings' ? 'bg-muted' : ''}`}
-        title='Settings'
-        to='/settings'
-      >
-        <Settings className='size-5' />
-      </Link>
+      {hasSettings ? (
+        <Link
+          aria-current={surface === 'settings' ? 'page' : undefined}
+          aria-label='Settings'
+          className={`${ACTION_LINK_CLASS} ${surface === 'settings' ? 'bg-muted' : ''}`}
+          title='Settings'
+          to='/settings'
+        >
+          <Settings className='size-5' />
+        </Link>
+      ) : null}
       <ThemeSettings />
       <UserMenu />
     </div>
