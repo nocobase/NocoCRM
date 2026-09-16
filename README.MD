@@ -156,7 +156,7 @@ Database tasks support `--connection <name>` and `--all`; no argument targets `d
 | `pnpm fix`           | Fix lint problems, then format                               |
 | `pnpm check`         | Everything above plus a build; what to run before committing |
 
-`pnpm nocobase app i18n:check` reports a language declared in `client/locales/` but not `server/locales/`, or the reverse. The browser builds its language picker from one and the server decides what it answers in from the other, so a language on only one side is one the interface offers and the server then rejects.
+`pnpm nocobase app i18n:check` reports a language declared in `client/locales/` but not `server/locales/`, or the reverse, and exits nonzero until the lists align. The browser builds its language picker from the client list, so a client-only language still works in the interface; server messages fall back to English and the language control explains that fallback. Add the matching server locale when server-produced text should use the same language.
 
 ### Plugins
 
@@ -283,7 +283,7 @@ Rebuild with a matching `--target` and `--node-version`. ABI 115 is Node 20, 127
 
 ## Configuration
 
-`server/config/` and `client/config/` contain editable TypeScript defaults. `config.yml` holds environment-specific overrides, written for you at generation time and yours to edit from there. It is gitignored because it carries your `auth.secret`; deploy it through your secret management rather than committing it. `config.example.yml` documents common deployment options, including sections the generated file leaves out.
+`server/config/` and `client/config/` contain editable TypeScript defaults. `config.yml` holds environment-specific overrides, written for you at generation time and yours to edit from there. It is gitignored because it carries your `auth.secret`; deploy it through your secret management rather than committing it. It is generated from `config.example.yml`, which is kept beside it as the reference for every option.
 
 Two settings decide where the application is reachable:
 
