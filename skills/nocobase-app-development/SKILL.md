@@ -19,7 +19,7 @@ Do not use it to upgrade the template this application was generated from. That 
 
 For pages with Tabs, nested pages, or navigation groups, read [child routes](references/client-child-routes.md). Page-level Tabs use child routes by default, even when the user does not mention routing. Declare their content under the parent route and derive the selected Tab from the URL. Opening the parent URL redirects to the default accessible Tab with replace and preserves query parameters; explicit Tab URLs retain their selection. Follow an explicit user request for a different interaction.
 
-Default ships with a localized homepage, no application-owned routes, and no example plugins or demo data. Its built-in application provider exposes Authorization Permission Sets as direct roles in the Users page; add other application services beside it. Use `app-template-examples` to explore runnable demonstrations. `database/main/` starts empty; do not copy example history into Default.
+Default ships with a localized homepage, no application-owned routes, and no example plugins or demo data. Its built-in application provider exposes Authorization Permission Sets as direct roles in the Users page; add other application services beside it. Use `app-template-examples` to explore runnable demonstrations. `database/main/` contains required permission initialization only; do not copy example tables or sample data into Default.
 
 ## Before you start
 
@@ -82,11 +82,13 @@ For creating, editing or removing theme presets, read [themes](references/themes
 
 ## Database configuration factories
 
+Keep `@nocobase/db` in `dependencies` alongside the database driver. It supplies the driver's runtime peer and lets TypeScript resolve the inferred database configuration declaration through the public package name. Moving it to `devDependencies` can cause TS2883 in an installed application even while the source workspace builds successfully.
+
 Declare database defaults with `defineAppDatabaseConfig` from `@nocobase/app-server/database`. When switching or adding connections, read [database connections](references/database-connections.md) for complete examples, YAML overrides, schema ownership and verification.
 
 ## Where to work
 
-The Settings and Dev tools header entries stay visible on their destination pages. The Dev tools entry is development-only and must remain absent from production builds.
+The Settings header entry appears only when the user has an accessible page in the settings navigation, and stays visible on that page. The Dev tools entry stays visible on its destination pages, is development-only, and must remain absent from production builds.
 
 Business code belongs in a small, stable set of places:
 
@@ -150,6 +152,10 @@ The proxy maps same-origin browser HTTP and WebSocket Origin headers to the targ
 Use `APP_SERVER_PORT` for the local entry port in both development modes. With `PROXY_TARGET_URL` it selects Vite's preferred port, defaulting to 5173; without it, it selects the local backend port, defaulting to 13000, and Vite still starts from 5173. If occupied, the port advances automatically. Open the printed Local URL and keep the remote service address in `PROXY_TARGET_URL`.
 
 ## Finishing
+
+`pnpm build --help` (or `-h`) lists build options and exits without loading build dependencies, running hooks, or modifying `dist/`. Every successful build records `nocobase.buildTarget` in `dist/package.json`, including builds with no native modules: `platform`, `arch`, `libc`, `nodeMajor`, and `nodeAbi`. Use `libc` only for Linux; its value on other platforms is a compatibility placeholder. Deployment checks should compare these fields with the host runtime and also respect `engines.node`. With `--target current` (the default), the Node version and ABI come from the running process; an explicit platform target defaults to Node 24 unless `--node-version` is supplied.
+
+When building for another platform, pass `--target` and verify the native binaries retained in `dist/node_modules`. `better-sqlite3` 13 bundles N-API binaries for multiple platforms; Alpine targets need the `linuxmusl` binary, while other Linux targets use the `linux` binary.
 
 The Dockerfile runs `scripts/utils/prepare-container-dist.mjs` after building. The installed runtime otherwise chooses plugin TypeScript migration and seed directories ahead of their compiled output. This container-only workaround verifies the compiled counterparts and removes only the shadowing source task directories from deployment dependencies. Keep compiled tasks and migration checksums unchanged; remove the workaround when the runtime handles compiled task resolution.
 

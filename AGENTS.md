@@ -8,7 +8,7 @@ Do not create a plugin to add a feature. Plugins are separately published packag
 
 Default is the clean application starting point. It registers product capabilities but no `app-plugin-*-example` plugins, example pages, application sample services, or sample APIs. Keep runnable demonstrations in `app-template-examples`. Application-owned server routes start empty; the only built-in application provider exposes Authorization Permission Sets as direct roles in the Users page. The only application page is a localized homepage.
 
-`database/main/` starts empty for application-owned migrations and seeds. Do not add article history, demo seeds, or compatibility copies from Examples to this template. Existing installations retain their own executed migration sources when upgrading; see `MIGRATION.md`.
+`database/main/` contains required permission initialization only; application-owned business migrations and seeds start empty. Do not add article history, demo seeds, or compatibility copies from Examples to this template. Existing installations retain their own executed migration sources when upgrading; see the [upgrade migration rules](skills/nocobase-app-upgrade/references/edge-cases.md#migrations).
 
 ## Load the development skills
 
@@ -58,7 +58,7 @@ A feature with a page and an API touches five places: a migration for the table,
 
 Layouts own breadcrumb route context; `AppRouter` selects routes and layouts. See [page routes](skills/nocobase-app-development/references/client-pages-and-routes.md#putting-the-page-in-a-breadcrumb-trail) for each layout's scope.
 
-The Settings and Dev tools header entries stay visible on their destination pages. The Dev tools entry is development-only and must remain absent from production builds.
+The Settings header entry appears only when the user has an accessible page in the settings navigation, and stays visible on that page. The Dev tools entry stays visible on its destination pages, is development-only, and must remain absent from production builds.
 
 `client/routing/`, `client/shell/`, `client/layouts/`, `client/theme/`, the server entry points, the build scripts, and the tsconfigs are the scaffolding the template provides. It is still this application's own source — it shipped to the user and they may change it — but it is the part the template evolves, so an edit there is what a future upgrade has to reconcile.
 
@@ -247,6 +247,8 @@ Building a permission system, a notification sender, or a job scheduler by hand 
 
 ## Adding a dependency
 
+Keep `@nocobase/db` in `dependencies` alongside the database driver. It supplies the driver's runtime peer and lets TypeScript resolve the inferred database configuration declaration through the public package name. Moving it to `devDependencies` can cause TS2883 in an installed application even while the source workspace builds successfully.
+
 Put a package your **server** code imports in `dependencies`. Put everything your **client** code imports — along with build tooling, tests, and type-only imports — in `devDependencies`.
 
 That split looks backwards until you see how the two halves are deployed. `pnpm build` bundles the client: Vite resolves every client import and inlines it into `dist/client`, so nothing has to resolve it again later. The server is not bundled. `dist/server` keeps its bare imports, and `pnpm build` generates `dist/package.json` from your `dependencies` and installs a `node_modules` next to it — that tree is what the deployed server resolves against, and `devDependencies` are not in it.
@@ -299,9 +301,11 @@ The current `@nocobase/app-server` version resolves plugin database task source 
 
 ### Building for another platform
 
+`pnpm build --help` (or `-h`) lists build options and exits without loading build dependencies, running hooks, or modifying `dist/`. Every successful build records `nocobase.buildTarget` in `dist/package.json`, including builds with no native modules: `platform`, `arch`, `libc`, `nodeMajor`, and `nodeAbi`. Use `libc` only for Linux; its value on other platforms is a compatibility placeholder. Deployment checks should compare these fields with the host runtime and also respect `engines.node`. With `--target current` (the default), the Node version and ABI come from the running process; an explicit platform target defaults to Node 24 unless `--node-version` is supplied.
+
 `pnpm build` targets the machine it runs on, so `pnpm build && pnpm start` works. A deployment build says where it is going: `--target linux-x64`, `--target linux-arm64`, `--target linux-x64-musl`, plus `--node-version` when the server's Node major differs. Every build prints the platform it produced and records it in `dist/package.json` under `nocobase.buildTarget`.
 
-A `.node` binary is compiled for one platform, architecture, C library, and Node ABI at once. `pg`, `mysql2`, and `tedious` are plain JavaScript, so an application using only those is portable as built.
+A `.node` binary must match the target platform, architecture, and C library; addons using the Node ABI must also match its version. `better-sqlite3` 13 uses N-API and bundles its platform binaries, so cross-platform builds retain the target's binary, including the separate `linuxmusl` build for Alpine. `pg`, `mysql2`, and `tedious` are plain JavaScript, so an application using only those is portable as built.
 
 ### When a build or a deployment fails
 

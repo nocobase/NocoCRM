@@ -251,20 +251,39 @@ Client packages are not among them. Plugins declare what their browser code need
 **The build targets the machine you run it on**, so `pnpm build && pnpm start` works. Deploying elsewhere means saying where:
 
 ```bash
+pnpm build --help                                 # all build options
 pnpm build                                        # this machine
 pnpm build --target linux-x64                     # most Linux servers
 pnpm build --target linux-arm64                   # ARM servers, Graviton
 pnpm build --target linux-x64-musl                # Alpine, and most slim container images
-pnpm build --target linux-x64 --node-version 22   # when the server runs Node 22
+pnpm build --target linux-x64 --node-version 24   # explicitly target Node 24
 ```
 
 A `.node` binary is compiled for one platform, architecture, C library, and Node version at once, so a build made on a Mac installs binaries a Linux server cannot load. `--target` sets platform, architecture, and C library together, because they are chosen together: `linux-x64` and `linux-x64-musl` are different binaries, and Alpine needs the musl one. If you are unsure, `ldd --version` on the server prints `musl` for musl and `GNU libc` otherwise.
 
-`--node-version` takes the major version your server runs, separately, because the same Linux host may run any of several. Supported: 20, 22, 24, 26.
+`--node-version` takes the major version your server runs, separately, because the same Linux host may run any of several. The binary retargeter knows ABI mappings for 20, 22, 24, and 26; the application itself requires Node >=24.
 
-Every build prints the platform it produced and records it in `dist/package.json` under `nocobase.buildTarget`, so a `dist/` built for the wrong machine can be identified rather than guessed at.
+`pnpm build --help` (or `-h`) lists build options and exits without loading build dependencies, running hooks, or modifying `dist/`. Every successful build records `nocobase.buildTarget` in `dist/package.json`, including builds with no native modules: `platform`, `arch`, `libc`, `nodeMajor`, and `nodeAbi`. Use `libc` only for Linux; its value on other platforms is a compatibility placeholder. Deployment checks should compare these fields with the host runtime and also respect `engines.node`. With `--target current` (the default), the Node version and ABI come from the running process; an explicit platform target defaults to Node 24 unless `--node-version` is supplied.
 
-If your application has no native modules — `pg`, `mysql2`, and `tedious` are all plain JavaScript — none of this applies and `dist/` is portable as built.
+For example, `pnpm build --target linux-x64 --node-version 24` produces:
+
+```json
+{
+  "nocobase": {
+    "buildTarget": {
+      "platform": "linux",
+      "arch": "x64",
+      "libc": "glibc",
+      "nodeMajor": 24,
+      "nodeAbi": 137
+    }
+  }
+}
+```
+
+`nodeMajor` describes the target runtime, not the Node version used to run the build. No target patch version is implied. These fields provide platform and Node ABI checks for Hub deployment; they do not describe system libraries, CPU instruction requirements, or other runtime prerequisites.
+
+If your application has no native modules — `pg`, `mysql2`, and `tedious` are all plain JavaScript — no platform-specific binaries need retargeting. The build still records the selected target, and the deployment runtime must satisfy `engines.node`.
 
 #### Packing the build
 
@@ -343,6 +362,10 @@ Configuration is resolved from the file, environment variables, and defaults in 
 ## Testing
 
 Tests live in `tests/`, never beside the source they cover. Put logic and integration tests under `tests/logic/` and component tests under `tests/components/`. Tests needing a real server, real authentication, or a real database belong in `e2e/`.
+
+### AI server end-to-end testing
+
+`pnpm test:e2e` discovers the source workspace’s optional AI server test and skips it unless `AI_LOCAL_E2E=1`. Build first and use a dedicated, installed test application database with a configured LLM service and an API key belonging to a test user. Set `AI_E2E_LLM_SERVICE`, `AI_E2E_MODEL`, and `AI_E2E_API_KEY`; `AI_E2E_EMPLOYEE` defaults to `viz`. The test starts the compiled local server, makes a real model request, and removes its conversation afterward. Never point it at production data. Generated applications ship the Playwright configuration but no template tests, so an empty run succeeds.
 
 ### Notification testing
 
