@@ -33,12 +33,15 @@ const routes: readonly AppClientRouteContribution[] = [
 export default routes;
 ```
 
-The page module must default-export its component:
+The page module must default-export its component and wrap its content in `PageContainer` to use the shared page padding and spacing:
 
 ```tsx
 // client/pages/orders.tsx
+import type { ReactElement } from 'react';
+import { PageContainer } from '@/components/page-container';
+
 export default function OrdersPage(): ReactElement {
-  return <section className='p-6'>...</section>;
+  return <PageContainer>...</PageContainer>;
 }
 ```
 
@@ -126,16 +129,16 @@ The owning layout supplies the route tree: `AppShell` for business pages, and `S
 }
 ```
 
-The page places `<Breadcrumbs />` itself, above its heading, and keeps its own container and spacing:
+The page places `<Breadcrumbs />` itself, above its heading, inside `PageContainer`, which supplies the shared page spacing:
 
 ```tsx
-<section className='mx-auto w-full max-w-6xl space-y-6 p-6 md:p-8'>
+<PageContainer className='mx-auto max-w-6xl'>
   <Breadcrumbs />
   <PageHeader
     title={t('orders.title')}
     actions={<Button>{t('orders.create')}</Button>}
   />
-</section>
+</PageContainer>
 ```
 
 The trail follows the matched route hierarchy:
@@ -172,3 +175,7 @@ Do not declare product routes in any of them. They render routes; `client/routes
 - A signed-out visit to a `required` page redirects to sign-in.
 - A settings page with `access` disappears from navigation when denied, and its direct URL does not load the component.
 - The page's chunk loads on navigation rather than in the initial bundle.
+
+Account-menu sign-out checks the Better Auth result for an error before refreshing the session. Keep failures visible through the localized error toast; do not simulate sign-out by redirecting while the server session remains valid.
+
+The authorization provider clears the permission snapshot before rendering a new session. Route navigation and page guards subscribe to the authorization revision; preserve these checks when customizing the shell so account changes and permission updates take effect without a reload. Pending checks hide protected content, and failed checks deny access.
