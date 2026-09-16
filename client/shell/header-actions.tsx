@@ -1,8 +1,8 @@
+import { useClientApplication } from '@nocobase/app-client';
 import { MonitorCog, Settings, Sparkles } from 'lucide-react';
-import { useContext, type ReactElement } from 'react';
+import type { ReactElement } from 'react';
 import { Link, useLocation } from 'react-router';
 
-import { SettingsRouteTreeContext } from '../routing/settings-route-context.js';
 import {
   navigationPages,
   useRouteNavigation,
@@ -24,7 +24,7 @@ const ACTION_LINK_CLASS =
  * settings entry is shown only when its navigation contains an accessible page.
  */
 export function HeaderActions(): ReactElement {
-  const routes = useContext(SettingsRouteTreeContext);
+  const routes = useClientApplication().runtime.settingsRouteTree;
   // Share the Settings navigation checks instead of opening an empty surface.
   const { items } = useRouteNavigation(routes, true);
   const hasSettings = navigationPages(items).length > 0;

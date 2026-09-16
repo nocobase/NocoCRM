@@ -3,6 +3,10 @@ import { MemoryRouter } from 'react-router';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { HeaderActions } from '../../client/shell/header-actions.js';
 
+vi.mock('@nocobase/app-client', () => ({
+  useClientApplication: () => ({ runtime: { settingsRouteTree: [] } }),
+}));
+
 const state = vi.hoisted(() => ({ pages: [] as unknown[] }));
 vi.mock('../../client/routing/route-navigation.js', () => ({
   useRouteNavigation: () => ({ items: state.pages }),
