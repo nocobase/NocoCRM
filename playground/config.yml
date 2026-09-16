@@ -1,0 +1,47 @@
+# Application settings for the Compose playground, mounted at /app/config.yml.
+# AUTH_SECRET, SESSION_SECRET, and APP_PUBLIC_ORIGIN come from .env through Compose.
+# Keep credentials out of this committed file.
+
+client:
+  app:
+    title: NocoCRM
+    # defaultColorScheme: system # light | dark | system
+    # defaultTheme: compact
+
+# i18n:
+#   defaultLocale: zh-CN
+
+auth:
+  emailAndPassword:
+    enabled: true
+    autoSignIn: false
+  session:
+    storeSessionInDatabase: true
+
+# In-app notifications use the application's database.
+notification:
+  channels:
+    - type: in-app
+      enabled: true
+      providers:
+        - type: database
+          name: default
+
+database:
+  default: main
+  connections:
+    main:
+      dialect: sqlite
+      # Keep the database inside the persistent storage volume.
+      filename: /app/dist/storage/crm.sqlite
+      debug: false
+      schemaManagement: managed
+      migrations:
+        autoRun: true
+      seeds:
+        autoRun: true
+
+snowflake:
+  # Assign a distinct workerId to each concurrently running instance.
+  workerId: 0
+  epoch: 1605024000

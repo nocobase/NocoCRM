@@ -274,6 +274,18 @@ Declare such a package in `dependencies` when you write the code; nothing will r
 
 Without `--tar` no archive is produced, which is what you want when the build is only going to be run locally.
 
+### Container image CI
+
+The current `@nocobase/app-server` version resolves plugin database task source directories before compiled directories. After `pnpm build`, the Dockerfile runs `scripts/utils/prepare-container-dist.mjs` to remove shadowing TypeScript task directories only inside the generated deployment dependencies, after checking each compiled counterpart exists. This keeps plain Node from loading TypeScript under `node_modules`; do not edit plugin migrations or their checksums. Remove the workaround when the runtime resolves compiled tasks itself.
+
+`Dockerfile` builds the application with the existing `pnpm build` pipeline and copies only the complete `dist/` into a Node runtime image. The build configures the `@nocobase` scope to use `https://npm.nocobase.ai/`. Keep the `/app/dist` directory name: standalone runtime path resolution uses it to locate the compiled client. Both stages must agree on Node, architecture, and libc. The runtime disables pnpm's automatic dependency installation before scripts because the deployment dependencies have already been installed and pruned. `.dockerignore` excludes local configuration and state because the build can write environment values into `dist/.env`.
+
+`.github/workflows/docker.yml` validates PR images and publishes successful `main` and `v*` builds to GHCR using `GITHUB_TOKEN`. `e2e/docker-smoke.mjs` starts the final image with disposable secrets and data, checks health, CRM authentication, and client assets, and verifies shutdown before that exact image is pushed. Runtime configuration is mounted separately; persistent storage belongs at `/app/dist/storage`. See the container section in `README.MD` for local commands.
+
+`playground/docker-compose.yml` runs the published image with SQLite, a health check, and a named storage volume. `playground/.env.example` documents its settings; real secrets belong in the gitignored `playground/.env`, separate from the application's root environment file. Run Compose from `playground/` and preserve existing environment files. Validate Compose changes with a separate project name and disposable secrets so tests never touch an existing deployment or its volume.
+
+`playground/config.yml` is a committed, editable configuration with no credentials. Compose mounts it read-only at `/app/config.yml` and sets `APP_CONFIG_FILE` explicitly; secrets injected from `.env` take precedence. Keep its SQLite filename within `/app/dist/storage` so it remains on the persistent volume. Recreate the container after configuration edits to pick up atomic file replacements.
+
 ### Building for another platform
 
 `pnpm build` targets the machine it runs on, so `pnpm build && pnpm start` works. A deployment build says where it is going: `--target linux-x64`, `--target linux-arm64`, `--target linux-x64-musl`, plus `--node-version` when the server's Node major differs. Every build prints the platform it produced and records it in `dist/package.json` under `nocobase.buildTarget`.

@@ -76,6 +76,59 @@ pnpm start
 
 Build targets the local platform by default; use `pnpm build --target linux-x64 --node-version 24` (or your actual target) for deployment elsewhere, as described under [Deploying to a different machine](#deploying-to-a-different-machine). Supply production configuration separately and never run development and production against the same SQLite database at once. External mail and calendar integrations and automatic lead ingestion are outside this implementation.
 
+## Container image and GitHub Actions
+
+### Run the published image with Compose
+
+The [playground](playground/README.md) contains `docker-compose.yml`, an editable `config.yml`, and `.env.example` for running the published image with SQLite and a persistent volume. Its configuration is separate from the application's root files; Compose mounts `playground/config.yml` read-only and injects secrets from `playground/.env`.
+
+```bash
+cd playground
+cp -n .env.example .env
+openssl rand -hex 32
+openssl rand -hex 32
+# Edit .env and fill in AUTH_SECRET and SESSION_SECRET before continuing.
+docker compose config --quiet
+docker compose pull
+docker compose up -d --wait
+docker compose logs -f app
+```
+
+Open `http://localhost:13000/main/`. See the [playground instructions](playground/README.md) for registry login, configuration, updates, and data persistence.
+
+### Build and publish
+
+`.github/workflows/docker.yml` builds a `linux/amd64` image for pull requests to `main`, pushes to `main`, `v*` tags, and manual runs. Every image must pass a container smoke test covering startup on a fresh SQLite database, the health endpoint, rejection of anonymous CRM API requests, client JavaScript and CSS, and shutdown. Only successful builds on `main` or a `v*` tag are published to `ghcr.io/nocobase/crm`; other manual runs and pull requests only validate the image.
+
+Published images have a `sha-<full-commit-sha>` tag. Builds from `main` also update `latest`; release tags retain their Git name, such as `v1.0.0`. Publishing uses the repository's `GITHUB_TOKEN` with `packages: write`, so no registry password or SSH key is needed. The organization must allow Actions to publish packages; an existing package must grant this repository write access.
+
+The Dockerfile configures `@nocobase:registry=https://npm.nocobase.ai/`, then runs `pnpm install --frozen-lockfile` and `pnpm build` in a Node 24 Debian build stage. The same registry configuration applies when the build installs production dependencies inside `dist`. The runtime stage contains Node, pnpm, and the complete `/app/dist`, including production dependencies, and runs `pnpm start` as the `node` user. Both stages use the same Node version and Debian release for native module compatibility. Keep the `dist` directory name because the runtime uses it to locate client assets. The build's production dependency installation currently resolves transitive dependencies without a lockfile; deployment reproducibility is limited by that existing behavior.
+
+The container build also prepares plugin database tasks for this version of the runtime: it verifies the compiled JavaScript exists, then removes TypeScript task directories that would otherwise take precedence inside the deployment's dependencies. Development dependencies and migration source files in this checkout are unchanged.
+
+Build and verify locally:
+
+```bash
+docker build --platform linux/amd64 -t nococrm:local .
+node e2e/docker-smoke.mjs nococrm:local
+```
+
+The smoke test uses a disposable container and temporary secrets; it never mounts the application's local database or configuration. Production configuration is supplied at runtime. Create `config.yml` from `config.example.yml`, set unique authentication and session secrets, and run:
+
+```bash
+docker run --detach --name nococrm \
+  --publish 13000:13000 \
+  --mount type=bind,src="$(pwd)/config.yml",dst=/app/config.yml,readonly \
+  --mount type=volume,src=nococrm-storage,dst=/app/dist/storage \
+  --env APP_CONFIG_FILE=/app/config.yml \
+  --env APP_PUBLIC_ORIGIN=https://apps.example.com \
+  nococrm:local
+```
+
+Use the actual public origin and configure HTTPS at the reverse proxy. The container listens on `0.0.0.0:13000` and defaults to the `/main` mount path. To use another mount path, build with `--build-arg APP_BASE_PATH=/crm`; the image uses that value for both the client build and server runtime. Do not change only the runtime path. Configuration must be readable, and storage writable, by the image's `node` user (UID 1000). Keep the storage volume across container replacements; it holds the default SQLite database and uploaded files.
+
+`.dockerignore` excludes local environment files, credentials, configuration, database files, and storage from the build context. Do not put production secrets into build arguments or the image. `pnpm build` already installs the production dependencies inside `dist`; the runtime disables pnpm's automatic dependency check/install before scripts so `pnpm start` runs this packaged tree without reinstalling it. It also enables pnpm's built-in shell so container stop signals reach the server without an intermediate `/bin/sh`.
+
 ## Project structure
 
 ```text

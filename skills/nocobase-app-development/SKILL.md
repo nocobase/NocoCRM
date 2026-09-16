@@ -140,6 +140,14 @@ Use `APP_SERVER_PORT` for the local entry port in both development modes. With `
 
 ## Finishing
 
+The Dockerfile runs `scripts/utils/prepare-container-dist.mjs` after building. The installed runtime otherwise chooses plugin TypeScript migration and seed directories ahead of their compiled output. This container-only workaround verifies the compiled counterparts and removes only the shadowing source task directories from deployment dependencies. Keep compiled tasks and migration checksums unchanged; remove the workaround when the runtime handles compiled task resolution.
+
+For container CI, use the root `Dockerfile` and `.github/workflows/docker.yml`. The Dockerfile configures the NocoBase registry, delegates compilation and production dependency installation to `pnpm build`, then copies the whole deployment tree to `/app/dist`. Preserve that directory name, disable automatic pnpm dependency installation at runtime, and keep Node, architecture, and libc compatible across stages. Configuration and storage stay outside the image; `.dockerignore` excludes local secrets and state. Validate the final image with `node e2e/docker-smoke.mjs <image>` before publishing. The workflow publishes only verified `main` and `v*` images to GHCR; see `README.MD` for deployment commands.
+
+For running published images, use `playground/docker-compose.yml` and `playground/.env.example`. Run Compose from `playground/`, keep real secrets in its gitignored `.env` separate from the root application's environment file, and preserve the named storage volume when replacing containers. Test Compose changes under a unique project name with disposable configuration, checking health and storage across container recreation without using an existing deployment's data.
+
+`playground/config.yml` exposes editable, non-secret application settings. It is mounted read-only at `/app/config.yml` and selected through `APP_CONFIG_FILE`; Compose injects secrets separately from `.env`. Keep SQLite on the storage volume, and recreate containers after changing configuration. Verify configuration changes through an observable result, such as the title embedded in the served client HTML.
+
 ```bash
 pnpm typecheck
 pnpm test
