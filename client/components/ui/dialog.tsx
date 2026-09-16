@@ -26,7 +26,12 @@ function DialogOverlay({
   ...props
 }: DialogPrimitive.Backdrop.Props) {
   return (
+    // Application change: Base UI drops the backdrop of a nested dialog, so a
+    // dialog opened from inside the AI assistant panel (a sheet that shows no
+    // overlay of its own) appeared over a page with no dimming or blur at all.
+    // forceRender keeps the backdrop on every dialog, whatever it is nested in.
     <DialogPrimitive.Backdrop
+      forceRender
       data-slot='dialog-overlay'
       className={cn(
         'fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0',

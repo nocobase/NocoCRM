@@ -91,6 +91,24 @@
   }
 }
 
+/* Application change: every modal overlay gets the same frosted backdrop.
+   The CRM's own dialogs and sheets (client/components/ui) already paint
+   bg-black/10 with a backdrop blur, but plugin pages ship their own overlays
+   (users, notification, api-keys, authorization, ai-employee), each a flat
+   bg-black/30 to bg-black/45 with no blur. All of them are a full-screen
+   fixed element at z-50 with a bg-black opacity class, and nothing else in
+   the application matches that shape (the mobile sidebar backdrop is z-40).
+   Unlayered, so it wins over the utilities regardless of specificity.
+   Remove once the plugins share the shadcn dialog. */
+.fixed.inset-0.z-50[class*='bg-black/'] {
+  background-color: rgb(0 0 0 / 0.1);
+}
+@supports (backdrop-filter: blur(0)) {
+  .fixed.inset-0.z-50[class*='bg-black/'] {
+    backdrop-filter: blur(var(--blur-xs, 4px));
+  }
+}
+
 @media (min-width: 768px) {
   body.crm-assistant-open .crm-page-main {
     margin-right: min(28rem, 40vw);
