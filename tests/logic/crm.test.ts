@@ -145,8 +145,12 @@ beforeAll(async () => {
       name: string;
       username: string;
       email: string;
+      password: string;
       roleScopes: Record<string, string>;
     }) {
+      // The users plugin's rule, which the demo accounts must satisfy.
+      if (input.password.length < 8)
+        throw new Error('Password must be at least 8 characters');
       const id = `demo-${input.username}`;
       await database
         .query()

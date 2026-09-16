@@ -12,6 +12,8 @@ import { requireCapability, roleKey, type Actor } from './authorization.js';
 // which rows the import created, so removal touches nothing else.
 export const DEMO_MARKER = 'demo-dataset-v1';
 
+export const demoPassword = (username: string): string => `${username}123`;
+
 export interface DemoAccount {
   readonly username: string;
   readonly name: string;
@@ -20,8 +22,9 @@ export interface DemoAccount {
 
 // The people the dataset belongs to. The administrator importing it owns
 // nothing, as administrators do; the manager and the two sellers own the
-// records, the other two accounts exist for signing in. Passwords equal
-// usernames, as the demo has always worked.
+// records, the other two accounts exist for signing in. The password is the
+// username followed by 123 (liming123): the users plugin wants eight
+// characters, and the platform's own administrator is admin123.
 export const demoAccounts: readonly DemoAccount[] = [
   { username: 'liming', name: '李明', role: 'sales-manager' },
   { username: 'zhaomin', name: '赵敏', role: 'sales-manager' },
@@ -135,7 +138,7 @@ export async function populateDemo(
             name: account.name,
             username: account.username,
             email: `${account.username}@demo.example`,
-            password: account.username,
+            password: demoPassword(account.username),
             role: roleKey(account.role),
           })
         ).id;

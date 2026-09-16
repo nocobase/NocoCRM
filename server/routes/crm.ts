@@ -166,16 +166,27 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
       async create(input) {
         if (!app.container.has(userManagementServiceToken))
           throw new CrmError('demoAccounts', 500);
-        const created = await app.container
-          .resolve(userManagementServiceToken)
-          .create({
-            name: input.name,
-            username: input.username,
-            email: input.email,
-            password: input.password,
-            roleScopes: { app: input.role },
-          });
-        return { id: created.id };
+        try {
+          const created = await app.container
+            .resolve(userManagementServiceToken)
+            .create({
+              name: input.name,
+              username: input.username,
+              email: input.email,
+              password: input.password,
+              roleScopes: { app: input.role },
+            });
+          return { id: created.id };
+        } catch (error) {
+          // The users plugin explains its refusal (a password rule, a taken
+          // email); the notice shows that text under the CRM's own message.
+          throw new CrmError(
+            'demoAccounts',
+            500,
+            undefined,
+            error instanceof Error ? error.message : undefined,
+          );
+        }
       },
     };
     routes.post('/demo/populate', async (c) =>

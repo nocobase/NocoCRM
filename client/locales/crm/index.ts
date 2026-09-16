@@ -292,8 +292,8 @@ const wording = {
   settingsSaved: ['Settings saved', '设置已保存'],
   demoData: ['Demo data', '演示数据'],
   demoDescription: [
-    'A Chinese dataset for a fictional consulting firm, 云策数字咨询: leads, accounts, contacts, opportunities, activities and approvals, dated relative to the day it is imported. Importing creates the demo accounts below when they do not exist; their password equals the username.',
-    '一套以虚构的「云策数字咨询」为背景的中文演示数据，包含线索、客户、联系人、商机、活动和审批，日期以导入当天为基准。导入时会自动创建下列演示账号（已存在的直接使用），密码与用户名相同。',
+    'A Chinese dataset for a fictional consulting firm, 云策数字咨询: leads, accounts, contacts, opportunities, activities and approvals, dated relative to the day it is imported. Importing creates the demo accounts below when they do not exist; the password is the username followed by 123, such as liming123.',
+    '一套以虚构的「云策数字咨询」为背景的中文演示数据，包含线索、客户、联系人、商机、活动和审批，日期以导入当天为基准。导入时会自动创建下列演示账号（已存在的直接使用），密码为用户名加 123，例如 liming123。',
   ],
   demoAbsent: ['No demo data has been imported.', '尚未导入演示数据。'],
   demoPresent: [
@@ -986,8 +986,8 @@ const wording = {
     ],
     demoMissing: ['There is no demo data to remove.', '没有可清除的演示数据。'],
     demoAccounts: [
-      'The demo accounts could not be created because user management is unavailable.',
-      '用户管理不可用，无法创建演示账号。',
+      'The demo accounts could not be created.',
+      '无法创建演示账号。',
     ],
   },
 } as const;
