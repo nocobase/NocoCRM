@@ -44,6 +44,16 @@ export interface ListOptions {
   approverId?: string;
   from?: string;
   to?: string;
+  // Activities by when they happen (ISO instants), for the calendar's month.
+  startFrom?: string;
+  startTo?: string;
+  // Everything but this status: a picker that must not offer converted leads.
+  excludeStatus?: string;
+  // Activities a user runs or takes part in: their own agenda.
+  involvedId?: string;
+  // The order rows come in; the default is newest first by creation. A
+  // leading minus means descending.
+  sort?: 'startAt' | '-startAt' | '-submittedAt';
   // Restrict to these records: how a statistic's count becomes the list it
   // counted. Comma-separated in the query string. An empty list matches
   // nothing, which is what a zero count should show.
@@ -51,6 +61,8 @@ export interface ListOptions {
   page?: number;
   pageSize?: number;
 }
+// A detail page's related lists and history come this many at a time.
+export const RELATED_PAGE = 20;
 export interface ListResult {
   data: CrmRecord[];
   total: number;
@@ -295,6 +307,18 @@ export class CrmService {
         select = select.where(key, '=', options[key]);
     if (options.status && definition.statusField)
       select = select.where(definition.statusField, '=', options.status);
+    if (options.excludeStatus && definition.statusField)
+      select = select.where(
+        definition.statusField,
+        '!=',
+        options.excludeStatus,
+      );
+    if (entity === 'activities') {
+      if (options.startFrom)
+        select = select.where('startAt', '>=', options.startFrom);
+      if (options.startTo)
+        select = select.where('startAt', '<=', options.startTo);
+    }
     if (
       (options.employed === 'true' || options.employed === 'false') &&
       fieldsFor(entity).includes('employed')
@@ -308,6 +332,15 @@ export class CrmService {
         'like',
         `%"${options.participantId.replace(/[%_"]/g, '')}"%`,
       );
+    if (options.involvedId && entity === 'activities') {
+      const id = options.involvedId;
+      select = select.where((eb) =>
+        eb.or([
+          eb('ownerId', '=', id),
+          eb('internalParticipants', 'like', `%"${id.replace(/[%_"]/g, '')}"%`),
+        ]),
+      );
+    }
     if (options.ids !== undefined) {
       const ids = options.ids.split(',').filter(Boolean);
       select = ids.length
@@ -333,8 +366,11 @@ export class CrmService {
         .clearSelect()
         .select((eb) => [eb.fn.countAll().as('total')])
         .executeTakeFirst();
+      const sortField = (options.sort ?? '-createdAt').replace(/^-/, '');
+      const direction =
+        options.sort?.startsWith('-') === false ? 'asc' : 'desc';
       const records = await select
-        .orderBy('createdAt', 'desc')
+        .orderBy(sortField, direction)
         .orderBy('id', 'asc')
         .limit(pageSize)
         .offset((page - 1) * pageSize)
@@ -385,20 +421,41 @@ export class CrmService {
     if (!row) throw new CrmError('notFound', 404);
     return decodeRow(row) as CrmRecord;
   }
-  async detail(actor: Actor, entity: Entity, id: string): Promise<Row> {
-    const record = await this.get(actor, entity, id);
+  // A record's change history, newest first, a page at a time, with the
+  // fields the reader may not see left out of each entry.
+  async historyOf(
+    actor: Actor,
+    entity: Entity,
+    id: string,
+    options: { page?: number; pageSize?: number } = {},
+  ): Promise<{ data: Row[]; total: number; page: number; pageSize: number }> {
+    await this.get(actor, entity, id);
     const readable = outputFields(
       entity,
       await conditions(actor, entity, 'read'),
     );
-    const history = (
-      await this.database
-        .query()
+    const page = Math.max(1, options.page ?? 1);
+    const pageSize = Math.min(
+      1000,
+      Math.max(1, options.pageSize ?? RELATED_PAGE),
+    );
+    const query = this.database.query();
+    const count = await query
+      .selectFrom('crmHistory')
+      .select((eb) => [eb.fn.countAll().as('total')])
+      .where('entity', '=', entity)
+      .where('recordId', '=', id)
+      .executeTakeFirst();
+    const data = (
+      await query
         .selectFrom('crmHistory')
         .selectAll()
         .where('entity', '=', entity)
         .where('recordId', '=', id)
         .orderBy('createdAt', 'desc')
+        .orderBy('id', 'asc')
+        .limit(pageSize)
+        .offset((page - 1) * pageSize)
         .execute()
     ).map((event) => ({
       ...event,
@@ -411,7 +468,28 @@ export class CrmService {
         ? { fromValue: null, toValue: null }
         : {}),
     }));
+    return { data, total: Number(count?.total ?? 0), page, pageSize };
+  }
+  // The record with the first page of its history and of each related list;
+  // the page asks for further pages through the list and history endpoints.
+  async detail(actor: Actor, entity: Entity, id: string): Promise<Row> {
+    const record = await this.get(actor, entity, id);
+    const historyPage = await this.historyOf(actor, entity, id);
+    const history = historyPage.data;
+    const historyTotal = historyPage.total;
     const related: Partial<Record<Entity, CrmRecord[]>> = {};
+    const relatedTotals: Partial<Record<Entity, number>> = {};
+    const firstPage = async (
+      child: Entity,
+      options: ListOptions,
+    ): Promise<void> => {
+      const result = await this.list(actor, child, {
+        ...options,
+        pageSize: RELATED_PAGE,
+      });
+      related[child] = result.data;
+      relatedTotals[child] = result.total;
+    };
     const link: ListOptions =
       entity === 'leads'
         ? { leadId: id }
@@ -423,19 +501,10 @@ export class CrmService {
               ? { contactId: id }
               : {};
     if (['leads', 'accounts', 'contacts', 'opportunities'].includes(entity))
-      related.activities = (
-        await this.list(actor, 'activities', { ...link, pageSize: 1000 })
-      ).data;
+      await firstPage('activities', { ...link, sort: '-startAt' });
     if (entity === 'accounts') {
-      related.contacts = (
-        await this.list(actor, 'contacts', { accountId: id, pageSize: 1000 })
-      ).data;
-      related.opportunities = (
-        await this.list(actor, 'opportunities', {
-          accountId: id,
-          pageSize: 1000,
-        })
-      ).data;
+      await firstPage('contacts', { accountId: id });
+      await firstPage('opportunities', { accountId: id });
     }
     // Where the object came from: the leads whose conversion produced it.
     // Read for the "converted from" line, and on accounts for the delete check.
@@ -456,19 +525,14 @@ export class CrmService {
         .execute();
     }
     if (entity === 'contacts')
-      related.opportunities = (
-        await this.list(actor, 'opportunities', {
-          contactId: id,
-          pageSize: 1000,
-        })
-      ).data;
-    if (entity === 'opportunities')
-      related.approvals = (
-        await this.list(actor, 'approvals', {
-          opportunityId: id,
-          pageSize: 1000,
-        })
-      ).data;
+      await firstPage('opportunities', { contactId: id });
+    if (entity === 'opportunities') {
+      await firstPage('approvals', { opportunityId: id });
+      // The people a deal can involve come from its account; the page
+      // offers the first of them and asks for more on demand.
+      if (record.accountId)
+        await firstPage('contacts', { accountId: toText(record.accountId) });
+    }
     let canEdit = false;
     let canDelete = false;
     try {
@@ -532,7 +596,9 @@ export class CrmService {
     return {
       record,
       history,
+      historyTotal,
       related,
+      relatedTotals,
       blockers,
       unlinks,
       permissions: {

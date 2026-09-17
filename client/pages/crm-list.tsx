@@ -4,11 +4,7 @@ import {
   useRefresh,
 } from '../components/crm/api.js';
 import { EntityStatistics } from '../components/crm/statistics.js';
-import {
-  useLookups,
-  lookupTitles,
-  recordTitle,
-} from '../components/crm/lookups.js';
+import { recordTitle } from '../components/crm/lookups.js';
 import { fieldLabelKey, toText } from '../components/crm/api.js';
 import { useState, type ReactElement } from 'react';
 import { useLocation } from 'react-router';
@@ -186,7 +182,6 @@ function EntityList({
       setMoving(false);
     }
   };
-  const lookups = useLookups();
   const definition = meta?.definitions[entity];
   const params = new URLSearchParams({
     search,
@@ -215,27 +210,49 @@ function EntityList({
     queryFn: () => api<ListData>(path),
     enabled: Boolean(definition),
   });
-  const records = lookups[entity] ?? [];
-  const metricIds = metric ? new Set(metric.ids) : undefined;
-  const filtered = records.filter(
-    (r) =>
-      (!metricIds || metricIds.has(r.id)) &&
-      (!status || r[definition?.statusField ?? 'status'] === status) &&
-      (!ownerId || r.ownerId === ownerId) &&
-      (scope !== 'mine' || r.ownerId === meta?.userId) &&
-      (scope !== 'participating' ||
-        (Array.isArray(r.internalParticipants) &&
-          r.internalParticipants.includes(meta?.userId))) &&
-      (!source || r.source === source) &&
-      (!search ||
-        [r.name, r.company, r.email, r.phone].some((v) =>
-          toText(v ?? '')
-            .toLowerCase()
-            .includes(search.toLowerCase()),
-        )),
+  // The calendar reads one month from the server, by when activities
+  // happen, with the same filters as the list. The range is widened by a
+  // day either side so every business timezone's month is covered; the
+  // cells only draw the days they own. Pages are read until the month is
+  // complete: a month's activities are bounded, and a cell needs them all
+  // to say how many it hides.
+  const monthStart = Date.UTC(
+    Number(month.slice(0, 4)),
+    Number(month.slice(5)) - 1,
+    1,
   );
+  const monthEnd = Date.UTC(
+    Number(month.slice(0, 4)),
+    Number(month.slice(5)),
+    1,
+  );
+  const calendarParams = new URLSearchParams(params);
+  for (const key of ['page', 'pageSize']) calendarParams.delete(key);
+  calendarParams.set(
+    'startFrom',
+    new Date(monthStart - 86400000).toISOString(),
+  );
+  calendarParams.set('startTo', new Date(monthEnd + 86400000).toISOString());
+  calendarParams.set('pageSize', '500');
+  const calendarPath = `${toText(entity)}?${calendarParams.toString()}`;
+  const calendar = useQuery({
+    queryKey: [...scopeKey, calendarPath],
+    queryFn: async () => {
+      const all: CrmRecord[] = [];
+      for (let page = 1; page <= 20; page++) {
+        const result = await api<ListData>(
+          `${calendarPath}&page=${toText(page)}`,
+        );
+        all.push(...result.data);
+        if (result.page * result.pageSize >= result.total) break;
+      }
+      return all;
+    },
+    enabled: Boolean(definition) && view === 'calendar',
+  });
+  const filtered = calendar.data ?? [];
   const writable = Boolean(meta?.permissions[entity]?.create);
-  const lookup = lookupTitles(lookups);
+  const lookup = query.data?.titles ?? {};
   const read = meta?.permissions[entity]?.read;
   // A lead's name cell carries "name / company", so the company column would
   // repeat it.
@@ -254,8 +271,10 @@ function EntityList({
           ? [key, 'opportunityAmount']
           : [key],
       ) ?? [];
-  const opportunityOf = (record: CrmRecord): CrmRecord | undefined =>
-    (lookups.opportunities ?? []).find((o) => o.id === record.opportunityId);
+  const opportunityOf = (
+    record: CrmRecord,
+  ): { amount: number; currency: string } | undefined =>
+    query.data?.opportunities?.[toText(record.opportunityId ?? '')];
   const newButton = (
     <>
       {writable && (
@@ -611,7 +630,7 @@ function EntityList({
                                 name:
                                   entity === 'contacts'
                                     ? toText(record.name)
-                                    : recordTitle(entity, record, lookups),
+                                    : recordTitle(entity, record, lookup),
                               }}
                             />
                           ) : key === 'opportunityAmount' ? (
@@ -662,7 +681,7 @@ function EntityList({
               <span>
                 {text('page', {
                   page,
-                  pages: Math.max(1, Math.ceil(query.data.total / 25)),
+                  pages: Math.max(1, Math.ceil(query.data.total / PAGE_SIZE)),
                 })}
               </span>
               <div className='flex gap-2'>
@@ -675,7 +694,7 @@ function EntityList({
                 </Button>
                 <Button
                   variant='outline'
-                  disabled={page * 25 >= query.data.total}
+                  disabled={page * PAGE_SIZE >= query.data.total}
                   onClick={() => setPage(page + 1)}
                 >
                   {text('next')}
@@ -706,7 +725,7 @@ function EntityList({
                   setInvalidating({ record: dragged, stage });
                 else void move(dragged, { [definition.statusField!]: stage });
               }}
-              renderCard={(record) => (
+              renderCard={(record, titles) => (
                 <Card
                   key={record.id}
                   className='gap-0 py-4 shadow-none'
@@ -736,7 +755,7 @@ function EntityList({
                       entity={entity}
                       record={{
                         id: record.id,
-                        name: recordTitle(entity, record, lookups),
+                        name: recordTitle(entity, record, titles),
                       }}
                     />
                     <div className='space-y-0.5 text-xs text-muted-foreground'>
@@ -980,6 +999,7 @@ function EntityList({
           entity={entity}
           initial={form.input}
           id={form.id}
+          titles={lookup}
           onClose={() => setForm(undefined)}
           andThen={
             entity === 'approvals'
@@ -1002,7 +1022,7 @@ function EntityList({
         <ReasonDialog
           entity={entity}
           stage={invalidating.stage}
-          title={recordTitle(entity, invalidating.record, lookups)}
+          title={recordTitle(entity, invalidating.record, lookup)}
           busy={moving}
           onCancel={() => setInvalidating(undefined)}
           onConfirm={(reasons) =>
@@ -1033,7 +1053,10 @@ function BoardColumn({
   params: URLSearchParams;
   droppable: boolean;
   onDrop: (dragged: CrmRecord) => void;
-  renderCard: (record: CrmRecord) => ReactElement;
+  renderCard: (
+    record: CrmRecord,
+    titles: Record<string, string>,
+  ) => ReactElement;
 }): ReactElement {
   const { text } = useCrmText();
   const api = useCrmApi();
@@ -1054,6 +1077,10 @@ function BoardColumn({
   });
   const items = query.data?.pages.flatMap((p) => p.data) ?? [];
   const total = query.data?.pages[0]?.total ?? 0;
+  const titles = (query.data?.pages ?? []).reduce<Record<string, string>>(
+    (all, p) => ({ ...all, ...p.titles }),
+    {},
+  );
   return (
     <section
       className='w-72 shrink-0 rounded-xl border bg-muted/40 p-3'
@@ -1079,7 +1106,7 @@ function BoardColumn({
         </span>
       </div>
       <div className='space-y-3'>
-        {items.map(renderCard)}
+        {items.map((record) => renderCard(record, titles))}
         {query.hasNextPage && (
           <Button
             variant='ghost'

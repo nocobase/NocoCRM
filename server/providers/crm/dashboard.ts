@@ -2,10 +2,86 @@ import { toText } from './schema.js';
 import type { Row } from '@nocobase/db';
 import type { Actor } from './authorization.js';
 import { probabilities, stages, type CrmRecord } from './schema.js';
-import { array, type CrmService } from './service.js';
+import { array, type CrmService, type ListResult } from './service.js';
 import { allRecords, statistics } from './statistics.js';
 
 export { allRecords };
+
+// The offset of a zone at an instant, so the business day's end can be
+// expressed as an instant without a calendar library.
+function zoneOffsetMinutes(timeZone: string, date: Date): number {
+  const part = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    timeZoneName: 'longOffset',
+  })
+    .formatToParts(date)
+    .find((p) => p.type === 'timeZoneName')?.value;
+  const match = /GMT([+-])(\d{2}):?(\d{2})?/.exec(part ?? '');
+  if (!match) return 0;
+  const minutes = Number(match[2]) * 60 + Number(match[3] ?? 0);
+  return match[1] === '-' ? -minutes : minutes;
+}
+
+// A workspace card shows this many before asking for the next page.
+export const AGENDA_PAGE = 5;
+export type AgendaName = 'today' | 'overdue' | 'approvals';
+export const agendaNames: AgendaName[] = ['today', 'overdue', 'approvals'];
+
+// One of the workspace's three lists, a page at a time, straight from the
+// list query: today's agenda is what is still ahead today, anything not
+// started whose time has passed is overdue (the rule the activity list's
+// card uses), and the approvals are the ones waiting for the reader — or,
+// in the team scope, for anyone. The reader's own agenda is what they run
+// or take part in.
+export async function agenda(
+  service: CrmService,
+  actor: Actor,
+  name: AgendaName,
+  options: { scope?: string; page?: number; pageSize?: number },
+): Promise<ListResult> {
+  const team = options.scope === 'team';
+  const page = options.page ?? 1;
+  const pageSize = options.pageSize ?? AGENDA_PAGE;
+  if (name === 'approvals')
+    return service.list(actor, 'approvals', {
+      status: 'pending',
+      approverId: team ? undefined : actor.id,
+      sort: '-submittedAt',
+      page,
+      pageSize,
+    });
+  const settings = await service.settings();
+  const now = new Date();
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: settings.timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+  const endOfToday = new Date(
+    Date.parse(`${today}T23:59:59.999Z`) -
+      zoneOffsetMinutes(settings.timeZone, now) * 60000,
+  );
+  const involvedId = team ? undefined : actor.id;
+  return name === 'today'
+    ? service.list(actor, 'activities', {
+        status: 'planned',
+        startFrom: now.toISOString(),
+        startTo: endOfToday.toISOString(),
+        involvedId,
+        sort: 'startAt',
+        page,
+        pageSize,
+      })
+    : service.list(actor, 'activities', {
+        status: 'planned',
+        startTo: new Date(now.getTime() - 1).toISOString(),
+        involvedId,
+        sort: '-startAt',
+        page,
+        pageSize,
+      });
+}
 
 // The workspace reads top to bottom: what to do today, where the risks are,
 // how the month's business stands, and how the team does. The team scope
@@ -41,17 +117,10 @@ export async function dashboard(
   const accountMetrics = accounts.metrics as Row;
   const dealMetrics = opportunities.metrics as Row;
 
-  // Today's agenda follows the scope: the reader's own (what they run or
-  // take part in), or the whole team's.
-  const visibleActivities = await allRecords(service, actor, 'activities');
-  const personal = team
-    ? visibleActivities
-    : visibleActivities.filter(
-        (r) =>
-          r.ownerId === actor.id ||
-          array(r.internalParticipants).includes(actor.id),
-      );
-  const approvals = await allRecords(service, actor, 'approvals');
+  // The three lists come one page each; the cards ask for the rest.
+  const [todayList, overdueList, approvalList] = await Promise.all(
+    agendaNames.map((name) => agenda(service, actor, name, options)),
+  );
 
   // The funnel is the book as it stands: open deals by current stage.
   const deals = await allRecords(service, actor, 'opportunities', { ownerId });
@@ -136,25 +205,9 @@ export async function dashboard(
 
   return {
     scope: team ? 'team' : 'mine',
-    // Today's agenda is what is still ahead today; anything not started
-    // whose time has passed — earlier today or on an earlier day — is
-    // overdue, the same rule the activity list's card uses.
-    today: personal.filter(
-      (r) =>
-        r.status === 'planned' &&
-        r.startAt &&
-        dayOf(r.startAt) === today &&
-        new Date(toText(r.startAt)) >= now,
-    ),
-    overdue: personal.filter(
-      (r) =>
-        r.status === 'planned' &&
-        r.startAt &&
-        new Date(toText(r.startAt)) < now,
-    ),
-    approvals: approvals.filter(
-      (r) => r.status === 'pending' && (team || r.approverId === actor.id),
-    ),
+    today: todayList,
+    overdue: overdueList,
+    approvals: approvalList,
     attention: {
       uncontacted: leadMetrics.uncontacted,
       staleLeads: leadMetrics.stale,

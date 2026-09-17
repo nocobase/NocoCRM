@@ -6,7 +6,7 @@ import {
 } from '@nocobase/app-client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from '@nocobase/i18n/client';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import type {
   CrmRecord,
   Entity,
@@ -40,16 +40,27 @@ export interface Metadata {
   approve: boolean;
   settingsAccess: boolean;
 }
-export interface ListData {
+// Display names for every record a response refers to, resolved by the
+// server: `titles` are composed ("account / deal"), `names` bare.
+export interface Titled {
+  titles: Record<string, string>;
+  names: Record<string, string>;
+  opportunities?: Record<string, { amount: number; currency: string }>;
+}
+export interface ListData extends Titled {
   data: CrmRecord[];
   total: number;
   page: number;
   pageSize: number;
 }
-export interface Detail {
+export interface Detail extends Titled {
   record: CrmRecord;
+  // The first page of the history and of each related list; the totals say
+  // how much more the history and list endpoints hold.
   history: Data[];
+  historyTotal?: number;
   related: Partial<Record<Entity, CrmRecord[]>>;
+  relatedTotals?: Partial<Record<Entity, number>>;
   // What a delete would orphan, counted per child object; empty when clear.
   blockers?: Partial<Record<Entity, number>>;
   // Records a delete would edit (a contact taken out of their lists).
@@ -112,6 +123,82 @@ export function useCrmQuery<T>(
         error.status < 500
       ) && failureCount < 3,
   });
+}
+// One record by id, with the titles of what it refers to, through the list
+// endpoint: the light read a picker or a card needs to show a name.
+export function useRecord(entity: Entity | undefined, id: unknown) {
+  const key = toText(id ?? '');
+  const api = useCrmApi();
+  const scopeKey = useCrmScopeKey();
+  return useQuery({
+    queryKey: [...scopeKey, `${toText(entity)}?ids=${key}`],
+    queryFn: () =>
+      api<ListData>(
+        `${toText(entity)}?ids=${encodeURIComponent(key)}&pageSize=1`,
+      ),
+    enabled: Boolean(entity && key),
+    staleTime: 20000,
+    select: (result) => ({
+      record: result.data[0],
+      titles: result.titles,
+      names: result.names,
+    }),
+  });
+}
+// A list that arrived with a page (a detail's related records, its history)
+// and grows a page at a time from the endpoint given: the records so far,
+// the server's total, and the titles the extra pages brought with them. The
+// state belongs to the base path, so a different record starts afresh.
+export function useMore<T = CrmRecord>(
+  base: string | undefined,
+  initial: { data: T[]; total: number } | undefined,
+  pageSize = PAGE_SIZE,
+) {
+  const api = useCrmApi();
+  const [state, setState] = useState<{
+    base: string | undefined;
+    more: T[];
+    page: number;
+    titles: Record<string, string>;
+    loading: boolean;
+  }>({ base, more: [], page: 1, titles: {}, loading: false });
+  const current =
+    state.base === base
+      ? state
+      : { base, more: [], page: 1, titles: {}, loading: false };
+  const records = [...(initial?.data ?? []), ...current.more];
+  const total = initial?.total ?? records.length;
+  const loadMore = async (): Promise<void> => {
+    if (!base || current.loading) return;
+    setState({ ...current, loading: true });
+    try {
+      const joiner = base.includes('?') ? '&' : '?';
+      const next = await api<{
+        data: T[];
+        page: number;
+        titles?: Record<string, string>;
+      }>(
+        `${base}${joiner}page=${toText(current.page + 1)}&pageSize=${toText(pageSize)}`,
+      );
+      setState({
+        base,
+        more: [...current.more, ...next.data],
+        page: next.page,
+        titles: { ...current.titles, ...(next.titles ?? {}) },
+        loading: false,
+      });
+    } catch {
+      setState({ ...current, loading: false });
+    }
+  };
+  return {
+    records,
+    total,
+    titles: current.titles,
+    hasMore: records.length < total,
+    loading: current.loading,
+    loadMore,
+  };
 }
 export function useMetadata() {
   return useCrmQuery<Metadata>('metadata');

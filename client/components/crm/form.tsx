@@ -1,7 +1,7 @@
-import { useLookups, lookupTitles, recordTitle } from './lookups.js';
+import { RecordMultiPicker, RecordPicker } from './record-picker.js';
 import { fieldLabelKey, toText } from './api.js';
 import { CountryChoice, SubdivisionChoice } from './geography.js';
-import { useMemo, useRef, useState, type ReactElement } from 'react';
+import { useRef, useState, type ReactElement } from 'react';
 import { Paperclip, Plus, Trash2, Upload, X } from 'lucide-react';
 import { Button } from '../ui/button.js';
 import { Input } from '../ui/input.js';
@@ -190,6 +190,7 @@ export function RecordForm({
   saveLabel,
   onSubmit,
   andThen,
+  titles,
 }: {
   entity: Entity;
   initial?: Data;
@@ -203,14 +204,18 @@ export function RecordForm({
   // open on the now-existing record, so a retry updates it rather than
   // creating it again.
   andThen?: { label: string; run: (record: CrmRecord) => Promise<void> };
+  // Names the opening page already resolved, so preset relations show at once.
+  titles?: Record<string, string>;
 }): ReactElement {
   const { data: meta } = useMetadata();
-  const lookup = useLookups();
   const api = useCrmApi();
   const refresh = useRefresh();
   const { text } = useCrmText();
   const [error, setError] = useState<unknown>();
   const [busy, setBusy] = useState(false);
+  // The bare names of records picked in this form, for the deal name a new
+  // opportunity takes from its account.
+  const pickedNamesRef = useRef<Record<string, string>>({});
   // The record once created here, so a retry after a failed follow-up
   // updates it instead of creating a second one.
   const [createdId, setCreatedId] = useState<string>();
@@ -271,8 +276,7 @@ export function RecordForm({
             ...(entity === 'opportunities' && !id && !current.name && value
               ? {
                   name: text('opportunityName', {
-                    name:
-                      lookup.accounts.find((r) => r.id === value)?.name ?? '',
+                    name: pickedNamesRef.current[toText(value)] ?? '',
                   }),
                 }
               : {}),
@@ -317,7 +321,7 @@ export function RecordForm({
         writable &&
         (writable.fields === '*' || writable.fields.includes(f.key)),
     ) ?? [];
-  const names = useMemo(() => lookupTitles(lookup), [lookup]);
+  const names = titles ?? {};
   const choices = (field: Field): { value: string; label: string }[] => {
     if (field.relation === 'users')
       return (meta?.users ?? [])
@@ -335,27 +339,6 @@ export function RecordForm({
               )),
         )
         .map((u) => ({ value: u.id, label: u.name }));
-    if (field.relation)
-      return lookup[field.relation]
-        .filter(
-          (r) =>
-            ((field.relation !== 'contacts' &&
-              field.relation !== 'opportunities') ||
-              !input.accountId ||
-              r.accountId === input.accountId) &&
-            (field.relation !== 'leads' ||
-              r.status !== 'converted' ||
-              initial.leadId === r.id),
-        )
-        .map((r) => ({
-          value: r.id,
-          // Participants are picked from one account, so the bare name will
-          // do; a relation to another object keeps "name / account".
-          label:
-            field.type === 'multi'
-              ? toText(r.name)
-              : recordTitle(field.relation as Entity, r, lookup),
-        }));
     const key =
       field.key === 'type' && entity === 'accounts' ? 'accountType' : field.key;
     return (meta?.settings.options[key] ?? field.options ?? []).map((v) => ({
@@ -398,6 +381,51 @@ export function RecordForm({
           value={toText(value ?? '')}
           country={toText(input.country ?? '')}
           onChange={(v) => set(field.key, v || null)}
+        />
+      );
+    // A related record is searched for, a page at a time. Contacts and deals
+    // are looked for within the chosen account; a converted lead is not
+    // offered, since its work has moved on to what it became.
+    if (
+      field.type === 'relation' &&
+      field.relation &&
+      field.relation !== 'users'
+    )
+      return (
+        <RecordPicker
+          entity={field.relation}
+          label={label}
+          value={toText(value ?? '')}
+          titles={titles}
+          filter={
+            ['contacts', 'opportunities'].includes(field.relation) &&
+            input.accountId
+              ? { accountId: toText(input.accountId) }
+              : undefined
+          }
+          excludeStatus={field.relation === 'leads' ? 'converted' : undefined}
+          onChange={(v, picked) => {
+            if (picked) pickedNamesRef.current[v] = toText(picked.name);
+            set(field.key, v || null);
+          }}
+          disabled={
+            !id &&
+            ['leadId', 'accountId', 'opportunityId'].includes(field.key) &&
+            Boolean(initial[field.key])
+          }
+        />
+      );
+    if (field.type === 'multi' && field.relation && field.relation !== 'users')
+      return (
+        <RecordMultiPicker
+          entity={field.relation}
+          label={label}
+          value={arrayValues(value).map(toText)}
+          names={titles}
+          filter={
+            input.accountId ? { accountId: toText(input.accountId) } : undefined
+          }
+          onChange={(v) => set(field.key, v)}
         />
       );
     if (field.type === 'select' || field.type === 'relation')
@@ -444,12 +472,17 @@ export function RecordForm({
                 toText(contact.contactId) || `unselected-${index.toString()}`
               }
             >
-              <Choice
+              <RecordPicker
+                entity='contacts'
+                bare
                 label={text('entities.contacts')}
                 value={toText(contact.contactId ?? '')}
-                choices={lookup.contacts
-                  .filter((c) => c.accountId === input.accountId)
-                  .map((c) => ({ value: c.id, label: c.name }))}
+                titles={titles}
+                filter={
+                  input.accountId
+                    ? { accountId: toText(input.accountId) }
+                    : undefined
+                }
                 onChange={(v) =>
                   set(
                     field.key,

@@ -45,7 +45,7 @@ import {
 } from '../components/crm/common.js';
 import {
   useCrmQuery,
-  PAGE_SIZE,
+  useCrmApi,
   useCrmText,
   useMetadata,
   rows,
@@ -54,6 +54,7 @@ import {
   type Data,
   type CrmRecord,
   type Entity,
+  type ListData,
 } from '../components/crm/api.js';
 
 // The six risk cards: which list page they open, the metric key that page
@@ -131,134 +132,23 @@ export default function DashboardPage(): ReactElement {
     void navigate(`/crm/${toText(entity)}?metric=${metric}`);
 
   // One of the three "today" lists: activities carry their type and a start
-  // time; approvals carry their topic and when they were submitted.
-  // Each card pages the way every list does: a page, then more on demand.
-  const [shown, setShown] = useState<Record<string, number>>({});
+  // time; approvals carry their topic and when they were submitted. The
+  // workspace brings the first page of each; the card asks for the rest.
   const agenda = (
-    name: 'today' | 'overdue' | 'approvals',
+    name: AgendaName,
     empty: string,
     to: string,
-  ): ReactElement => {
-    const entity: Entity = name === 'approvals' ? 'approvals' : 'activities';
-    const records = (data?.[name] ?? []) as CrmRecord[];
-    const visible = shown[name] ?? PAGE_SIZE;
-    return (
-      <Card className='shadow-none'>
-        <CardHeader className='flex flex-row items-center justify-between'>
-          <CardTitle className='text-base'>
-            {text(
-              name === 'approvals'
-                ? scope === 'team'
-                  ? 'pendingApprovalsTeam'
-                  : 'pendingApprovals'
-                : name,
-            )}
-            <span className='ml-2 text-muted-foreground'>{records.length}</span>
-          </CardTitle>
-          <Link to={to} aria-label={text('more')}>
-            <ArrowUpRight className='size-4 text-muted-foreground' />
-          </Link>
-        </CardHeader>
-        <CardContent className='space-y-3'>
-          {records.length ? (
-            records.slice(0, visible).map((r) => (
-              <div
-                key={r.id}
-                className='border-b pb-3 text-sm last:border-0 last:pb-0'
-              >
-                <div className='flex items-center gap-2'>
-                  <Badge variant='outline'>
-                    {text(`options.${toText(r.type ?? r.topic)}`, {
-                      defaultValue: toText(r.type ?? r.topic),
-                    })}
-                  </Badge>
-                  <span className='min-w-0 flex-1 truncate'>
-                    <RecordLink entity={entity} record={r} />
-                  </span>
-                </div>
-                <p className='mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground'>
-                  <span className='inline-flex items-center gap-1'>
-                    <Clock className='size-3 shrink-0' />
-                    {localDate(r.startAt ?? r.submittedAt, language, timeZone)}
-                  </span>
-                  {/* Whose it is — the same line in both scopes, so the
-                      cards read alike: an approval names its applicant and
-                      approver, an activity its owner. */}
-                  {name === 'approvals' ? (
-                    <>
-                      <span className='inline-flex items-center gap-1'>
-                        <User className='size-3 shrink-0' />
-                        {toText(
-                          meta?.users.find((u) => u.id === r.ownerId)?.name,
-                        )}
-                      </span>
-                      <span className='inline-flex items-center gap-1'>
-                        <ShieldCheck className='size-3 shrink-0' />
-                        {toText(
-                          meta?.users.find((u) => u.id === r.approverId)?.name,
-                        )}
-                      </span>
-                    </>
-                  ) : (
-                    <span className='inline-flex items-center gap-1'>
-                      <User className='size-3 shrink-0' />
-                      {meta?.users.find((u) => u.id === r.ownerId)?.name}
-                    </span>
-                  )}
-                </p>
-                {entity === 'activities' && (
-                  <div className='mt-1 flex gap-1'>
-                    {(['prepareActivity', 'reportActivity'] as const).map(
-                      (key) => (
-                        <Button
-                          key={key}
-                          size='sm'
-                          variant='ghost'
-                          className='h-7 px-2 text-xs text-ai hover:text-ai'
-                          onClick={() =>
-                            window.dispatchEvent(
-                              new CustomEvent('crm-assistant', {
-                                detail: {
-                                  prompt: text(`prompts.${key}`),
-                                  entity: 'activities',
-                                  recordId: r.id,
-                                  send: key === 'prepareActivity',
-                                },
-                              }),
-                            )
-                          }
-                        >
-                          <Sparkles />
-                          {text(key)}
-                        </Button>
-                      ),
-                    )}
-                  </div>
-                )}
-              </div>
-            ))
-          ) : (
-            <p className='py-2 text-sm text-muted-foreground'>{empty}</p>
-          )}
-          {records.length > visible && (
-            <Button
-              variant='ghost'
-              size='sm'
-              className='w-full'
-              onClick={() =>
-                setShown((all) => ({ ...all, [name]: visible + PAGE_SIZE }))
-              }
-            >
-              {text('loadMore')}
-              <span className='ml-1 tabular-nums text-muted-foreground'>
-                {records.length - visible}
-              </span>
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-    );
-  };
+  ): ReactElement => (
+    <AgendaCard
+      key={`${name}-${scope}`}
+      name={name}
+      scope={scope}
+      initial={data?.[name] as ListData | undefined}
+      empty={empty}
+      to={to}
+      timeZone={timeZone}
+    />
+  );
 
   const section = (title: string, children: ReactNode): ReactElement => (
     <section className='space-y-3'>
@@ -597,5 +487,164 @@ export default function DashboardPage(): ReactElement {
         </>
       )}
     </CrmFrame>
+  );
+}
+
+type AgendaName = 'today' | 'overdue' | 'approvals';
+// A workspace card pages in fives: five is what fits under the day's
+// heading without scrolling, and the rest comes on request.
+const AGENDA_PAGE = 5;
+
+function AgendaCard({
+  name,
+  scope,
+  initial,
+  empty,
+  to,
+  timeZone,
+}: {
+  name: AgendaName;
+  scope: 'mine' | 'team';
+  initial: ListData | undefined;
+  empty: string;
+  to: string;
+  timeZone: string;
+}): ReactElement {
+  const { text, language } = useCrmText();
+  const { data: meta } = useMetadata();
+  const api = useCrmApi();
+  const entity: Entity = name === 'approvals' ? 'approvals' : 'activities';
+  // Pages fetched past the first, which came with the workspace itself.
+  const [more, setMore] = useState<CrmRecord[]>([]);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const records = [...(initial?.data ?? []), ...more];
+  const total = initial?.total ?? 0;
+  const loadMore = async (): Promise<void> => {
+    setLoading(true);
+    try {
+      const next = await api<ListData>(
+        `dashboard/${name}?scope=${scope}&page=${toText(page + 1)}&pageSize=${toText(AGENDA_PAGE)}`,
+      );
+      setMore((all) => [...all, ...next.data]);
+      setPage(next.page);
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <Card className='shadow-none'>
+      <CardHeader className='flex flex-row items-center justify-between'>
+        <CardTitle className='text-base'>
+          {text(
+            name === 'approvals'
+              ? scope === 'team'
+                ? 'pendingApprovalsTeam'
+                : 'pendingApprovals'
+              : name,
+          )}
+          <span className='ml-2 text-muted-foreground'>{total}</span>
+        </CardTitle>
+        <Link to={to} aria-label={text('more')}>
+          <ArrowUpRight className='size-4 text-muted-foreground' />
+        </Link>
+      </CardHeader>
+      <CardContent className='space-y-3'>
+        {records.length ? (
+          records.map((r) => (
+            <div
+              key={r.id}
+              className='border-b pb-3 text-sm last:border-0 last:pb-0'
+            >
+              <div className='flex items-center gap-2'>
+                <Badge variant='outline'>
+                  {text(`options.${toText(r.type ?? r.topic)}`, {
+                    defaultValue: toText(r.type ?? r.topic),
+                  })}
+                </Badge>
+                <span className='min-w-0 flex-1 truncate'>
+                  <RecordLink entity={entity} record={r} />
+                </span>
+              </div>
+              <p className='mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground'>
+                <span className='inline-flex items-center gap-1'>
+                  <Clock className='size-3 shrink-0' />
+                  {localDate(r.startAt ?? r.submittedAt, language, timeZone)}
+                </span>
+                {/* Whose it is — the same line in both scopes, so the
+                      cards read alike: an approval names its applicant and
+                      approver, an activity its owner. */}
+                {name === 'approvals' ? (
+                  <>
+                    <span className='inline-flex items-center gap-1'>
+                      <User className='size-3 shrink-0' />
+                      {toText(
+                        meta?.users.find((u) => u.id === r.ownerId)?.name,
+                      )}
+                    </span>
+                    <span className='inline-flex items-center gap-1'>
+                      <ShieldCheck className='size-3 shrink-0' />
+                      {toText(
+                        meta?.users.find((u) => u.id === r.approverId)?.name,
+                      )}
+                    </span>
+                  </>
+                ) : (
+                  <span className='inline-flex items-center gap-1'>
+                    <User className='size-3 shrink-0' />
+                    {meta?.users.find((u) => u.id === r.ownerId)?.name}
+                  </span>
+                )}
+              </p>
+              {entity === 'activities' && (
+                <div className='mt-1 flex gap-1'>
+                  {(['prepareActivity', 'reportActivity'] as const).map(
+                    (key) => (
+                      <Button
+                        key={key}
+                        size='sm'
+                        variant='ghost'
+                        className='h-7 px-2 text-xs text-ai hover:text-ai'
+                        onClick={() =>
+                          window.dispatchEvent(
+                            new CustomEvent('crm-assistant', {
+                              detail: {
+                                prompt: text(`prompts.${key}`),
+                                entity: 'activities',
+                                recordId: r.id,
+                                send: key === 'prepareActivity',
+                              },
+                            }),
+                          )
+                        }
+                      >
+                        <Sparkles />
+                        {text(key)}
+                      </Button>
+                    ),
+                  )}
+                </div>
+              )}
+            </div>
+          ))
+        ) : (
+          <p className='py-2 text-sm text-muted-foreground'>{empty}</p>
+        )}
+        {records.length < total && (
+          <Button
+            variant='ghost'
+            size='sm'
+            className='w-full'
+            disabled={loading}
+            onClick={() => void loadMore()}
+          >
+            {text('loadMore')}
+            <span className='ml-1 tabular-nums text-muted-foreground'>
+              {total - records.length}
+            </span>
+          </Button>
+        )}
+      </CardContent>
+    </Card>
   );
 }

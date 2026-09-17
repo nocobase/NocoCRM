@@ -20,6 +20,17 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
     ...actual,
     useCrmApi: () => state.api,
     useRefresh: () => state.refresh,
+    // A picker names its preset value through one record read.
+    useRecord: (entity: string, id: unknown) => ({
+      data:
+        entity && id
+          ? {
+              record: { id, name: id === 'lead-a' ? 'Lead A' : String(id) },
+              titles: {},
+              names: {},
+            }
+          : undefined,
+    }),
     useCrmQuery: () => ({
       data: { subdivisions: [{ value: 'CN-11', label: 'Beijing' }] },
     }),
@@ -60,20 +71,6 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
     }),
   };
 });
-vi.mock('../../client/components/crm/lookups.js', async (importOriginal) => ({
-  // Only the data hook is stubbed; the pure title helpers stay real.
-  ...(await importOriginal<
-    typeof import('../../client/components/crm/lookups.js')
-  >()),
-  useLookups: () => ({
-    leads: [{ id: 'lead-a', name: 'Lead A' }],
-    accounts: [{ id: 'account-a', name: 'Account A' }],
-    contacts: [],
-    opportunities: [],
-    activities: [],
-    approvals: [],
-  }),
-}));
 vi.mock('../../client/components/crm/common.js', () => ({
   Loading: () => null,
   ErrorNotice: ({ error }: { error?: unknown }) =>
@@ -98,7 +95,9 @@ describe('CRM forms and file interchange', () => {
     expect(state.api).not.toHaveBeenCalled();
     expect(screen.getByRole('alert')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('combobox', { name: 'Source' }));
-    await userEvent.click(await screen.findByRole('option', { name: 'Website' }));
+    await userEvent.click(
+      await screen.findByRole('option', { name: 'Website' }),
+    );
     await userEvent.click(
       screen.getByRole('button', { name: 'Save', exact: true }),
     );

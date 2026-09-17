@@ -1,4 +1,5 @@
-import { useLookups, recordTitle } from './lookups.js';
+import { recordTitle } from './lookups.js';
+import { RecordPicker } from './record-picker.js';
 import { toText } from './api.js';
 import { useState, type ReactElement, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -13,7 +14,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from '../ui/dialog.js';
-import { Choice } from './form.js';
 import { inherited, proposalFor } from './conversion-fields.js';
 import { ErrorNotice, Value } from './common.js';
 import {
@@ -23,6 +23,7 @@ import {
   useMetadata,
   useRefresh,
   useCrmScopeKey,
+  useRecord,
   arrayValues,
   type CrmRecord,
   type Data,
@@ -92,19 +93,18 @@ export function ConvertDialog({
   const { data: meta } = useMetadata();
   const api = useCrmApi();
   const refresh = useRefresh();
-  const lookup = useLookups();
   const scopeKey = useCrmScopeKey();
-  const preview = useCrmQuery<{ accounts: CrmRecord[]; contacts: CrmRecord[] }>(
-    `leads/${toText(lead.id)}/conversion`,
-  );
+  const preview = useCrmQuery<{
+    accounts: CrmRecord[];
+    contacts: CrmRecord[];
+    titles: Record<string, string>;
+  }>(`leads/${toText(lead.id)}/conversion`);
   // The list endpoint puts total beside data, not inside it, so this reads
   // the raw response rather than going through useCrmQuery's unwrapping.
   const activities = useQuery({
     queryKey: [...scopeKey, `activities?leadId=${toText(lead.id)}&count`],
     queryFn: () =>
-      api<{ total: number }>(
-        `activities?leadId=${toText(lead.id)}&pageSize=1`,
-      ),
+      api<{ total: number }>(`activities?leadId=${toText(lead.id)}&pageSize=1`),
   });
   const [input, setInput] = useState<Data>(() => ({
     accountName: lead.company ?? '',
@@ -132,10 +132,6 @@ export function ConvertDialog({
         : {}),
     }));
 
-  const names: Record<string, string> = {};
-  for (const [entity, records] of Object.entries(lookup))
-    for (const r of records)
-      names[toText(r.id)] = recordTitle(entity as Entity, r);
   const suggestedAccounts = preview.data?.accounts ?? [];
   // Until the user chooses, exactly one match is taken as the choice: a
   // single strong hit is more likely the same company than a new one, and a
@@ -147,7 +143,19 @@ export function ConvertDialog({
         ? suggestedAccounts[0].id
         : null
       : input.accountId;
-  const account = lookup.accounts.find((r) => r.id === accountId);
+  // The chosen records: a suggestion the preview brought, or one picked by
+  // search and read on its own.
+  const pickedAccount = useRecord(
+    accountId && !suggestedAccounts.some((r) => r.id === accountId)
+      ? 'accounts'
+      : undefined,
+    accountId,
+  );
+  const account =
+    suggestedAccounts.find((r) => r.id === accountId) ??
+    (pickedAccount.data?.record?.id === accountId
+      ? pickedAccount.data.record
+      : undefined);
   const suggestedContacts = (preview.data?.contacts ?? []).filter(
     (c) => !account || c.accountId === account.id,
   );
@@ -157,7 +165,23 @@ export function ConvertDialog({
         ? suggestedContacts[0].id
         : null
       : input.contactId;
-  const contact = lookup.contacts.find((r) => r.id === contactId);
+  const pickedContact = useRecord(
+    contactId && !suggestedContacts.some((r) => r.id === contactId)
+      ? 'contacts'
+      : undefined,
+    contactId,
+  );
+  const contact =
+    suggestedContacts.find((r) => r.id === contactId) ??
+    (pickedContact.data?.record?.id === contactId
+      ? pickedContact.data.record
+      : undefined);
+  // Names for the lead, the suggestions and whatever was picked by search.
+  const names: Record<string, string> = {
+    ...(preview.data?.titles ?? {}),
+    ...(pickedAccount.data?.titles ?? {}),
+    ...(pickedContact.data?.titles ?? {}),
+  };
   // What is actually submitted: the derived choices, not the raw state.
   const resolved: Data = { ...input, accountId, contactId };
   const linkedActivities = activities.data?.total ?? 0;
@@ -171,8 +195,7 @@ export function ConvertDialog({
     if (!current) return [];
     const proposed = proposalFor(lead, entity);
     return inherited[entity].filter(
-      (key) =>
-        current[key] && proposed[key] && current[key] !== proposed[key],
+      (key) => current[key] && proposed[key] && current[key] !== proposed[key],
     );
   };
 
@@ -181,7 +204,9 @@ export function ConvertDialog({
     canLink: boolean,
   ): ReactElement => {
     const key = entity === 'accounts' ? 'accountId' : 'contactId';
-    const linking = Boolean(resolved[key]);
+    // Linking without a pick yet is the empty string: the picker is open,
+    // nothing chosen. Null is an explicit "create new".
+    const linking = resolved[key] !== null && resolved[key] !== undefined;
     return (
       <div className='flex gap-1 rounded-lg border p-0.5'>
         <Button
@@ -200,10 +225,9 @@ export function ConvertDialog({
           onClick={() => {
             const first =
               entity === 'accounts'
-                ? (suggestedAccounts[0] ?? lookup.accounts[0])
-                : (suggestedContacts[0] ??
-                  lookup.contacts.find((c) => c.accountId === account?.id));
-            if (first) set(key, first.id);
+                ? suggestedAccounts[0]
+                : suggestedContacts[0];
+            set(key, first ? first.id : '');
           }}
         >
           {text('linkExisting')}
@@ -219,14 +243,18 @@ export function ConvertDialog({
     const fields = conflicts(entity, current);
     if (!current || !fields.length) return null;
     const key =
-      entity === 'accounts' ? 'overwriteAccountFields' : 'overwriteContactFields';
+      entity === 'accounts'
+        ? 'overwriteAccountFields'
+        : 'overwriteContactFields';
     const proposed = proposalFor(lead, entity);
     const chosen = arrayValues(input[key]);
     const def = (k: string) =>
       meta?.definitions[entity].fields.find((f) => f.key === k) ?? { key: k };
     return (
       <div className='space-y-2'>
-        <p className='text-xs text-muted-foreground'>{text('overwriteFields')}</p>
+        <p className='text-xs text-muted-foreground'>
+          {text('overwriteFields')}
+        </p>
         {fields.map((field) => (
           <label key={field} className='flex items-start gap-2 text-sm'>
             <Checkbox
@@ -324,19 +352,15 @@ export function ConvertDialog({
         >
           <Section title={text('entities.accounts')}>
             <div className='flex flex-wrap items-center gap-3'>
-              {modeToggle('accounts', lookup.accounts.length > 0)}
-              {Boolean(accountId) && (
+              {modeToggle('accounts', true)}
+              {accountId !== null && accountId !== undefined && (
                 <div className='min-w-48 flex-1'>
-                  <Choice
+                  <RecordPicker
+                    entity='accounts'
                     label={text('entities.accounts')}
                     value={toText(accountId)}
+                    titles={names}
                     onChange={(v) => set('accountId', v || null)}
-                    choices={[
-                      ...suggestedAccounts,
-                      ...lookup.accounts.filter(
-                        (r) => !suggestedAccounts.some((s) => s.id === r.id),
-                      ),
-                    ].map((r) => ({ value: r.id, label: r.name }))}
                   />
                 </div>
               )}
@@ -369,20 +393,19 @@ export function ConvertDialog({
 
           <Section title={text('entities.contacts')}>
             <div className='flex flex-wrap items-center gap-3'>
-              {modeToggle(
-                'contacts',
-                Boolean(account) &&
-                  lookup.contacts.some((c) => c.accountId === account?.id),
-              )}
-              {Boolean(contactId) && (
+              {modeToggle('contacts', Boolean(account))}
+              {contactId !== null && contactId !== undefined && (
                 <div className='min-w-48 flex-1'>
-                  <Choice
+                  <RecordPicker
+                    entity='contacts'
+                    bare
                     label={text('entities.contacts')}
                     value={toText(contactId)}
+                    titles={names}
+                    filter={
+                      account ? { accountId: toText(account.id) } : undefined
+                    }
                     onChange={(v) => set('contactId', v || null)}
-                    choices={lookup.contacts
-                      .filter((r) => r.accountId === account?.id)
-                      .map((r) => ({ value: r.id, label: r.name }))}
                   />
                 </div>
               )}
@@ -445,7 +468,11 @@ export function ConvertDialog({
             >
               {text('cancel')}
             </Button>
-            <Button type='submit' disabled={busy}>
+            <Button
+              type='submit'
+              // Linking was chosen but nothing picked yet: nothing to submit.
+              disabled={busy || accountId === '' || contactId === ''}
+            >
               {busy ? text('saving') : text('convert')}
             </Button>
           </DialogFooter>

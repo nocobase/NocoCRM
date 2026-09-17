@@ -1,9 +1,4 @@
 import {
-  useLookups,
-  lookupTitles,
-  plainNames,
-} from '../components/crm/lookups.js';
-import {
   fieldLabelKey,
   linkOf,
   PAGE_SIZE,
@@ -63,6 +58,7 @@ import {
 import {
   useCrmApi,
   useCrmQuery,
+  useMore,
   useCrmText,
   useMetadata,
   useRefresh,
@@ -149,24 +145,40 @@ function LeadDetail({ id }: { id: string }): ReactElement {
     isLoading,
   } = useCrmQuery<Detail>(`leads/${toText(id)}`);
   const { data: meta } = useMetadata();
-  const lookup = useLookups();
   const api = useCrmApi();
   const refresh = useRefresh();
   const navigate = useNavigate();
   const { text, language } = useCrmText();
   const [tab, setTab] = useState('activities');
-  // Activities, attachments and history all page in the same size chunks.
-  const pageStep = PAGE_SIZE;
-  const [shown, setShown] = useState(pageStep);
-  const [shownHistory, setShownHistory] = useState(pageStep);
+  // The activities and the history arrive one page each with the lead;
+  // these grow them from the list and history endpoints.
+  const moreActivities = useMore(
+    `activities?leadId=${toText(id)}&sort=-startAt`,
+    detail?.related.activities
+      ? {
+          data: rows(detail.related.activities) as CrmRecord[],
+          total:
+            detail.relatedTotals?.activities ??
+            rows(detail.related.activities).length,
+        }
+      : undefined,
+  );
+  const moreHistory = useMore<Data>(
+    `leads/${toText(id)}/history`,
+    detail
+      ? {
+          data: detail.history,
+          total: detail.historyTotal ?? detail.history.length,
+        }
+      : undefined,
+  );
   const [uploading, setUploading] = useState(false);
   // History records attachments as ids; one lookup for everything on screen
   // turns "Attachments 3" into the actual filenames. Declared with the other
   // hooks so it runs before this component's early returns.
   const historyFileIds = [
     ...new Set(
-      (detail?.history ?? [])
-        .slice(0, shownHistory)
+      moreHistory.records
         .flatMap((event) =>
           arrayValues((event.changes as Data | undefined)?.attachments).map(
             toText,
@@ -209,7 +221,13 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   const record = detail.record;
   const definition = meta.definitions.leads;
   const editable = detail.permissions.edit;
-  const names = lookupTitles(lookup);
+  // Names for everything this page links to, resolved by the server with
+  // the record itself.
+  const names = {
+    ...detail.titles,
+    ...moreActivities.titles,
+    ...moreHistory.titles,
+  };
   const field = (key: string): Field =>
     definition.fields.find((f) => f.key === key) ?? { key, type: 'text' };
   // Newest first by when the activity happens, not when the row was written:
@@ -222,13 +240,8 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       arrayValues(activity.attachments).map(toText),
     ),
   ]).size;
-  const activities = rows(detail.related.activities)
-    .slice()
-    .sort(
-      (left, right) =>
-        new Date(toText(right.startAt ?? right.createdAt)).getTime() -
-        new Date(toText(left.startAt ?? left.createdAt)).getTime(),
-    );
+  // Newest first by when they happen, in the server's order so pages join.
+  const activities = moreActivities.records;
   const converted = record.status === 'converted';
   const patch = async (values: Data): Promise<void> => {
     await api(`leads/${toText(id)}`, 'PATCH', values);
@@ -508,9 +521,13 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                 <div className='-ml-2.5 flex gap-1'>
                   {(
                     [
-                      ['activities', 'entities.activities', activities.length],
+                      [
+                        'activities',
+                        'entities.activities',
+                        moreActivities.total,
+                      ],
                       ['attachments', 'fields.attachments', attachmentCount],
-                      ['historyTab', 'historyTab', detail.history.length],
+                      ['historyTab', 'historyTab', moreHistory.total],
                     ] as const
                   ).map(([name, label, count]) => (
                     <Button
@@ -555,21 +572,25 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                     <>
                       {/* One continuous rule down the list; each item hangs a node on it. */}
                       <ol className='relative ml-1.5 border-l border-border'>
-                        {activities.slice(0, shown).map((activity) => (
+                        {activities.map((activity) => (
                           <ActivityItem
                             key={toText(activity.id)}
                             activity={activity}
+                            titles={names}
+                            names={detail.names}
                           />
                         ))}
                       </ol>
-                      {activities.length > shown && (
+                      {moreActivities.hasMore && (
                         <Button
                           className='mt-3'
                           variant='ghost'
                           size='sm'
-                          onClick={() => setShown((n) => n + pageStep)}
+                          disabled={moreActivities.loading}
+                          onClick={() => void moreActivities.loadMore()}
                         >
-                          {text('loadMore')} · {activities.length - shown}
+                          {text('loadMore')} ·{' '}
+                          {moreActivities.total - activities.length}
                         </Button>
                       )}
                     </>
@@ -597,7 +618,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
               ) : (
                 <>
                   <ol>
-                    {detail.history.slice(0, shownHistory).map((event) => (
+                    {moreHistory.records.map((event) => (
                       // Read as a log: fixed time and actor columns frame a
                       // flexible middle, so the eye can scan one column at a
                       // time instead of re-parsing each row.
@@ -641,15 +662,16 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                       </li>
                     ))}
                   </ol>
-                  {detail.history.length > shownHistory && (
+                  {moreHistory.hasMore && (
                     <Button
                       className='mt-3'
                       variant='ghost'
                       size='sm'
-                      onClick={() => setShownHistory((n) => n + pageStep)}
+                      disabled={moreHistory.loading}
+                      onClick={() => void moreHistory.loadMore()}
                     >
                       {text('loadMore')} ·{' '}
-                      {detail.history.length - shownHistory}
+                      {moreHistory.total - moreHistory.records.length}
                     </Button>
                   )}
                 </>
@@ -907,15 +929,23 @@ export function WebsiteField({
   );
 }
 
-export function ActivityItem({ activity }: { activity: Data }): ReactElement {
+export function ActivityItem({
+  activity,
+  titles = {},
+  names: bareNames = {},
+}: {
+  activity: Data;
+  // Resolved by the server with the page this item sits on: composed
+  // titles for links, bare names for the participants.
+  titles?: Record<string, string>;
+  names?: Record<string, string>;
+}): ReactElement {
   const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
-  // Cached queries, shared with the page around this item.
-  const lookup = useLookups();
-  const names = lookupTitles(lookup);
+  const names = titles;
   // External participants are shown by bare name: the activity's account is
   // already on screen, so "name / account" would only repeat it.
-  const contactNames = plainNames(lookup, 'contacts');
+  const contactNames = bareNames;
   const [open, setOpen] = useState(false);
   const [activityError, setActivityError] = useState<unknown>();
   const status = toText(activity.status);
@@ -930,9 +960,6 @@ export function ActivityItem({ activity }: { activity: Data }): ReactElement {
       type: 'text',
     };
   // External participants come from the activity's account, as in the form.
-  const contactChoices = (lookup.contacts ?? [])
-    .filter((c) => !activity.accountId || c.accountId === activity.accountId)
-    .map((c) => ({ value: toText(c.id), label: toText(c.name) }));
   const editableField = (key: string): ReactElement => (
     <InlineField
       entity='activities'
@@ -940,7 +967,11 @@ export function ActivityItem({ activity }: { activity: Data }): ReactElement {
       field={activityField(key)}
       editable={editable}
       lookup={key === 'externalParticipants' ? contactNames : names}
-      choices={key === 'externalParticipants' ? contactChoices : undefined}
+      relationFilter={
+        activity.accountId
+          ? { accountId: toText(activity.accountId) }
+          : undefined
+      }
       label={text(fieldLabelKey('activities', key))}
     />
   );

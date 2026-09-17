@@ -1,4 +1,3 @@
-import { useLookups, lookupTitles } from './lookups.js';
 import { toText } from './api.js';
 import {
   createContext,
@@ -51,6 +50,7 @@ import {
   useCrmText,
   useRefresh,
   useMetadata,
+  useRecord,
   rows,
   fieldLabelKey,
   localDate,
@@ -136,16 +136,14 @@ export function AssistantPanel(): ReactElement | null {
   // also runs while this panel's own send is in flight: that is how the
   // question's progress steps, written on the server, reach the screen
   // before the reply does.
-  const history = useCrmQuery<{ messages: Data[]; actions: Data[] }>(
-    'ai/history',
-    Boolean(state?.open),
-    {
-      refetchInterval: (data) =>
-        busy || data?.messages.some((m) => m.status === 'pending')
-          ? 2000
-          : false,
-    },
-  );
+  const history = useCrmQuery<{
+    messages: Data[];
+    actions: Data[];
+    titles: Record<string, string>;
+  }>('ai/history', Boolean(state?.open), {
+    refetchInterval: (data) =>
+      busy || data?.messages.some((m) => m.status === 'pending') ? 2000 : false,
+  });
   const pendingOnServer = (history.data?.messages ?? []).some(
     (m) => m.status === 'pending',
   );
@@ -245,6 +243,7 @@ export function AssistantPanel(): ReactElement | null {
   }, []);
   if (!state || !meta?.settings.aiEnabled) return null;
   const actions = rows(history.data?.actions);
+  const titles = history.data?.titles ?? {};
   return (
     // Clicking a nav link counts as an outside press, which would close the panel on every page switch.
     <Sheet
@@ -312,7 +311,7 @@ export function AssistantPanel(): ReactElement | null {
                   <Spinner className='size-4' />
                   {text('thinking')}
                 </div>
-                <Steps steps={rows(m.steps)} live />
+                <Steps steps={rows(m.steps)} titles={titles} live />
               </div>
             ) : m.status === 'failed' || m.status === 'cancelled' ? (
               <div
@@ -340,7 +339,11 @@ export function AssistantPanel(): ReactElement | null {
                 // with lookups or a web search is worth keeping.
                 ['search', 'get', 'web'].includes(toText(step.kind)),
               ) ? (
-              <Trail key={`${toText(m.id)}-trail`} steps={rows(m.steps)} />
+              <Trail
+                key={`${toText(m.id)}-trail`}
+                steps={rows(m.steps)}
+                titles={titles}
+              />
             ) : null,
             // The cards a reply produced sit under that reply, whatever became
             // of them: an executed card stays as the record of what was done,
@@ -348,7 +351,12 @@ export function AssistantPanel(): ReactElement | null {
             ...actions
               .filter((a) => a.messageId === m.id)
               .map((a) => (
-                <ActionCard key={toText(a.id)} action={a} continueAfter />
+                <ActionCard
+                  key={toText(a.id)}
+                  action={a}
+                  titles={titles}
+                  continueAfter
+                />
               )),
           ])}
           {/* A pending card whose reply is gone (the chat was cleared) is not
@@ -508,7 +516,6 @@ function ConversionSummary({
   editable,
   onEdit,
   onSet,
-  lookup,
 }: {
   input: Data;
   lead: CrmRecord | undefined;
@@ -524,10 +531,13 @@ function ConversionSummary({
   // Writes a top-level request key: accountName, createOpportunity,
   // opportunityName, amount, overwriteAccountFields, overwriteContactFields.
   onSet: (key: string, value: unknown) => Promise<void>;
-  lookup: Partial<Record<Entity, CrmRecord[]>>;
 }): ReactElement | null {
   const { text } = useCrmText();
   const { data: meta } = useMetadata();
+  // The records the proposal links to, read on demand for the conflict
+  // list: what they hold today against what the lead would write.
+  const linkedAccount = useRecord('accounts', input.accountId);
+  const linkedContact = useRecord('contacts', input.contactId);
   if (!lead) return null;
   const fieldDef = (entity: Entity, key: string): Field =>
     meta?.definitions[entity].fields.find((f) => f.key === key) ?? {
@@ -566,8 +576,11 @@ function ConversionSummary({
     id: string,
     proposal: Data,
   ): ReactElement | null => {
-    const current = lookup[entity]?.find((r) => r.id === id);
-    if (!current) return null;
+    const current =
+      entity === 'accounts'
+        ? linkedAccount.data?.record
+        : linkedContact.data?.record;
+    if (!current || toText(current.id) !== id) return null;
     const fields = inherited[entity].filter(
       (key) => current[key] && proposal[key] && current[key] !== proposal[key],
     );
@@ -741,14 +754,16 @@ const convertFields: Record<string, Field> = {
 
 export function ActionCard({
   action,
+  titles = {},
   continueAfter = false,
 }: {
   action: Data;
+  // Names for the records the card refers to, resolved with the history.
+  titles?: Record<string, string>;
   // Ask the assistant to carry on with deferred steps once this executes.
   // Only the chat panel sets it: a confirmation there is mid-conversation.
   continueAfter?: boolean;
 }): ReactElement {
-  const lookup = useLookups();
   const { data: meta } = useMetadata();
   const { text } = useCrmText();
   const api = useCrmApi();
@@ -770,6 +785,14 @@ export function ActionCard({
   const [error, setError] = useState<unknown>();
   const entity = action.entity as Entity;
   const input = (action.input ?? {}) as Data;
+  // The record an update edits or a conversion converts, read on demand:
+  // the form opens on its current values, the summary on the lead.
+  const target = useRecord(
+    ['update', 'convert'].includes(toText(action.operation))
+      ? entity
+      : undefined,
+    action.recordId,
+  );
   // What the model originally proposed. Rows from before this was recorded
   // carry their input as the proposal, so nothing there shows as edited.
   const proposed = (action.proposedInput ?? input) as Data;
@@ -809,9 +832,7 @@ export function ActionCard({
       key,
       type: 'text',
     };
-  // Value and InlineField want a flat id -> name map, while useLookups returns
-  // the records grouped by entity.
-  const names = lookupTitles(lookup);
+  const names = titles;
   // The original value the way the row shows the current one: an option's
   // label, a relation's name, yes / no — not the stored code.
   const proposedLabel = (key: string): string => {
@@ -967,7 +988,7 @@ export function ActionCard({
             {action.operation === 'convert' && (
               <ConversionSummary
                 input={input}
-                lead={lookup.leads.find((r) => r.id === action.recordId)}
+                lead={target.data?.record}
                 names={names}
                 editable={action.status === 'pending'}
                 onEdit={(target, key, value) => {
@@ -982,7 +1003,6 @@ export function ActionCard({
                 onSet={(key, value) =>
                   update({ input: { ...input, [key]: value } })
                 }
-                lookup={lookup}
               />
             )}
           </>
@@ -1058,12 +1078,8 @@ export function ActionCard({
           id={
             action.operation === 'update' ? toText(action.recordId) : undefined
           }
-          initial={{
-            ...(lookup[action.entity as Entity]?.find(
-              (r) => r.id === action.recordId,
-            ) ?? {}),
-            ...input,
-          }}
+          initial={{ ...(target.data?.record ?? {}), ...input }}
+          titles={names}
           onClose={() => setEditing(false)}
           onSubmit={(values) => update({ input: values })}
         />
@@ -1077,15 +1093,16 @@ export function ActionCard({
 // the lookups so "读取客户「华东智造集团」" reads as such.
 function Steps({
   steps,
+  titles = {},
   live = false,
 }: {
   steps: Data[];
+  titles?: Record<string, string>;
   live?: boolean;
 }): ReactElement {
   const { text } = useCrmText();
   const { data: meta } = useMetadata();
-  const lookup = useLookups();
-  const names = lookupTitles(lookup);
+  const names = titles;
   const nameOf = (id: unknown): string =>
     names[toText(id)] ??
     meta?.users.find((u) => u.id === id)?.name ??
@@ -1187,7 +1204,13 @@ function Steps({
 }
 
 // The trail an answered question keeps, folded to one line under it.
-function Trail({ steps }: { steps: Data[] }): ReactElement {
+function Trail({
+  steps,
+  titles,
+}: {
+  steps: Data[];
+  titles: Record<string, string>;
+}): ReactElement {
   const { text } = useCrmText();
   const [open, setOpen] = useState(false);
   return (
@@ -1205,7 +1228,7 @@ function Trail({ steps }: { steps: Data[] }): ReactElement {
       </button>
       {open && (
         <div className='mt-1 rounded-lg bg-muted/40 p-2 text-muted-foreground'>
-          <Steps steps={steps} />
+          <Steps steps={steps} titles={titles} />
         </div>
       )}
     </div>

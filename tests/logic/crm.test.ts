@@ -702,7 +702,9 @@ describe('CRM API security and domain rules', () => {
     ).toBe(0);
     expect(
       JSON.stringify(
-        await request('/leads/lookup', 'restricted').then((r) => r.json()),
+        await request('/leads?search=secret-canary', 'restricted').then((r) =>
+          r.json(),
+        ),
       ),
     ).not.toContain('secret-canary');
     // Export is for managers and administrators only.
@@ -768,7 +770,7 @@ describe('CRM API security and domain rules', () => {
     const board = await dashboard(service, actor('rep'), {});
     expect(board.attention).toMatchObject({ overdueOpportunities: 0 });
     expect(board.business).toMatchObject({ pipeline: { CNY: 1000 } });
-    expect((board.today as CrmRecord[]).length).toBe(0);
+    expect((board.today as { total: number }).total).toBe(0);
     expect(
       (board.funnel as { stage: string; count: number }[])[0],
     ).toMatchObject({ stage: 'contact' });
@@ -1181,6 +1183,201 @@ describe('demo dataset', () => {
     const missing = await request('/demo/reset', 'admin', 'POST', {});
     expect(missing.status).toBe(404);
   }, 120000);
+});
+
+describe('resolved titles and paged filters', () => {
+  it('names every record a page refers to and filters activities by date', async () => {
+    const account = await service.save(actor('rep'), 'accounts', {
+      name: 'Titled account',
+    });
+    const contact = await service.save(actor('rep'), 'contacts', {
+      name: 'Titled person',
+      accountId: account.id,
+    });
+    const deal = await service.save(actor('rep'), 'opportunities', {
+      name: 'Titled deal',
+      accountId: account.id,
+      amount: 12345,
+      currency: 'CNY',
+      contacts: [{ contactId: contact.id, role: 'other' }],
+    });
+    const activity = await service.save(actor('rep'), 'activities', {
+      name: 'Titled call',
+      accountId: account.id,
+      opportunityId: deal.id,
+      externalParticipants: [contact.id],
+      startAt: '2031-03-10T09:00:00.000Z',
+      endAt: '2031-03-10T10:00:00.000Z',
+    });
+    const approval = await service.save(actor('rep'), 'approvals', {
+      name: 'Titled approval',
+      opportunityId: deal.id,
+      topic: 'discount',
+      approverId: 'manager',
+    });
+    const page = async (path: string): Promise<Record<string, any>> =>
+      (await request(path, 'rep').then((r) => r.json())) as Record<string, any>;
+    // A contact and a deal carry their account in the title; the bare name
+    // stays available for lists already scoped to that account.
+    const contacts = await page(`/contacts?ids=${toText(contact.id)}`);
+    expect(contacts.titles[toText(contact.id)]).toBe(
+      'Titled person / Titled account',
+    );
+    expect(contacts.names[toText(contact.id)]).toBe('Titled person');
+    const deals = await page(`/opportunities?ids=${toText(deal.id)}`);
+    expect(deals.titles[toText(deal.id)]).toBe('Titled account / Titled deal');
+    expect(deals.titles[toText(account.id)]).toBe('Titled account');
+    expect(deals.titles[toText(contact.id)]).toBe(
+      'Titled person / Titled account',
+    );
+    // The approval list names the deal and carries its size for the column.
+    const approvals = await page(`/approvals?ids=${toText(approval.id)}`);
+    expect(approvals.titles[toText(deal.id)]).toBe(
+      'Titled account / Titled deal',
+    );
+    expect(approvals.opportunities[toText(deal.id)]).toEqual({
+      amount: 12345,
+      currency: 'CNY',
+    });
+    // A detail page gets the names of what it links to and, for a deal, the
+    // account's contacts to offer.
+    const detail = await page(`/opportunities/${toText(deal.id)}`);
+    expect(detail.data.titles[toText(account.id)]).toBe('Titled account');
+    expect(
+      detail.data.related.contacts.map((c: { id: string }) => c.id),
+    ).toContain(contact.id);
+    // Activities by when they happen, for the calendar's month.
+    const inMarch = await page(
+      '/activities?startFrom=2031-03-01T00:00:00.000Z&startTo=2031-03-31T23:59:59.999Z',
+    );
+    expect(inMarch.data.map((r: { id: string }) => r.id)).toContain(
+      activity.id,
+    );
+    expect(inMarch.titles[toText(deal.id)]).toBe(
+      'Titled account / Titled deal',
+    );
+    const inApril = await page(
+      '/activities?startFrom=2031-04-01T00:00:00.000Z&startTo=2031-04-30T23:59:59.999Z',
+    );
+    expect(inApril.data.map((r: { id: string }) => r.id)).not.toContain(
+      activity.id,
+    );
+    // A picker leaves out one status, and the whole-table lookup is gone.
+    const leads = await page('/leads?excludeStatus=new&pageSize=200');
+    expect(
+      leads.data.every((r: { status: string }) => r.status !== 'new'),
+    ).toBe(true);
+    expect((await request('/leads/lookup', 'rep')).status).toBe(404);
+  });
+  it("pages a detail page's related lists, its history and the AI actions", async () => {
+    const account = await service.save(actor('rep'), 'accounts', {
+      name: 'Busy account',
+    });
+    for (let i = 0; i < 23; i++)
+      await service.save(actor('rep'), 'contacts', {
+        name: `Person ${toText(i)}`,
+        accountId: account.id,
+      });
+    // Twenty-two history entries: the creation and twenty-one renames.
+    for (let i = 0; i < 21; i++)
+      await service.save(
+        actor('rep'),
+        'accounts',
+        { name: `Busy account ${toText(i)}` },
+        toText(account.id),
+      );
+    const detail = (await request(
+      `/accounts/${toText(account.id)}`,
+      'rep',
+    ).then((r) => r.json())) as {
+      data: {
+        related: { contacts: unknown[] };
+        relatedTotals: { contacts: number };
+        history: unknown[];
+        historyTotal: number;
+      };
+    };
+    expect(detail.data.related.contacts).toHaveLength(20);
+    expect(detail.data.relatedTotals.contacts).toBe(23);
+    expect(detail.data.history).toHaveLength(20);
+    expect(detail.data.historyTotal).toBe(22);
+    const contacts = (await request(
+      `/contacts?accountId=${toText(account.id)}&page=2&pageSize=20`,
+      'rep',
+    ).then((r) => r.json())) as { data: unknown[]; total: number };
+    expect(contacts.data).toHaveLength(3);
+    expect(contacts.total).toBe(23);
+    const history = (await request(
+      `/accounts/${toText(account.id)}/history?page=2&pageSize=20`,
+      'rep',
+    ).then((r) => r.json())) as {
+      data: unknown[];
+      total: number;
+      page: number;
+    };
+    expect(history.page).toBe(2);
+    expect(history.data).toHaveLength(2);
+    expect(history.total).toBe(22);
+    // History is read within the reader's access, like the record.
+    expect(
+      (await request(`/accounts/${toText(account.id)}/history`, 'outsider'))
+        .status,
+    ).toBe(403);
+    // The action center reads its lists a page at a time, with counts.
+    const actions = (await request('/ai/actions?status=pending', 'rep').then(
+      (r) => r.json(),
+    )) as { data: unknown[]; total: number; counts: Record<string, number> };
+    expect(Array.isArray(actions.data)).toBe(true);
+    expect(actions.counts).toEqual(expect.any(Object));
+    expect((await request('/ai/actions?page=0', 'rep')).status).toBe(400);
+  });
+  it('pages the workspace lists in fives and only for the reader', async () => {
+    // Seven overdue activities of the reader's own, one of somebody else's.
+    const late = await service.save(actor('rep'), 'accounts', {
+      name: 'Late account',
+    });
+    for (let i = 0; i < 7; i++)
+      await service.save(actor('rep'), 'activities', {
+        name: `Overdue ${toText(i)}`,
+        accountId: late.id,
+        startAt: `2020-01-0${toText(i + 1)}T09:00:00.000Z`,
+        endAt: `2020-01-0${toText(i + 1)}T10:00:00.000Z`,
+      });
+    await service.save(actor('other'), 'activities', {
+      name: 'Someone else is late',
+      accountId: late.id,
+      startAt: '2020-02-01T09:00:00.000Z',
+      endAt: '2020-02-01T10:00:00.000Z',
+    });
+    const board = (await request('/dashboard?scope=mine', 'rep').then((r) =>
+      r.json(),
+    )) as { data: { overdue: { data: { name: string }[]; total: number } } };
+    expect(board.data.overdue.data).toHaveLength(5);
+    const mine = await service.list(actor('rep'), 'activities', {
+      status: 'planned',
+      involvedId: 'rep',
+      startTo: new Date().toISOString(),
+      pageSize: 1,
+    });
+    expect(board.data.overdue.total).toBe(mine.total);
+    expect(
+      board.data.overdue.data.some((r) => r.name === 'Someone else is late'),
+    ).toBe(false);
+    const second = (await request(
+      '/dashboard/overdue?scope=mine&page=2&pageSize=5',
+      'rep',
+    ).then((r) => r.json())) as { data: { name: string }[]; page: number };
+    expect(second.page).toBe(2);
+    expect(second.data.length).toBeGreaterThan(0);
+    expect(second.data.length).toBeLessThanOrEqual(5);
+    expect((await request('/dashboard/nothing', 'rep')).status).toBe(404);
+    // The team scope sees everyone's.
+    const team = (await request(
+      '/dashboard/overdue?scope=team&pageSize=100',
+      'rep',
+    ).then((r) => r.json())) as { data: { name: string }[] };
+    expect(team.data.some((r) => r.name === 'Someone else is late')).toBe(true);
+  });
 });
 
 it('maps legacy industry and country text to codes and back', async () => {

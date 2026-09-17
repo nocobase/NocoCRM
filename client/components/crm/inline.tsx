@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { Input } from '../ui/input.js';
 import { Textarea } from '../ui/textarea.js';
 import { Choice, MultiChoice } from './form.js';
+import { RecordMultiPicker, RecordPicker } from './record-picker.js';
 import { CountryChoice, SubdivisionChoice } from './geography.js';
 import { Value } from './common.js';
 import {
@@ -40,6 +41,7 @@ export function InlineField({
   size = 'field',
   bare = false,
   plain = false,
+  relationFilter,
 }: {
   entity: Entity;
   record: CrmRecord;
@@ -48,6 +50,8 @@ export function InlineField({
   lookup?: Record<string, string>;
   label: string;
   choices?: { value: string; label: string }[];
+  // What a related record is searched within (the contacts of one account).
+  relationFilter?: Record<string, string | undefined>;
   // Lets a caller save several fields together when one alone would be
   // rejected — a lead going invalid must carry its reason in the same write.
   onSave?: (value: unknown) => Promise<void>;
@@ -241,7 +245,42 @@ export function InlineField({
         void save(field.type === 'multi' ? listDraft : draft);
       }}
     >
-      {field.type === 'multi' ? (
+      {field.type === 'multi' &&
+      field.relation &&
+      field.relation !== 'users' ? (
+        // Records are searched for, a page at a time, never listed whole.
+        <RecordMultiPicker
+          entity={field.relation}
+          label={label}
+          value={listDraft}
+          names={lookup}
+          filter={relationFilter}
+          disabled={saving}
+          onOpenChange={(open) => {
+            popupOpenRef.current = open;
+            if (!open) void save(listDraft);
+          }}
+          onChange={setListDraft}
+        />
+      ) : field.type === 'relation' &&
+        field.relation &&
+        field.relation !== 'users' ? (
+        <RecordPicker
+          entity={field.relation}
+          label={label}
+          value={draft}
+          titles={lookup}
+          filter={relationFilter}
+          onOpenChange={(open) => {
+            popupOpenRef.current = open;
+            if (!open) setEditing(false);
+          }}
+          onChange={(v) => {
+            setDraft(v);
+            void save(v);
+          }}
+        />
+      ) : field.type === 'multi' ? (
         // Picks accumulate while the list is open; closing it saves the set.
         <MultiChoice
           label={label}

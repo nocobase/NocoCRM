@@ -1,10 +1,5 @@
-import {
-  useLookups,
-  lookupTitles,
-  plainNames,
-  recordTitle,
-} from '../components/crm/lookups.js';
-import { PAGE_SIZE, sentence, toText } from '../components/crm/api.js';
+import { recordTitle } from '../components/crm/lookups.js';
+import { sentence, toText, useMore } from '../components/crm/api.js';
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 import {
@@ -245,16 +240,48 @@ export default function EntityDetail({
     isLoading,
   } = useCrmQuery<Detail>(`${toText(entity)}/${toText(id)}`);
   const { data: meta } = useMetadata();
-  const lookup = useLookups();
   const api = useCrmApi();
   const refresh = useRefresh();
   const navigate = useNavigate();
   const { text, language } = useCrmText();
   const [tab, setTab] = useState<string>();
-  const pageStep = PAGE_SIZE;
-  const [shown, setShown] = useState(pageStep);
-  const [shownHistory, setShownHistory] = useState(pageStep);
-  const [shownApprovals, setShownApprovals] = useState(pageStep);
+  // The related lists and the history arrive one page each with the
+  // record; these grow them from the list and history endpoints.
+  const linkParam =
+    entity === 'leads'
+      ? `leadId=${toText(id)}`
+      : entity === 'accounts'
+        ? `accountId=${toText(id)}`
+        : entity === 'contacts'
+          ? `contactId=${toText(id)}`
+          : entity === 'opportunities'
+            ? `opportunityId=${toText(id)}`
+            : '';
+  const firstPage = (name: Entity) =>
+    detail?.related[name]
+      ? {
+          data: rows(detail.related[name]) as CrmRecord[],
+          total:
+            detail.relatedTotals?.[name] ?? rows(detail.related[name]).length,
+        }
+      : undefined;
+  const moreActivities = useMore(
+    `activities?${linkParam}&sort=-startAt`,
+    firstPage('activities'),
+  );
+  const moreApprovals = useMore(
+    `approvals?opportunityId=${toText(id)}`,
+    firstPage('approvals'),
+  );
+  const moreHistory = useMore<Data>(
+    `${toText(entity)}/${toText(id)}/history`,
+    detail
+      ? {
+          data: detail.history,
+          total: detail.historyTotal ?? detail.history.length,
+        }
+      : undefined,
+  );
   const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState<{ entity: Entity; initial: Data }>();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -264,7 +291,7 @@ export default function EntityDetail({
   // record (and its activities) to filenames for display.
   const historyFileIds = [
     ...new Set(
-      (detail?.history ?? []).flatMap((event) => {
+      moreHistory.records.flatMap((event) => {
         const changes = event.changes as Data | undefined;
         return Array.isArray(changes?.attachments)
           ? changes.attachments.map(toText)
@@ -297,8 +324,17 @@ export default function EntityDetail({
   const record = detail.record;
   const definition = meta.definitions[entity];
   const editable = detail.permissions.edit;
-  const names = lookupTitles(lookup);
-  const title = recordTitle(entity, record, lookup);
+  // Names for everything this page links to, resolved by the server with
+  // the record: composed titles for links, bare names for people listed
+  // under their own account.
+  const names = {
+    ...detail.titles,
+    ...moreActivities.titles,
+    ...moreApprovals.titles,
+    ...moreHistory.titles,
+  };
+  const bareNames = detail.names;
+  const title = recordTitle(entity, record, names);
   const field = (key: string): Field =>
     definition.fields.find((f) => f.key === key) ?? { key, type: 'text' };
   const patch = async (values: Data): Promise<void> => {
@@ -307,30 +343,23 @@ export default function EntityDetail({
   };
   // An activity's external participants come from its account, shown by bare
   // name: the account is already on the page.
-  const contactChoices = (lookup.contacts ?? [])
-    .filter((c) => !record.accountId || c.accountId === record.accountId)
-    .map((c) => ({ value: toText(c.id), label: toText(c.name) }));
   const inline = (key: string): ReactElement => (
     <InlineField
       entity={entity}
       record={record}
       field={field(key)}
       editable={editable}
-      lookup={
-        key === 'externalParticipants' ? plainNames(lookup, 'contacts') : names
+      lookup={key === 'externalParticipants' ? bareNames : names}
+      relationFilter={
+        record.accountId ? { accountId: toText(record.accountId) } : undefined
       }
-      choices={key === 'externalParticipants' ? contactChoices : undefined}
       label={text(fieldLabelKey(entity, key))}
     />
   );
   const convertedFrom = rows(detail.related.leads) as CrmRecord[];
-  // Newest first, like the activities.
-  const approvals = rows(detail.related.approvals).sort((a, b) =>
-    toText(b.createdAt).localeCompare(toText(a.createdAt)),
-  );
-  const activities = rows(detail.related.activities).sort((a, b) =>
-    toText(b.startAt).localeCompare(toText(a.startAt)),
-  );
+  // Newest first, in the server's order, so pages join up.
+  const approvals = moreApprovals.records;
+  const activities = moreActivities.records;
   const linkedOpportunities = rows(detail.related.opportunities);
   // A contact has no attachments field of its own: its tab only gathers the
   // files on the activities and opportunities it takes part in.
@@ -390,7 +419,7 @@ export default function EntityDetail({
   const tabs: [string, string, number][] = [
     ...(entity !== 'activities' && entity !== 'approvals'
       ? [
-          ['activities', 'entities.activities', activities.length] as [
+          ['activities', 'entities.activities', moreActivities.total] as [
             string,
             string,
             number,
@@ -409,11 +438,11 @@ export default function EntityDetail({
       : []),
     ...relatedTabs.map(
       (name) =>
-        [name, `entities.${name}`, rows(detail.related[name]).length] as [
-          string,
-          string,
-          number,
-        ],
+        [
+          name,
+          `entities.${name}`,
+          detail.relatedTotals?.[name] ?? rows(detail.related[name]).length,
+        ] as [string, string, number],
     ),
     // A contact keeps no files of its own; the ones it appears in are read
     // from the activity or opportunity that holds them.
@@ -426,7 +455,7 @@ export default function EntityDetail({
           ],
         ]
       : []),
-    ['historyTab', 'historyTab', detail.history.length],
+    ['historyTab', 'historyTab', moreHistory.total],
   ];
   const activeTab = tab ?? tabs[0][0];
   const blockerEntries = Object.entries(detail.blockers ?? {}).filter(
@@ -715,7 +744,7 @@ export default function EntityDetail({
                                 entity='leads'
                                 record={{
                                   id: lead.id,
-                                  name: recordTitle('leads', lead, lookup),
+                                  name: recordTitle('leads', lead, names),
                                 }}
                               />
                             ))}
@@ -836,7 +865,9 @@ export default function EntityDetail({
                 <OpportunityContacts
                   record={record}
                   editable={editable}
-                  lookup={lookup}
+                  contacts={rows(detail.related.contacts) as CrmRecord[]}
+                  contactsTotal={detail.relatedTotals?.contacts}
+                  names={bareNames}
                   onSave={patch}
                   // A new person is created at the account, not on the deal:
                   // they then appear under "other contacts" to be added.
@@ -874,7 +905,7 @@ export default function EntityDetail({
                   ) : (
                     <>
                       <ol className='relative ml-1.5 border-l border-border'>
-                        {approvals.slice(0, shownApprovals).map((approval) => (
+                        {approvals.map((approval) => (
                           <ApprovalItem
                             key={toText(approval.id)}
                             approval={approval}
@@ -882,15 +913,16 @@ export default function EntityDetail({
                           />
                         ))}
                       </ol>
-                      {approvals.length > shownApprovals && (
+                      {moreApprovals.hasMore && (
                         <Button
                           className='mt-3'
                           variant='ghost'
                           size='sm'
-                          onClick={() => setShownApprovals((n) => n + pageStep)}
+                          disabled={moreApprovals.loading}
+                          onClick={() => void moreApprovals.loadMore()}
                         >
                           {text('loadMore')} ·{' '}
-                          {approvals.length - shownApprovals}
+                          {moreApprovals.total - approvals.length}
                         </Button>
                       )}
                     </>
@@ -921,21 +953,25 @@ export default function EntityDetail({
                   ) : (
                     <>
                       <ol className='relative ml-1.5 border-l border-border'>
-                        {activities.slice(0, shown).map((activity) => (
+                        {activities.map((activity) => (
                           <ActivityItem
                             key={toText(activity.id)}
                             activity={activity}
+                            titles={names}
+                            names={bareNames}
                           />
                         ))}
                       </ol>
-                      {activities.length > shown && (
+                      {moreActivities.hasMore && (
                         <Button
                           className='mt-3'
                           variant='ghost'
                           size='sm'
-                          onClick={() => setShown((n) => n + pageStep)}
+                          disabled={moreActivities.loading}
+                          onClick={() => void moreActivities.loadMore()}
                         >
-                          {text('loadMore')} · {activities.length - shown}
+                          {text('loadMore')} ·{' '}
+                          {moreActivities.total - activities.length}
                         </Button>
                       )}
                     </>
@@ -965,7 +1001,7 @@ export default function EntityDetail({
               ) : activeTab === 'historyTab' ? (
                 <>
                   <ol>
-                    {detail.history.slice(0, shownHistory).map((event) => (
+                    {moreHistory.records.map((event) => (
                       <li
                         className='flex items-baseline gap-3 border-b border-border/60 py-1.5 text-sm last:border-0'
                         key={toText(event.id)}
@@ -1003,15 +1039,16 @@ export default function EntityDetail({
                       </li>
                     ))}
                   </ol>
-                  {detail.history.length > shownHistory && (
+                  {moreHistory.hasMore && (
                     <Button
                       className='mt-3'
                       variant='ghost'
                       size='sm'
-                      onClick={() => setShownHistory((n) => n + pageStep)}
+                      disabled={moreHistory.loading}
+                      onClick={() => void moreHistory.loadMore()}
                     >
                       {text('loadMore')} ·{' '}
-                      {detail.history.length - shownHistory}
+                      {moreHistory.total - moreHistory.records.length}
                     </Button>
                   )}
                 </>
@@ -1023,7 +1060,9 @@ export default function EntityDetail({
                   records={
                     rows(detail.related[activeTab as Entity]) as CrmRecord[]
                   }
-                  lookup={lookup}
+                  total={detail.relatedTotals?.[activeTab as Entity]}
+                  base={`${activeTab}?${linkParam}`}
+                  titles={names}
                   onCreate={
                     activeTab !== 'leads' &&
                     meta.permissions[activeTab as Entity]?.create
@@ -1103,7 +1142,7 @@ export default function EntityDetail({
                                 entity={child}
                                 record={{
                                   id: r.id,
-                                  name: recordTitle(child, r, lookup),
+                                  name: recordTitle(child, r, names),
                                 }}
                               />
                             </span>
@@ -1196,21 +1235,28 @@ export default function EntityDetail({
 
 function RelatedList({
   entity,
-  records,
-  lookup,
+  records: firstPage,
+  total,
+  base,
+  titles,
   onCreate,
 }: {
   entity: Entity;
+  // The first page, with the server's total and the path for the rest.
   records: CrmRecord[];
-  lookup: Partial<Record<Entity, CrmRecord[]>>;
+  total?: number;
+  base: string;
+  titles: Record<string, string>;
   onCreate?: () => void;
 }): ReactElement {
   const { text } = useCrmText();
   const { data: meta } = useMetadata();
-  const names = lookupTitles(lookup);
-  // The newest thirty, the rest on request, the same as the activity list.
-  const pageStep = PAGE_SIZE;
-  const [shown, setShown] = useState(pageStep);
+  const more = useMore(base, {
+    data: firstPage,
+    total: total ?? firstPage.length,
+  });
+  const records = more.records;
+  const names = { ...titles, ...more.titles };
   // Each related object shows the columns that say something about it: a
   // contact has no status, an opportunity has a stage and an amount.
   const columns: readonly string[] =
@@ -1254,16 +1300,15 @@ function RelatedList({
         <p className='text-sm text-muted-foreground'>{text('noRecords')}</p>
       ) : (
         <>
-          {entity === 'contacts'
-            ? contactList(ordered.slice(0, shown))
-            : table(ordered.slice(0, shown))}
-          {ordered.length > shown && (
+          {entity === 'contacts' ? contactList(ordered) : table(ordered)}
+          {more.hasMore && (
             <Button
               variant='ghost'
               size='sm'
-              onClick={() => setShown((n) => n + pageStep)}
+              disabled={more.loading}
+              onClick={() => void more.loadMore()}
             >
-              {text('loadMore')} · {ordered.length - shown}
+              {text('loadMore')} · {more.total - records.length}
             </Button>
           )}
           {departed.length > 0 && (
@@ -1320,7 +1365,7 @@ function RelatedList({
                         entity={entity}
                         record={{
                           id: r.id,
-                          name: recordTitle(entity, r, lookup),
+                          name: recordTitle(entity, r, names),
                         }}
                       />
                     </span>
@@ -1466,18 +1511,30 @@ const contactRoles = [
 function OpportunityContacts({
   record,
   editable,
-  lookup,
+  contacts: firstPage,
+  contactsTotal,
+  names,
   onSave,
   onCreate,
 }: {
   record: CrmRecord;
   editable: boolean;
-  lookup: Partial<Record<Entity, CrmRecord[]>>;
+  // The account's contacts, the first page read with the deal: who can be
+  // on it. The rest come on request.
+  contacts: CrmRecord[];
+  contactsTotal?: number;
+  names: Record<string, string>;
   onSave: (values: Data) => Promise<void>;
   onCreate?: () => void;
 }): ReactElement {
   const { text } = useCrmText();
-  const names = lookupTitles(lookup);
+  const more = useMore(
+    record.accountId
+      ? `contacts?accountId=${toText(record.accountId)}`
+      : undefined,
+    { data: firstPage, total: contactsTotal ?? firstPage.length },
+  );
+  const contacts = more.records;
   const [removing, setRemoving] = useState<string>();
   // Joining asks for the role first: a person on a deal without one is a
   // record that says nothing.
@@ -1489,12 +1546,10 @@ function OpportunityContacts({
     contactId: toText(c.contactId),
     role: toText(c.role || 'other'),
   }));
-  const contactsOf = (lookup.contacts ?? []).filter(
-    (c) => c.accountId === record.accountId,
-  );
+  const contactsOf = contacts.filter((c) => c.accountId === record.accountId);
   const nameOf = (id: string): string =>
     toText(contactsOf.find((c) => c.id === id)?.name) ||
-    toText(lookup.contacts?.find((c) => c.id === id)?.name) ||
+    names[id] ||
     text('entities.contacts');
   const candidates = contactsOf.filter(
     (c) =>
@@ -1543,7 +1598,7 @@ function OpportunityContacts({
             {list.map((item) => {
               // A contact the lookup lacks (not readable) still gets a row,
               // with only its name.
-              const contact: CrmRecord = lookup.contacts?.find(
+              const contact: CrmRecord = contactsOf.find(
                 (c) => c.id === item.contactId,
               ) ?? {
                 id: item.contactId,
@@ -1613,9 +1668,11 @@ function OpportunityContacts({
       <div className='space-y-2 pt-2'>
         <h4 className='text-xs font-medium text-muted-foreground'>
           {text('otherAccountContacts')}
-          <span className='ml-1 tabular-nums'>{candidates.length}</span>
+          <span className='ml-1 tabular-nums'>
+            {candidates.length + (more.total - contacts.length)}
+          </span>
         </h4>
-        {!candidates.length ? (
+        {!candidates.length && !more.hasMore ? (
           <p className='text-sm text-muted-foreground'>{text('noContacts')}</p>
         ) : (
           <ul className='divide-y divide-border'>
@@ -1641,6 +1698,16 @@ function OpportunityContacts({
               />
             ))}
           </ul>
+        )}
+        {more.hasMore && (
+          <Button
+            variant='ghost'
+            size='sm'
+            disabled={more.loading}
+            onClick={() => void more.loadMore()}
+          >
+            {text('loadMore')} · {more.total - contacts.length}
+          </Button>
         )}
       </div>
       {joining && (

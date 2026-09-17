@@ -216,6 +216,60 @@ export class CrmAi {
         .then((records) => records.map(decodeRow)),
     };
   }
+  // The reader's actions by status ("pending", "settled" for everything
+  // decided, or one settled status), newest first, a page at a time, with
+  // how many of each status there are for the action center's filter row.
+  async actions(
+    actor: Actor,
+    options: { status?: string; page?: number; pageSize?: number },
+  ): Promise<{
+    data: Row[];
+    total: number;
+    page: number;
+    pageSize: number;
+    counts: Record<string, number>;
+  }> {
+    const query = this.service.database.query();
+    const page = Math.max(1, options.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, options.pageSize ?? 20));
+    const settled = ['executed', 'dismissed', 'superseded'];
+    const statuses =
+      options.status === 'settled'
+        ? settled
+        : options.status
+          ? [options.status]
+          : [...settled, 'pending'];
+    const base = query
+      .selectFrom('crmAiActions')
+      .where('ownerId', '=', actor.id)
+      .where('status', 'in', statuses);
+    const [count, rows, byStatus] = await Promise.all([
+      base.select((eb) => [eb.fn.countAll().as('total')]).executeTakeFirst(),
+      base
+        .selectAll()
+        .orderBy('createdAt', 'desc')
+        .orderBy('id', 'asc')
+        .limit(pageSize)
+        .offset((page - 1) * pageSize)
+        .execute(),
+      query
+        .selectFrom('crmAiActions')
+        .select(['status'])
+        .select((eb) => [eb.fn.countAll().as('n')])
+        .where('ownerId', '=', actor.id)
+        .groupBy('status')
+        .execute(),
+    ]);
+    return {
+      data: rows.map(decodeRow),
+      total: Number(count?.total ?? 0),
+      page,
+      pageSize,
+      counts: Object.fromEntries(
+        byStatus.map((r) => [toText(r.status), Number(r.n ?? 0)]),
+      ),
+    };
+  }
   // Messages only. Actions stay: the executed ones are the trail of changes
   // already written to the CRM, and the pending ones remain confirmable from
   // the action center on their own.

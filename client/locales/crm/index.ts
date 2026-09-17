@@ -290,6 +290,9 @@ const wording = {
   reminders: ['Reminders', '提醒设置'],
   aiSettings: ['AI configuration', 'AI 配置'],
   settingsSaved: ['Settings saved', '设置已保存'],
+  searchRecords: ['Type to search', '输入关键字搜索'],
+  noMatches: ['No matching records', '没有匹配的记录'],
+  clearChoice: ['Clear', '清除选择'],
   demoData: ['Demo data', '演示数据'],
   demoDescription: [
     'A Chinese dataset for a fictional consulting firm, 云策数字咨询: leads, accounts, contacts, opportunities, activities and approvals, dated relative to the day it is imported. Importing creates the demo accounts below when they do not exist; the password is the username followed by 123, such as liming123.',

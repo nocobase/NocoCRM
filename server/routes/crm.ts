@@ -31,8 +31,13 @@ import {
   probabilities,
   entities,
   object,
+  type Entity,
 } from '../providers/crm/schema.js';
-import { type ListOptions } from '../providers/crm/service.js';
+import {
+  array,
+  RELATED_PAGE,
+  type ListOptions,
+} from '../providers/crm/service.js';
 import { conversionPreview, convertLead } from '../providers/crm/conversion.js';
 import {
   demoStatus,
@@ -41,7 +46,16 @@ import {
   type DemoAccountCreator,
 } from '../providers/crm/demo.js';
 import { userManagementServiceToken } from '@nocobase/app-plugin-users/server/tokens';
-import { allRecords, dashboard } from '../providers/crm/dashboard.js';
+import {
+  AGENDA_PAGE,
+  agenda,
+  agendaNames,
+  allRecords,
+  dashboard,
+  type AgendaName,
+} from '../providers/crm/dashboard.js';
+import { resolveTitles } from '../providers/crm/titles.js';
+import type { Row } from '@nocobase/db';
 
 type CrmEnv = { Variables: AuthorizationEnv['Variables'] & { actor: Actor } };
 export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
@@ -50,6 +64,28 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
     const routes = new Hono<CrmEnv>();
     const service = app.container.resolve(crmToken);
     const ai = app.container.resolve(crmAiToken);
+    // An action names the record it targets and the records its proposal
+    // points at; both are titled so a card reads as names, not ids.
+    const actionTitles = (actor: Actor, data: Row) => {
+      const rows: Partial<Record<Entity, Row[]>> = {};
+      const add = (entity: unknown, row: Row): void => {
+        const name = toText(entity ?? '');
+        if (entities.includes(name as Entity))
+          (rows[name as Entity] ??= []).push(row);
+      };
+      for (const action of array(data.actions)) {
+        const item = object(action);
+        add(item.entity, {
+          ...object(item.input ?? {}),
+          id: item.recordId ?? '',
+        });
+      }
+      // A reply's trail names the records it looked at.
+      for (const message of array(data.messages))
+        for (const step of array(object(message).steps))
+          add(object(step).entity, { id: object(step).id ?? '' });
+      return resolveTitles(service, actor, rows);
+    };
     routes.use(
       '*',
       app.container.resolve(authenticationToken).required(),
@@ -145,9 +181,45 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         },
       });
     });
-    routes.get('/dashboard', async (c) =>
-      c.json({ data: await dashboard(service, c.get('actor'), c.req.query()) }),
-    );
+    routes.get('/dashboard', async (c) => {
+      const data = await dashboard(service, c.get('actor'), c.req.query());
+      const rows = (list: unknown): Row[] =>
+        array(object(list).data).map(object);
+      return c.json({
+        data: {
+          ...data,
+          ...(await resolveTitles(service, c.get('actor'), {
+            activities: [...rows(data.today), ...rows(data.overdue)],
+            approvals: rows(data.approvals),
+          })),
+        },
+      });
+    });
+    // The next page of one workspace list, for its card's "load more".
+    routes.get('/dashboard/:list', async (c) => {
+      const name = c.req.param('list');
+      if (!agendaNames.includes(name as AgendaName))
+        throw new CrmError('notFound', 404);
+      const page = Number(c.req.query('page') ?? 1);
+      const pageSize = Number(c.req.query('pageSize') ?? AGENDA_PAGE);
+      if (
+        ![page, pageSize].every((n) => Number.isSafeInteger(n) && n > 0) ||
+        pageSize > 100
+      )
+        throw new CrmError('invalidInput');
+      const result = await agenda(service, c.get('actor'), name as AgendaName, {
+        scope: c.req.query('scope'),
+        page,
+        pageSize,
+      });
+      const entity: Entity = name === 'approvals' ? 'approvals' : 'activities';
+      return c.json({
+        ...result,
+        ...(await resolveTitles(service, c.get('actor'), {
+          [entity]: result.data,
+        })),
+      });
+    });
     routes.get('/settings', async (c) => {
       if (!(await capability(c.get('actor'), 'manage', 'settings')))
         throw new CrmError('forbidden', 403);
@@ -207,9 +279,30 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         data: await service.saveSettings(c.get('actor'), await c.req.json()),
       }),
     );
+    // The reader's proposed actions, a page at a time: the action center's
+    // pending queue and its record of what was decided.
+    routes.get('/ai/actions', async (c) => {
+      await conditions(c.get('actor'), 'leads', 'read');
+      const page = Number(c.req.query('page') ?? 1);
+      const pageSize = Number(c.req.query('pageSize') ?? RELATED_PAGE);
+      if (![page, pageSize].every((n) => Number.isSafeInteger(n) && n > 0))
+        throw new CrmError('invalidInput');
+      const result = await ai.actions(c.get('actor'), {
+        status: c.req.query('status'),
+        page,
+        pageSize,
+      });
+      return c.json({
+        ...result,
+        ...(await actionTitles(c.get('actor'), { actions: result.data })),
+      });
+    });
     routes.get('/ai/history', async (c) => {
       await conditions(c.get('actor'), 'leads', 'read');
-      return c.json({ data: await ai.history(c.get('actor')) });
+      const data = await ai.history(c.get('actor'));
+      return c.json({
+        data: { ...data, ...(await actionTitles(c.get('actor'), data)) },
+      });
     });
     routes.delete('/ai/history', async (c) =>
       c.json({ data: await ai.clearMessages(c.get('actor')) }),
@@ -361,18 +454,6 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         ),
       }),
     );
-    // The complete visible set, for name resolution on the client. Reads
-    // stay within the caller's own access; only the CSV download is gated.
-    routes.get('/:entity/lookup', async (c) =>
-      c.json({
-        data: await allRecords(
-          service,
-          c.get('actor'),
-          asEntity(c.req.param('entity')),
-          c.req.query(),
-        ),
-      }),
-    );
     // Taking the data out of the system is a manager's call.
     routes.get('/:entity/export', async (c) => {
       if (!(await capability(c.get('actor'), 'manage')))
@@ -415,15 +496,23 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
       );
       return c.json({ data: result }, 201);
     });
-    routes.get('/leads/:id/conversion', async (c) =>
-      c.json({
-        data: await conversionPreview(
-          service,
-          c.get('actor'),
-          c.req.param('id'),
-        ),
-      }),
-    );
+    routes.get('/leads/:id/conversion', async (c) => {
+      const data = await conversionPreview(
+        service,
+        c.get('actor'),
+        c.req.param('id'),
+      );
+      return c.json({
+        data: {
+          ...data,
+          ...(await resolveTitles(service, c.get('actor'), {
+            leads: [data.lead as Row],
+            accounts: data.accounts as Row[],
+            contacts: data.contacts as Row[],
+          })),
+        },
+      });
+    });
     routes.post('/leads/:id/convert', async (c) =>
       c.json({
         data: await convertLead(
@@ -444,15 +533,52 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         ),
       }),
     );
-    routes.get('/:entity/:id', async (c) =>
-      c.json({
-        data: await service.detail(
-          c.get('actor'),
-          asEntity(c.req.param('entity')),
-          c.req.param('id'),
+    // Further pages of a record's change history, named like the detail.
+    routes.get('/:entity/:id/history', async (c) => {
+      const entity = asEntity(c.req.param('entity'));
+      const page = Number(c.req.query('page') ?? 1);
+      const pageSize = Number(c.req.query('pageSize') ?? RELATED_PAGE);
+      if (![page, pageSize].every((n) => Number.isSafeInteger(n) && n > 0))
+        throw new CrmError('invalidInput');
+      const result = await service.historyOf(
+        c.get('actor'),
+        entity,
+        c.req.param('id'),
+        { page, pageSize },
+      );
+      return c.json({
+        ...result,
+        ...(await resolveTitles(service, c.get('actor'), {
+          [entity]: result.data.map((event) => object(event.changes ?? {})),
+        })),
+      });
+    });
+    routes.get('/:entity/:id', async (c) => {
+      const entity = asEntity(c.req.param('entity'));
+      const data = await service.detail(
+        c.get('actor'),
+        entity,
+        c.req.param('id'),
+      );
+      // The record, everything related to it, and the ids its history
+      // mentions (a changed owner or account) all get their names.
+      const rows: Partial<Record<Entity, Row[]>> = {};
+      for (const [name, list] of Object.entries(object(data.related ?? {})))
+        rows[name as Entity] = array(list).map(object);
+      rows[entity] = [
+        ...(rows[entity] ?? []),
+        object(data.record),
+        ...array(data.history).map((event) =>
+          object(object(event).changes ?? {}),
         ),
-      }),
-    );
+      ];
+      return c.json({
+        data: {
+          ...data,
+          ...(await resolveTitles(service, c.get('actor'), rows)),
+        },
+      });
+    });
     routes.get('/:entity', async (c) => {
       const options: ListOptions = {
         ...c.req.query(),
@@ -465,13 +591,14 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         )
       )
         throw new CrmError('invalidInput');
-      return c.json(
-        await service.list(
-          c.get('actor'),
-          asEntity(c.req.param('entity')),
-          options,
-        ),
-      );
+      const entity = asEntity(c.req.param('entity'));
+      const result = await service.list(c.get('actor'), entity, options);
+      return c.json({
+        ...result,
+        ...(await resolveTitles(service, c.get('actor'), {
+          [entity]: result.data,
+        })),
+      });
     });
     routes.post('/:entity', async (c) =>
       c.json(
