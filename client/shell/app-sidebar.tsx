@@ -124,8 +124,14 @@ export function NavigationTree({
     key: selectedKey,
     expanded: selected,
   });
-  const expanded =
-    disclosure.key === selectedKey ? disclosure.expanded : selected;
+  // Reveal the selected route without discarding other groups' disclosure state.
+  if (disclosure.key !== selectedKey) {
+    setDisclosure({
+      key: selectedKey,
+      expanded: selected || disclosure.expanded,
+    });
+  }
+  const expanded = disclosure.expanded;
 
   if (children.length > 0 && item.route.componentLoader) {
     return (
