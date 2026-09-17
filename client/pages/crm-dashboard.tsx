@@ -19,6 +19,12 @@ import {
   Scale,
   User,
   ShieldCheck,
+  Building2,
+  FilePen,
+  PhoneOff,
+  UserMinus,
+  UserX,
+  XCircle,
 } from 'lucide-react';
 import { Button } from '../components/ui/button.js';
 import {
@@ -106,6 +112,15 @@ const attentionCards: {
     metric: 'overdueOpportunities',
     icon: AlertCircle,
   },
+  // Gaps in the book itself, and one's own unfinished requests.
+  { key: 'noContacts', entity: 'accounts', metric: 'noContacts', icon: UserX },
+  {
+    key: 'missingContact',
+    entity: 'contacts',
+    metric: 'missingContact',
+    icon: PhoneOff,
+  },
+  { key: 'toSubmit', entity: 'approvals', metric: 'toSubmit', icon: FilePen },
 ];
 
 export default function DashboardPage(): ReactElement {
@@ -327,6 +342,17 @@ export default function DashboardPage(): ReactElement {
                       : text('metricNotes.winRate')
                   }
                 />
+                <Metric
+                  title={text('customers')}
+                  icon={Building2}
+                  value={Number(overall.customers ?? 0)}
+                  note={text('metricNotes.customers', {
+                    share: Number(overall.accounts)
+                      ? `${toText(Math.round((Number(overall.customers ?? 0) / Number(overall.accounts)) * 100))}%`
+                      : '0%',
+                  })}
+                  onClick={() => openList('accounts', 'customers')}
+                />
               </div>
               <Card className='shadow-none'>
                 <CardHeader className='flex flex-row items-center justify-between'>
@@ -369,7 +395,7 @@ export default function DashboardPage(): ReactElement {
           )}
           {section(
             text('risks'),
-            <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6'>
+            <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'>
               {attentionCards.map((card) => (
                 <Metric
                   key={card.key}
@@ -414,6 +440,46 @@ export default function DashboardPage(): ReactElement {
                   value={moneyTotals(business.wonThisMonth, language)}
                   note={text('metricNotes.wonThisMonth')}
                   onClick={() => openList('opportunities', 'wonThisMonth')}
+                />
+                <Metric
+                  title={text('completedThisMonth')}
+                  icon={CheckCircle2}
+                  value={Number(business.completedThisMonth ?? 0)}
+                  note={text('metricNotes.completedThisMonth')}
+                  onClick={() => openList('activities', 'completedThisMonth')}
+                />
+                <Metric
+                  title={text('churnedThisMonth')}
+                  icon={UserMinus}
+                  value={Number(business.churnedThisMonth ?? 0)}
+                  tone={
+                    Number(business.churnedThisMonth ?? 0) > 0
+                      ? 'attention'
+                      : 'neutral'
+                  }
+                  note={text('metricNotes.churnedThisMonth', {
+                    added: Number(business.newAccounts ?? 0),
+                  })}
+                  onClick={() => openList('accounts', 'churnedThisMonth')}
+                />
+                <Metric
+                  title={text('approvedThisMonth')}
+                  icon={ShieldCheck}
+                  value={Number(business.approvedThisMonth ?? 0)}
+                  note={text('metricNotes.approvedThisMonth')}
+                  onClick={() => openList('approvals', 'approvedThisMonth')}
+                />
+                <Metric
+                  title={text('rejectedThisMonth')}
+                  icon={XCircle}
+                  value={Number(business.rejectedThisMonth ?? 0)}
+                  note={text('metricNotes.rejectedThisMonth', {
+                    rate:
+                      business.approvalRate == null
+                        ? '—'
+                        : `${toText(Math.round(Number(business.approvalRate) * 100))}%`,
+                  })}
+                  onClick={() => openList('approvals', 'rejectedThisMonth')}
                 />
               </div>
             </>,

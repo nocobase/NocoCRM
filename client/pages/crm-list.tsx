@@ -3,7 +3,6 @@ import {
   useCrmScopeKey,
   useRefresh,
 } from '../components/crm/api.js';
-import { EntityStatistics } from '../components/crm/statistics.js';
 import { recordTitle } from '../components/crm/lookups.js';
 import { fieldLabelKey, toText } from '../components/crm/api.js';
 import { useState, type ReactElement } from 'react';
@@ -133,12 +132,30 @@ function EntityList({
   const [filtersOpen, setFiltersOpen] = useState(false);
   // A statistic card clicked into a filter: the key names the chip, the ids
   // are what the server restricts the list to.
-  const [metric, setMetric] = useState<{ key: string; ids: string[] }>();
+  // A metric filter: undefined until the reader touches it, null once
+  // cleared, so a workspace card's opening filter applies until dismissed.
+  const [metric, setMetric] = useState<{ key: string; ids: string[] } | null>();
   // Unfiltered on purpose: the title shows how many leads exist, not how
-  // many match the current filters.
-  const totals = useCrmQuery<{ metrics?: Data }>(
+  // many match the current filters. One row is enough to learn the total.
+  const totals = useQuery({
+    queryKey: [...scopeKey, `${toText(entity)}?pageSize=1`],
+    queryFn: () => api<ListData>(`${toText(entity)}?pageSize=1`),
+  });
+  // A workspace card opens the list already filtered to its members: the
+  // statistics endpoint names them, once, when the page opens with a metric.
+  const initialMembers = useCrmQuery<{ members?: Record<string, string[]> }>(
     `${toText(entity)}/statistics?`,
+    Boolean(initialMetric),
   );
+  const initialIds = initialMetric
+    ? initialMembers.data?.members?.[initialMetric]
+    : undefined;
+  const activeMetric =
+    metric === undefined
+      ? initialMetric && initialIds
+        ? { key: initialMetric, ids: initialIds }
+        : undefined
+      : (metric ?? undefined);
   const filtering = Boolean(
     search || status || ownerId || source || employed || topic || approverId,
   );
@@ -195,15 +212,11 @@ function EntityList({
     page: toText(page),
     pageSize: String(PAGE_SIZE),
   });
-  if (metric) params.set('ids', metric.ids.join(','));
+  if (activeMetric) params.set('ids', activeMetric.ids.join(','));
   // Each board column pages its own status through the list endpoint, so it
   // takes the filters without page, size or status.
   const columnParams = new URLSearchParams(params);
   for (const key of ['page', 'pageSize', 'status']) columnParams.delete(key);
-  // The cards describe the whole filtered set, never just the clicked card's
-  // own members, so they get the params without the metric restriction.
-  const statisticsParams = new URLSearchParams(params);
-  statisticsParams.delete('ids');
   const path = `${toText(entity)}?${params.toString()}`;
   const query = useQuery({
     queryKey: [...scopeKey, path],
@@ -338,16 +351,117 @@ function EntityList({
       </CrmFrame>
     );
   if (!meta || !definition) return <Loading />;
+  // The view switch, the activity scope, the search toggle and the CSV
+  // actions sit in the header beside the create button, not on a row of
+  // their own.
+  const toolbar = (
+    <>
+      <div className='flex gap-1 rounded-lg border p-1'>
+        {[
+          ['list', LayoutList],
+          ...(['leads', 'accounts', 'opportunities'].includes(entity)
+            ? [['board', Columns3]]
+            : []),
+          ...(entity === 'activities' ? [['calendar', CalendarDays]] : []),
+        ].map(([name, Icon]) => {
+          const Component = Icon as typeof LayoutList;
+          return (
+            <Button
+              key={toText(name)}
+              variant={view === name ? 'secondary' : 'ghost'}
+              onClick={() => setView(toText(name))}
+            >
+              <Component />
+              {text(toText(name))}
+            </Button>
+          );
+        })}
+      </div>
+      <Button
+        variant={filtersOpen || filtering ? 'secondary' : 'ghost'}
+        size='icon'
+        aria-label={text('search')}
+        aria-expanded={filtersOpen}
+        onClick={() => setFiltersOpen((v) => !v)}
+      >
+        <Search />
+      </Button>
+      {/* Whose activities: always in the toolbar, not a filter to open. */}
+      {entity === 'activities' && (
+        <div className='flex rounded-lg border p-0.5'>
+          {(['all', 'mine', 'participating'] as const).map((value) => (
+            <Button
+              key={value}
+              size='sm'
+              variant={scope === value ? 'secondary' : 'ghost'}
+              onClick={() => {
+                setScope(value);
+                setPage(1);
+              }}
+            >
+              {text(value)}
+            </Button>
+          ))}
+        </div>
+      )}
+      <div className='flex gap-2'>
+        {writable && (
+          <Button
+            variant='ghost'
+            size='icon'
+            aria-label={text('import')}
+            title={text('import')}
+            onClick={() => setImporting(true)}
+          >
+            <Upload />
+          </Button>
+        )}
+        {/* Export is a manager's action; the server refuses it otherwise. */}
+        {meta?.manage && (
+          <Button
+            variant='ghost'
+            size='icon'
+            aria-label={text('export')}
+            title={text('export')}
+            onClick={() => {
+              void (async () => {
+                try {
+                  const response = await api<{ data: CrmRecord[] }>(
+                    `${toText(entity)}/export?${params.toString()}`,
+                  );
+                  downloadCsv(
+                    `${toText(entity)}.csv`,
+                    definition?.fields
+                      .map((f) => f.key)
+                      .filter(
+                        (key) =>
+                          read &&
+                          (read.fields === '*' || read.fields.includes(key)),
+                      ) ?? [],
+                    response.data,
+                  );
+                } catch (e) {
+                  setError(e);
+                }
+              })();
+            }}
+          >
+            <Download />
+          </Button>
+        )}
+      </div>
+    </>
+  );
   return (
     <CrmFrame
       // The lead total sits beside the title rather than as a metric card:
       // it is context, not something to act on.
       title={
-        totals.data?.metrics?.total !== undefined ? (
+        totals.data?.total !== undefined ? (
           <>
             {text(`entities.${toText(entity)}`)}
             <span className='ml-2 align-middle text-base font-normal text-muted-foreground tabular-nums'>
-              {toText(totals.data.metrics.total)}
+              {toText(totals.data.total)}
             </span>
           </>
         ) : (
@@ -355,133 +469,22 @@ function EntityList({
         )
       }
       description={text(`descriptions.${toText(entity)}`)}
-      actions={newButton}
+      actions={
+        <>
+          {toolbar}
+          {newButton}
+        </>
+      }
       // No list page carries the generic assistant button: the global entry
       // and the record pages' own shortcuts cover it.
       assistant={false}
     >
       <ErrorNotice error={query.error ?? error} />
-      <EntityStatistics
-        entity={entity}
-        enabled={Boolean(definition)}
-        breakdown={false}
-        // An account's "new this month" is a note on the churn card, not a card.
-        hide={[
-          'total',
-          'overdue',
-          'pipeline',
-          // Quoted in card notes rather than cards of their own.
-          'waitingLong',
-          'approvalRate',
-          ...(entity === 'accounts' ? ['newThisMonth'] : []),
-        ]}
-        selected={metric?.key}
-        initial={initialMetric}
-        onSelect={(key, ids) => {
-          setMetric(key ? { key, ids } : undefined);
-          setPage(1);
-        }}
-        filters={statisticsParams.toString()}
-      />
-      <div className='flex flex-wrap items-center justify-between gap-3'>
-        <div className='flex gap-1 rounded-lg border p-1'>
-          {[
-            ['list', LayoutList],
-            ...(['leads', 'accounts', 'opportunities'].includes(entity)
-              ? [['board', Columns3]]
-              : []),
-            ...(entity === 'activities' ? [['calendar', CalendarDays]] : []),
-          ].map(([name, Icon]) => {
-            const Component = Icon as typeof LayoutList;
-            return (
-              <Button
-                key={toText(name)}
-                variant={view === name ? 'secondary' : 'ghost'}
-                onClick={() => setView(toText(name))}
-              >
-                <Component />
-                {text(toText(name))}
-              </Button>
-            );
-          })}
-        </div>
-        <Button
-          variant={filtersOpen || filtering ? 'secondary' : 'ghost'}
-          size='icon'
-          aria-label={text('search')}
-          aria-expanded={filtersOpen}
-          onClick={() => setFiltersOpen((v) => !v)}
-        >
-          <Search />
-        </Button>
-        {/* Whose activities: always in the toolbar, not a filter to open. */}
-        {entity === 'activities' && (
-          <div className='flex rounded-lg border p-0.5'>
-            {(['all', 'mine', 'participating'] as const).map((value) => (
-              <Button
-                key={value}
-                size='sm'
-                variant={scope === value ? 'secondary' : 'ghost'}
-                onClick={() => {
-                  setScope(value);
-                  setPage(1);
-                }}
-              >
-                {text(value)}
-              </Button>
-            ))}
-          </div>
-        )}
-        <div className='flex-1' />
-        <div className='flex gap-2'>
-          {writable && (
-            <Button variant='ghost' onClick={() => setImporting(true)}>
-              <Upload />
-              {text('import')}
-            </Button>
-          )}
-          {/* Export is a manager's action; the server refuses it otherwise. */}
-          {meta?.manage && (
-            <Button
-              variant='ghost'
-              onClick={() => {
-                void (async () => {
-                  try {
-                    const response = await api<{ data: CrmRecord[] }>(
-                      `${toText(entity)}/export?${params.toString()}`,
-                    );
-                    downloadCsv(
-                      `${toText(entity)}.csv`,
-                      definition?.fields
-                        .map((f) => f.key)
-                        .filter(
-                          (key) =>
-                            read &&
-                            (read.fields === '*' || read.fields.includes(key)),
-                        ) ?? [],
-                      response.data,
-                    );
-                  } catch (e) {
-                    setError(e);
-                  }
-                })();
-              }}
-            >
-              <Download />
-              {text('export')}
-            </Button>
-          )}
-        </div>
-      </div>
-      {metric && (
+      {activeMetric && (
         <div className='flex items-center gap-2 text-sm'>
           <span className='text-muted-foreground'>{text('showing')}</span>
-          <Button
-            variant='secondary'
-            size='sm'
-            onClick={() => setMetric(undefined)}
-          >
-            {text(metric.key)}
+          <Button variant='secondary' size='sm' onClick={() => setMetric(null)}>
+            {text(activeMetric.key)}
             <X className='size-3.5' />
           </Button>
         </div>

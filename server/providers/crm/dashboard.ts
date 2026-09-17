@@ -108,14 +108,27 @@ export async function dashboard(
   const today = dayOf(now);
   const month = today.slice(0, 7);
 
-  const [leads, accounts, opportunities] = await Promise.all(
-    (['leads', 'accounts', 'opportunities'] as const).map((entity) =>
-      statistics(service, actor, entity, { ownerId }),
-    ),
-  );
+  // Every object's numbers, with the list pages' rules, so the workspace is
+  // the one place that reads them.
+  const [leads, accounts, contacts, opportunities, activities, approvals] =
+    await Promise.all(
+      (
+        [
+          'leads',
+          'accounts',
+          'contacts',
+          'opportunities',
+          'activities',
+          'approvals',
+        ] as const
+      ).map((entity) => statistics(service, actor, entity, { ownerId })),
+    );
   const leadMetrics = leads.metrics as Row;
   const accountMetrics = accounts.metrics as Row;
+  const contactMetrics = contacts.metrics as Row;
   const dealMetrics = opportunities.metrics as Row;
+  const activityMetrics = activities.metrics as Row;
+  const approvalMetrics = approvals.metrics as Row;
 
   // The three lists come one page each; the cards ask for the rest.
   const [todayList, overdueList, approvalList] = await Promise.all(
@@ -213,8 +226,11 @@ export async function dashboard(
       staleLeads: leadMetrics.stale,
       staleAccounts: accountMetrics.stale,
       noOpenOpportunity: accountMetrics.noOpenOpportunity,
+      noContacts: accountMetrics.noContacts,
+      missingContact: contactMetrics.missingContact,
       closingSoon: dealMetrics.closingSoon,
       overdueOpportunities: dealMetrics.overdueOpportunities,
+      toSubmit: approvalMetrics.toSubmit,
     },
     business: {
       newLeads: leadMetrics.newThisMonth,
@@ -222,11 +238,20 @@ export async function dashboard(
       pipeline: dealMetrics.pipeline,
       weighted: dealMetrics.weighted,
       wonThisMonth: dealMetrics.wonThisMonth,
+      churnedThisMonth: accountMetrics.churnedThisMonth,
+      newAccounts: accountMetrics.newThisMonth,
+      completedThisMonth: activityMetrics.completedThisMonth,
+      approvedThisMonth: approvalMetrics.approvedThisMonth,
+      rejectedThisMonth: approvalMetrics.rejectedThisMonth,
+      approvalRate: approvalMetrics.approvalRate,
     },
-    // Whole-history ratios, kept apart from the month's numbers.
+    // Whole-history ratios and standing counts, kept apart from the
+    // month's numbers.
     overall: {
       conversionRate: leadMetrics.conversionRate,
       winRate: dealMetrics.winRate,
+      customers: accountMetrics.customers,
+      accounts: accountMetrics.total,
     },
     funnel,
     sellers,
