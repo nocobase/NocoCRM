@@ -5,9 +5,14 @@ import {
 } from '../components/crm/api.js';
 import { recordTitle } from '../components/crm/lookups.js';
 import { fieldLabelKey, toText } from '../components/crm/api.js';
-import { useState, type ReactElement } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import { useLocation } from 'react-router';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+  type InfiniteData,
+} from '@tanstack/react-query';
 import {
   Plus,
   Search,
@@ -186,20 +191,87 @@ function EntityList({
     stage: string;
   }>();
   const [moving, setMoving] = useState(false);
+  // The card being dragged, dimmed in its column while it is in the air.
+  const [dragging, setDragging] = useState<string>();
+  // The card that just landed in a column, marked for a moment so the eye
+  // finds it among the others; the mark clears on its own.
+  const [landed, setLanded] = useState<string>();
+  useEffect(() => {
+    if (!landed) return;
+    const timer = setTimeout(() => setLanded(undefined), 2000);
+    return () => clearTimeout(timer);
+  }, [landed]);
+  useEffect(() => {
+    const done = (): void => setDragging(undefined);
+    window.addEventListener('dragend', done);
+    window.addEventListener('drop', done);
+    return () => {
+      window.removeEventListener('dragend', done);
+      window.removeEventListener('drop', done);
+    };
+  }, []);
+  const client = useQueryClient();
+  const definition = meta?.definitions[entity];
+  // A drop moves the card between the two columns' cached pages at once,
+  // so it lands where it was dropped before the server has answered; the
+  // refresh afterwards makes the columns exact, and a failure reloads them.
+  const moveInCache = (record: CrmRecord, stage: string): void => {
+    const statusField = definition?.statusField;
+    if (!statusField) return;
+    const prefix = [...scopeKey, `${toText(entity)}/board`];
+    const columns = client.getQueriesData<InfiniteData<ListData>>({
+      queryKey: prefix,
+    });
+    const from = toText(record[statusField]);
+    const full =
+      columns
+        .flatMap(([, data]) => data?.pages.flatMap((p) => p.data) ?? [])
+        .find((r) => r.id === record.id) ?? record;
+    for (const [queryKey, data] of columns) {
+      if (!data) continue;
+      const column = toText(queryKey[prefix.length]);
+      if (column === from)
+        client.setQueryData<InfiniteData<ListData>>(queryKey, {
+          ...data,
+          pages: data.pages.map((p) => ({
+            ...p,
+            data: p.data.filter((r) => r.id !== record.id),
+            total: Math.max(0, p.total - 1),
+          })),
+        });
+      else if (column === stage)
+        client.setQueryData<InfiniteData<ListData>>(queryKey, {
+          ...data,
+          pages: data.pages.map((p, i) => ({
+            ...p,
+            data:
+              i === 0 ? [{ ...full, [statusField]: stage }, ...p.data] : p.data,
+            total: p.total + 1,
+          })),
+        });
+    }
+  };
   const move = async (record: CrmRecord, patch: Data): Promise<void> => {
     setMoving(true);
     setError(undefined);
+    const stage = definition?.statusField
+      ? patch[definition.statusField]
+      : undefined;
+    if (typeof stage === 'string') {
+      moveInCache(record, stage);
+      setLanded(toText(record.id));
+    }
     try {
       await api(`${toText(entity)}/${toText(record.id)}`, 'PATCH', patch);
       setInvalidating(undefined);
       await refresh();
     } catch (e) {
       setError(e);
+      await refresh();
     } finally {
       setMoving(false);
     }
   };
-  const definition = meta?.definitions[entity];
   const params = new URLSearchParams({
     search,
     status,
@@ -716,6 +788,10 @@ function EntityList({
               params={columnParams}
               droppable={stage !== 'converted'}
               onDrop={(dragged) => {
+                // The card is about to be re-rendered in another column, so
+                // its own dragend never reaches the element that started the
+                // drag; the drop is where the dimming ends.
+                setDragging(undefined);
                 if (
                   dragged.status === 'converted' ||
                   dragged[definition.statusField!] === stage ||
@@ -731,14 +807,28 @@ function EntityList({
               renderCard={(record, titles) => (
                 <Card
                   key={record.id}
-                  className='gap-0 py-4 shadow-none'
+                  className={`gap-0 py-4 shadow-none transition-[opacity,box-shadow,background-color] duration-700 ${toText(
+                    dragging === record.id ? 'opacity-40' : '',
+                  )} ${toText(
+                    landed === record.id
+                      ? 'bg-primary/15 ring-2 ring-primary/60'
+                      : '',
+                  )} ${toText(
+                    record.status !== 'converted' &&
+                      (meta?.manage || record.ownerId === meta?.userId)
+                      ? 'cursor-grab active:cursor-grabbing'
+                      : '',
+                  )}`}
                   draggable={
                     record.status !== 'converted' &&
                     (meta?.manage || record.ownerId === meta?.userId)
                   }
+                  onDragEnd={() => setDragging(undefined)}
                   // The card carries what the drop needs, since the target
                   // column does not hold the source column's records.
-                  onDragStart={(e) =>
+                  onDragStart={(e) => {
+                    e.dataTransfer.effectAllowed = 'move';
+                    setDragging(toText(record.id));
                     e.dataTransfer.setData(
                       'application/json',
                       JSON.stringify({
@@ -750,8 +840,8 @@ function EntityList({
                         [definition.statusField!]:
                           record[definition.statusField!],
                       }),
-                    )
-                  }
+                    );
+                  }}
                 >
                   <CardContent className='space-y-1.5 px-4'>
                     <RecordLink
@@ -1067,6 +1157,9 @@ function BoardColumn({
   const base = new URLSearchParams(params);
   base.set('status', stage);
   base.set('pageSize', String(PAGE_SIZE));
+  // Most recently touched first: a card dropped here was just touched, so
+  // it stays at the top where it landed, and a column reads as recent work.
+  base.set('sort', '-updatedAt');
   const query = useInfiniteQuery({
     queryKey: [...scopeKey, `${toText(entity)}/board`, stage, base.toString()],
     queryFn: ({ pageParam }) => {
@@ -1084,15 +1177,33 @@ function BoardColumn({
     (all, p) => ({ ...all, ...p.titles }),
     {},
   );
+  // Whether a card is held over this column: counted, because entering a
+  // child fires leave on the parent, and the highlight must not flicker.
+  const [overCount, setOverCount] = useState(0);
+  const over = droppable && overCount > 0;
   return (
     <section
-      className='w-72 shrink-0 rounded-xl border bg-muted/40 p-3'
+      className={`w-72 shrink-0 rounded-xl border p-3 transition-colors ${toText(
+        over ? 'border-dashed border-primary bg-primary/5' : 'bg-muted/40',
+      )}`}
       // A non-droppable column (converted, reached only through the
       // conversion flow) never calls preventDefault, so the cursor says no
       // before the user lets go instead of the drop silently doing nothing.
-      onDragOver={droppable ? (e) => e.preventDefault() : undefined}
+      onDragOver={
+        droppable
+          ? (e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+            }
+          : undefined
+      }
+      onDragEnter={droppable ? () => setOverCount((n) => n + 1) : undefined}
+      onDragLeave={
+        droppable ? () => setOverCount((n) => Math.max(0, n - 1)) : undefined
+      }
       onDrop={(e) => {
         e.preventDefault();
+        setOverCount(0);
         try {
           onDrop(
             JSON.parse(e.dataTransfer.getData('application/json')) as CrmRecord,

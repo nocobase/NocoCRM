@@ -53,7 +53,7 @@ export interface ListOptions {
   involvedId?: string;
   // The order rows come in; the default is newest first by creation. A
   // leading minus means descending.
-  sort?: 'startAt' | '-startAt' | '-submittedAt';
+  sort?: 'startAt' | '-startAt' | '-submittedAt' | '-updatedAt';
   // Restrict to these records: how a statistic's count becomes the list it
   // counted. Comma-separated in the query string. An empty list matches
   // nothing, which is what a zero count should show.
