@@ -6,13 +6,21 @@ import {
   toText,
 } from '../components/crm/api.js';
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
   type ReactElement,
   type ReactNode,
 } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
+import { Sheet, SheetContent, SheetTitle } from '../components/ui/sheet.js';
+import {
+  RecordDrawerContext,
+  useRecordDrawer,
+  useRecordLink,
+  type RecordDrawerApi,
+} from '../components/crm/record-drawer.js';
 import {
   ArrowLeft,
   ArrowRightLeft,
@@ -30,6 +38,8 @@ import {
   MapPinned,
   Megaphone,
   Download,
+  Maximize2,
+  X,
   Paperclip,
   Phone,
   Plus,
@@ -98,17 +108,119 @@ import {
 import { InlineField } from '../components/crm/inline.js';
 import { ConvertDialog } from '../components/crm/conversion.js';
 
+const drawerEntities: Entity[] = [
+  'leads',
+  'accounts',
+  'contacts',
+  'opportunities',
+  'activities',
+  'approvals',
+];
+
 export default function CrmDetailPage(): ReactElement {
   const params = useParams();
+  const navigate = useNavigate();
+  // The record shown in the drawer lives in the URL ("?open=entity/id"),
+  // so a reload, the back button and a copied link all restore it.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const opened = toText(searchParams.get('open') ?? '');
+  const open = useCallback<RecordDrawerApi['open']>(
+    (target, id) => {
+      // A phone has no room for a drawer over a page: go to the record.
+      if (window.matchMedia('(max-width: 767px)').matches) {
+        void navigate(`/crm/${toText(target)}/${toText(id)}`);
+        return;
+      }
+      setSearchParams((previous) => {
+        const next = new URLSearchParams(previous);
+        next.set('open', `${toText(target)}/${toText(id)}`);
+        return next;
+      });
+    },
+    [navigate, setSearchParams],
+  );
+  const close = useCallback(() => {
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.delete('open');
+      return next;
+    });
+  }, [setSearchParams]);
   const entity = params.entity as Entity;
   const key = `${toText(params.entity)}/${toText(params.id)}`;
   // The route can render once more with empty params while it is being left
   // (after a delete); without both there is nothing to load.
   if (!params.entity || !params.id) return <></>;
-  return entity === 'leads' ? (
-    <LeadDetail key={key} id={params.id} />
-  ) : (
-    <EntityDetail key={key} entity={entity} id={params.id} />
+  return (
+    <RecordDrawerContext.Provider value={{ open, close, inDrawer: false }}>
+      {entity === 'leads' ? (
+        <LeadDetail key={key} id={params.id} />
+      ) : (
+        <EntityDetail key={key} entity={entity} id={params.id} />
+      )}
+      <RecordDrawer target={opened} open={open} close={close} />
+    </RecordDrawerContext.Provider>
+  );
+}
+
+// The drawer a detail page opens other records in: the same detail
+// component as the full page, over the page the reader came from. Links
+// inside it replace what it shows (the back button steps back through
+// them), and the toolbar offers the full page.
+function RecordDrawer({
+  target,
+  open,
+  close,
+}: {
+  target: string;
+  open: RecordDrawerApi['open'];
+  close: () => void;
+}): ReactElement {
+  const { text } = useCrmText();
+  const [entity, id] = target.split('/') as [Entity, string | undefined];
+  const valid = Boolean(id) && drawerEntities.includes(entity);
+  return (
+    <Sheet open={valid} onOpenChange={(next) => !next && close()}>
+      <SheetContent
+        side='right'
+        showCloseButton={false}
+        // The primitive sizes a right sheet with side-scoped classes, so the
+        // wider drawer has to override them at the same specificity.
+        className='gap-0 overflow-y-auto p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-none data-[side=right]:md:w-[72vw] data-[side=right]:lg:w-[64vw] data-[side=right]:xl:w-[56vw] data-[side=right]:2xl:max-w-[1100px]'
+      >
+        {valid && (
+          <RecordDrawerContext.Provider value={{ open, close, inDrawer: true }}>
+            <div className='sticky top-0 z-10 flex items-center gap-2 border-b bg-popover/95 px-4 py-2 backdrop-blur'>
+              <SheetTitle className='flex-1 text-sm text-muted-foreground'>
+                {text(`entities.${toText(entity)}`)}
+              </SheetTitle>
+              <Button
+                variant='ghost'
+                size='sm'
+                nativeButton={false}
+                render={<Link to={`/crm/${toText(entity)}/${toText(id)}`} />}
+              >
+                <Maximize2 />
+                {text('openFullPage')}
+              </Button>
+              <Button
+                variant='ghost'
+                size='icon-sm'
+                aria-label={text('close')}
+                onClick={close}
+              >
+                <X />
+              </Button>
+            </div>
+            {entity === 'leads' ? (
+              <LeadDetail key={target} id={toText(id)} />
+            ) : (
+              <EntityDetail key={target} entity={entity} id={toText(id)} />
+            )}
+          </RecordDrawerContext.Provider>
+        )}
+      </SheetContent>
+    </Sheet>
   );
 }
 const leadFieldIcons: Record<string, LucideIcon> = {
@@ -152,6 +264,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   const api = useCrmApi();
   const refresh = useRefresh();
   const navigate = useNavigate();
+  const drawer = useRecordDrawer();
   const { text, language } = useCrmText();
   const [tab, setTab] = useState('activities');
   // The activities and the history arrive one page each with the lead;
@@ -741,7 +854,8 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                       await api(`leads/${toText(id)}`, 'DELETE');
                       // Leave first: refreshing while still on the page
                       // refetches the record that no longer exists.
-                      void navigate('/crm/leads');
+                      if (drawer?.inDrawer) drawer.close();
+                      else void navigate('/crm/leads');
                       void refresh();
                     } catch (e) {
                       setError(e);
@@ -945,6 +1059,7 @@ export function ActivityItem({
   names?: Record<string, string>;
 }): ReactElement {
   const { text, language } = useCrmText();
+  const activityLink = useRecordLink('activities', toText(activity.id));
   const { data: meta } = useMetadata();
   const names = titles;
   // External participants are shown by bare name: the activity's account is
@@ -1117,7 +1232,7 @@ export function ActivityItem({
           <ErrorNotice error={activityError} />
           <Link
             className='mx-2 inline-flex items-center gap-1 font-medium hover:text-primary hover:underline'
-            to={`/crm/activities/${toText(activity.id)}`}
+            {...activityLink}
           >
             {text('viewDetails')}
             <ArrowUpRight className='size-3 text-muted-foreground' />
@@ -1562,6 +1677,27 @@ export function UploadZone({
   );
 }
 
+// The record a linked file came from, opened like any other record link.
+function SourceLink({
+  entity,
+  id,
+  name,
+}: {
+  entity: Entity;
+  id: string;
+  name: string;
+}): ReactElement {
+  const link = useRecordLink(entity, id);
+  return (
+    <Link
+      className='text-muted-foreground hover:text-primary hover:underline'
+      {...link}
+    >
+      {name}
+    </Link>
+  );
+}
+
 // The lead's own uploads plus everything attached to its activities, so the tab
 // answers "what documents exist for this lead" rather than "what is on this row".
 // Each file remembers which record holds it, because removing one has to unlink
@@ -1697,12 +1833,11 @@ export function RecordAttachments({
                 const source = sources.get(id);
                 if (!source) return null;
                 return (
-                  <Link
-                    className='text-muted-foreground hover:text-primary hover:underline'
-                    to={`/crm/${toText(group.entity)}/${toText(source.record.id)}`}
-                  >
-                    {toText(source.record.name)}
-                  </Link>
+                  <SourceLink
+                    entity={group.entity}
+                    id={toText(source.record.id)}
+                    name={toText(source.record.name)}
+                  />
                 );
               }}
             />

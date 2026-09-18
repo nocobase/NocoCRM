@@ -2,6 +2,7 @@ import { toText } from './api.js';
 import { CountryLabel, SubdivisionLabel } from './geography.js';
 import type { ReactElement, ReactNode } from 'react';
 import { Link } from 'react-router';
+import { useRecordDrawer, useRecordLink } from './record-drawer.js';
 import {
   ArrowUpRight,
   Inbox,
@@ -45,11 +46,19 @@ export function CrmFrame({
   children: ReactNode;
 }): ReactElement {
   const { text } = useCrmText();
+  // Inside the record drawer the frame is a section of the drawer, not the
+  // page's main landmark, and sits tighter.
+  const inDrawer = useRecordDrawer()?.inDrawer ?? false;
+  const Frame = inDrawer ? 'div' : 'main';
   return (
-    <main
-      className={`mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-8 ${toText(
-        fill ? 'flex h-full flex-col pb-0 md:pb-0' : 'pb-24 md:pb-24',
-      )}`}
+    <Frame
+      className={
+        inDrawer
+          ? 'space-y-6 p-4 md:p-6'
+          : `mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-8 ${toText(
+              fill ? 'flex h-full flex-col pb-0 md:pb-0' : 'pb-24 md:pb-24',
+            )}`
+      }
     >
       <header className='flex flex-wrap items-start justify-between gap-4'>
         <div>
@@ -92,7 +101,7 @@ export function CrmFrame({
         </div>
       </header>
       {children}
-    </main>
+    </Frame>
   );
 }
 export function Loading(): ReactElement {
@@ -259,10 +268,11 @@ export function RecordLink({
   entity: Entity;
   record: { id: string; name: string };
 }): ReactElement {
+  const link = useRecordLink(entity, toText(record.id));
   return (
     <Link
       className='inline-flex items-center gap-1 font-medium hover:text-primary hover:underline'
-      to={`/crm/${toText(entity)}/${toText(record.id)}`}
+      {...link}
     >
       {record.name}
       <ArrowUpRight className='size-3 text-muted-foreground' />

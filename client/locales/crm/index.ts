@@ -92,6 +92,7 @@ const wording = {
     '每次上传最多 20 MB，附件仅对有权查看关联记录的用户开放。',
   ],
   viewDetails: ['View details', '查看详情'],
+  openFullPage: ['Open full page', '整页打开'],
   uploadFile: ['Upload file', '上传文件'],
   uploading: ['Uploading…', '上传中…'],
   dropFilesHere: ['Drop files here, or', '将文件拖到这里，或'],

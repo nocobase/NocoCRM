@@ -3,6 +3,10 @@ import { sentence, toText, useMore } from '../components/crm/api.js';
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 import {
+  useRecordDrawer,
+  useRecordLink,
+} from '../components/crm/record-drawer.js';
+import {
   ArrowLeft,
   ArrowUpRight,
   Banknote,
@@ -227,6 +231,22 @@ const reasonKeys: Record<string, string[]> = {
   resumeAt: ['paused'],
 };
 
+// The account a contact or a deal belongs to, in the title line.
+function AccountCrumb({
+  id,
+  name,
+}: {
+  id: string;
+  name: string;
+}): ReactElement {
+  const link = useRecordLink('accounts', id);
+  return (
+    <Link className='px-2 hover:text-primary hover:underline' {...link}>
+      {name}
+    </Link>
+  );
+}
+
 export default function EntityDetail({
   entity,
   id,
@@ -243,6 +263,7 @@ export default function EntityDetail({
   const api = useCrmApi();
   const refresh = useRefresh();
   const navigate = useNavigate();
+  const drawer = useRecordDrawer();
   const { text, language } = useCrmText();
   const [tab, setTab] = useState<string>();
   // The related lists and the history arrive one page each with the
@@ -519,12 +540,10 @@ export default function EntityDetail({
     <span className='-mx-2 flex flex-wrap items-center'>
       {entity === 'opportunities' && record.accountId ? (
         <>
-          <Link
-            className='px-2 hover:text-primary hover:underline'
-            to={`/crm/accounts/${toText(record.accountId)}`}
-          >
-            {names[toText(record.accountId)] ?? text('entities.accounts')}
-          </Link>
+          <AccountCrumb
+            id={toText(record.accountId)}
+            name={names[toText(record.accountId)] ?? text('entities.accounts')}
+          />
           <span className='text-muted-foreground/60'>/</span>
         </>
       ) : null}
@@ -539,12 +558,10 @@ export default function EntityDetail({
       {entity === 'contacts' && record.accountId ? (
         <>
           <span className='text-muted-foreground/60'>/</span>
-          <Link
-            className='px-2 hover:text-primary hover:underline'
-            to={`/crm/accounts/${toText(record.accountId)}`}
-          >
-            {names[toText(record.accountId)] ?? text('entities.accounts')}
-          </Link>
+          <AccountCrumb
+            id={toText(record.accountId)}
+            name={names[toText(record.accountId)] ?? text('entities.accounts')}
+          />
         </>
       ) : null}
     </span>
@@ -1089,8 +1106,10 @@ export default function EntityDetail({
             if (
               !['activities', 'approvals'].includes(form.entity) &&
               form.entity !== entity
-            )
-              void navigate(`/crm/${toText(form.entity)}/${toText(r.id)}`);
+            ) {
+              if (drawer) drawer.open(form.entity, toText(r.id));
+              else void navigate(`/crm/${toText(form.entity)}/${toText(r.id)}`);
+            }
           }}
           andThen={
             form.entity === 'approvals'
@@ -1217,7 +1236,8 @@ export default function EntityDetail({
                 await api(`${toText(entity)}/${toText(id)}`, 'DELETE');
                 // Leave first: refreshing while still on the page refetches
                 // the record that no longer exists.
-                void navigate(`/crm/${toText(entity)}`);
+                if (drawer?.inDrawer) drawer.close();
+                else void navigate(`/crm/${toText(entity)}`);
                 void refresh();
               } catch (e) {
                 setError(e);
@@ -1400,6 +1420,7 @@ function ContactItem({
   trailing?: ReactNode;
 }): ReactElement {
   const { text } = useCrmText();
+  const contactLink = useRecordLink('contacts', toText(contact.id));
   const { data: meta } = useMetadata();
   const [open, setOpen] = useState(false);
   // Mirrors the server rule: the owner edits their own, a manager edits any.
@@ -1485,7 +1506,7 @@ function ContactItem({
           </div>
           <Link
             className='mx-2 inline-flex items-center gap-1 font-medium hover:text-primary hover:underline'
-            to={`/crm/contacts/${toText(contact.id)}`}
+            {...contactLink}
           >
             {text('viewDetails')}
             <ArrowUpRight className='size-3 text-muted-foreground' />
@@ -1863,6 +1884,7 @@ function ApprovalItem({
   names: Record<string, string>;
 }): ReactElement {
   const { text, language } = useCrmText();
+  const approvalLink = useRecordLink('approvals', toText(approval.id));
   const { data: meta } = useMetadata();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<unknown>();
@@ -1989,7 +2011,7 @@ function ApprovalItem({
           </div>
           <Link
             className='mx-2 inline-flex items-center gap-1 font-medium hover:text-primary hover:underline'
-            to={`/crm/approvals/${toText(approval.id)}`}
+            {...approvalLink}
           >
             {text('viewDetails')}
             <ArrowUpRight className='size-3 text-muted-foreground' />
