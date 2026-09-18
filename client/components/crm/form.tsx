@@ -1,8 +1,9 @@
 import { RecordMultiPicker, RecordPicker } from './record-picker.js';
+import { FileDropZone, FileLinks } from './attachments.js';
 import { fieldLabelKey, toText } from './api.js';
 import { CountryChoice, SubdivisionChoice } from './geography.js';
 import { useRef, useState, type ReactElement } from 'react';
-import { Paperclip, Plus, Trash2, Upload, X } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button.js';
 import { Input } from '../ui/input.js';
 import { Textarea } from '../ui/textarea.js';
@@ -258,7 +259,6 @@ export function RecordForm({
               : {}),
     ...initial,
   }));
-  const [uploaded, setUploaded] = useState<Record<string, string>>({});
   const set = (key: string, value: unknown): void =>
     setInput((current) => ({
       ...current,
@@ -559,90 +559,27 @@ export function RecordForm({
     if (field.type === 'files')
       return (
         <div className='space-y-2'>
-          {/* The native control is present but hidden; the button beside it is
-              the visible affordance, the same one the detail pages use. */}
-          <input
-            id={common.id}
-            className='sr-only'
-            type='file'
-            multiple
-            disabled={busy}
-            onChange={(e) => {
-              void (async () => {
-                const files = Array.from(e.target.files ?? []);
-                if (!files.length) return;
-                setBusy(true);
-                setError(undefined);
-                const form = new FormData();
-                files.forEach((file) => form.append('file', file));
-                try {
-                  const result = await api<{
-                    data: { id: string; filename: string }[];
-                  }>(`files?entity=${toText(entity)}`, 'POST', form);
-                  set(field.key, [
-                    ...arrayValues(value),
-                    ...result.data.map((r) => r.id),
-                  ]);
-                  setUploaded((old) => ({
-                    ...old,
-                    ...Object.fromEntries(
-                      result.data.map((r) => [r.id, r.filename]),
-                    ),
-                  }));
-                } catch (e) {
-                  setError(e);
-                } finally {
-                  setBusy(false);
-                  e.target.value = '';
-                }
-              })();
-            }}
+          {/* The same drop zone and file rows as a record's attachments
+              tab; what lands here joins the form value and is saved with
+              the record. */}
+          <FileDropZone
+            entity={entity}
+            busy={busy}
+            setBusy={setBusy}
+            onError={setError}
+            onUploaded={(ids) =>
+              set(field.key, [...arrayValues(value).map(toText), ...ids])
+            }
           />
-          <div className='flex flex-wrap items-center gap-3'>
-            <Button
-              type='button'
-              variant='outline'
-              size='sm'
-              disabled={busy}
-              onClick={() => document.getElementById(common.id)?.click()}
-            >
-              <Upload />
-              {busy ? text('saving') : text('uploadFile')}
-            </Button>
-            <span className='text-xs text-muted-foreground'>
-              {text('fileHint')}
-            </span>
-          </div>
-          {arrayValues(value).length > 0 && (
-            <ul className='divide-y rounded-lg border'>
-              {arrayValues(value).map((id) => (
-                <li
-                  className='flex items-center gap-2 px-3 py-1.5 text-sm'
-                  key={toText(id)}
-                >
-                  <Paperclip className='size-3.5 shrink-0 text-muted-foreground' />
-                  <span className='min-w-0 flex-1 truncate'>
-                    {uploaded[toText(id)] ?? text('attachment')}
-                  </span>
-                  <Button
-                    type='button'
-                    variant='ghost'
-                    size='icon-sm'
-                    className='size-6 text-muted-foreground'
-                    aria-label={text('remove')}
-                    onClick={() =>
-                      set(
-                        field.key,
-                        (value as unknown[]).filter((v) => v !== id),
-                      )
-                    }
-                  >
-                    <X className='size-3.5' />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <FileLinks
+            files={arrayValues(value)}
+            onRemove={(id) =>
+              set(
+                field.key,
+                arrayValues(value).filter((v) => toText(v) !== id),
+              )
+            }
+          />
         </div>
       );
     const date = ['date', 'datetime'].includes(field.type);

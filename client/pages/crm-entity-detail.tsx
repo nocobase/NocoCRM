@@ -105,9 +105,9 @@ import {
   HistoryChanges,
   LeadRow,
   RecordAttachments,
-  UploadZone,
   WebsiteField,
 } from './crm-detail.js';
+import { UploadZone } from '../components/crm/attachments.js';
 
 // Which shortcuts a detail page offers the assistant, per the specification.
 // Each is a complete instruction sent as soon as it is clicked.

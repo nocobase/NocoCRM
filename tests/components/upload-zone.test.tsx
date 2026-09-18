@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { UploadZone } from '../../client/pages/crm-detail.js';
+import { UploadZone } from '../../client/components/crm/attachments.js';
 import { crmEn } from '../../client/locales/crm/index.js';
 
 const state = vi.hoisted(() => ({
