@@ -260,6 +260,22 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           );
         }
       },
+      async resetPassword(id, password) {
+        if (!app.container.has(userManagementServiceToken))
+          throw new CrmError('demoAccounts', 500);
+        try {
+          await app.container
+            .resolve(userManagementServiceToken)
+            .resetPassword(id, password);
+        } catch (error) {
+          throw new CrmError(
+            'demoAccounts',
+            500,
+            undefined,
+            error instanceof Error ? error.message : toText(error),
+          );
+        }
+      },
     };
     routes.post('/demo/populate', async (c) =>
       c.json({

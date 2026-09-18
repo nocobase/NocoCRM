@@ -43,6 +43,9 @@ export interface DemoAccountCreator {
     password: string;
     role: string;
   }): Promise<{ id: string }>;
+  // An account that already exists is reused, and its password set back to
+  // the demo one, so the password the settings page states always holds.
+  resetPassword(id: string, password: string): Promise<void>;
 }
 
 export interface DemoStatus {
@@ -131,6 +134,8 @@ export async function populateDemo(
   const userIds: Record<string, string> = {};
   for (const account of demoAccounts) {
     const found = existing.find((u) => u.username === account.username);
+    if (found)
+      await accounts.resetPassword(found.id, demoPassword(account.username));
     const id = found
       ? found.id
       : (

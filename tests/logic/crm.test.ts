@@ -52,6 +52,8 @@ let database: DatabaseManager;
 let authorization: AppAuthorization;
 let service: CrmService;
 let folder: string;
+// Users whose password the demo import set back through the users plugin.
+const passwordResets: string[] = [];
 let router: Hono;
 const actor = (id: string): Actor => ({
   id,
@@ -169,6 +171,12 @@ beforeAll(async () => {
       return { id };
     },
   } as unknown as ReturnType<
+    // A reused account gets the demo password back; the import relies on it.
+    async resetPassword(userId: string, password: string) {
+      if (password.length < 8)
+        throw new Error('Password must be at least 8 characters');
+      passwordResets.push(userId);
+    },
     typeof container.resolve<typeof userManagementServiceToken>
   >);
   router = await crmRoutes.createRouter({
@@ -1230,6 +1238,20 @@ describe('resolved titles and paged filters', () => {
     const approval = await service.save(actor('rep'), 'approvals', {
       name: 'Titled approval',
       opportunityId: deal.id,
+
+  it('reuses the accounts on a second import and sets their passwords back', async () => {
+    // The first import created the accounts, so nothing was reset then.
+    expect(passwordResets).toEqual([]);
+    const again = await request('/demo/populate', 'admin', 'POST', {});
+    expect(again.status).toBe(200);
+    expect([...passwordResets].sort()).toEqual(
+      demoAccounts.map((a) => `demo-${a.username}`).sort(),
+    );
+    // Leave the database as the earlier tests expect it: without the demo.
+    expect((await request('/demo/reset', 'admin', 'POST', {})).status).toBe(
+      200,
+    );
+  }, 120000);
       topic: 'discount',
       approverId: 'manager',
     });
