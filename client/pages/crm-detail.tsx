@@ -22,7 +22,6 @@ import {
   type RecordDrawerApi,
 } from '../components/crm/record-drawer.js';
 import {
-  ArrowLeft,
   ArrowRightLeft,
   ArrowUpRight,
   Briefcase,
@@ -407,23 +406,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
           />
         </span>
       }
-      description={
-        <span className='flex flex-wrap items-center gap-x-2 gap-y-1'>
-          <Link
-            className='inline-flex items-center gap-1 hover:text-foreground'
-            to='/crm/leads'
-          >
-            <ArrowLeft className='size-3.5' />
-            {text('back')}
-          </Link>
-          <span aria-hidden className='text-muted-foreground/50'>
-            ·
-          </span>
-          <span>
-            {text('leadIdPrefix')}: {toText(record.id)}
-          </span>
-        </span>
-      }
+      description={`${toText(text('leadIdPrefix'))}: ${toText(record.id)}`}
       // The page-level assistant entry is the lead-specific one: it opens the
       // same panel with a follow-up prompt already typed.
       assistant={false}

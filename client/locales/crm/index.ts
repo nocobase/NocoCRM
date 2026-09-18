@@ -155,7 +155,6 @@ const wording = {
   ],
   timeline: ['History', '变更记录'],
   related: ['Related records', '关联记录'],
-  back: ['Back', '返回'],
   andMore: ['and {{count}} more', '等 {{count}} 个，查看'],
   deleteBlocked: [
     'Cannot delete: these records point at it and would be left without a parent. Remove or move them first.',

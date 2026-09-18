@@ -7,7 +7,6 @@ import {
   useRecordLink,
 } from '../components/crm/record-drawer.js';
 import {
-  ArrowLeft,
   ArrowUpRight,
   Banknote,
   ClipboardCheck,
@@ -569,23 +568,7 @@ export default function EntityDetail({
   return (
     <CrmFrame
       title={heading}
-      description={
-        <span className='flex flex-wrap items-center gap-x-2 gap-y-1'>
-          <Link
-            className='inline-flex items-center gap-1 hover:text-foreground'
-            to={`/crm/${toText(entity)}`}
-          >
-            <ArrowLeft className='size-3.5' />
-            {text('back')}
-          </Link>
-          <span aria-hidden className='text-muted-foreground/50'>
-            ·
-          </span>
-          <span>
-            {text(`entities.${toText(entity)}`)} ID: {toText(record.id)}
-          </span>
-        </span>
-      }
+      description={`${toText(text(`entities.${toText(entity)}`))} ID: ${toText(record.id)}`}
       // Pages with shortcuts have their own entries; the contact and
       // approval pages have none and no generic button either — the global
       // entry serves them.
