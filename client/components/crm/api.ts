@@ -200,8 +200,8 @@ export function useMore<T = CrmRecord>(
     loadMore,
   };
 }
-export function useMetadata() {
-  return useCrmQuery<Metadata>('metadata');
+export function useMetadata(enabled = true) {
+  return useCrmQuery<Metadata>('metadata', enabled);
 }
 export function useRefresh() {
   const client = useQueryClient();

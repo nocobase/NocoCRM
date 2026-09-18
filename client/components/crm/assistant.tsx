@@ -1,4 +1,5 @@
 import { toText } from './api.js';
+import { useGetIdentity } from '@refinedev/core';
 import {
   createContext,
   useContext,
@@ -76,14 +77,20 @@ const openKey = 'crm-assistant-open';
 export function CrmAssistantProvider({
   children,
 }: PropsWithChildren): ReactElement {
-  // Whether the panel is open survives a reload of this tab: the user keeps
-  // working with it beside the page, and a refresh should not shut it.
+  // The panel starts open on a screen wide enough to hold it beside the
+  // page: the assistant is the CRM's front door, not a hidden extra. Once
+  // the user opens or closes it, that choice survives a reload of the tab.
   const [open, setOpen] = useState(() => {
     try {
-      return sessionStorage.getItem(openKey) === '1';
+      const stored = sessionStorage.getItem(openKey);
+      if (stored !== null) return stored === '1';
     } catch {
-      return false;
+      /* Storage may be unavailable; fall through to the default. */
     }
+    return (
+      typeof window !== 'undefined' &&
+      window.matchMedia('(min-width: 768px)').matches
+    );
   });
   const [message, setMessage] = useState('');
   const [context, setContext] = useState<Data>({});
@@ -126,7 +133,12 @@ export function CrmAssistantProvider({
 }
 export function AssistantPanel(): ReactElement | null {
   const state = useContext(AssistantContext);
-  const { data: meta } = useMetadata();
+  // Nothing is asked of the server until the session is known: the panel
+  // may already be open when the app mounts, before sign-in has settled,
+  // and an unauthenticated request would sit in the panel as an error.
+  const { data: identity } = useGetIdentity<{ id: string }>();
+  const signedIn = Boolean(identity?.id);
+  const { data: meta } = useMetadata(signedIn);
   const { text } = useCrmText();
   const api = useCrmApi();
   const refresh = useRefresh();
@@ -140,7 +152,7 @@ export function AssistantPanel(): ReactElement | null {
     messages: Data[];
     actions: Data[];
     titles: Record<string, string>;
-  }>('ai/history', Boolean(state?.open), {
+  }>('ai/history', Boolean(state?.open) && signedIn, {
     refetchInterval: (data) =>
       busy || data?.messages.some((m) => m.status === 'pending') ? 2000 : false,
   });
