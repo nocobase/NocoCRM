@@ -963,13 +963,23 @@ export class CrmService {
       if (input.status !== 'completed') input.completedAt = null;
     }
     if (entity === 'approvals') {
-      await this.get(
-        actor,
-        'opportunities',
-        toText(input.opportunityId),
-        tx,
-        'update',
-      );
+      // The deal must be one the applicant may edit (their own, for a
+      // salesperson); a deal they can only read gets a reason, not "not
+      // found".
+      try {
+        await this.get(
+          actor,
+          'opportunities',
+          toText(input.opportunityId),
+          tx,
+          'update',
+        );
+      } catch (error) {
+        if (!(error instanceof CrmError && error.code === 'notFound'))
+          throw error;
+        await this.get(actor, 'opportunities', toText(input.opportunityId), tx);
+        throw new CrmError('approvalOpportunity', 403, 'opportunityId');
+      }
       if (input.approverId)
         await this.checkApprover(actor, toText(input.approverId));
     }

@@ -599,9 +599,35 @@ describe('CRM API security and domain rules', () => {
       .selectAll()
       .where('recordId', '=', approval.id)
       .execute();
-    expect(outbox.map((r) => r.event)).toEqual(
-      expect.arrayContaining(['pending', 'approved']),
-    );
+    expect(outbox).toHaveLength(0);
+  });
+
+  it('refuses an approval for an opportunity the applicant may not edit', async () => {
+    const account = await service.save(actor('manager'), 'accounts', {
+      name: 'Manager account',
+    });
+    const opportunity = await service.save(actor('manager'), 'opportunities', {
+      name: 'Manager deal',
+      accountId: account.id,
+    });
+    await expect(
+      service.save(actor('rep'), 'approvals', {
+        name: 'Not mine',
+        opportunityId: opportunity.id,
+        topic: 'discount',
+        description: 'Terms',
+        approverId: 'manager',
+      }),
+    ).rejects.toMatchObject({ code: 'approvalOpportunity', status: 403 });
+    await expect(
+      service.save(actor('rep'), 'approvals', {
+        name: 'Missing deal',
+        opportunityId: 'no-such-deal',
+        topic: 'discount',
+        description: 'Terms',
+        approverId: 'manager',
+      }),
+    ).rejects.toMatchObject({ code: 'notFound' });
   });
 
   it('lets applicants delete their own drafts but never submitted approvals', async () => {

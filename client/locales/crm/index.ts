@@ -943,6 +943,10 @@ const wording = {
       'You cannot approve your own request.',
       '不能审批自己发起的申请。',
     ],
+    approvalOpportunity: [
+      'An approval can only be raised for an opportunity you may edit.',
+      '只能为自己负责的商机发起审批。',
+    ],
     invalidApprover: [
       'Choose an active manager or administrator.',
       '请选择有效的经理或管理员作为审批人。',

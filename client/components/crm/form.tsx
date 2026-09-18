@@ -397,12 +397,21 @@ export function RecordForm({
           label={label}
           value={toText(value ?? '')}
           titles={titles}
-          filter={
-            ['contacts', 'opportunities'].includes(field.relation) &&
+          filter={{
+            ...(['contacts', 'opportunities'].includes(field.relation) &&
             input.accountId
               ? { accountId: toText(input.accountId) }
-              : undefined
-          }
+              : {}),
+            // An approval is raised for a deal its applicant may edit, which
+            // for a salesperson means their own: the picker offers only
+            // those rather than letting the server refuse the pick.
+            ...(entity === 'approvals' &&
+            field.key === 'opportunityId' &&
+            meta &&
+            !meta.manage
+              ? { ownerId: meta.userId }
+              : {}),
+          }}
           excludeStatus={field.relation === 'leads' ? 'converted' : undefined}
           onChange={(v, picked) => {
             if (picked) pickedNamesRef.current[v] = toText(picked.name);
