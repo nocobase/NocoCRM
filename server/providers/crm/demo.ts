@@ -188,7 +188,7 @@ export async function populateDemo(
     ).toISOString();
   const started = now.toISOString();
   const manifest: Manifest = {
-    version: 5,
+    version: 6,
     label: '云策数字咨询 CRM 演示数据',
     createdAt: started,
     businessDate: calendarDay,
@@ -1033,6 +1033,109 @@ export async function populateDemo(
           ? '联系人已确认意向。发送简要纪要并约定下一步。'
           : null,
       );
+    // A steady cadence beyond the hand-placed fortnight, so the calendar
+    // and the day's agenda have something on every working day from a
+    // month back to three months ahead, whichever day the demo is opened
+    // on: past days are completed (with the odd no-show or cancellation),
+    // future days are planned. The work rotates over the live deals and
+    // the open leads, owned by whoever owns the record.
+    const activeDeals = opportunities
+      .map((deal, index) => ({ deal, index }))
+      .filter(
+        ({ index }) => !['won', 'lost', 'paused'].includes(deals[index][3]),
+      );
+    const openLeads = leads
+      .map((lead, index) => ({ lead, index }))
+      .filter(
+        ({ lead }) => !['converted', 'invalid'].includes(toText(lead.status)),
+      );
+    const cadenceNames = [
+      '周度进展沟通',
+      '方案细节确认',
+      '需求澄清会议',
+      '演示准备',
+      '合同条款跟进',
+      '试点验收',
+      '阶段复盘',
+      '采购流程跟进',
+      '培训计划沟通',
+      '续约意向沟通',
+    ];
+    const cadenceTypes = [
+      'call',
+      'meeting',
+      'demo',
+      'email',
+      'task',
+      'call',
+      'meeting',
+    ];
+    const cadenceFeedback = [
+      '同步了本周进展，确认了下一步。',
+      '客户补充了两条需求，已记录。',
+      '确认了时间表与参与人。',
+      '演示材料已按反馈调整。',
+    ];
+    const weekdayOf = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      weekday: 'short',
+    });
+    let n = 0;
+    for (let day = -30; day <= 90; day++) {
+      if (day >= -14 && day <= 7) continue;
+      // Noon, so the weekday is the business day whatever the zone offset.
+      const weekday = weekdayOf.format(
+        new Date(base + day * 86400000 + 12 * 3600000),
+      );
+      if (weekday === 'Sat' || weekday === 'Sun') continue;
+      const perDay = day % 3 === 0 ? 2 : 1;
+      for (let k = 0; k < perDay; k++, n++) {
+        const hour = [9, 10, 11, 14, 15, 16][n % 6];
+        const name = cadenceNames[n % cadenceNames.length];
+        const type = cadenceTypes[n % cadenceTypes.length];
+        const status =
+          day < 0
+            ? n % 9 === 4
+              ? 'noShow'
+              : n % 11 === 6
+                ? 'cancelled'
+                : 'completed'
+            : 'planned';
+        const feedback =
+          status === 'completed'
+            ? cadenceFeedback[n % cadenceFeedback.length]
+            : null;
+        if (n % 3 === 2 && openLeads.length) {
+          const { lead, index } = openLeads[n % openLeads.length];
+          await activity(
+            `${toText(lead.company)} ${name}`,
+            leadLinks(index),
+            day,
+            hour,
+            status,
+            type,
+            feedback,
+          );
+        } else {
+          const { deal, index } = activeDeals[n % activeDeals.length];
+          const a = deals[index][0];
+          await activity(
+            `${companies[a][0]} ${name}`,
+            {
+              accountId: accounts_[a].id,
+              opportunityId: deal.id,
+              ownerId: accountOwner(a).id,
+              externalParticipants: [contacts[a][0].id],
+            },
+            day,
+            hour,
+            status,
+            type,
+            feedback,
+          );
+        }
+      }
+    }
   });
 
   // Approvals are raised by whoever owns the deal, submitted to 李明; one of

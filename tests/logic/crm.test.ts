@@ -1137,6 +1137,24 @@ describe('demo dataset', () => {
     expect(await count('opportunities')).toBe(before.opportunities + 30);
     expect(await count('leads')).toBe(before.leads + 16);
     expect(await count('approvals')).toBe(before.approvals + 3);
+    // Activities cover a month back and three months ahead on every
+    // working day, so the calendar and the agenda are never empty
+    // whichever day the demo is opened on.
+    const day = 86400000;
+    const now = Date.now();
+    const spread = await service.list(actor('admin'), 'activities', {
+      pageSize: 500,
+    });
+    const starts = spread.data.map((a) => Date.parse(toText(a.startAt)));
+    expect(starts.filter((t) => t < now - 20 * day).length).toBeGreaterThan(10);
+    expect(starts.filter((t) => t > now + 60 * day).length).toBeGreaterThan(15);
+    for (let ahead = 8; ahead <= 88; ahead += 7) {
+      const from = now + ahead * day;
+      expect(
+        starts.some((t) => t >= from && t < from + 7 * day),
+        `week ${String(ahead)} days ahead has activities`,
+      ).toBe(true);
+    }
     const users = await service.users(actor('admin'));
     for (const account of demoAccounts) {
       const user = users.find((u) => u.username === account.username);
