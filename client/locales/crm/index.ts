@@ -93,6 +93,9 @@ const wording = {
   ],
   viewDetails: ['View details', '查看详情'],
   uploadFile: ['Upload file', '上传文件'],
+  uploading: ['Uploading…', '上传中…'],
+  dropFilesHere: ['Drop files here, or', '将文件拖到这里，或'],
+  chooseFiles: ['choose files', '点击选择文件'],
   removeFileTitle: ['Remove this attachment?', '移除此附件？'],
   removeFileHint: [
     'The file stays in the system and is only unlinked from this record.',
@@ -332,6 +335,12 @@ const wording = {
   template: ['Download template', '下载模板'],
   importPreview: ['{{count}} rows ready to import', '{{count}} 行记录待导入'],
   download: ['Download', '下载'],
+  preview: ['Preview', '预览'],
+  close: ['Close', '关闭'],
+  noPreview: [
+    'This kind of file cannot be shown here. Download it to open it.',
+    '这类文件无法在线预览，请下载后打开。',
+  ],
   month: ['Month', '月份'],
   previousMonth: ['Previous month', '上个月'],
   nextMonth: ['Next month', '下个月'],

@@ -29,6 +29,7 @@ import {
   MapPin,
   MapPinned,
   Megaphone,
+  Download,
   Paperclip,
   Phone,
   Plus,
@@ -81,6 +82,9 @@ import {
   Value,
 } from '../components/crm/common.js';
 import { RecordForm } from '../components/crm/form.js';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { useQuery } from '@tanstack/react-query';
 import EntityDetail from './crm-entity-detail.js';
 import {
   DropdownMenu,
@@ -605,7 +609,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                   onError={setError}
                   uploader={
                     editable ? (
-                      <UploadButton
+                      <UploadZone
                         entity='leads'
                         record={record}
                         busy={uploading}
@@ -1124,6 +1128,142 @@ export function ActivityItem({
   );
 }
 
+interface CrmFile {
+  id: string;
+  filename: string;
+  createdAt: string;
+  // The stored type when the browser can show it inline, otherwise null.
+  mimeType: string | null;
+  size: number | null;
+  url: string;
+}
+
+// "1.2 MB" style sizes for the preview's subtitle.
+function fileSize(bytes: number): string {
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return `${unit ? value.toFixed(1) : String(value)} ${units[unit]}`;
+}
+
+// A Markdown attachment, fetched as text and rendered on the client. HTML
+// inside it is escaped rather than rendered, so an upload cannot run
+// anything in the page.
+function MarkdownPreview({ url }: { url: string }): ReactElement {
+  const { text } = useCrmText();
+  const { data, error, isLoading } = useQuery({
+    queryKey: ['crm', 'file-text', url],
+    queryFn: async () => {
+      const response = await fetch(url, { credentials: 'same-origin' });
+      if (!response.ok) throw new Error(String(response.status));
+      return response.text();
+    },
+    staleTime: 60000,
+  });
+  if (isLoading)
+    return <p className='text-sm text-muted-foreground'>{text('loading')}</p>;
+  if (error || data === undefined)
+    return (
+      <p className='rounded-md border border-dashed px-4 py-8 text-center text-sm text-muted-foreground'>
+        {text('noPreview')}
+      </p>
+    );
+  return (
+    <div className='min-h-0 flex-1 overflow-auto rounded-md border px-5 py-4 text-sm leading-relaxed [&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:font-mono [&_code]:text-[0.9em] [&_h1]:mt-4 [&_h1]:mb-2 [&_h1]:text-xl [&_h1]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mt-3 [&_h3]:mb-1 [&_h3]:font-semibold [&_h4]:mt-3 [&_h4]:font-medium [&_hr]:my-4 [&_img]:max-w-full [&_li]:my-0.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-2 [&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-muted [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_table]:my-2 [&_table]:border-collapse [&_td]:border [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:bg-muted/50 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_ul]:list-disc [&_ul]:pl-5'>
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{data}</ReactMarkdown>
+    </div>
+  );
+}
+
+// Opening an attachment shows it in a dialog rather than saving it: images
+// and PDFs render inline, Markdown is rendered from its text, anything else
+// is named and offered for download. The download stays a click away in the
+// footer either way.
+function FilePreview({
+  file,
+  onClose,
+  timeZone,
+}: {
+  file: CrmFile | null;
+  onClose: () => void;
+  timeZone: string;
+}): ReactElement {
+  const { text, language } = useCrmText();
+  const type = file?.mimeType ?? '';
+  const inlineUrl = file ? `${file.url}?inline=1` : '';
+  const kind = type.startsWith('image/')
+    ? 'image'
+    : type === 'application/pdf' || type === 'text/plain'
+      ? 'frame'
+      : type === 'text/markdown' || type === 'text/x-markdown'
+        ? 'markdown'
+        : 'none';
+  return (
+    <Dialog open={file !== null} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        className={
+          kind === 'none'
+            ? 'sm:max-w-md'
+            : 'flex max-h-[90vh] flex-col sm:max-w-4xl'
+        }
+      >
+        <DialogHeader>
+          <DialogTitle className='break-all'>{file?.filename}</DialogTitle>
+          <DialogDescription>
+            {file
+              ? [
+                  file.size === null ? null : fileSize(file.size),
+                  localDate(file.createdAt, language, timeZone),
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
+              : null}
+          </DialogDescription>
+        </DialogHeader>
+        {kind === 'image' ? (
+          <div className='flex min-h-0 flex-1 items-center justify-center overflow-auto rounded-md bg-muted/40 p-2'>
+            <img
+              src={inlineUrl}
+              alt={file?.filename ?? ''}
+              className='max-h-[70vh] max-w-full object-contain'
+            />
+          </div>
+        ) : kind === 'frame' ? (
+          <iframe
+            src={inlineUrl}
+            title={file?.filename ?? ''}
+            className='h-[70vh] w-full rounded-md border bg-background'
+          />
+        ) : kind === 'markdown' ? (
+          <MarkdownPreview url={inlineUrl} />
+        ) : (
+          <p className='rounded-md border border-dashed px-4 py-8 text-center text-sm text-muted-foreground'>
+            {text('noPreview')}
+          </p>
+        )}
+        <DialogFooter>
+          <Button variant='outline' onClick={onClose}>
+            {text('close')}
+          </Button>
+          {file ? (
+            <Button
+              nativeButton={false}
+              render={<a href={file.url} download={file.filename} />}
+            >
+              <Download />
+              {text('download')}
+            </Button>
+          ) : null}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function FileLinks({
   files,
   onRemove,
@@ -1138,10 +1278,13 @@ function FileLinks({
   const { data: meta } = useMetadata();
   const attachmentStep = PAGE_SIZE;
   const [shown, setShown] = useState(attachmentStep);
+  const [previewing, setPreviewing] = useState<CrmFile | null>(null);
+  const timeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
   const ids = files.map(toText).filter(Boolean);
-  const { data } = useCrmQuery<
-    { id: string; filename: string; createdAt: string; url: string }[]
-  >(`files?ids=${encodeURIComponent(ids.join(','))}`, ids.length > 0);
+  const { data } = useCrmQuery<CrmFile[]>(
+    `files?ids=${encodeURIComponent(ids.join(','))}`,
+    ids.length > 0,
+  );
   // Newest upload first, so a truncated list shows the most recent files rather
   // than whichever happened to be appended first.
   const ordered = data
@@ -1162,30 +1305,33 @@ function FileLinks({
     );
   return (
     <ul className='space-y-1'>
+      <FilePreview
+        file={previewing}
+        onClose={() => setPreviewing(null)}
+        timeZone={timeZone}
+      />
       {visible.map((id) => {
         const file = data?.find((f) => f.id === id);
         return (
           <li key={id} className='flex items-start gap-1'>
             {file ? (
-              // The endpoint sends Content-Disposition: attachment, so a plain
-              // link downloads rather than navigating away.
+              // The name opens the preview dialog; the download and remove
+              // icons sit together at the end of the row (the endpoint sends
+              // Content-Disposition: attachment, so the link saves the file).
               // One flex row so the name, its time and its source sit on a
               // single centre line despite the differing text sizes.
               <span className='flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-0.5'>
-                <a
-                  className='inline-flex min-w-0 items-center gap-2 text-sm text-primary hover:underline'
-                  href={file.url}
-                  download={file.filename}
+                <button
+                  type='button'
+                  className='inline-flex min-w-0 items-center gap-2 text-left text-sm text-primary hover:underline'
+                  aria-label={`${toText(text('preview'))} ${file.filename}`}
+                  onClick={() => setPreviewing(file)}
                 >
                   <Paperclip className='size-3.5 shrink-0 text-muted-foreground' />
                   <span className='break-all'>{file.filename}</span>
-                </a>
+                </button>
                 <span className='text-xs text-muted-foreground'>
-                  {localDate(
-                    file.createdAt,
-                    language,
-                    meta?.settings.timeZone ?? 'Asia/Shanghai',
-                  )}
+                  {localDate(file.createdAt, language, timeZone)}
                 </span>
                 {sourceLabel ? (
                   <span className='text-xs'>{sourceLabel(id)}</span>
@@ -1196,31 +1342,37 @@ function FileLinks({
                 <Paperclip className='size-3.5 shrink-0' />…
               </span>
             )}
-            {onRemove && (
-              <Button
-                className='size-6 shrink-0 text-muted-foreground hover:text-destructive'
-                variant='ghost'
-                size='icon-sm'
-                // Two uploads may share a filename, so the label carries the
-                // upload time to stay distinguishable to screen readers.
-                aria-label={`${toText(text('remove'))} ${toText(
-                  file?.filename ?? id,
-                )}${
-                  file
-                    ? ` · ${toText(
-                        localDate(
-                          file.createdAt,
-                          language,
-                          meta?.settings.timeZone ?? 'Asia/Shanghai',
-                        ),
-                      )}`
-                    : ''
-                }`}
-                onClick={() => onRemove(id)}
-              >
-                <Trash2 />
-              </Button>
-            )}
+            <span className='ml-auto flex shrink-0 items-center'>
+              {file && (
+                <a
+                  className='inline-flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground'
+                  href={file.url}
+                  download={file.filename}
+                  aria-label={`${toText(text('download'))} ${file.filename}`}
+                >
+                  <Download className='size-3.5' />
+                </a>
+              )}
+              {onRemove && (
+                <Button
+                  className='size-6 text-muted-foreground hover:text-destructive'
+                  variant='ghost'
+                  size='icon-sm'
+                  // Two uploads may share a filename, so the label carries the
+                  // upload time to stay distinguishable to screen readers.
+                  aria-label={`${toText(text('remove'))} ${toText(
+                    file?.filename ?? id,
+                  )}${
+                    file
+                      ? ` · ${toText(localDate(file.createdAt, language, timeZone))}`
+                      : ''
+                  }`}
+                  onClick={() => onRemove(id)}
+                >
+                  <Trash2 />
+                </Button>
+              )}
+            </span>
           </li>
         );
       })}
@@ -1275,23 +1427,21 @@ export function Attachments({
     })();
   };
   return (
-    <div className='space-y-1 px-2'>
-      {/* The upload control shares the heading line, so the list below is
-          only files. */}
-      <div className='flex items-center justify-between gap-2'>
-        <p className='text-xs text-muted-foreground'>
-          {text('fields.attachments')}
-        </p>
-        {editable && (
-          <UploadButton
-            entity={entity}
-            record={record}
-            busy={busy}
-            setBusy={setBusy}
-            onError={onError}
-          />
-        )}
-      </div>
+    <div className='space-y-2 px-2'>
+      <p className='text-xs text-muted-foreground'>
+        {text('fields.attachments')}
+      </p>
+      {/* The drop zone sits between the heading and the list, so adding a
+          file happens right where the files are. */}
+      {editable && (
+        <UploadZone
+          entity={entity}
+          record={record}
+          busy={busy}
+          setBusy={setBusy}
+          onError={onError}
+        />
+      )}
       <FileLinks files={files} onRemove={editable ? setPending : undefined} />
       {pending && (
         <ConfirmDialog
@@ -1306,8 +1456,9 @@ export function Attachments({
   );
 }
 
-// Multiple files at once; they attach to whichever record hosts the button.
-export function UploadButton({
+// Multiple files at once, dropped on the area or picked through its button;
+// they attach to whichever record hosts the zone.
+export function UploadZone({
   entity,
   record,
   busy,
@@ -1324,54 +1475,90 @@ export function UploadButton({
   const refresh = useRefresh();
   const { text } = useCrmText();
   const fileRef = useRef<HTMLInputElement>(null);
+  // Counts enters and leaves, because dragging over a child fires a leave
+  // for the parent before the child's enter.
+  const [dragDepth, setDragDepth] = useState(0);
+  const over = dragDepth > 0;
+  const upload = (picked: File[]): void => {
+    if (!picked.length || busy) return;
+    void (async () => {
+      setBusy(true);
+      const body = new FormData();
+      picked.forEach((file) => body.append('file', file));
+      try {
+        const result = await api<{ data: { id: string }[] }>(
+          `files?entity=${toText(entity)}`,
+          'POST',
+          body,
+        );
+        await api(`${toText(entity)}/${toText(record.id)}`, 'PATCH', {
+          attachments: [
+            ...arrayValues(record.attachments).map(toText),
+            ...result.data.map((uploaded) => uploaded.id),
+          ],
+        });
+        await refresh();
+      } catch (cause) {
+        onError(cause);
+      } finally {
+        setBusy(false);
+      }
+    })();
+  };
   return (
-    <>
-      <Button
-        variant='outline'
-        size='sm'
-        disabled={busy}
-        onClick={() => fileRef.current?.click()}
-      >
-        <Upload />
-        {busy ? text('saving') : text('uploadFile')}
-      </Button>
+    <div
+      role='button'
+      tabIndex={busy ? -1 : 0}
+      aria-disabled={busy}
+      aria-label={text('uploadFile')}
+      className={`flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 rounded-md border border-dashed px-3 py-3 text-sm transition-colors ${
+        over
+          ? 'border-primary bg-primary/5 text-foreground'
+          : 'border-border text-muted-foreground hover:border-primary/60 hover:bg-muted/40'
+      } ${busy ? 'cursor-progress opacity-60' : 'cursor-pointer'}`}
+      onClick={() => !busy && fileRef.current?.click()}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          if (!busy) fileRef.current?.click();
+        }
+      }}
+      onDragEnter={(event) => {
+        event.preventDefault();
+        setDragDepth((n) => n + 1);
+      }}
+      onDragOver={(event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = busy ? 'none' : 'copy';
+      }}
+      onDragLeave={() => setDragDepth((n) => Math.max(0, n - 1))}
+      onDrop={(event) => {
+        event.preventDefault();
+        setDragDepth(0);
+        upload(Array.from(event.dataTransfer.files ?? []));
+      }}
+    >
+      <Upload className='size-4 shrink-0' />
+      <span>{busy ? text('uploading') : text('dropFilesHere')}</span>
+      {!busy && (
+        <span className='font-medium text-primary underline-offset-4 hover:underline'>
+          {text('chooseFiles')}
+        </span>
+      )}
       <input
         ref={fileRef}
         type='file'
         multiple
         hidden
-        aria-label={text('uploadFile')}
+        tabIndex={-1}
+        aria-hidden
         onChange={(event) => {
-          const picked = Array.from(event.target.files ?? []);
-          if (!picked.length) return;
-          void (async () => {
-            setBusy(true);
-            const body = new FormData();
-            picked.forEach((file) => body.append('file', file));
-            try {
-              const result = await api<{ data: { id: string }[] }>(
-                `files?entity=${toText(entity)}`,
-                'POST',
-                body,
-              );
-              await api(`${toText(entity)}/${toText(record.id)}`, 'PATCH', {
-                attachments: [
-                  ...arrayValues(record.attachments).map(toText),
-                  ...result.data.map((uploaded) => uploaded.id),
-                ],
-              });
-              await refresh();
-            } catch (cause) {
-              onError(cause);
-            } finally {
-              setBusy(false);
-              // Without this, picking the same file twice fires no change event.
-              event.target.value = '';
-            }
-          })();
+          upload(Array.from(event.target.files ?? []));
+          // Without this, picking the same file twice fires no change event.
+          event.target.value = '';
         }}
       />
-    </>
+    </div>
   );
 }
 
@@ -1399,8 +1586,8 @@ export function RecordAttachments({
   approvals?: Data[];
   editable: boolean;
   onError: (error: unknown) => void;
-  // The upload control, rendered at the top of this panel so adding a file
-  // happens where the files are.
+  // The upload zone, rendered under the record's own group so adding a
+  // file happens where those files are listed.
   uploader?: ReactNode;
 }): ReactElement {
   const api = useCrmApi();
@@ -1484,14 +1671,12 @@ export function RecordAttachments({
           empty group still tells the reader where an upload would land. */}
       {hasOwnFiles && (
         <div className='space-y-2'>
-          <div className='flex min-h-7 items-center justify-between gap-2'>
-            <p className='text-xs font-medium text-muted-foreground'>
-              {text('attachmentsOwn', {
-                entity: text(`entity.${toText(entity)}`),
-              })}
-            </p>
-            {uploader}
-          </div>
+          <p className='text-xs font-medium text-muted-foreground'>
+            {text('attachmentsOwn', {
+              entity: text(`entity.${toText(entity)}`),
+            })}
+          </p>
+          {uploader}
           <FileLinks files={own} onRemove={editable ? setPending : undefined} />
         </div>
       )}

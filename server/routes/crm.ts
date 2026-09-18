@@ -385,6 +385,20 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         })),
       });
     });
+    // The stored type of a file, when it is one the preview dialog can
+    // show (the browser renders images, PDF and plain text itself; the
+    // client renders Markdown from the text); anything else is offered
+    // as a download only.
+    const previewType = (file: { mimeType?: unknown }): string | null => {
+      const type = toText(file.mimeType ?? '').toLowerCase();
+      return /^image\/(png|jpeg|gif|webp|svg\+xml|bmp|avif)$/.test(type) ||
+        type === 'application/pdf' ||
+        type === 'text/plain' ||
+        type === 'text/markdown' ||
+        type === 'text/x-markdown'
+        ? type
+        : null;
+    };
     // Attachments are stored as bare ids; a list needs their names in one call
     // rather than a request per file.
     routes.get('/files', async (c) => {
@@ -398,7 +412,7 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
       const files = await service.database
         .query()
         .selectFrom('crmFiles')
-        .select(['id', 'filename', 'createdAt'])
+        .select(['id', 'filename', 'createdAt', 'mimeType', 'size'])
         .where('id', 'in', ids)
         .execute();
       const readable = [];
@@ -408,6 +422,8 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
             id: toText(file.id),
             filename: toText(file.filename),
             createdAt: toText(file.createdAt),
+            mimeType: previewType(file) ?? null,
+            size: file.size == null ? null : Number(file.size),
             url: `${toText(app.publicBasePath)}/api/crm/files/${toText(encodeURIComponent(toText(file.id)))}`,
           });
       return c.json({ data: readable });
@@ -435,10 +451,16 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         .resolve(driveManagerToken)
         .use(toText(file.disk))
         .getStream(toText(file.key));
+      // "?inline=1" shows the file in the browser, for the preview dialog,
+      // and only for types a browser renders safely on its own (images,
+      // PDF, plain text); everything else stays a download whatever the
+      // stored type says.
+      const inline = c.req.query('inline') === '1' ? previewType(file) : null;
+      const name = toText(encodeURIComponent(toText(file.filename)));
       return new Response(Readable.toWeb(stream) as ReadableStream, {
         headers: {
-          'Content-Type': 'application/octet-stream',
-          'Content-Disposition': `attachment; filename*=UTF-8''${toText(encodeURIComponent(toText(file.filename)))}`,
+          'Content-Type': inline ?? 'application/octet-stream',
+          'Content-Disposition': `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${name}`,
           'X-Content-Type-Options': 'nosniff',
           'Cache-Control': 'private, no-store',
         },

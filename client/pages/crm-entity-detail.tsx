@@ -102,7 +102,7 @@ import {
   HistoryChanges,
   LeadRow,
   RecordAttachments,
-  UploadButton,
+  UploadZone,
   WebsiteField,
 } from './crm-detail.js';
 
@@ -988,7 +988,7 @@ export default function EntityDetail({
                   onError={setError}
                   uploader={
                     editable && hasOwnFiles ? (
-                      <UploadButton
+                      <UploadZone
                         entity={entity}
                         record={record}
                         busy={uploading}
