@@ -167,16 +167,10 @@ export function StageStepper({
                       : 'bg-muted text-muted-foreground',
                 )} ${toText(editable ? 'enabled:hover:bg-primary/25' : '')}`}
               >
-                {/* Reached stages (passed and current) are ticked; the ones
-                    ahead show an empty circle. */}
-                {passed || active ? (
-                  <Check
-                    className={`size-3.5 shrink-0 ${toText(
-                      active ? 'text-primary-foreground' : 'text-primary',
-                    )}`}
-                  />
-                ) : (
-                  <span className='size-3.5 shrink-0 rounded-full border border-current' />
+                {/* Only the current stage carries a mark; the colours
+                    already tell passed stages from the ones ahead. */}
+                {active && (
+                  <Check className='size-3.5 shrink-0 text-primary-foreground' />
                 )}
                 <span className='min-w-0 flex-1 truncate text-sm font-medium'>
                   {text(`options.${stage}`)}
