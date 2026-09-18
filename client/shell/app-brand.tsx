@@ -1,4 +1,5 @@
 import { resolveAppUrl } from '@nocobase/app-client';
+import { useTranslation } from '@nocobase/i18n/client';
 import type { ReactElement } from 'react';
 import { Link } from 'react-router';
 
@@ -10,10 +11,13 @@ export interface AppBrandProps {
 // logo image from /assets (light and dark variants, the way the sign-in page
 // shows it), while the wordmark is the application's name rather than the
 // template's.
-export function AppBrand({ compact = false }: AppBrandProps): ReactElement {
+export function AppBrand(inputProps: AppBrandProps): ReactElement {
+  const { t } = useTranslation();
+  const { compact = false } = inputProps;
+
   return (
     <Link
-      aria-label='NocoCRM home'
+      aria-label={t('navigation.brandHome', { defaultValue: 'NocoCRM home' })}
       className='flex min-w-0 items-center gap-2 text-foreground'
       to='/'
     >

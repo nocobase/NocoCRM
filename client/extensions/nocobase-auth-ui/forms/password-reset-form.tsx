@@ -25,39 +25,52 @@ export interface PasswordResetAction {
   }) => Promise<void>;
 }
 
-export function PasswordResetForm({
-  action: actionOverride,
-  className,
-  token,
-  submitLabel,
-  pendingLabel,
-}: PasswordResetFormProps): ReactElement {
+export function PasswordResetForm(
+  inputProps: PasswordResetFormProps,
+): ReactElement {
   const { t } = useTranslation();
+  const {
+    action: actionOverride,
+    className,
+    token,
+    submitLabel = t('auth.resetTitle', { defaultValue: 'Reset password' }),
+    pendingLabel = t('auth.resetting', { defaultValue: 'Resetting…' }),
+  } = inputProps;
+
   const [confirmation, setConfirmation] = useState('');
   const [password, setPassword] = useState('');
-  const [validationError, setValidationError] = useState<string>();
+  const [passwordMismatch, setPasswordMismatch] = useState(false);
+  const validationError = passwordMismatch
+    ? t('auth.passwordMismatch', { defaultValue: "Passwords don't match." })
+    : undefined;
   const defaultAction = usePasswordReset();
   const action = actionOverride ?? defaultAction;
   const errorMessage =
     validationError ??
-    (!token ? t('auth.reset.invalid') : undefined) ??
+    (!token
+      ? t('auth.invalidResetLink', {
+          defaultValue: 'This password reset link is invalid or has expired.',
+        })
+      : undefined) ??
     action.error?.message;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     if (!token) return;
     if (password !== confirmation) {
-      setValidationError(t('auth.reset.mismatch'));
+      setPasswordMismatch(true);
       return;
     }
-    setValidationError(undefined);
+    setPasswordMismatch(false);
     void action.submit({ password, token });
   };
 
   return (
     <form className={className ?? 'space-y-5'} onSubmit={handleSubmit}>
       <div className='space-y-2'>
-        <Label htmlFor='new-password'>{t('auth.reset.password')}</Label>
+        <Label htmlFor='new-password'>
+          {t('auth.newPassword', { defaultValue: 'New password' })}
+        </Label>
         <Input
           id='new-password'
           autoComplete='new-password'
@@ -69,7 +82,11 @@ export function PasswordResetForm({
         />
       </div>
       <div className='space-y-2'>
-        <Label htmlFor='confirm-new-password'>{t('auth.reset.confirm')}</Label>
+        <Label htmlFor='confirm-new-password'>
+          {t('auth.confirmNewPassword', {
+            defaultValue: 'Confirm new password',
+          })}
+        </Label>
         <Input
           id='confirm-new-password'
           autoComplete='new-password'
@@ -88,18 +105,16 @@ export function PasswordResetForm({
         disabled={!token || action.isPending}
         type='submit'
       >
-        {action.isPending
-          ? (pendingLabel ?? t('auth.reset.submitting'))
-          : (submitLabel ?? t('auth.reset.submit'))}
+        {action.isPending ? pendingLabel : submitLabel}
       </Button>
       <div className='pt-3 text-sm'>
         <p className='text-center text-muted-foreground'>
-          {t('auth.reset.back')}{' '}
+          {t('auth.returnTo', { defaultValue: 'Return to' })}{' '}
           <a
             className='font-semibold text-foreground underline underline-offset-4'
             href='login'
           >
-            {t('auth.reset.signIn')}
+            {t('auth.signInLink', { defaultValue: 'sign in' })}
           </a>
         </p>
       </div>

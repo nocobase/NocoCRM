@@ -27,15 +27,21 @@ export interface PasswordLoginFormProps {
   readonly pendingLabel?: string;
 }
 
-export function PasswordLoginForm({
-  action: actionOverride,
-  className,
-  identifierLabel,
-  passwordLabel,
-  submitLabel,
-  pendingLabel,
-}: PasswordLoginFormProps = {}): ReactElement {
+export function PasswordLoginForm(
+  inputProps: PasswordLoginFormProps = {},
+): ReactElement {
   const { t } = useTranslation();
+  const {
+    action: actionOverride,
+    className,
+    identifierLabel = t('auth.identifier', {
+      defaultValue: 'Username or email',
+    }),
+    passwordLabel = t('auth.password', { defaultValue: 'Password' }),
+    submitLabel = t('auth.signIn', { defaultValue: 'Sign in' }),
+    pendingLabel = t('auth.signingIn', { defaultValue: 'Signing in…' }),
+  } = inputProps;
+
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -50,9 +56,7 @@ export function PasswordLoginForm({
   return (
     <form className={className ?? 'space-y-5'} onSubmit={handleSubmit}>
       <div className='space-y-2'>
-        <Label htmlFor='identifier'>
-          {identifierLabel ?? t('auth.login.identifier')}
-        </Label>
+        <Label htmlFor='identifier'>{identifierLabel}</Label>
         <Input
           id='identifier'
           autoComplete='username'
@@ -63,9 +67,7 @@ export function PasswordLoginForm({
         />
       </div>
       <div className='space-y-2'>
-        <Label htmlFor='password'>
-          {passwordLabel ?? t('auth.login.password')}
-        </Label>
+        <Label htmlFor='password'>{passwordLabel}</Label>
         <div className='relative'>
           <Input
             id='password'
@@ -79,8 +81,8 @@ export function PasswordLoginForm({
           <button
             aria-label={
               isPasswordVisible
-                ? t('auth.login.hidePassword')
-                : t('auth.login.showPassword')
+                ? t('auth.hidePassword', { defaultValue: 'Hide password' })
+                : t('auth.showPassword', { defaultValue: 'Show password' })
             }
             aria-pressed={isPasswordVisible}
             className='absolute inset-y-0 right-0 inline-flex w-10 items-center justify-center rounded-r-lg text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50'
@@ -99,9 +101,7 @@ export function PasswordLoginForm({
         <FormStatus type='error'>{action.error.message}</FormStatus>
       ) : null}
       <Button className='w-full' disabled={action.isPending} type='submit'>
-        {action.isPending
-          ? (pendingLabel ?? t('auth.login.submitting'))
-          : (submitLabel ?? t('auth.login.submit'))}
+        {action.isPending ? pendingLabel : submitLabel}
       </Button>
       <div className='pt-3 text-sm'>
         <nav className='flex items-center justify-between text-muted-foreground'>
@@ -109,13 +109,13 @@ export function PasswordLoginForm({
             className='hover:text-foreground hover:underline'
             href='forgot-password'
           >
-            {t('auth.login.forgot')}
+            {t('auth.forgotLink', { defaultValue: 'Forgot password?' })}
           </a>
           <a
             className='font-semibold text-foreground underline underline-offset-4'
             href='register'
           >
-            {t('auth.login.register')}
+            {t('auth.signUp', { defaultValue: 'Sign up' })}
           </a>
         </nav>
       </div>

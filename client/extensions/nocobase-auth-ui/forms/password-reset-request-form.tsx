@@ -23,14 +23,20 @@ export interface PasswordResetRequestFormProps {
   readonly successMessage?: string;
 }
 
-export function PasswordResetRequestForm({
-  action: actionOverride,
-  className,
-  submitLabel,
-  pendingLabel,
-  successMessage,
-}: PasswordResetRequestFormProps = {}): ReactElement {
+export function PasswordResetRequestForm(
+  inputProps: PasswordResetRequestFormProps = {},
+): ReactElement {
   const { t } = useTranslation();
+  const {
+    action: actionOverride,
+    className,
+    submitLabel = t('auth.sendResetLink', { defaultValue: 'Send reset link' }),
+    pendingLabel = t('auth.sending', { defaultValue: 'Sending…' }),
+    successMessage = t('auth.resetSent', {
+      defaultValue: 'If the account exists, a reset link has been sent.',
+    }),
+  } = inputProps;
+
   const [email, setEmail] = useState('');
   const defaultAction = usePasswordResetRequest();
   const action = actionOverride ?? defaultAction;
@@ -43,7 +49,9 @@ export function PasswordResetRequestForm({
   return (
     <form className={className ?? 'space-y-5'} onSubmit={handleSubmit}>
       <div className='space-y-2'>
-        <Label htmlFor='email'>{t('auth.forgot.email')}</Label>
+        <Label htmlFor='email'>
+          {t('auth.email', { defaultValue: 'Email' })}
+        </Label>
         <Input
           id='email'
           autoComplete='email'
@@ -57,23 +65,21 @@ export function PasswordResetRequestForm({
       {action.error ? (
         <FormStatus type='error'>{action.error.message}</FormStatus>
       ) : action.isSuccess ? (
-        <FormStatus type='success'>
-          {successMessage ?? t('auth.forgot.sent')}
-        </FormStatus>
+        <FormStatus type='success'>{successMessage}</FormStatus>
       ) : null}
       <Button className='w-full' disabled={action.isPending} type='submit'>
-        {action.isPending
-          ? (pendingLabel ?? t('auth.forgot.submitting'))
-          : (submitLabel ?? t('auth.forgot.submit'))}
+        {action.isPending ? pendingLabel : submitLabel}
       </Button>
       <div className='pt-3 text-sm'>
         <p className='text-center text-muted-foreground'>
-          {t('auth.forgot.remember')}{' '}
+          {t('auth.rememberPassword', {
+            defaultValue: 'Remember your password?',
+          })}{' '}
           <a
             className='font-semibold text-foreground underline underline-offset-4'
             href='login'
           >
-            {t('auth.forgot.signIn')}
+            {t('auth.signIn', { defaultValue: 'Sign in' })}
           </a>
         </p>
       </div>

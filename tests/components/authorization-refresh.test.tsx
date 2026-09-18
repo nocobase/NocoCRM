@@ -17,6 +17,12 @@ vi.mock('@refinedev/core', () => ({
 }));
 vi.mock('@nocobase/i18n/client', () => ({
   NamespaceScope: ({ children }: { children: React.ReactNode }) => children,
+  // The route wrappers read their status text through the locale; the
+  // English default is what this test looks for.
+  useTranslation: () => ({
+    t: (key: string, options?: { defaultValue?: string }) =>
+      options?.defaultValue ?? key,
+  }),
 }));
 beforeEach(() => {
   state.revision = 0;
