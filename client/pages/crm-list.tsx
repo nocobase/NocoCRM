@@ -526,6 +526,10 @@ function EntityList({
   );
   return (
     <CrmFrame
+      // The board takes the viewport height with each column scrolling on
+      // its own, so its horizontal scrollbar stays in view at the bottom
+      // rather than below a page-long column.
+      fill={view === 'board'}
       // The lead total sits beside the title rather than as a metric card:
       // it is context, not something to act on.
       title={
@@ -779,7 +783,7 @@ function EntityList({
           </>
         )
       ) : view === 'board' ? (
-        <div className='flex gap-4 overflow-x-auto pb-4'>
+        <div className='flex min-h-0 flex-1 gap-4 overflow-x-auto pb-2'>
           {definition?.statuses.map((stage) => (
             <BoardColumn
               key={stage}
@@ -1183,7 +1187,7 @@ function BoardColumn({
   const over = droppable && overCount > 0;
   return (
     <section
-      className={`w-72 shrink-0 rounded-xl border p-3 transition-colors ${toText(
+      className={`flex w-72 shrink-0 flex-col rounded-xl border p-3 transition-colors ${toText(
         over ? 'border-dashed border-primary bg-primary/5' : 'bg-muted/40',
       )}`}
       // A non-droppable column (converted, reached only through the
@@ -1213,13 +1217,15 @@ function BoardColumn({
         }
       }}
     >
-      <div className='mb-4 flex items-center justify-between'>
+      <div className='mb-4 flex shrink-0 items-center justify-between'>
         <Status value={stage} />
         <span className='text-sm tabular-nums text-muted-foreground'>
           {total}
         </span>
       </div>
-      <div className='space-y-3'>
+      {/* The cards scroll inside the column; the padding keeps a landed
+          card's ring from being clipped at the edges. */}
+      <div className='-m-1 min-h-0 flex-1 space-y-3 overflow-y-auto p-1'>
         {items.map((record) => renderCard(record, titles))}
         {query.hasNextPage && (
           <Button

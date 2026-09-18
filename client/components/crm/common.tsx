@@ -30,6 +30,7 @@ export function CrmFrame({
   description,
   actions,
   assistant = true,
+  fill = false,
   children,
 }: {
   title: ReactNode;
@@ -38,11 +39,18 @@ export function CrmFrame({
   // The action center is where the assistant's proposals already live, so a
   // button to open the assistant there adds nothing.
   assistant?: boolean;
+  // The page takes exactly the viewport height and its content scrolls
+  // inside (the board), instead of growing and scrolling as a whole.
+  fill?: boolean;
   children: ReactNode;
 }): ReactElement {
   const { text } = useCrmText();
   return (
-    <main className='mx-auto w-full max-w-[1600px] space-y-6 p-4 pb-24 md:p-8 md:pb-24'>
+    <main
+      className={`mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-8 ${toText(
+        fill ? 'flex h-full flex-col pb-0 md:pb-0' : 'pb-24 md:pb-24',
+      )}`}
+    >
       <header className='flex flex-wrap items-start justify-between gap-4'>
         <div>
           {typeof title === 'string' ? (
