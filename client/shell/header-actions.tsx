@@ -1,4 +1,5 @@
 import { useClientApplication } from '@nocobase/app-client';
+import { useTranslation } from '@nocobase/i18n/client';
 import { MonitorCog, Settings, Sparkles } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { Link, useLocation } from 'react-router';
@@ -29,6 +30,7 @@ export function HeaderActions(): ReactElement {
   const { items } = useRouteNavigation(routes, true);
   const hasSettings = navigationPages(items).length > 0;
   const { pathname } = useLocation();
+  const { t } = useTranslation();
   const surface = pathname.startsWith('/settings')
     ? 'settings'
     : pathname.startsWith('/dev')
@@ -59,9 +61,9 @@ export function HeaderActions(): ReactElement {
       {import.meta.env.DEV ? (
         <Link
           aria-current={surface === 'dev' ? 'page' : undefined}
-          aria-label='Dev tools'
+          aria-label={t('dev.title', { defaultValue: 'Dev tools' })}
           className={`${ACTION_LINK_CLASS} ${surface === 'dev' ? 'bg-muted' : ''}`}
-          title='Dev tools'
+          title={t('dev.title', { defaultValue: 'Dev tools' })}
           to='/dev'
         >
           <MonitorCog className='size-5' />
@@ -70,9 +72,9 @@ export function HeaderActions(): ReactElement {
       {hasSettings ? (
         <Link
           aria-current={surface === 'settings' ? 'page' : undefined}
-          aria-label='Settings'
+          aria-label={t('settings.title', { defaultValue: 'Settings' })}
           className={`${ACTION_LINK_CLASS} ${surface === 'settings' ? 'bg-muted' : ''}`}
-          title='Settings'
+          title={t('settings.title', { defaultValue: 'Settings' })}
           to='/settings'
         >
           <Settings className='size-5' />
