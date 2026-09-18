@@ -34,6 +34,7 @@ import {
   type Actor,
 } from '../../server/providers/crm/authorization.js';
 import { CrmService } from '../../server/providers/crm/service.js';
+import { run as notify } from '../../server/workflows/approval-notification/server/notify.js';
 import { createCrmUserRoleScope } from '../../server/providers/crm/user-roles.js';
 import { convertLead } from '../../server/providers/crm/conversion.js';
 import { crmToken, crmAiToken } from '../../server/providers/crm/index.js';
@@ -51,9 +52,9 @@ import type { AIManager } from '@nocobase/ai-employee';
 let database: DatabaseManager;
 let authorization: AppAuthorization;
 let service: CrmService;
-let folder: string;
 // Users whose password the demo import set back through the users plugin.
 const passwordResets: string[] = [];
+let folder: string;
 let router: Hono;
 const actor = (id: string): Actor => ({
   id,
@@ -170,13 +171,13 @@ beforeAll(async () => {
       });
       return { id };
     },
-  } as unknown as ReturnType<
     // A reused account gets the demo password back; the import relies on it.
     async resetPassword(userId: string, password: string) {
       if (password.length < 8)
         throw new Error('Password must be at least 8 characters');
       passwordResets.push(userId);
     },
+  } as unknown as ReturnType<
     typeof container.resolve<typeof userManagementServiceToken>
   >);
   router = await crmRoutes.createRouter({
@@ -593,6 +594,8 @@ describe('CRM API security and domain rules', () => {
         approverId: 'manager',
       }),
     ).rejects.toMatchObject({ code: 'selfApproval' });
+    // Messages are the approval-notification workflow's to send; this
+    // service has no workflow service, so nothing is queued directly.
     const outbox = await database
       .query()
       .selectFrom('crmOutbox')
@@ -1235,6 +1238,20 @@ describe('demo dataset', () => {
     const missing = await request('/demo/reset', 'admin', 'POST', {});
     expect(missing.status).toBe(404);
   }, 120000);
+
+  it('reuses the accounts on a second import and sets their passwords back', async () => {
+    // The first import created the accounts, so nothing was reset then.
+    expect(passwordResets).toEqual([]);
+    const again = await request('/demo/populate', 'admin', 'POST', {});
+    expect(again.status).toBe(200);
+    expect([...passwordResets].sort()).toEqual(
+      demoAccounts.map((a) => `demo-${a.username}`).sort(),
+    );
+    // Leave the database as the earlier tests expect it: without the demo.
+    expect((await request('/demo/reset', 'admin', 'POST', {})).status).toBe(
+      200,
+    );
+  }, 120000);
 });
 
 describe('resolved titles and paged filters', () => {
@@ -1264,20 +1281,6 @@ describe('resolved titles and paged filters', () => {
     const approval = await service.save(actor('rep'), 'approvals', {
       name: 'Titled approval',
       opportunityId: deal.id,
-
-  it('reuses the accounts on a second import and sets their passwords back', async () => {
-    // The first import created the accounts, so nothing was reset then.
-    expect(passwordResets).toEqual([]);
-    const again = await request('/demo/populate', 'admin', 'POST', {});
-    expect(again.status).toBe(200);
-    expect([...passwordResets].sort()).toEqual(
-      demoAccounts.map((a) => `demo-${a.username}`).sort(),
-    );
-    // Leave the database as the earlier tests expect it: without the demo.
-    expect((await request('/demo/reset', 'admin', 'POST', {})).status).toBe(
-      200,
-    );
-  }, 120000);
       topic: 'discount',
       approverId: 'manager',
     });
@@ -1570,4 +1573,145 @@ it('reverses the CRM migration on a real SQLite database', async () => {
   } finally {
     await isolated.destroy();
   }
+});
+
+describe('approval-notification workflow', () => {
+  const approvalFor = async (crm: CrmService, name: string) => {
+    const account = await crm.save(actor('rep'), 'accounts', { name });
+    const opportunity = await crm.save(actor('rep'), 'opportunities', {
+      name: `${name} deal`,
+      accountId: account.id,
+    });
+    return crm.save(actor('rep'), 'approvals', {
+      name: `${name} request`,
+      opportunityId: opportunity.id,
+      topic: 'discount',
+      description: 'Terms',
+      approverId: 'manager',
+    });
+  };
+  const outboxEvents = async (recordId: unknown) =>
+    (
+      await database
+        .query()
+        .selectFrom('crmOutbox')
+        .select(['id', 'event', 'recipientId'])
+        .where('recordId', '=', recordId)
+        .execute()
+    ).map((r) => [toText(r.event), toText(r.recipientId), toText(r.id)]);
+
+  it('starts the workflow for every approval event once it is committed', async () => {
+    const trigger = vi.fn().mockResolvedValue({
+      status: 'accepted',
+      eventKey: 'k',
+      runId: 'r',
+    });
+    const crm = new CrmService(database, authorization, () => ({
+      trigger,
+      registerInstruction: () => undefined,
+    }));
+    const approval = await approvalFor(crm, 'Workflow account');
+    const submitted = await crm.approvalAction(
+      actor('rep'),
+      approval.id,
+      'submit',
+    );
+    const withdrawn = await crm.approvalAction(
+      actor('rep'),
+      approval.id,
+      'withdraw',
+    );
+    await crm.approvalAction(actor('rep'), approval.id, 'submit');
+    const decided = await crm.approvalAction(
+      actor('manager'),
+      approval.id,
+      'reject',
+      'No',
+    );
+    const calls = trigger.mock.calls.map(([key, input, options]) => ({
+      key,
+      event: input.event,
+      recipientId: input.recipientId,
+      actorId: input.actorId,
+      eventKey: options.eventKey,
+    }));
+    expect(calls.map((c) => c.key)).toEqual([
+      'approval-notification',
+      'approval-notification',
+      'approval-notification',
+      'approval-notification',
+    ]);
+    expect(calls.map((c) => [c.event, c.recipientId, c.actorId])).toEqual([
+      ['pending', 'manager', 'rep'],
+      ['withdrawn', 'manager', 'rep'],
+      ['pending', 'manager', 'rep'],
+      ['rejected', 'rep', 'manager'],
+    ]);
+    expect(calls[0].eventKey).toBe(
+      `approval-notification:${toText(approval.id)}:pending:${toText(submitted.updatedAt)}`,
+    );
+    expect(calls[1].eventKey).toBe(
+      `approval-notification:${toText(approval.id)}:withdrawn:${toText(withdrawn.updatedAt)}`,
+    );
+    expect(calls[3].eventKey).toBe(
+      `approval-notification:${toText(approval.id)}:rejected:${toText(decided.updatedAt)}`,
+    );
+    // The workflow is the only sender: the service queued nothing itself.
+    expect(await outboxEvents(approval.id)).toEqual([]);
+  });
+
+  it('sends nothing itself when the workflow is not running', async () => {
+    const crm = new CrmService(database, authorization, () => ({
+      trigger: vi
+        .fn()
+        .mockResolvedValue({ status: 'skipped', reason: 'disabled' }),
+      registerInstruction: () => undefined,
+    }));
+    const approval = await approvalFor(crm, 'Skipped account');
+    await crm.approvalAction(actor('rep'), approval.id, 'submit');
+    const decided = await crm.approvalAction(
+      actor('manager'),
+      approval.id,
+      'approve',
+    );
+    expect(decided.status).toBe('approved');
+    expect(await outboxEvents(approval.id)).toEqual([]);
+  });
+
+  it('queues each message once from the run script, however often it reruns', async () => {
+    const approval = await approvalFor(service, 'Script account');
+    const at = new Date().toISOString();
+    const args = {
+      approvalId: approval.id,
+      recipientId: 'rep',
+      actorId: 'manager',
+      event: 'rejected',
+      at,
+    };
+    const options = {
+      services: { has: () => true, resolve: () => service },
+      signal: new AbortController().signal,
+      logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+    } as unknown as Parameters<typeof notify>[1];
+    expect(await notify(args, options)).toEqual({ queued: true });
+    expect(await notify(args, options)).toEqual({ queued: false });
+    expect(
+      await notify(
+        { ...args, event: 'pending', recipientId: 'manager', actorId: 'rep' },
+        options,
+      ),
+    ).toEqual({ queued: true });
+    expect(
+      (await outboxEvents(approval.id)).map(([event, recipient]) => [
+        event,
+        recipient,
+      ]),
+    ).toEqual([
+      ['rejected', 'rep'],
+      ['pending', 'manager'],
+    ]);
+    await expect(notify({ ...args, event: 'maybe' }, options)).rejects.toThrow(
+      /event/,
+    );
+  });
 });

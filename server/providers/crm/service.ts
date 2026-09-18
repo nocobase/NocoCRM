@@ -1,3 +1,4 @@
+import type { WorkflowServiceContract } from '@nocobase/app-plugin-workflow/server';
 import { decodeRow, encodeRow, jsonValue } from './values.js';
 import { toText } from './schema.js';
 import { isCountry, isSubdivision, subdivisionCode } from './geography.js';
@@ -26,6 +27,9 @@ import {
   type CrmSettings,
   type Entity,
 } from './schema.js';
+
+// The approval statuses that carry a message, named by the status.
+const approvalEvents = ['pending', 'withdrawn', 'approved', 'rejected'];
 
 export interface ListOptions {
   search?: string;
@@ -100,6 +104,11 @@ export class CrmService {
   constructor(
     public readonly database: DatabaseManager,
     public readonly authz: AppAuthorization,
+    // The workflow service, looked up when needed because it is registered
+    // after this one; absent in tests and in an application without the
+    // workflow plugin, which then does the follow-through directly.
+    private readonly workflows: () =>
+      WorkflowServiceContract | undefined = () => undefined,
   ) {}
   async settings(
     query: QueryAdapter = this.database.query(),
@@ -1247,10 +1256,14 @@ export class CrmService {
     comment = '',
     tx?: QueryAdapter,
   ): Promise<CrmRecord> {
-    if (!tx)
-      return this.mutate(actor, (prepared, query) =>
+    if (!tx) {
+      const changed = await this.mutate(actor, (prepared, query) =>
         this.approvalAction(prepared, id, action, comment, query),
       );
+      // Only once the change is committed: the workflow reads the record.
+      await this.notifyApproval(actor, changed);
+      return changed;
+    }
     const record = await this.get(actor, 'approvals', id, tx);
     const now = new Date().toISOString();
     let status: string;
@@ -1312,21 +1325,88 @@ export class CrmService {
       record.status,
       status,
     );
-    await this.enqueue(
-      tx,
-      actor,
-      'approvals',
-      { ...record, ...changes },
-      ['submit', 'withdraw'].includes(action)
-        ? toText(record.approverId)
-        : record.ownerId,
-      status,
-    );
     return this.get(actor, 'approvals', id, tx);
+  }
+  // Every message an approval sends goes through the "approval-notification"
+  // workflow (server/workflows/approval-notification), started once the
+  // change is committed: a submission or withdrawal to the approver, a
+  // decision to the applicant. A caller that ran approvalAction inside its
+  // own transaction (the demo import) calls this after committing. The
+  // workflow is the only sender: without the workflow service, or with the
+  // workflow not deployed or not enabled, nothing is sent.
+  async notifyApproval(
+    actor: Actor,
+    record: CrmRecord,
+  ): Promise<
+    Awaited<ReturnType<WorkflowServiceContract['trigger']>> | undefined
+  > {
+    const workflows = this.workflows();
+    const event = toText(record.status);
+    if (!workflows || !approvalEvents.includes(event)) return undefined;
+    const approvalId = toText(record.id);
+    const at = toText(record.updatedAt);
+    return workflows.trigger(
+      'approval-notification',
+      {
+        approvalId,
+        event,
+        recipientId: ['pending', 'withdrawn'].includes(event)
+          ? toText(record.approverId)
+          : toText(record.ownerId),
+        actorId: actor.id,
+        at,
+        opportunityId: record.opportunityId
+          ? toText(record.opportunityId)
+          : null,
+      },
+      { eventKey: `approval-notification:${approvalId}:${event}:${at}` },
+    );
+  }
+  // Queues one message for a record, keyed so the same message is never
+  // queued twice; called by the approval-notification workflow's run
+  // script. Returns whether a message was queued now.
+  async notifyOutcome({
+    entity,
+    recordId,
+    recipientId,
+    actorId,
+    event,
+    key,
+  }: {
+    entity: Entity;
+    recordId: string;
+    recipientId: string;
+    actorId: string;
+    event: string;
+    key: string;
+  }): Promise<boolean> {
+    const query = this.database.query();
+    const record = await query
+      .selectFrom(definitions[entity].table)
+      .select(['id', 'name'])
+      .where('id', '=', recordId)
+      .executeTakeFirst();
+    if (!record) return false;
+    const before = await query
+      .selectFrom('crmOutbox')
+      .select('id')
+      .where('id', '=', key)
+      .executeTakeFirst();
+    if (before) return false;
+    await this.enqueue(
+      query,
+      { id: actorId },
+      entity,
+      record,
+      recipientId,
+      event,
+      key,
+    );
+    return true;
   }
   async enqueue(
     query: QueryAdapter,
-    actor: Actor,
+    actor: Pick<Actor, 'id'>,
     entity: Entity,
     record: Row,
     recipientId: string,

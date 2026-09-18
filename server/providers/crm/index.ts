@@ -12,6 +12,7 @@ import { createCronJobManager, type CronJobManager } from '@nocobase/cron';
 import { authorizationToken } from '@nocobase/app-plugin-authorization';
 import { aiManagerToken } from '@nocobase/app-plugin-ai-employee/server';
 import { notificationServiceToken } from '@nocobase/app-plugin-notification/server';
+import { workflowServiceToken } from '@nocobase/app-plugin-workflow/server';
 import {
   provisionCrm,
   registerCrmResources,
@@ -42,6 +43,10 @@ export default class CrmProvider extends ServiceProvider<Application> {
         new CrmService(
           this.app.container.resolve(databaseManagerToken),
           this.app.container.resolve(authorizationToken),
+          () =>
+            this.app.container.has(workflowServiceToken)
+              ? this.app.container.resolve(workflowServiceToken)
+              : undefined,
         ),
     );
     this.app.container.singleton(
