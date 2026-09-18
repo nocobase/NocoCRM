@@ -1,4 +1,7 @@
-import { useGetIdentity } from '@refinedev/core';
+import {
+  authenticationClientToken,
+  type AuthClient,
+} from '@nocobase/app-plugin-authentication/client';
 import {
   apiClientToken,
   useService,
@@ -93,10 +96,27 @@ export function useCrmApi() {
 // columns, the lists on a record's tabs, the action centre.
 export const PAGE_SIZE = 20;
 
+// The signed-in user's id, read from the authentication plugin's client
+// through the shared query cache so it is one request for the whole page
+// and available above the plugin's own React provider (the assistant
+// panel mounts there). This application registers no Refine identity
+// resolver, so Refine's useGetIdentity never resolves here.
+export function useSessionUserId(): string | undefined {
+  const client = useService(authenticationClientToken) as AuthClient;
+  const { data } = useQuery({
+    queryKey: ['crm', 'session'],
+    queryFn: async () => (await client.getSession()).data ?? null,
+    staleTime: 5000,
+  });
+  return data?.user?.id;
+}
+
 export function useCrmScopeKey(): readonly string[] {
-  const { data: identity } = useGetIdentity<{ id: string }>();
+  // The session user scopes the cache, so one browser signing in as
+  // someone else never sees the previous user's pages.
+  const userId = useSessionUserId();
   const { i18n } = useTranslation('crm');
-  return ['crm', identity?.id ?? 'anonymous', i18n.language];
+  return ['crm', userId ?? 'anonymous', i18n.language];
 }
 export function useCrmQuery<T>(
   path: string,

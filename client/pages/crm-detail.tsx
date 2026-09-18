@@ -91,8 +91,7 @@ import {
   Value,
 } from '../components/crm/common.js';
 import { RecordForm } from '../components/crm/form.js';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { Markdown } from '../components/crm/markdown.js';
 import { useQuery } from '@tanstack/react-query';
 import EntityDetail from './crm-entity-detail.js';
 import {
@@ -1271,9 +1270,9 @@ function MarkdownPreview({ url }: { url: string }): ReactElement {
       </p>
     );
   return (
-    <div className='min-h-0 flex-1 overflow-auto rounded-md border px-5 py-4 text-sm leading-relaxed [&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:font-mono [&_code]:text-[0.9em] [&_h1]:mt-4 [&_h1]:mb-2 [&_h1]:text-xl [&_h1]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mt-3 [&_h3]:mb-1 [&_h3]:font-semibold [&_h4]:mt-3 [&_h4]:font-medium [&_hr]:my-4 [&_img]:max-w-full [&_li]:my-0.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-2 [&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-muted [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_table]:my-2 [&_table]:border-collapse [&_td]:border [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:bg-muted/50 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_ul]:list-disc [&_ul]:pl-5'>
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{data}</ReactMarkdown>
-    </div>
+    <Markdown className='min-h-0 flex-1 overflow-auto rounded-md border px-5 py-4 text-sm leading-relaxed'>
+      {data}
+    </Markdown>
   );
 }
 

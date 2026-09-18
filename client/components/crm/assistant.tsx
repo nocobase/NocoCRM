@@ -1,5 +1,4 @@
 import { toText } from './api.js';
-import { useGetIdentity } from '@refinedev/core';
 import {
   createContext,
   useContext,
@@ -51,6 +50,7 @@ import {
   useCrmText,
   useRefresh,
   useMetadata,
+  useSessionUserId,
   useRecord,
   rows,
   fieldLabelKey,
@@ -61,6 +61,7 @@ import {
   type Field,
 } from './api.js';
 import { ErrorNotice, RecordLink, Value } from './common.js';
+import { Markdown } from './markdown.js';
 import { InlineField } from './inline.js';
 import { RecordForm } from './form.js';
 import { inherited, proposalFor } from './conversion-fields.js';
@@ -136,8 +137,9 @@ export function AssistantPanel(): ReactElement | null {
   // Nothing is asked of the server until the session is known: the panel
   // may already be open when the app mounts, before sign-in has settled,
   // and an unauthenticated request would sit in the panel as an error.
-  const { data: identity } = useGetIdentity<{ id: string }>();
-  const signedIn = Boolean(identity?.id);
+  // Nothing is asked of the server before there is a session: a fresh
+  // window would otherwise get a 401 and show an error instead of the chat.
+  const signedIn = Boolean(useSessionUserId());
   const { data: meta } = useMetadata(signedIn);
   const { text } = useCrmText();
   const api = useCrmApi();
@@ -302,13 +304,23 @@ export function AssistantPanel(): ReactElement | null {
               >
                 {toText(m.content)}
               </p>
-            ) : (
+            ) : // The assistant writes Markdown (headings, lists, tables), so
+            // its bubbles render it; what the user typed stays as typed.
+            m.role === 'user' ? (
               <div
                 key={toText(m.id)}
-                className={`whitespace-pre-wrap break-words rounded-xl p-4 text-sm leading-relaxed ${toText(m.role === 'user' ? 'ml-8 bg-primary/10' : 'mr-3 border bg-card')}`}
+                className='ml-8 whitespace-pre-wrap break-words rounded-xl bg-primary/10 p-4 text-sm leading-relaxed'
               >
                 {toText(m.content)}
               </div>
+            ) : (
+              <Markdown
+                key={toText(m.id)}
+                compact
+                className='mr-3 break-words rounded-xl border bg-card p-4 text-sm leading-relaxed'
+              >
+                {toText(m.content)}
+              </Markdown>
             ),
             // A question still being answered shows the same "thinking"
             // bubble as one just sent; one whose reply never came (the
