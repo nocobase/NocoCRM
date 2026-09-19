@@ -23,7 +23,7 @@ const notify = (
     config: {
       module: './server/notify',
       args: {
-        approvalId: '{{$input.approvalId}}',
+        recordId: '{{$input.approvalId}}',
         recipientId: '{{$input.recipientId}}',
         actorId: '{{$input.actorId}}',
         event,

@@ -9,6 +9,7 @@ import { fieldsFor, toText } from '../../server/providers/crm/schema.js';
 import geographyMigration from '../../database/main/migrations/202609100001_crm_geography_codes.js';
 // @vitest-environment node
 import sqlite from '@nocobase/db-sqlite';
+import { databaseManagerToken } from '@nocobase/db';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -1183,7 +1184,10 @@ describe('demo dataset', () => {
       pageSize: 500,
     });
     const starts = spread.data.map((a) => Date.parse(toText(a.startAt)));
-    expect(starts.filter((t) => t < now - 20 * day).length).toBeGreaterThan(10);
+    // Weekdays between thirty and twenty days back, whatever today is.
+    expect(
+      starts.filter((t) => t < now - 20 * day).length,
+    ).toBeGreaterThanOrEqual(6);
     expect(starts.filter((t) => t > now + 60 * day).length).toBeGreaterThan(15);
     for (let ahead = 8; ahead <= 88; ahead += 7) {
       const from = now + ahead * day;
@@ -1682,14 +1686,18 @@ describe('approval-notification workflow', () => {
     const approval = await approvalFor(service, 'Script account');
     const at = new Date().toISOString();
     const args = {
-      approvalId: approval.id,
+      recordId: approval.id,
       recipientId: 'rep',
       actorId: 'manager',
       event: 'rejected',
       at,
     };
     const options = {
-      services: { has: () => true, resolve: () => service },
+      services: {
+        has: () => true,
+        resolve: (token: unknown) =>
+          token === databaseManagerToken ? database : service,
+      },
       signal: new AbortController().signal,
       logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
     } as unknown as Parameters<typeof notify>[1];

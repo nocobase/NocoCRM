@@ -1362,48 +1362,6 @@ export class CrmService {
       { eventKey: `approval-notification:${approvalId}:${event}:${at}` },
     );
   }
-  // Queues one message for a record, keyed so the same message is never
-  // queued twice; called by the approval-notification workflow's run
-  // script. Returns whether a message was queued now.
-  async notifyOutcome({
-    entity,
-    recordId,
-    recipientId,
-    actorId,
-    event,
-    key,
-  }: {
-    entity: Entity;
-    recordId: string;
-    recipientId: string;
-    actorId: string;
-    event: string;
-    key: string;
-  }): Promise<boolean> {
-    const query = this.database.query();
-    const record = await query
-      .selectFrom(definitions[entity].table)
-      .select(['id', 'name'])
-      .where('id', '=', recordId)
-      .executeTakeFirst();
-    if (!record) return false;
-    const before = await query
-      .selectFrom('crmOutbox')
-      .select('id')
-      .where('id', '=', key)
-      .executeTakeFirst();
-    if (before) return false;
-    await this.enqueue(
-      query,
-      { id: actorId },
-      entity,
-      record,
-      recipientId,
-      event,
-      key,
-    );
-    return true;
-  }
   async enqueue(
     query: QueryAdapter,
     actor: Pick<Actor, 'id'>,
