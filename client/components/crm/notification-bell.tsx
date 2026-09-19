@@ -1,24 +1,44 @@
 import { Bell } from 'lucide-react';
-import type { ReactElement } from 'react';
+import { useContext, type ReactElement, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
 import {
   NotificationInAppProvider,
+  NotificationInAppRuntimeContext,
   useNotificationInAppRuntime,
 } from '@nocobase/app-plugin-notification-in-app/client';
 import { useCrmText } from './api.js';
 
+// One in-app notification runtime for the whole shell: the header's bell
+// and the notification centre read the same unread count, so marking
+// everything read in the centre clears the bell at once. Where a shell
+// already provides the runtime this only passes children through; a
+// surface without one gets its own.
+export function NotificationRuntime({
+  children,
+}: {
+  children: ReactNode;
+}): ReactElement {
+  const shared = useContext(NotificationInAppRuntimeContext);
+  return shared ? (
+    <>{children}</>
+  ) : (
+    <NotificationInAppProvider>{children}</NotificationInAppProvider>
+  );
+}
+
 // The notification centre's entry in the header: a bell with the unread
-// count, kept current by the plugin's own provider (it listens to the
-// realtime channel). Highlighted while the centre itself is open.
+// count, kept current by the plugin's runtime (it listens to the realtime
+// channel and to the centre's own changes). Highlighted while the centre
+// itself is open.
 export function NotificationBell({
   className,
 }: {
   className: string;
 }): ReactElement {
   return (
-    <NotificationInAppProvider>
+    <NotificationRuntime>
       <BellLink className={className} />
-    </NotificationInAppProvider>
+    </NotificationRuntime>
   );
 }
 

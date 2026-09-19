@@ -7,6 +7,7 @@ import { RouteTreeProvider } from '../routing/route-context.js';
 
 import { AppHeader } from './app-header.js';
 import { AppSidebar } from './app-sidebar.js';
+import { NotificationRuntime } from '../components/crm/notification-bell.js';
 
 export function AppShell({
   routes,
@@ -30,22 +31,27 @@ export function AppShell({
         />
         {/* Application change: the whole column, header included, moves aside
             for the assistant panel, so the header's actions stay reachable. */}
-        <div className='crm-page-main flex min-w-0 flex-1 flex-col'>
-          <AppHeader
-            desktopSidebarCollapsed={desktopSidebarCollapsed}
-            onOpenSidebar={() => setMobileSidebarOpen(true)}
-            onToggleDesktopSidebar={() =>
-              setDesktopSidebarCollapsed((collapsed) => !collapsed)
-            }
-          />
-          <main className='relative min-w-0 flex-1 overflow-hidden'>
-            {/* main only positions; the page scrolls in here, so a child page layer laid over main is neither
+        {/* Application change: the header's bell and the notification centre
+            page share one notification runtime, so the centre's changes
+            reach the bell. */}
+        <NotificationRuntime>
+          <div className='crm-page-main flex min-w-0 flex-1 flex-col'>
+            <AppHeader
+              desktopSidebarCollapsed={desktopSidebarCollapsed}
+              onOpenSidebar={() => setMobileSidebarOpen(true)}
+              onToggleDesktopSidebar={() =>
+                setDesktopSidebarCollapsed((collapsed) => !collapsed)
+              }
+            />
+            <main className='relative min-w-0 flex-1 overflow-hidden'>
+              {/* main only positions; the page scrolls in here, so a child page layer laid over main is neither
             moved by the page's scrolling nor stretched by its height. */}
-            <div className='h-full overflow-y-auto'>
-              <Outlet />
-            </div>
-          </main>
-        </div>
+              <div className='h-full overflow-y-auto'>
+                <Outlet />
+              </div>
+            </main>
+          </div>
+        </NotificationRuntime>
       </div>
     </RouteTreeProvider>
   );

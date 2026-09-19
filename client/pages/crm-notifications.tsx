@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { NotificationInAppProvider } from '@nocobase/app-plugin-notification-in-app/client';
+import { NotificationRuntime } from '../components/crm/notification-bell.js';
 import { CrmFrame } from '../components/crm/common.js';
 import { NotificationInbox } from '../components/crm/notification-inbox.js';
 import { useCrmText } from '../components/crm/api.js';
@@ -11,9 +11,9 @@ export default function NotificationsPage(): ReactElement {
       description={text('notificationDescription')}
       assistant={false}
     >
-      <NotificationInAppProvider>
+      <NotificationRuntime>
         <NotificationInbox />
-      </NotificationInAppProvider>
+      </NotificationRuntime>
     </CrmFrame>
   );
 }
