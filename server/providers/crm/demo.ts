@@ -1152,34 +1152,24 @@ export async function populateDemo(
     day: number,
     submitDay: number,
   ): Promise<Row> =>
-    service
-      .mutate(who, async (prepared, q) => {
-        const save = saver(prepared, q);
-        const record = await save('approvals', input, day);
-        await service.approvalAction(
-          prepared,
-          toText(record.id),
-          'submit',
-          '',
-          q,
-        );
-        await q
-          .updateTable('crmApprovals')
-          .set({ submittedAt: at(submitDay, 11), updatedAt: at(submitDay, 11) })
-          .where('id', '=', record.id)
-          .execute();
-        await historyAt(q, at(submitDay, 11));
-        return record;
-      })
-      .then(async (record) => {
-        // The approver's message goes through the approval-notification
-        // workflow, started after the transaction like a real submission.
-        await service.notifyApproval(
-          who,
-          await service.get(who, 'approvals', toText(record.id)),
-        );
-        return record;
-      });
+    service.mutate(who, async (prepared, q) => {
+      const save = saver(prepared, q);
+      const record = await save('approvals', input, day);
+      await service.approvalAction(
+        prepared,
+        toText(record.id),
+        'submit',
+        '',
+        q,
+      );
+      await q
+        .updateTable('crmApprovals')
+        .set({ submittedAt: at(submitDay, 11), updatedAt: at(submitDay, 11) })
+        .where('id', '=', record.id)
+        .execute();
+      await historyAt(q, at(submitDay, 11));
+      return record;
+    });
   await raise(
     accountOwner(0),
     {
@@ -1219,10 +1209,6 @@ export async function populateDemo(
       .execute();
     await historyAt(q, at(-5, 15));
   });
-  await service.notifyApproval(
-    managerActor,
-    await service.get(managerActor, 'approvals', toText(paymentTerms.id)),
-  );
   await raise(
     managerActor,
     {

@@ -30,6 +30,10 @@ export interface Actor {
   decisions?: Record<string, DatabaseAuthorizationConditions | null>;
   capabilities?: Record<string, boolean>;
   users?: Row[];
+  // Registers work to run once the current transaction has committed (the
+  // workflows a change starts); set by CrmService.mutate on the prepared
+  // actor, absent when a caller runs its own transaction.
+  after?: (callback: () => Promise<void>) => void;
 }
 export const roles: string[] = [
   'sales-representative',

@@ -32,7 +32,8 @@ export default class CrmProvider extends ServiceProvider<Application> {
   public readonly name: string = 'crm/provider';
   private cron?: CronJobManager;
   private unregisterRoleScope?: () => void;
-  private scanning = false;
+  private reminding = false;
+  private delivering = false;
   public override register(): void {
     this.app.container
       .resolve(i18nToken)
@@ -86,19 +87,22 @@ export default class CrmProvider extends ServiceProvider<Application> {
     this.unregisterRoleScope = undefined;
     this.cron?.close();
   }
+  // Both recurring passes, every half minute.
   private async scan(): Promise<void> {
-    if (this.scanning) return;
-    this.scanning = true;
+    await this.remindActivities();
+    await this.deliverNotifications();
+  }
+  // Finds the activities about to start and starts one activity-reminder
+  // workflow run per recipient; returns how many were started this pass.
+  async remindActivities(): Promise<number> {
+    if (this.reminding) return 0;
+    this.reminding = true;
+    let reminded = 0;
     try {
       const service = this.app.container.resolve(crmToken);
       const query = service.database.query();
       const settings = await service.settings();
       const now = new Date();
-      const system: Actor = {
-        id: 'system',
-        locale: 'en-US',
-        scope: service.authz.for({ principal: { type: 'system', id: 'crm' } }),
-      };
       const activities = await query
         .selectFrom('crmActivities')
         .selectAll()
@@ -112,20 +116,33 @@ export default class CrmProvider extends ServiceProvider<Application> {
           ).toISOString(),
         )
         .execute();
+      // Each reminder is an activity-reminder workflow run, keyed by the
+      // activity, its start and the recipient, so repeated scans of the
+      // same row start nothing new.
       for (const activity of activities)
         for (const user of new Set([
           activity.ownerId,
           ...array(activity.internalParticipants),
-        ]))
-          await service.enqueue(
-            query,
-            system,
-            'activities',
-            activity,
-            toText(user),
-            'starting',
-            `activity:${toText(activity.id)}:${toText(activity.startAt)}:${toText(user)}`,
-          );
+        ])) {
+          await service.remindActivity(activity, toText(user));
+          reminded += 1;
+        }
+      return reminded;
+    } finally {
+      this.reminding = false;
+    }
+  }
+  // Sends the queued messages as in-app notifications, in the recipient's
+  // language and only what they may still see; returns the pass's counts.
+  async deliverNotifications(): Promise<{ delivered: number; failed: number }> {
+    if (this.delivering) return { delivered: 0, failed: 0 };
+    this.delivering = true;
+    let delivered = 0;
+    let failed = 0;
+    try {
+      const service = this.app.container.resolve(crmToken);
+      const query = service.database.query();
+      const now = new Date();
       const pending = await query
         .selectFrom('crmOutbox')
         .selectAll()
@@ -195,7 +212,9 @@ export default class CrmProvider extends ServiceProvider<Application> {
             .set({ status: 'submitted', notificationId: sent.notificationId })
             .where('id', '=', row.id)
             .execute();
+          delivered += 1;
         } catch (error) {
+          failed += 1;
           // The reason stays with the row: a failed delivery that says only
           // "failed" cannot be diagnosed later.
           await query
@@ -210,8 +229,9 @@ export default class CrmProvider extends ServiceProvider<Application> {
             .execute();
         }
       }
+      return { delivered, failed };
     } finally {
-      this.scanning = false;
+      this.delivering = false;
     }
   }
 }

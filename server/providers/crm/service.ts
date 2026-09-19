@@ -172,7 +172,18 @@ export class CrmService {
       'manage',
       'settings',
     );
-    return this.database.transaction(({ query }) => fn(prepared, query));
+    // Work registered during the transaction (the workflows a change
+    // starts) runs once it has committed, so a workflow reads what the
+    // change wrote and a rolled-back change starts nothing.
+    const afterCommit: (() => Promise<void>)[] = [];
+    prepared.after = (callback) => {
+      afterCommit.push(callback);
+    };
+    const result = await this.database.transaction(({ query }) =>
+      fn(prepared, query),
+    );
+    for (const callback of afterCommit) await callback();
+    return result;
   }
   async saveSettings(actor: Actor, raw: unknown): Promise<CrmSettings> {
     await requireCapability(actor, 'manage', 'settings');
@@ -1256,14 +1267,10 @@ export class CrmService {
     comment = '',
     tx?: QueryAdapter,
   ): Promise<CrmRecord> {
-    if (!tx) {
-      const changed = await this.mutate(actor, (prepared, query) =>
+    if (!tx)
+      return this.mutate(actor, (prepared, query) =>
         this.approvalAction(prepared, id, action, comment, query),
       );
-      // Only once the change is committed: the workflow reads the record.
-      await this.notifyApproval(actor, changed);
-      return changed;
-    }
     const record = await this.get(actor, 'approvals', id, tx);
     const now = new Date().toISOString();
     let status: string;
@@ -1325,27 +1332,48 @@ export class CrmService {
       record.status,
       status,
     );
-    return this.get(actor, 'approvals', id, tx);
+    const changed = await this.get(actor, 'approvals', id, tx);
+    // The message goes out through the approval-notification workflow once
+    // the change is committed: a submission or withdrawal to the approver,
+    // a decision to the applicant.
+    this.afterCommit(actor, () => this.notifyApproval(actor, changed));
+    return changed;
   }
-  // Every message an approval sends goes through the "approval-notification"
-  // workflow (server/workflows/approval-notification), started once the
-  // change is committed: a submission or withdrawal to the approver, a
-  // decision to the applicant. A caller that ran approvalAction inside its
-  // own transaction (the demo import) calls this after committing. The
-  // workflow is the only sender: without the workflow service, or with the
-  // workflow not deployed or not enabled, nothing is sent.
+  // Runs work once the current transaction has committed; a caller that
+  // supplied its own transaction without a hook gets it run at once.
+  private afterCommit(actor: Actor, work: () => Promise<unknown>): void {
+    if (actor.after) actor.after(() => work().then(() => undefined));
+    else void work();
+  }
+  // The workflows the CRM starts. Every message the CRM sends goes through
+  // one of them, started once the change that caused it is committed, so
+  // each message leaves an inspectable run. They are the only senders:
+  // without the workflow service, or with a workflow not deployed or not
+  // enabled, nothing is sent.
+  private async trigger(
+    workflow: string,
+    input: Record<string, string | null>,
+    eventKey: string,
+  ): Promise<
+    Awaited<ReturnType<WorkflowServiceContract['trigger']>> | undefined
+  > {
+    const workflows = this.workflows();
+    if (!workflows) return undefined;
+    return workflows.trigger(workflow, input, { eventKey });
+  }
+  // "approval-notification": a submission or withdrawal to the approver, a
+  // decision to the applicant.
   async notifyApproval(
     actor: Actor,
     record: CrmRecord,
   ): Promise<
     Awaited<ReturnType<WorkflowServiceContract['trigger']>> | undefined
   > {
-    const workflows = this.workflows();
     const event = toText(record.status);
-    if (!workflows || !approvalEvents.includes(event)) return undefined;
+    if (!approvalEvents.includes(event)) return undefined;
     const approvalId = toText(record.id);
     const at = toText(record.updatedAt);
-    return workflows.trigger(
+    return this.trigger(
       'approval-notification',
       {
         approvalId,
@@ -1359,7 +1387,44 @@ export class CrmService {
           ? toText(record.opportunityId)
           : null,
       },
-      { eventKey: `approval-notification:${approvalId}:${event}:${at}` },
+      `approval-notification:${approvalId}:${event}:${at}`,
+    );
+  }
+  // "record-notification": a record changing hands, and an activity's
+  // internal participants being invited, removed, rescheduled or told of
+  // a cancellation.
+  async notifyRecord(
+    actor: Actor,
+    entity: Entity,
+    record: Row,
+    recipientId: string,
+    event: string,
+  ): Promise<
+    Awaited<ReturnType<WorkflowServiceContract['trigger']>> | undefined
+  > {
+    const recordId = toText(record.id);
+    const at = toText(record.updatedAt);
+    return this.trigger(
+      'record-notification',
+      { entity, recordId, recipientId, actorId: actor.id, event, at },
+      `record-notification:${entity}:${recordId}:${event}:${recipientId}:${at}`,
+    );
+  }
+  // "activity-reminder": an activity about to start, to its owner and each
+  // internal participant; the event key is the reminder's identity, so a
+  // scan that sees the same activity again starts nothing new.
+  async remindActivity(
+    activity: Row,
+    recipientId: string,
+  ): Promise<
+    Awaited<ReturnType<WorkflowServiceContract['trigger']>> | undefined
+  > {
+    const activityId = toText(activity.id);
+    const startAt = toText(activity.startAt);
+    return this.trigger(
+      'activity-reminder',
+      { activityId, recipientId, startAt },
+      `activity:${activityId}:${startAt}:${recipientId}`,
     );
   }
   async enqueue(
@@ -1410,15 +1475,12 @@ export class CrmService {
   ): Promise<void> {
     // Only a change of hands is worth a message; edits to a record by
     // someone else are visible in its history and were noise as alerts.
+    // Each message is a record-notification workflow run, started once
+    // this transaction has committed; a message to whoever made the
+    // change is not sent.
+    const messages: [string, string][] = [];
     if (previous?.ownerId !== record.ownerId)
-      await this.enqueue(
-        query,
-        actor,
-        entity,
-        record,
-        toText(record.ownerId),
-        'assigned',
-      );
+      messages.push([toText(record.ownerId), 'assigned']);
     if (entity === 'activities') {
       const before = array(previous?.internalParticipants);
       const after = array(record.internalParticipants);
@@ -1433,10 +1495,25 @@ export class CrmService {
                   record.endAt !== previous?.endAt
                 ? 'rescheduled'
                 : '';
-        if (event)
-          await this.enqueue(query, actor, entity, record, toText(user), event);
+        if (event) messages.push([toText(user), event]);
       }
     }
+    const saved = await query
+      .selectFrom(definitions[entity].table)
+      .select(['id', 'updatedAt'])
+      .where('id', '=', record.id)
+      .executeTakeFirst();
+    for (const [recipientId, event] of messages)
+      if (recipientId && recipientId !== actor.id)
+        this.afterCommit(actor, () =>
+          this.notifyRecord(
+            actor,
+            entity,
+            { ...record, updatedAt: saved?.updatedAt ?? record.updatedAt },
+            recipientId,
+            event,
+          ),
+        );
   }
 }
 export function array(value: unknown): unknown[] {
