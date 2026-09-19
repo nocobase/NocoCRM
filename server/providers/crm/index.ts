@@ -1,6 +1,7 @@
 import { i18nToken } from '@nocobase/app-server/i18n';
 import { notificationLocales } from '../../locales/crm-notifications/index.js';
 import { asEntity, toText } from './schema.js';
+import { resolveTitles } from './titles.js';
 import type { Application } from '@nocobase/app-server/application';
 import { databaseManagerToken } from '@nocobase/db';
 import {
@@ -189,9 +190,18 @@ export default class CrmProvider extends ServiceProvider<Application> {
           const title = t(`titles.${toText(row.event)}`, {
             entity: t(`entities.${toText(row.entity)}`),
           });
+          // The record is named the way the pages name it (a lead by person
+          // and company, a deal by account and name), not by its bare name.
+          const entity = asEntity(toText(row.entity));
+          const { titles } = await resolveTitles(service, recipient, {
+            [entity]: [record],
+          });
           const content = {
             title,
-            body: t('body', { title, name: record.name ?? '' }),
+            body: t('body', {
+              title,
+              name: titles[toText(record.id)] ?? record.name ?? '',
+            }),
           };
           const sent = await this.app.container
             .resolve(notificationServiceToken)

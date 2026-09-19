@@ -929,6 +929,7 @@ describe('CRM API security and domain rules', () => {
     await service.rememberLocale({ ...actor('rep'), locale: 'zh-CN' });
     const lead = await service.save(actor('rep'), 'leads', {
       name: '提醒测试',
+      company: '提醒公司',
     });
     const meeting = await service.save(actor('rep'), 'activities', {
       name: '即将开始的会议',
@@ -982,19 +983,35 @@ describe('CRM API security and domain rules', () => {
         body: expect.stringContaining('即将开始的会议'),
       },
     });
+    // A lead is named by person and company, as the pages name it.
+    await service.enqueue(
+      database.query(),
+      actor('rep'),
+      'leads',
+      lead,
+      'manager',
+      'assigned',
+      'lead-title-check',
+    );
+    await scan.call(provider);
+    const leadMessage = send.mock.calls
+      .map((call) => call[0] as { content: { body: string } })
+      .find((call) => call.content.body.includes('提醒测试'));
+    expect(leadMessage?.content.body).toContain('提醒测试 / 提醒公司');
     const count = send.mock.calls.length;
     await scan.call(provider);
     expect(send).toHaveBeenCalledTimes(count);
     // Every scan asked for the same reminder by the same key; the second
     // start is deduplicated by the runtime and would queue nothing anyway.
-    expect(
-      inline.triggers
-        .filter((t) => t.key === 'activity-reminder')
-        .map((t) => t.eventKey),
-    ).toEqual([
-      `activity:${toText(meeting.id)}:${toText(meeting.startAt)}:rep`,
-      `activity:${toText(meeting.id)}:${toText(meeting.startAt)}:rep`,
-    ]);
+    const reminderKeys = inline.triggers
+      .filter((t) => t.key === 'activity-reminder')
+      .map((t) => t.eventKey);
+    expect(reminderKeys.length).toBeGreaterThanOrEqual(2);
+    expect(new Set(reminderKeys)).toEqual(
+      new Set([
+        `activity:${toText(meeting.id)}:${toText(meeting.startAt)}:rep`,
+      ]),
+    );
     await service.enqueue(
       database.query(),
       actor('rep'),
