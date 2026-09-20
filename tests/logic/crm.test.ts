@@ -7,6 +7,7 @@ import { statistics } from '../../server/providers/crm/statistics.js';
 import { dashboard } from '../../server/providers/crm/dashboard.js';
 import { fieldsFor, toText } from '../../server/providers/crm/schema.js';
 import geographyMigration from '../../database/main/migrations/202609100001_crm_geography_codes.js';
+import legacyTimestampsMigration from '../../database/main/migrations/202609200001_legacy_epoch_timestamps.js';
 // @vitest-environment node
 import sqlite from '@nocobase/db-sqlite';
 import { databaseManagerToken } from '@nocobase/db';
@@ -25,7 +26,7 @@ import {
   type AppAuthorization,
 } from '@nocobase/app-plugin-authorization';
 import { authenticationToken } from '@nocobase/app-plugin-authentication';
-import { createConfigPaths } from '@nocobase/app-server/config';
+import { createAppPaths } from '@nocobase/app-server/config';
 import { ServiceContainer } from '@nocobase/service-provider';
 import { Hono, type MiddlewareHandler } from 'hono';
 import {
@@ -244,7 +245,7 @@ beforeAll(async () => {
   router = await crmRoutes.createRouter({
     container,
     publicBasePath: '/test',
-    paths: createConfigPaths({ rootDir: folder }),
+    paths: createAppPaths({ rootDir: folder }),
   } as Application);
 }, 30000);
 afterAll(async () => {
@@ -1705,12 +1706,101 @@ it('reverses the CRM migration on a real SQLite database', async () => {
       directory: resolve('database/main/migrations'),
       packageName: 'crm',
     });
-    expect((await migrator.latest()).executed).toHaveLength(24);
+    expect((await migrator.latest()).executed).toHaveLength(25);
     expect(await isolated.builder().hasCollection('crmLeads')).toBe(true);
     expect((await migrator.latest()).executed).toEqual([]);
-    expect((await migrator.rollback()).rolledBack).toHaveLength(24);
+    expect((await migrator.rollback()).rolledBack).toHaveLength(25);
     expect(await isolated.builder().hasCollection('crmLeads')).toBe(false);
     expect(await isolated.builder().hasCollection('crmAccounts')).toBe(false);
+  } finally {
+    await isolated.destroy();
+  }
+});
+
+it('rewrites legacy epoch timestamps so repository reads succeed', async () => {
+  const isolated = createDatabaseManager(
+    defineDatabase({
+      drivers: { sqlite },
+      default: 'main',
+      connections: {
+        main: {
+          dialect: 'sqlite',
+          filename: ':memory:',
+          schemaManagement: 'managed',
+        },
+      },
+    }),
+  );
+  try {
+    await isolated.connect();
+    const schedulerRoot = resolve(
+      'node_modules/@nocobase/app-plugin-scheduler',
+    );
+    await isolated
+      .createMigrator({
+        sources: [
+          {
+            packageName: 'scheduler',
+            directory: resolve(schedulerRoot, 'dist/database/migrations'),
+          },
+          {
+            packageName: 'crm',
+            directory: resolve('database/main/migrations'),
+          },
+        ],
+      })
+      .latest();
+    const query = isolated.query();
+    const started = Date.UTC(2026, 8, 13, 1, 30, 28, 587);
+    // What the scheduler's first release and the CRM's first provisioning
+    // wrote: a Date through the raw query builder, stored as a number.
+    await query
+      .insertInto('scheduleSyncLocks')
+      .values({ appName: 'main', createdAt: started, updatedAt: started })
+      .execute();
+    await query
+      .insertInto('crmSettings')
+      .values({ id: 'legacy', value: '{}', updatedAt: started })
+      .execute();
+    await legacyTimestampsMigration.up({
+      builder: isolated.builder(),
+      query,
+      connection: isolated.connection(),
+    });
+    const lock = await query
+      .selectFrom('scheduleSyncLocks')
+      .selectAll()
+      .where('appName', '=', 'main')
+      .executeTakeFirstOrThrow();
+    expect(lock.createdAt).toBe('2026-09-13T01:30:28.587Z');
+    expect(lock.updatedAt).toBe('2026-09-13T01:30:28.587Z');
+    const setting = await query
+      .selectFrom('crmSettings')
+      .selectAll()
+      .where('id', '=', 'legacy')
+      .executeTakeFirstOrThrow();
+    expect(setting.updatedAt).toBe('2026-09-13T01:30:28.587Z');
+    // The scheduler now reads its lock through the repository at startup.
+    const read = await isolated
+      .connection()
+      .repository('scheduleSyncLocks')
+      .findOne({ filter: { appName: 'main' } });
+    expect(read?.createdAt).toBeTruthy();
+    // Already an instant: left alone on a second run.
+    await legacyTimestampsMigration.up({
+      builder: isolated.builder(),
+      query,
+      connection: isolated.connection(),
+    });
+    expect(
+      (
+        await query
+          .selectFrom('crmSettings')
+          .select('updatedAt')
+          .where('id', '=', 'legacy')
+          .executeTakeFirstOrThrow()
+      ).updatedAt,
+    ).toBe('2026-09-13T01:30:28.587Z');
   } finally {
     await isolated.destroy();
   }

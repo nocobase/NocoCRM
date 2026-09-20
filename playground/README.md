@@ -55,6 +55,6 @@ docker compose up -d --wait
 docker compose down
 ```
 
-The named volume at `/app/dist/storage` survives container replacement and `docker compose down`. Adding `--volumes` deletes the database and uploaded files.
+The named volume at `/app/storage` survives container replacement and `docker compose down`. Adding `--volumes` deletes the database and uploaded files.
 
 The Compose project name is `nococrm`, keeping its volume separate from other NocoBase playgrounds. For multiple independent playgrounds, give each one its own project name and host port. If port 13000 is already in use, change both `NOCOBASE_PORT` and `APP_PUBLIC_ORIGIN` in `.env`.

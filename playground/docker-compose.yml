@@ -21,7 +21,7 @@ services:
         read_only: true
         bind:
           create_host_path: false
-      - nocobase_data:/app/dist/storage
+      - nocobase_data:/app/storage
     healthcheck:
       test:
         - CMD
