@@ -34,9 +34,11 @@ ENV NODE_ENV=production \
     APP_BASE_PATH=${APP_BASE_PATH}
 
 # Keep the dist directory name: the runtime uses it to resolve built client paths.
+# Persistent storage (database, uploads, sessions, logs, workflow artifacts) lives
+# one level up at /app/storage, the deployment root the compiled runtime declares.
 WORKDIR /app/dist
 COPY --from=build --chown=node:node /app/dist/ ./
-RUN mkdir -p storage && chown node:node storage
+RUN mkdir -p /app/storage && chown node:node /app/storage
 USER node
 EXPOSE 13000
 CMD ["pnpm", "start"]

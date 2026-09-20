@@ -33,7 +33,7 @@ database:
     main:
       dialect: sqlite
       # Keep the database inside the persistent storage volume.
-      filename: /app/dist/storage/crm.sqlite
+      filename: /app/storage/crm.sqlite
       debug: false
       schemaManagement: managed
       migrations:

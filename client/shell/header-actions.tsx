@@ -3,6 +3,12 @@ import { useTranslation } from '@nocobase/i18n/client';
 import { MonitorCog, Settings, Sparkles } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { Link, useLocation } from 'react-router';
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from '@/components/ui/tooltip';
 
 import {
   navigationPages,
@@ -37,51 +43,74 @@ export function HeaderActions(): ReactElement {
       ? 'dev'
       : 'app';
   return (
-    <div className='flex shrink-0 items-center gap-2'>
-      {surface === 'app' ? (
-        <NotificationBell className={ACTION_LINK_CLASS} />
-      ) : null}
-      {surface === 'app' ? (
-        <button
-          aria-label='AI 助手'
-          className={ACTION_LINK_CLASS}
-          title='AI 助手'
-          type='button'
-          onClick={() =>
-            window.dispatchEvent(
-              new CustomEvent('crm-assistant', { detail: {} }),
-            )
-          }
-        >
-          <Sparkles className='size-5' />
-        </button>
-      ) : null}
-      {/* The dev entry sits left of settings and exists only while developing: a production build evaluates this to
+    <TooltipProvider>
+      <div className='flex shrink-0 items-center gap-2'>
+        {surface === 'app' ? (
+          <NotificationBell className={ACTION_LINK_CLASS} />
+        ) : null}
+        {surface === 'app' ? (
+          <Tooltip>
+            <TooltipTrigger
+              render={<button className={ACTION_LINK_CLASS} type='button' />}
+              aria-label='AI 助手'
+              onClick={() =>
+                window.dispatchEvent(
+                  new CustomEvent('crm-assistant', { detail: {} }),
+                )
+              }
+            >
+              <Sparkles className='size-5' />
+            </TooltipTrigger>
+            <TooltipContent side='bottom'>AI 助手</TooltipContent>
+          </Tooltip>
+        ) : null}
+        {/* The dev entry sits left of settings and exists only while developing: a production build evaluates this to
           false and drops the link along with the whole dev surface it points at. */}
-      {import.meta.env.DEV ? (
-        <Link
-          aria-current={surface === 'dev' ? 'page' : undefined}
-          aria-label={t('dev.title', { defaultValue: 'Dev tools' })}
-          className={`${ACTION_LINK_CLASS} ${surface === 'dev' ? 'bg-muted' : ''}`}
-          title={t('dev.title', { defaultValue: 'Dev tools' })}
-          to='/dev'
-        >
-          <MonitorCog className='size-5' />
-        </Link>
-      ) : null}
-      {hasSettings ? (
-        <Link
-          aria-current={surface === 'settings' ? 'page' : undefined}
-          aria-label={t('settings.title', { defaultValue: 'Settings' })}
-          className={`${ACTION_LINK_CLASS} ${surface === 'settings' ? 'bg-muted' : ''}`}
-          title={t('settings.title', { defaultValue: 'Settings' })}
-          to='/settings'
-        >
-          <Settings className='size-5' />
-        </Link>
-      ) : null}
-      <ThemeSettings />
-      <UserMenu />
-    </div>
+        {import.meta.env.DEV ? (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Link
+                  to='/dev'
+                  aria-current={surface === 'dev' ? 'page' : undefined}
+                  className={`${ACTION_LINK_CLASS} ${surface === 'dev' ? 'bg-muted' : ''}`}
+                />
+              }
+              aria-label={t('dev.componentExamples', {
+                defaultValue: 'Component examples',
+              })}
+            >
+              <MonitorCog className='size-5' />
+            </TooltipTrigger>
+            <TooltipContent side='bottom'>
+              {t('dev.componentExamples', {
+                defaultValue: 'Component examples',
+              })}
+            </TooltipContent>
+          </Tooltip>
+        ) : null}
+        {hasSettings ? (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Link
+                  to='/settings'
+                  aria-current={surface === 'settings' ? 'page' : undefined}
+                  className={`${ACTION_LINK_CLASS} ${surface === 'settings' ? 'bg-muted' : ''}`}
+                />
+              }
+              aria-label={t('settings.title', { defaultValue: 'Settings' })}
+            >
+              <Settings className='size-5' />
+            </TooltipTrigger>
+            <TooltipContent side='bottom'>
+              {t('settings.title', { defaultValue: 'Settings' })}
+            </TooltipContent>
+          </Tooltip>
+        ) : null}
+        <ThemeSettings />
+        <UserMenu />
+      </div>
+    </TooltipProvider>
   );
 }
