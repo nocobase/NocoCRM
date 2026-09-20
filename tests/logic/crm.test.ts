@@ -727,6 +727,48 @@ describe('CRM API security and domain rules', () => {
       (await request('/approvals/' + pending.id, 'rep', 'DELETE')).status,
     ).toBe(200);
   });
+  it('lets only an administrator delete a decided approval', async () => {
+    const opportunity = (
+      await service.list(actor('rep'), 'opportunities')
+    ).data.find((r) => r.ownerId === 'rep')!;
+    const rejected = await service.save(actor('rep'), 'approvals', {
+      name: 'Mistaken request',
+      opportunityId: opportunity.id,
+      topic: 'discount',
+      description: 'Filed by mistake',
+      approverId: 'manager',
+    });
+    await service.approvalAction(actor('rep'), rejected.id, 'submit');
+    await service.approvalAction(actor('manager'), rejected.id, 'reject');
+    expect(
+      (await service.detail(actor('rep'), 'approvals', rejected.id)).permissions
+        .delete,
+    ).toBe(false);
+    expect(
+      (await service.detail(actor('manager'), 'approvals', rejected.id))
+        .permissions.delete,
+    ).toBe(false);
+    expect(
+      (await request('/approvals/' + rejected.id, 'rep', 'DELETE')).status,
+    ).toBe(409);
+    // A manager deletes only what they created, so the record is not theirs.
+    expect(
+      (await request('/approvals/' + rejected.id, 'manager', 'DELETE')).status,
+    ).toBe(404);
+    const detail = await service.detail(
+      actor('admin'),
+      'approvals',
+      rejected.id,
+    );
+    expect(detail.permissions.delete).toBe(true);
+    expect(detail.permissions.edit).toBe(false);
+    expect(
+      (await request('/approvals/' + rejected.id, 'admin', 'DELETE')).status,
+    ).toBe(200);
+    await expect(
+      service.get(actor('admin'), 'approvals', rejected.id),
+    ).rejects.toMatchObject({ code: 'notFound' });
+  });
   it('does not let a guessed private file ID become a readable attachment', async () => {
     const query = database.query();
     await query

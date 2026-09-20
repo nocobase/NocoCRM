@@ -574,7 +574,9 @@ export class CrmService {
         canEdit &&
         record.ownerId === actor.id &&
         ['draft', 'withdrawn'].includes(toText(record.status));
-      canDelete = canDelete && canEdit;
+      canDelete =
+        canDelete &&
+        (canEdit || (await capability(actor, 'manage', 'settings')));
     }
     // Counts of what would block a delete, keyed by child object, so the
     // confirmation dialog can name them instead of failing afterwards.
@@ -1108,10 +1110,13 @@ export class CrmService {
     const record = await this.get(actor, entity, id, tx, 'delete');
     if (entity === 'leads' && record.status === 'converted')
       throw new CrmError('convertedReadOnly', 409);
+    // An approval stays with its applicant while it is theirs to change; an
+    // administrator may remove one in any state (a mistaken or test request).
     if (
       entity === 'approvals' &&
       (record.ownerId !== actor.id ||
-        !['draft', 'withdrawn'].includes(toText(record.status)))
+        !['draft', 'withdrawn'].includes(toText(record.status))) &&
+      !(await capability(actor, 'manage', 'settings'))
     )
       throw new CrmError('approvalLocked', 409);
     for (const [child, field] of deletionChecks(entity))

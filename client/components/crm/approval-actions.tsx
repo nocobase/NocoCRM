@@ -59,8 +59,11 @@ export function ApprovalActions({
     approval.approverId === meta.userId &&
     approval.ownerId !== meta.userId &&
     status === 'pending';
+  // An administrator may delete an approval in any state.
   const canDelete =
-    withDelete && canSubmit && Boolean(meta.permissions.approvals.delete);
+    withDelete &&
+    (canSubmit || meta.settingsAccess) &&
+    Boolean(meta.permissions.approvals.delete);
   if (!canSubmit && !canWithdraw && !canDecide && !canDelete) return null;
   const run = async (fn: () => Promise<void>): Promise<void> => {
     setBusy(true);
@@ -184,7 +187,9 @@ export function ApprovalActions({
             entity: text('entity.approvals'),
             name: toText(approval.name),
           })}
-          description={text('deleteApprovalHint')}
+          description={text(
+            canSubmit ? 'deleteApprovalHint' : 'deleteDecidedApprovalHint',
+          )}
           busy={busy}
           onCancel={() => setConfirmDelete(false)}
           onConfirm={() =>

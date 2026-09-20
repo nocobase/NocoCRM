@@ -1173,7 +1173,9 @@ export default function EntityDetail({
                     entity === 'contacts'
                       ? 'deleteContactHint'
                       : entity === 'approvals'
-                        ? 'deleteApprovalHint'
+                        ? ['draft', 'withdrawn'].includes(toText(record.status))
+                          ? 'deleteApprovalHint'
+                          : 'deleteDecidedApprovalHint'
                         : entity === 'activities'
                           ? 'deleteActivityHint'
                           : 'deleteHint',

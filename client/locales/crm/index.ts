@@ -129,6 +129,10 @@ const wording = {
     'This request and its attachments and history are deleted; nothing else changes. This cannot be undone.',
     '这条申请及其附件、变更记录将被删除，所属商机不受影响。此操作无法撤销。',
   ],
+  deleteDecidedApprovalHint: [
+    'This request has been submitted or decided. Deleting it removes the decision and its history for the applicant and the approver too; the opportunity is untouched. This cannot be undone.',
+    '这条申请已提交或已有审批结果。删除后申请人和审批人都不再看到它及其审批记录，所属商机不受影响。此操作无法撤销。',
+  ],
   deleteActivityHint: [
     'This activity and its attachments and history are deleted; the lead, account or opportunity it was linked to is untouched. This cannot be undone.',
     '这条活动及其附件、变更记录将被删除，关联的线索、客户或商机不受影响。此操作无法撤销。',
