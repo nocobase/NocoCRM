@@ -1,5 +1,5 @@
 import type { DatabaseConnection } from '@nocobase/db';
-import type { AppAuthorization } from '@nocobase/app-plugin-authorization';
+import type { AppAuthorizationService } from '@nocobase/app-plugin-authorization/server';
 import {
   UserManagementError,
   UserRoleScopeError,
@@ -16,12 +16,12 @@ const ADMINISTRATOR = 'system-administrator';
 const USERS_I18N_NAMESPACE = '@nocobase/app-plugin-users';
 
 export function createCrmUserRoleScope(
-  authorization: Pick<AppAuthorization, 'permissionSets'>,
+  authorization: Pick<AppAuthorizationService, 'permissionSets'>,
 ): UserRoleScope {
   const managed = roles.map(roleKey);
   const sets = (connection?: DatabaseConnection) =>
     connection
-      ? authorization.permissionSets.withConnection(connection)
+      ? authorization.permissionSets.withTransaction(connection)
       : authorization.permissionSets;
   const assignedRole = (
     assignments: readonly {
@@ -66,7 +66,9 @@ export function createCrmUserRoleScope(
           // The permission set's title is bilingual because the
           // Authorization pages do not translate; the Users page does, so
           // it shows the CRM's own wording in the current language.
-          label: set?.title?.trim() || roleKey(role),
+          label:
+            (typeof set?.title === 'string' ? set.title.trim() : '') ||
+            roleKey(role),
           labelI18nKey: `crm.options.${role}`,
           labelI18nNs: 'crm',
         };

@@ -1,9 +1,14 @@
 import type { QueryAdapter, Row } from '@nocobase/db';
-import type { AppAuthorization } from '@nocobase/app-plugin-authorization';
+import type { AppAuthorizationService } from '@nocobase/app-plugin-authorization/server';
 import { convertLead } from './conversion.js';
 import { CrmError, definitions, object, stages, toText } from './schema.js';
 import { CrmService } from './service.js';
-import { requireCapability, roleKey, type Actor } from './authorization.js';
+import {
+  listUsers,
+  requireCapability,
+  roleKey,
+  type Actor,
+} from './authorization.js';
 
 // The demo dataset: 云策数字咨询, a fictional digital consulting firm, with
 // accounts, contacts, leads, opportunities, activities and approvals dated
@@ -113,7 +118,7 @@ function zoneOffsetMinutes(timeZone: string, date: Date): number {
 
 export async function populateDemo(
   service: CrmService,
-  authz: AppAuthorization,
+  authz: AppAuthorizationService,
   actor: Actor,
   accounts: DemoAccountCreator,
 ): Promise<DemoStatus> {
@@ -130,7 +135,7 @@ export async function populateDemo(
 
   // Accounts: reuse one that exists by username, create the rest, and make
   // sure each holds its demo role and nothing else among the CRM roles.
-  const existing = await authz.administration.listUsers();
+  const existing = await listUsers(service.database);
   const userIds: Record<string, string> = {};
   for (const account of demoAccounts) {
     const found = existing.find((u) => u.username === account.username);

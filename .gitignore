@@ -27,3 +27,6 @@ coverage/
 
 # pnpm's local content store.
 /.pnpm-store
+
+# Generated mirror of .agents/skills for Claude Code (skills:sync).
+/.claude/skills/

@@ -101,11 +101,7 @@ export async function resolveTitles(
     } catch {
       return;
     }
-    const readable = new Set(
-      access.fields.output === '*'
-        ? definitions[entity].fields.map((f) => f.key)
-        : access.fields.output,
-    );
+    const readable = new Set(access.fields);
     const columns = [
       'id',
       'name',
@@ -126,7 +122,7 @@ export async function resolveTitles(
         .selectFrom(definitions[entity].table)
         .select(columns)
         .where('id', 'in', chunk)
-        .where((eb) => compileFilter(eb, access.filter))
+        .where((eb) => compileFilter(eb, access.scope))
         .execute();
       (fetched[entity] ??= []).push(...found);
     }

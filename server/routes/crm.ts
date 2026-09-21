@@ -140,7 +140,7 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
               fields:
                 action === 'read'
                   ? outputFields(entity, access)
-                  : access.fields.input,
+                  : access.fields,
             };
           } catch {
             actions[action] = false;

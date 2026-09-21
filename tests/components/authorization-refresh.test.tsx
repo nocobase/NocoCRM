@@ -2,18 +2,25 @@ import { render, renderHook, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import type { AppClientRegisteredRoute } from '@nocobase/app-client/plugins';
 import { useRouteNavigation } from '../../client/routing/route-navigation.js';
-import { ClientPage } from '../../client/routing/client-route.js';
-const state = vi.hoisted(() => ({
-  revision: 0,
-  can: vi.fn(),
-  decision: { can: true } as { can: boolean } | undefined,
-}));
+import { ClientRoute } from '../../client/routing/client-route.js';
+const state = vi.hoisted(() => {
+  const can = vi.fn();
+  return {
+    revision: 0,
+    can,
+    // One client object for the whole test: the navigation hook keys its
+    // result on the client's identity.
+    client: { can: (check: unknown) => can(check) as Promise<boolean> },
+    decision: true as boolean | undefined,
+  };
+});
 vi.mock('@nocobase/app-plugin-authorization/client', () => ({
   useAuthorizationRevision: () => state.revision,
-}));
-vi.mock('@refinedev/core', () => ({
-  useCanWithoutCache: () => ({ can: state.can }),
-  useCan: () => ({ data: state.decision, isLoading: false }),
+  useAuthorizationClient: () => state.client,
+  useCan: () => ({
+    can: state.decision === true,
+    isPending: state.decision === undefined,
+  }),
 }));
 vi.mock('@nocobase/i18n/client', () => ({
   NamespaceScope: ({ children }: { children: React.ReactNode }) => children,
@@ -27,8 +34,12 @@ vi.mock('@nocobase/i18n/client', () => ({
 beforeEach(() => {
   state.revision = 0;
   state.can.mockReset();
-  state.decision = { can: true };
+  state.decision = true;
 });
+const authz = {
+  resource: { type: 'page', id: 'users' },
+  action: 'access',
+} as const;
 it('hides a mounted menu while a new permission revision is checked', async () => {
   const routes = [
     {
@@ -37,17 +48,15 @@ it('hides a mounted menu while a new permission revision is checked', async () =
       path: '/settings/users',
       packageName: 'crm',
       auth: 'required',
-      access: { resource: 'users', action: 'read' },
+      authz,
       navigation: { title: 'Users' },
       componentLoader: async () => ({ default: () => null }),
     },
   ] as AppClientRegisteredRoute[];
-  state.can.mockResolvedValue({ can: true });
-  const { result, rerender } = renderHook(() =>
-    useRouteNavigation(routes, true),
-  );
+  state.can.mockResolvedValue(true);
+  const { result, rerender } = renderHook(() => useRouteNavigation(routes));
   await waitFor(() => expect(result.current.items).toHaveLength(1));
-  state.can.mockResolvedValue({ can: false });
+  state.can.mockResolvedValue(false);
   state.revision++;
   rerender();
   expect(result.current.items).toHaveLength(0);
@@ -55,19 +64,22 @@ it('hides a mounted menu while a new permission revision is checked', async () =
   expect(result.current.items).toHaveLength(0);
 });
 it('removes already loaded page content when authorization has no valid result', async () => {
-  const page = {
-    access: { resource: 'users', action: 'read' },
-    checkAccess: true,
-    componentLoader: async () => ({ default: () => <p>Protected content</p> }),
-    kind: 'page' as const,
-    label: 'Users',
+  const route = {
+    id: 'users',
+    name: 'users',
+    path: '/settings/users',
     packageName: 'crm',
-  };
-  const { rerender } = render(<ClientPage page={page} />);
+    auth: 'required',
+    authz,
+    componentLoader: async () => ({ default: () => <p>Protected content</p> }),
+  } as unknown as AppClientRegisteredRoute;
+  const { rerender } = render(<ClientRoute route={route} />);
   await screen.findByText('Protected content');
   state.decision = undefined;
   state.revision++;
-  rerender(<ClientPage page={page} />);
+  rerender(<ClientRoute route={route} />);
   expect(screen.queryByText('Protected content')).not.toBeInTheDocument();
+  state.decision = false;
+  rerender(<ClientRoute route={route} />);
   expect(screen.getByText('Access denied')).toBeInTheDocument();
 });

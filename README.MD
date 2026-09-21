@@ -132,8 +132,8 @@ client/                  Browser application
 ├── pages/               Your page components
 ├── components/          Your components
 │   └── ui/              shadcn/ui primitives
-├── layouts/             Settings and dev tool shells
-├── shell/               Authenticated app shell: header, sidebar, user menu
+├── layouts/             App, Settings and Dev layouts
+│   └── components/      Layout containers, navigation, branding and account controls
 ├── routing/             Route rendering, access checks, loading and error UI
 ├── locales/             Your translated strings
 ├── theme/               App-wide theme and light/dark selector
@@ -218,7 +218,7 @@ Plugins add features to your application. Let these commands edit `package.json`
 | `pnpm package:remove <name>`    | Remove a direct NocoBase package and its synchronized Skill |
 | `pnpm skills:sync`              | Sync direct NocoBase package Skills into `.agents/skills/`  |
 
-`pnpm plugin:skills:sync` remains an alias for older automation; use `pnpm skills:sync` in new scripts and documentation.
+Use `pnpm skills:sync` to synchronize Skills. The CLI retains `nocobase plugin skills sync` for older applications, but new templates do not provide a separate script alias.
 
 Use a full package name, as with `plugin:register` and `plugin:unregister`; short names such as `authentication` also work. The optional name is a positional argument, not `--plugin`.
 
@@ -251,12 +251,8 @@ An older application with the new CLI but without the script can run `pnpm nocob
 
 | Script                      | What it does                                                                                |
 | --------------------------- | ------------------------------------------------------------------------------------------- |
-| `pnpm client:inspect`       | Print the resolved client composition: routes, providers, and which file owns each          |
-| `pnpm server:inspect`       | Print the resolved server composition                                                       |
 | `pnpm server:deps:retarget` | Replace native binaries with the target platform's; part of `pnpm build`                    |
 | `pnpm server:deps:verify`   | Check that everything your server and CLI import reaches a deployment; part of `pnpm build` |
-
-These read static declarations. They report what is wired, not whether it works — a passing inspection is not a substitute for tests.
 
 #### Deploying to a different machine
 
@@ -363,6 +359,10 @@ node -p "process.versions.modules"                # on the server: the ABI
 Rebuild with a matching `--target` and `--node-version`. ABI 115 is Node 20, 127 is Node 22, 137 is Node 24, 147 is Node 26.
 
 **`no prebuilt binary for <target>` during the build.** The package publishes no build for that combination. Check whether the version you depend on supports the target, and whether a musl build exists if you asked for one — musl coverage is thinner than glibc.
+
+## Strict startup verification
+
+Set `NOCOBASE_STRICT_STARTUP=true` when running `pnpm dev` or `pnpm start` in automated verification. Startup failures, including job import failures, exit nonzero after resource cleanup. Strict dev runs the server without watch mode so a failed server cannot remain hidden behind a watcher; restart the command after server or configuration changes. Client HMR remains available. Omit the variable or set it to `false` for normal development with server hot reload. Request errors and individual job execution failures do not terminate the application.
 
 ## Configuration
 

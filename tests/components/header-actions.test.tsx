@@ -1,30 +1,19 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { beforeEach, expect, it, vi } from 'vitest';
-import { HeaderActions } from '../../client/shell/header-actions.js';
+import { expect, it, vi } from 'vitest';
+import { HeaderActions } from '../../client/layouts/components/header-actions.js';
 
-vi.mock('@nocobase/app-client', () => ({
-  useClientApplication: () => ({ runtime: { settingsRouteTree: [] } }),
-}));
-
-const state = vi.hoisted(() => ({ pages: [] as unknown[] }));
-vi.mock('../../client/routing/route-navigation.js', () => ({
-  useRouteNavigation: () => ({ items: state.pages }),
-  navigationPages: (items: unknown[]) => items,
-}));
 vi.mock('../../client/theme/index.js', () => ({ ThemeSettings: () => null }));
-vi.mock('../../client/shell/user-menu.js', () => ({ UserMenu: () => null }));
+vi.mock('../../client/layouts/components/user-menu.js', () => ({
+  UserMenu: () => null,
+}));
 vi.mock('../../client/components/crm/notification-bell.js', () => ({
   NotificationBell: () => <button aria-label='Notifications' />,
 }));
-beforeEach(() => {
-  state.pages = [];
-});
-
 it('hides Settings when navigation has no accessible pages', () => {
   render(
     <MemoryRouter>
-      <HeaderActions />
+      <HeaderActions showSettings={false} showDev={false} />
     </MemoryRouter>,
   );
   expect(
@@ -33,10 +22,9 @@ it('hides Settings when navigation has no accessible pages', () => {
 });
 
 it('keeps Settings visible and current on an accessible settings page', () => {
-  state.pages = [{}];
   render(
     <MemoryRouter initialEntries={['/settings/users']}>
-      <HeaderActions />
+      <HeaderActions showSettings showDev={false} />
     </MemoryRouter>,
   );
   expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute(
@@ -57,7 +45,7 @@ it('preserves CRM notifications and the assistant action on application pages', 
   try {
     render(
       <MemoryRouter initialEntries={['/leads']}>
-        <HeaderActions />
+        <HeaderActions showSettings showDev={false} />
       </MemoryRouter>,
     );
     expect(
