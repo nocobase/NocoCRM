@@ -341,10 +341,6 @@ const wording = {
   download: ['Download', '下载'],
   preview: ['Preview', '预览'],
   close: ['Close', '关闭'],
-  noPreview: [
-    'This kind of file cannot be shown here. Download it to open it.',
-    '这类文件无法在线预览，请下载后打开。',
-  ],
   month: ['Month', '月份'],
   previousMonth: ['Previous month', '上个月'],
   nextMonth: ['Next month', '下个月'],

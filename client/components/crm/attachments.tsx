@@ -1,15 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
+import type { FileRecord } from '@nocobase/app-plugin-file/client';
 import { Download, Paperclip, Trash2, Upload } from 'lucide-react';
 import { useRef, useState, type ReactElement, type ReactNode } from 'react';
+import { FilePreviewDialog } from '@/extensions/nocobase-file-component-ui';
 import { Button } from '../ui/button.js';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/dialog.js';
 import {
   PAGE_SIZE,
   arrayValues,
@@ -23,7 +16,6 @@ import {
   type Data,
   type Entity,
 } from './api.js';
-import { Markdown } from './markdown.js';
 
 // Attachments, wherever they appear: the list of files on a record's tab
 // and in a dialog's form, the preview dialog a file opens in, and the drop
@@ -33,136 +25,31 @@ export interface CrmFile {
   id: string;
   filename: string;
   createdAt: string;
-  // The stored type when the browser can show it inline, otherwise null.
+  // The stored type, or null when the upload recorded none.
   mimeType: string | null;
   size: number | null;
   url: string;
 }
 
-// "1.2 MB" style sizes for the preview's subtitle.
-function fileSize(bytes: number): string {
-  const units = ['B', 'KB', 'MB', 'GB'];
-  let value = bytes;
-  let unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit += 1;
-  }
-  return `${unit ? value.toFixed(1) : String(value)} ${units[unit]}`;
-}
-
-// A Markdown attachment, fetched as text and rendered on the client. HTML
-// inside it is escaped rather than rendered, so an upload cannot run
-// anything in the page.
-function MarkdownPreview({ url }: { url: string }): ReactElement {
-  const { text } = useCrmText();
-  const { data, error, isLoading } = useQuery({
-    queryKey: ['crm', 'file-text', url],
-    queryFn: async () => {
-      const response = await fetch(url, { credentials: 'same-origin' });
-      if (!response.ok) throw new Error(String(response.status));
-      return response.text();
-    },
-    staleTime: 60000,
-  });
-  if (isLoading)
-    return <p className='text-sm text-muted-foreground'>{text('loading')}</p>;
-  if (error || data === undefined)
-    return (
-      <p className='rounded-md border border-dashed px-4 py-8 text-center text-sm text-muted-foreground'>
-        {text('noPreview')}
-      </p>
-    );
-  return (
-    <Markdown className='min-h-0 flex-1 overflow-auto rounded-md border px-5 py-4 text-sm leading-relaxed'>
-      {data}
-    </Markdown>
-  );
-}
-
-// Opening an attachment shows it in a dialog rather than saving it: images
-// and PDFs render inline, Markdown is rendered from its text, anything else
-// is named and offered for download. The download stays a click away in the
-// footer either way.
-function FilePreview({
-  file,
-  onClose,
-  timeZone,
-}: {
-  file: CrmFile | null;
-  onClose: () => void;
-  timeZone: string;
-}): ReactElement {
-  const { text, language } = useCrmText();
-  const type = file?.mimeType ?? '';
-  const inlineUrl = file ? `${file.url}?inline=1` : '';
-  const kind = type.startsWith('image/')
-    ? 'image'
-    : type === 'application/pdf' || type === 'text/plain'
-      ? 'frame'
-      : type === 'text/markdown' || type === 'text/x-markdown'
-        ? 'markdown'
-        : 'none';
-  return (
-    <Dialog open={file !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent
-        className={
-          kind === 'none'
-            ? 'sm:max-w-md'
-            : 'flex max-h-[90vh] flex-col sm:max-w-4xl'
-        }
-      >
-        <DialogHeader>
-          <DialogTitle className='break-all'>{file?.filename}</DialogTitle>
-          <DialogDescription>
-            {file
-              ? [
-                  file.size === null ? null : fileSize(file.size),
-                  localDate(file.createdAt, language, timeZone),
-                ]
-                  .filter(Boolean)
-                  .join(' · ')
-              : null}
-          </DialogDescription>
-        </DialogHeader>
-        {kind === 'image' ? (
-          <div className='flex min-h-0 flex-1 items-center justify-center overflow-auto rounded-md bg-muted/40 p-2'>
-            <img
-              src={inlineUrl}
-              alt={file?.filename ?? ''}
-              className='max-h-[70vh] max-w-full object-contain'
-            />
-          </div>
-        ) : kind === 'frame' ? (
-          <iframe
-            src={inlineUrl}
-            title={file?.filename ?? ''}
-            className='h-[70vh] w-full rounded-md border bg-background'
-          />
-        ) : kind === 'markdown' ? (
-          <MarkdownPreview url={inlineUrl} />
-        ) : (
-          <p className='rounded-md border border-dashed px-4 py-8 text-center text-sm text-muted-foreground'>
-            {text('noPreview')}
-          </p>
-        )}
-        <DialogFooter>
-          <Button variant='outline' onClick={onClose}>
-            {text('close')}
-          </Button>
-          {file ? (
-            <Button
-              nativeButton={false}
-              render={<a href={file.url} download={file.filename} />}
-            >
-              <Download />
-              {text('download')}
-            </Button>
-          ) : null}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+// The preview dialog is the file plugin's (client/extensions/
+// nocobase-file-component-ui): images, PDF, text and Markdown, and Word,
+// Excel and PowerPoint rendered in the browser. It takes the plugin's file
+// record shape; the CRM serves the bytes from its own route, with
+// "?inline=1" so the browser may show what it renders itself.
+function fileRecord(file: CrmFile): FileRecord {
+  const dot = file.filename.lastIndexOf('.');
+  return {
+    id: file.id,
+    disk: '',
+    key: '',
+    filename: file.filename,
+    ext: dot < 0 ? '' : file.filename.slice(dot + 1).toLowerCase(),
+    mimeType: file.mimeType ?? 'application/octet-stream',
+    size: file.size ?? 0,
+    createdAt: file.createdAt,
+    updatedAt: file.createdAt,
+    contentUrl: `${file.url}?inline=1`,
+  };
 }
 
 export function FileLinks({
@@ -179,7 +66,7 @@ export function FileLinks({
   const { data: meta } = useMetadata();
   const attachmentStep = PAGE_SIZE;
   const [shown, setShown] = useState(attachmentStep);
-  const [previewing, setPreviewing] = useState<CrmFile | null>(null);
+  const [previewing, setPreviewing] = useState<string | null>(null);
   const timeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
   const ids = files.map(toText).filter(Boolean);
   const { data } = useCrmQuery<CrmFile[]>(
@@ -200,16 +87,23 @@ export function FileLinks({
       )
     : ids;
   const visible = ordered.slice(0, shown);
+  // The dialog pages through the listed files in the order shown.
+  const records = visible.flatMap((id) => {
+    const file = data?.find((f) => f.id === id);
+    return file ? [fileRecord(file)] : [];
+  });
+  const previewIndex = records.findIndex((r) => r.id === previewing);
   if (!ids.length)
     return (
       <p className='text-sm text-muted-foreground'>{text('noAttachments')}</p>
     );
   return (
     <ul className='space-y-1'>
-      <FilePreview
-        file={previewing}
-        onClose={() => setPreviewing(null)}
-        timeZone={timeZone}
+      <FilePreviewDialog
+        files={records}
+        initialIndex={Math.max(previewIndex, 0)}
+        open={previewIndex >= 0}
+        onOpenChange={(open) => !open && setPreviewing(null)}
       />
       {visible.map((id) => {
         const file = data?.find((f) => f.id === id);
@@ -226,7 +120,7 @@ export function FileLinks({
                   type='button'
                   className='inline-flex min-w-0 items-center gap-2 text-left text-sm text-primary hover:underline'
                   aria-label={`${toText(text('preview'))} ${file.filename}`}
-                  onClick={() => setPreviewing(file)}
+                  onClick={() => setPreviewing(file.id)}
                 >
                   <Paperclip className='size-3.5 shrink-0 text-muted-foreground' />
                   <span className='break-all'>{file.filename}</span>

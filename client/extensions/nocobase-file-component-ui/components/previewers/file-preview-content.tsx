@@ -2,8 +2,11 @@ import { messageKey } from '../../lib/message-key.js';
 import { useTranslation } from '@nocobase/i18n/client';
 import type { FileRecord } from '../../types';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+// Application change: Markdown attachments render with the CRM's typography
+// (the same component as the assistant's replies) rather than the Registry
+// copy's `prose` classes, which need the Tailwind typography plugin this
+// application does not carry and otherwise show a plain wall of text.
+import { Markdown } from '@/components/crm/markdown';
 
 import {
   resolveOfficeEmbedUrl,
@@ -11,7 +14,6 @@ import {
   type FilePreviewKind,
 } from '../../lib/file-preview';
 import { Button } from '@/components/ui/button';
-import { resolveSafeFileUrl } from '../../lib/file-url';
 import { FileThumbnail } from '../file-thumbnail';
 
 import { OfficeOpenXmlPreview } from './office-open-xml-preview';
@@ -110,21 +112,9 @@ function MarkdownPreview(inputProps: { readonly text?: string }): ReactElement {
       </div>
     );
   return (
-    <article className='prose max-h-[70vh] max-w-none overflow-auto rounded-md bg-muted/30 p-4'>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        urlTransform={(url) => resolveSafeFileUrl(url) ?? ''}
-        components={{
-          a: ({ children, ...props }) => (
-            <a {...props} target='_blank' rel='noreferrer'>
-              {children}
-            </a>
-          ),
-        }}
-      >
-        {text}
-      </ReactMarkdown>
-    </article>
+    <Markdown className='max-h-[70vh] overflow-auto rounded-md border px-5 py-4 text-sm leading-relaxed'>
+      {text}
+    </Markdown>
   );
 }
 

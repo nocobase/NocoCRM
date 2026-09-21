@@ -401,10 +401,11 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         })),
       });
     });
-    // The stored type of a file, when it is one the preview dialog can
-    // show (the browser renders images, PDF and plain text itself; the
-    // client renders Markdown from the text); anything else is offered
-    // as a download only.
+    // The stored type of a file, when it is one the browser may render on
+    // its own from "?inline=1" (images, PDF, plain text, Markdown as text).
+    // The preview dialog is the file plugin's, which decides what it can
+    // show from the stored type and the extension and fetches the bytes
+    // itself for Office documents, so the list carries the stored type.
     const previewType = (file: { mimeType?: unknown }): string | null => {
       const type = toText(file.mimeType ?? '').toLowerCase();
       return /^image\/(png|jpeg|gif|webp|svg\+xml|bmp|avif)$/.test(type) ||
@@ -438,7 +439,7 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
             id: toText(file.id),
             filename: toText(file.filename),
             createdAt: toText(file.createdAt),
-            mimeType: previewType(file) ?? null,
+            mimeType: file.mimeType == null ? null : toText(file.mimeType),
             size: file.size == null ? null : Number(file.size),
             url: `${toText(app.publicBasePath)}/api/crm/files/${toText(encodeURIComponent(toText(file.id)))}`,
           });
