@@ -114,7 +114,10 @@ const settingsRoutes: AppClientRouteContribution = defineSettingsRoutes([
     name: 'crm-settings',
     path: '/crm',
     navigation: { title: 'crm.settings', icon: Settings2 },
-    access: { resource: 'authorization.settings.crm', action: 'manage' },
+    authz: {
+      resource: { type: 'settings', id: 'crm' },
+      action: 'manage',
+    },
     componentLoader: () => import('./pages/crm-settings.js'),
   },
 ]);

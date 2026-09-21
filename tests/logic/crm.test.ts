@@ -23,8 +23,8 @@ import {
 import {
   createAppAuthorization,
   authorizationToken,
-  type AppAuthorization,
-} from '@nocobase/app-plugin-authorization';
+  type AppAuthorizationService,
+} from '@nocobase/app-plugin-authorization/server';
 import { authenticationToken } from '@nocobase/app-plugin-authentication';
 import { createAppPaths } from '@nocobase/app-server/config';
 import { ServiceContainer } from '@nocobase/service-provider';
@@ -54,7 +54,7 @@ import type { Application } from '@nocobase/app-server/application';
 import type { AIManager } from '@nocobase/ai-employee';
 
 let database: DatabaseManager;
-let authorization: AppAuthorization;
+let authorization: AppAuthorizationService;
 let service: CrmService;
 // Users whose password the demo import set back through the users plugin.
 const passwordResets: string[] = [];
@@ -67,12 +67,14 @@ function inlineWorkflows(crm: () => CrmService) {
     input: Record<string, unknown>;
     eventKey?: string;
   }[] = [];
+  // The run scripts read the database from the handle CrmProvider publishes.
+  (globalThis as Record<symbol, unknown>)[Symbol.for('nococrm.database')] =
+    database;
   const options = () =>
     ({
       services: {
         has: () => true,
-        resolve: (token: unknown) =>
-          token === databaseManagerToken ? database : crm(),
+        resolve: () => crm(),
       },
       signal: new AbortController().signal,
       logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -148,8 +150,11 @@ beforeAll(async () => {
     c.string('name');
     c.string('username');
     c.string('email');
-    // The authentication plugin's account-level switch, read by the CRM.
+    // The authentication plugin's account-level switch and deletion record,
+    // both read by the CRM.
     c.datetimeTz('disabledAt').nullable();
+    c.datetimeTz('deletedAt').nullable();
+    c.datetimeTz('createdAt').nullable();
   });
   await database
     .query()
@@ -177,7 +182,12 @@ beforeAll(async () => {
       ],
     })
     .latest();
-  authorization = createAppAuthorization({ connection: database.connection() });
+  authorization = createAppAuthorization({
+    connection: database.connection(),
+    // As in server/config/authorization.ts: the CRM administrator set is the
+    // root set, so administrators are unrestricted.
+    config: { permissionSets: { rootSet: roleKey('system-administrator') } },
+  });
   registerCrmResources(authorization);
   await provisionCrm(authorization, database);
   for (const [id, role] of [
@@ -306,13 +316,13 @@ describe('CRM API security and domain rules', () => {
     expect((await request('/metadata', 'admin')).status).toBe(200);
     expect(
       await actor('admin').scope.can({
-        resource: { type: 'authorization.settings', id: 'crm' },
+        resource: { type: 'settings', id: 'crm' },
         action: 'manage',
       }),
     ).toBe(true);
     expect(
       await actor('rep').scope.can({
-        resource: { type: 'authorization.settings', id: 'crm' },
+        resource: { type: 'settings', id: 'crm' },
         action: 'manage',
       }),
     ).toBe(false);
@@ -813,12 +823,9 @@ describe('CRM API security and domain rules', () => {
     await authorization.permissionSets.create({
       key: 'limited',
       grants: [
-        authorization.database.grant('crmLeads', {
-          read: { fields: { output: readable }, recordAccess: ['allRecords'] },
-          update: {
-            fields: { input: ['name'], output: readable },
-            recordAccess: ['allRecords'],
-          },
+        authorization.db.grant('crmLeads', {
+          read: { fields: readable, recordAccess: ['allRecords'] },
+          update: { fields: ['name'], recordAccess: ['allRecords'] },
         }),
       ],
     });

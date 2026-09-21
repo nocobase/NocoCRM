@@ -1,12 +1,24 @@
 import type { WorkflowRunOptions } from '@nocobase/app-plugin-workflow';
-import { databaseManagerToken } from '@nocobase/db';
+import type { DatabaseManager } from '@nocobase/db';
 
 // Queues one CRM message by inserting the outbox row the CRM's delivery
 // scan sends, keyed so the same message is never queued twice. A deployed
-// workflow runs from the artifact directory, not the application tree, so
-// this file reaches the database through the installed package's token
-// rather than importing the CRM service; each workflow package carries
-// its own copy for the same reason. Keep the copies identical.
+// workflow runs from the artifact directory on the storage disk, not the
+// application tree: nothing there resolves the application's packages, and
+// a `@nocobase/db` loaded from anywhere else would be another module
+// instance whose token the service container does not know. So this file
+// takes the database from the process-wide handle CrmProvider publishes
+// under a registry symbol, imports only types, and each workflow package
+// carries its own copy. Keep the copies identical.
+const DATABASE_HANDLE = Symbol.for('nococrm.database');
+function database(): DatabaseManager {
+  const handle = (globalThis as Record<symbol, unknown>)[DATABASE_HANDLE];
+  if (!handle)
+    throw new Error(
+      'The CRM database handle is not published; is CrmProvider registered?',
+    );
+  return handle as DatabaseManager;
+}
 const tables: Record<string, string> = {
   leads: 'crmLeads',
   accounts: 'crmAccounts',
@@ -62,7 +74,7 @@ export async function queueMessage(
   message: QueuedMessage,
 ): Promise<boolean> {
   if (message.recipientId === message.actorId) return false;
-  const query = options.services.resolve(databaseManagerToken).query();
+  const query = database().query();
   const record = await query
     .selectFrom(tables[message.entity])
     .select(['id', 'name'])

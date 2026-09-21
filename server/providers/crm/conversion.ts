@@ -165,7 +165,7 @@ export async function convertLead(
     })
     .where('id', '=', id)
     .where('status', '!=', 'converted')
-    .where((eb) => compileFilter(eb, access.filter))
+    .where((eb) => compileFilter(eb, access.scope))
     .execute();
   if (!updated.updatedCount) throw new CrmError('conflict', 409);
   // Conversion is the single authorized system operation that links all existing history,

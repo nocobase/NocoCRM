@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, it, vi } from 'vitest';
-import { UserMenu } from '../../client/shell/user-menu.js';
+import { UserMenu } from '../../client/layouts/components/user-menu.js';
 const state = vi.hoisted(() => ({
   signOut: vi.fn(),
   refresh: vi.fn(),
@@ -21,7 +21,7 @@ vi.mock('@nocobase/i18n/client', () => ({
   }),
 }));
 vi.mock('sonner', () => ({ toast: { error: state.error } }));
-vi.mock('../../client/shell/language-switcher.js', () => ({
+vi.mock('../../client/layouts/components/language-switcher.js', () => ({
   LanguageSwitcher: () => null,
 }));
 beforeEach(() => {

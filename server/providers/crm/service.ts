@@ -4,7 +4,7 @@ import { toText } from './schema.js';
 import { isCountry, isSubdivision, subdivisionCode } from './geography.js';
 import { randomUUID } from 'node:crypto';
 import type { DatabaseManager, QueryAdapter, Row } from '@nocobase/db';
-import type { AppAuthorization } from '@nocobase/app-plugin-authorization';
+import type { AppAuthorizationService } from '@nocobase/app-plugin-authorization/server';
 import {
   assertFields,
   capability,
@@ -15,6 +15,7 @@ import {
   roleKey,
   roles,
   type Actor,
+  listUsers,
 } from './authorization.js';
 import {
   CrmError,
@@ -103,7 +104,7 @@ const sellerRoles = ['sales-representative', 'sales-manager'];
 export class CrmService {
   constructor(
     public readonly database: DatabaseManager,
-    public readonly authz: AppAuthorization,
+    public readonly authz: AppAuthorizationService,
     // The workflow service, looked up when needed because it is registered
     // after this one; absent in tests and in an application without the
     // workflow plugin, which then does the follow-through directly.
@@ -242,7 +243,7 @@ export class CrmService {
   async users(actor: Actor): Promise<Row[]> {
     if (actor.users) return actor.users;
     await conditions(actor, 'leads', 'read');
-    const users = await this.authz.administration.listUsers();
+    const users = await listUsers(this.database);
     const assignments = await this.authz.permissionSets.listAssignments();
     const disabled = new Set(
       (
@@ -313,7 +314,7 @@ export class CrmService {
     let select = query
       .selectFrom(definition.table)
       .select(fields)
-      .where((eb) => compileFilter(eb, access.filter));
+      .where((eb) => compileFilter(eb, access.scope));
     for (const key of [
       'ownerId',
       'accountId',
@@ -436,7 +437,7 @@ export class CrmService {
       .selectFrom(definitions[entity].table)
       .select(fields)
       .where('id', '=', id)
-      .where((eb) => compileFilter(eb, access.filter))
+      .where((eb) => compileFilter(eb, access.scope))
       .executeTakeFirst();
     if (!row) throw new CrmError('notFound', 404);
     return decodeRow(row) as CrmRecord;
@@ -541,7 +542,7 @@ export class CrmService {
         .selectFrom('crmLeads')
         .select(outputFields('leads', leadAccess))
         .where(convertedField, '=', id)
-        .where((eb) => compileFilter(eb, leadAccess.filter))
+        .where((eb) => compileFilter(eb, leadAccess.scope))
         .execute();
     }
     if (entity === 'contacts')
@@ -1022,7 +1023,7 @@ export class CrmService {
         .set(encodeRow(values))
         .where('id', '=', id)
         .where('updatedAt', '=', previous!.updatedAt)
-        .where((eb) => compileFilter(eb, access.filter))
+        .where((eb) => compileFilter(eb, access.scope))
         .execute();
       if (!result.updatedCount) throw new CrmError('conflict', 409);
     } else
@@ -1089,7 +1090,7 @@ export class CrmService {
       const records = await query
         .selectFrom(definitions[entity].table)
         .select('attachments')
-        .where((eb) => compileFilter(eb, access.filter))
+        .where((eb) => compileFilter(eb, access.scope))
         .execute();
       if (records.some((record) => array(record.attachments).includes(id)))
         return true;
@@ -1229,7 +1230,7 @@ export class CrmService {
     await tx
       .deleteFrom(definitions[entity].table)
       .where('id', '=', id)
-      .where((eb) => compileFilter(eb, access.filter))
+      .where((eb) => compileFilter(eb, access.scope))
       .execute();
     await this.history(tx, actor, entity, id, 'deleted');
   }

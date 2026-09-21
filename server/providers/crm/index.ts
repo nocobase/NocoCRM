@@ -36,6 +36,13 @@ export default class CrmProvider extends ServiceProvider<Application> {
   private reminding = false;
   private delivering = false;
   public override register(): void {
+    // The workflow run scripts under server/workflows run from the storage
+    // disk, where they can neither import this application nor share a
+    // package instance with it; they reach the database through this
+    // process-wide handle (the same symbol is spelled out in each package's
+    // server/queue.ts).
+    (globalThis as Record<symbol, unknown>)[Symbol.for('nococrm.database')] =
+      this.app.container.resolve(databaseManagerToken);
     this.app.container
       .resolve(i18nToken)
       .registry.register('crm-notifications', notificationLocales);
