@@ -40,9 +40,13 @@ import { run as notify } from '../../server/workflows/approval-notification/serv
 import { run as notifyRecord } from '../../server/workflows/record-notification/server/notify.js';
 import { run as remind } from '../../server/workflows/activity-reminder/server/remind.js';
 import { createCrmUserRoleScope } from '../../server/providers/crm/user-roles.js';
+import { crmRecordTools } from '../../server/ai/tools/crm-records.js';
+import { crmWriteTools } from '../../server/ai/tools/crm-writes.js';
+import crmEmployee, {
+  crmAssistant,
+} from '../../server/ai/employees/crm-assistant.js';
 import { convertLead } from '../../server/providers/crm/conversion.js';
-import { crmToken, crmAiToken } from '../../server/providers/crm/index.js';
-import { CrmAi, previewRecords } from '../../server/providers/crm/ai.js';
+import { crmToken } from '../../server/providers/crm/index.js';
 import { crmRoutes } from '../../server/routes/crm.js';
 import { userManagementServiceToken } from '@nocobase/app-plugin-users/server/tokens';
 import {
@@ -51,7 +55,6 @@ import {
   demoStatus,
 } from '../../server/providers/crm/demo.js';
 import type { Application } from '@nocobase/app-server/application';
-import type { AIManager } from '@nocobase/ai-employee';
 
 let database: DatabaseManager;
 let authorization: AppAuthorizationService;
@@ -213,7 +216,6 @@ beforeAll(async () => {
   >);
   container.instance(authorizationToken, authorization);
   container.instance(crmToken, service);
-  container.instance(crmAiToken, new CrmAi(service, {} as AIManager));
   // What the demo import needs from the users plugin: an account with a role.
   container.instance(userManagementServiceToken, {
     async create(input: {
@@ -279,34 +281,6 @@ const request = (
   });
 
 describe('CRM API security and domain rules', () => {
-  it('keeps AI list previews to summary fields', () => {
-    const preview = previewRecords('leads', [
-      {
-        id: 'lead-1',
-        name: 'Ada',
-        company: 'Example',
-        status: 'working',
-        source: 'website',
-        ownerId: 'rep',
-        updatedAt: '2026-09-11T00:00:00.000Z',
-        email: 'ada@example.test',
-        phone: '+1 555 0100',
-        message: 'Long enquiry text',
-      },
-    ]);
-    expect(preview).toEqual([
-      {
-        id: 'lead-1',
-        name: 'Ada',
-        company: 'Example',
-        status: 'working',
-        source: 'website',
-        ownerId: 'rep',
-        updatedAt: '2026-09-11T00:00:00.000Z',
-      },
-    ]);
-  });
-
   it('rejects anonymous and unpermitted requests and serves permitted users', async () => {
     expect((await request('/leads')).status).toBe(401);
     expect((await request('/leads', 'outsider')).status).toBe(403);
@@ -1087,125 +1061,298 @@ describe('CRM API security and domain rules', () => {
       ).total,
     ).toBe(0);
   });
-  it('screens AI proposals by the same rules execution applies', async () => {
-    const ai = new CrmAi(service, {} as AIManager);
-    const theirs = await service.save(actor('other'), 'leads', {
-      name: 'Screen target',
+  it('offers the AI employee read tools bound to the signed-in user', async () => {
+    const tools = crmRecordTools(service, authorization);
+    const byName = Object.fromEntries(
+      tools.map((tool) => [tool.definition.name, tool]),
+    );
+    expect(Object.keys(byName).sort()).toEqual([
+      'get_record',
+      'list_users',
+      'search_records',
+    ]);
+    expect(crmEmployee.tools?.map((tool) => tool.name).sort()).toEqual([
+      'approval_action',
+      'convert_lead',
+      'create_record',
+      'delete_record',
+      'get_record',
+      'list_users',
+      'search_records',
+      'update_record',
+    ]);
+    expect(crmAssistant({ avatar: 'https://crm.example/x.png' }).avatar).toBe(
+      'https://crm.example/x.png',
+    );
+    // The deployment's business guidance is part of the role itself.
+    expect(crmAssistant({ avatar: 'x' }).systemPrompt).toContain(
+      '云策数字咨询',
+    );
+    for (const tool of tools) {
+      expect(tool.defaultPermission).toBe('ALLOW');
+      expect(tool.execution).toBe('backend');
+    }
+    const runtime = { toolCallId: 'call', writer: () => undefined };
+    // A refusal ends the call with the CRM's error body as the message.
+    const invoke = (name: string, actorId: string, args: unknown) =>
+      (
+        byName[name]!.invoke(
+          { actor: { id: actorId, roles: [], isRoot: false } },
+          args,
+          runtime,
+        ) as Promise<Record<string, unknown>>
+      ).then(
+        (content) => ({ status: 'success', content }),
+        (error: Error) => ({
+          status: 'error',
+          content: JSON.parse(error.message) as Record<string, unknown>,
+        }),
+      );
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Tool lead',
+      company: 'Tool company',
     });
-    const mine = await service.save(actor('rep'), 'leads', {
-      name: 'Screen own',
+    const search = await invoke('search_records', 'rep', {
+      entity: 'leads',
+      search: 'Tool lead',
     });
-    const account = await service.save(actor('other'), 'accounts', {
-      name: 'Screen account',
+    expect(search.status).toBe('success');
+    expect(search.content.total).toBe(1);
+    const users = (await invoke('list_users', 'rep', {}))
+      .content as unknown as {
+      id: string;
+      roles: string[];
+    }[];
+    expect(users.map((user) => user.id).sort()).toEqual(
+      expect.arrayContaining(['rep', 'manager', 'admin']),
+    );
+    expect(users.find((user) => user.id === 'manager')?.roles).toEqual([
+      'sales-manager',
+    ]);
+    // The caller is marked, so the model knows whether it may own records.
+    expect(
+      users.filter((user) => (user as { current?: boolean }).current),
+    ).toEqual([
+      expect.objectContaining({
+        id: 'rep',
+        can: { assign: false, approve: false, manage: false },
+      }),
+    ]);
+    const asManager = (await invoke('list_users', 'manager', {}))
+      .content as unknown as { id: string; can?: Record<string, boolean> }[];
+    expect(asManager.find((user) => user.id === 'manager')?.can).toEqual(
+      expect.objectContaining({ assign: true, approve: true }),
+    );
+    const read = await invoke('get_record', 'rep', {
+      entity: 'leads',
+      id: lead.id,
     });
-    const deal = await service.save(actor('other'), 'opportunities', {
-      name: 'Screen deal',
-      accountId: account.id,
+    expect(read.status).toBe('success');
+    expect((read.content.record as Record<string, unknown>).name).toBe(
+      'Tool lead',
+    );
+    // A user outside the CRM roles cannot read through the tools either;
+    // the refusal is the call's error, with the CRM's code.
+    const refused = await invoke('get_record', 'outsider', {
+      entity: 'leads',
+      id: lead.id,
     });
-    const screen = (who: string, action: Record<string, unknown>) =>
-      ai.screen(actor(who), action);
-    // Editing a record you do not own, and handing a record to someone else
-    // without the assign right, are refused; a manager may do both.
-    expect(
-      await screen('rep', {
-        entity: 'leads',
-        operation: 'update',
-        recordId: theirs.id,
-        input: { phone: '1' },
-      }),
-    ).toBe('forbidden');
-    expect(
-      await screen('rep', {
-        entity: 'leads',
-        operation: 'update',
-        recordId: mine.id,
-        input: { phone: '1' },
-      }),
-    ).toBe('ok');
-    expect(
-      await screen('rep', {
-        entity: 'leads',
-        operation: 'create',
-        input: { name: 'x', ownerId: 'other' },
-      }),
-    ).toBe('forbidden');
-    expect(
-      await screen('manager', {
-        entity: 'leads',
-        operation: 'create',
-        input: { name: 'x', ownerId: 'other' },
-      }),
-    ).toBe('ok');
-    expect(
-      await screen('manager', {
-        entity: 'leads',
-        operation: 'update',
-        recordId: theirs.id,
-        input: { ownerId: 'rep' },
-      }),
-    ).toBe('ok');
-    // An approval is raised on a deal you can edit; only its approver, a
-    // manager other than the applicant, decides it, and only while pending.
-    expect(
-      await screen('rep', {
-        entity: 'approvals',
-        operation: 'create',
-        input: { opportunityId: deal.id, topic: 'discount', name: 'x' },
-      }),
-    ).toBe('forbidden');
-    const approval = await service.save(actor('other'), 'approvals', {
-      name: 'Screen approval',
-      opportunityId: deal.id,
-      topic: 'discount',
-      // No description: optional since the subject carries the request.
-      approverId: 'manager',
-    });
-    expect(
-      await screen('manager', {
-        entity: 'approvals',
-        operation: 'approve',
-        recordId: approval.id,
-      }),
-    ).toBe('inapplicable');
-    await service.approvalAction(actor('other'), approval.id, 'submit');
-    expect(
-      await screen('manager', {
-        entity: 'approvals',
-        operation: 'approve',
-        recordId: approval.id,
-      }),
-    ).toBe('ok');
-    expect(
-      await screen('rep', {
-        entity: 'approvals',
-        operation: 'approve',
-        recordId: approval.id,
-      }),
-    ).toBe('forbidden');
-    expect(
-      await screen('other', {
-        entity: 'approvals',
-        operation: 'withdraw',
-        recordId: approval.id,
-      }),
-    ).toBe('ok');
-    expect(
-      await screen('rep', {
-        entity: 'approvals',
-        operation: 'withdraw',
-        recordId: approval.id,
-      }),
-    ).toBe('forbidden');
-    // A step on an existing record that names none is not offered.
-    expect(
-      await screen('rep', {
-        entity: 'leads',
-        operation: 'update',
-        input: { phone: '1' },
-      }),
-    ).toBe('unanchored');
+    expect(refused.status).toBe('error');
+    expect(refused.content.error).toBe('forbidden');
+    await expect(
+      byName.get_record!.invoke({}, { entity: 'leads', id: lead.id }, runtime),
+    ).rejects.toThrow('signed-in user');
   });
-
+  it('proposes CRM writes through tools the user confirms, under their own permissions', async () => {
+    const tools = crmWriteTools(service, authorization);
+    const byName = Object.fromEntries(
+      tools.map((tool) => [tool.definition.name, tool]),
+    );
+    expect(Object.keys(byName).sort()).toEqual([
+      'approval_action',
+      'convert_lead',
+      'create_record',
+      'delete_record',
+      'update_record',
+    ]);
+    // Every write waits for the user's confirmation in the conversation.
+    for (const tool of tools) {
+      expect(tool.defaultPermission).toBe('ASK');
+      expect(tool.execution).toBe('backend');
+    }
+    const runtime = { toolCallId: 'call', writer: () => undefined };
+    // A refusal ends the call with the CRM's error body as the message.
+    const invoke = (name: string, actorId: string, args: unknown) =>
+      (
+        byName[name]!.invoke(
+          { actor: { id: actorId, roles: [], isRoot: false } },
+          args,
+          runtime,
+        ) as Promise<Record<string, unknown>>
+      ).then(
+        (content) => ({ status: 'success', content }),
+        (error: Error) => ({
+          status: 'error',
+          content: JSON.parse(error.message) as Record<string, unknown>,
+        }),
+      );
+    const theirs = await service.save(actor('other'), 'leads', {
+      name: 'Write target',
+      company: 'Write company',
+    });
+    // Editing a record you may not see (reported as absent, as the pages
+    // do), and handing a record to someone else without the assign right,
+    // are refused as data; a manager may do both.
+    const refused = await invoke('update_record', 'rep', {
+      entity: 'leads',
+      id: theirs.id,
+      title: 'x',
+      input: { phone: '1' },
+    });
+    expect(refused.status).toBe('error');
+    expect(refused.content.error).toBe('notFound');
+    expect(
+      (
+        await invoke('create_record', 'rep', {
+          entity: 'leads',
+          title: 'x',
+          input: { name: 'x', ownerId: 'other' },
+        })
+      ).content.error,
+    ).toBe('forbidden');
+    const created = await invoke('create_record', 'manager', {
+      entity: 'leads',
+      title: 'x',
+      input: { name: 'Tool created', company: 'Tool Co', ownerId: 'other' },
+    });
+    expect(created.status).toBe('success');
+    expect(created.content.entity).toBe('leads');
+    const createdId = toText(created.content.id);
+    expect(
+      (await service.get(actor('other'), 'leads', createdId)).ownerId,
+    ).toBe('other');
+    const moved = await invoke('update_record', 'manager', {
+      entity: 'leads',
+      id: theirs.id,
+      title: 'x',
+      input: { ownerId: 'rep' },
+    });
+    expect(moved.status).toBe('success');
+    // A refusal by rule reports its code: an unknown field, a converted
+    // lead, a decision that is not this user's to make.
+    expect(
+      (
+        await invoke('update_record', 'rep', {
+          entity: 'leads',
+          id: theirs.id,
+          title: 'x',
+          input: { nonsense: 1 },
+        })
+      ).content.error,
+    ).toBe('invalidInput');
+    const converted = await invoke('convert_lead', 'rep', {
+      id: theirs.id,
+      title: 'x',
+      createOpportunity: true,
+      opportunityName: 'Tool deal',
+      amount: 100,
+    });
+    expect(converted.status).toBe('success');
+    expect(converted.content.recordStatus).toBe('converted');
+    expect(
+      (await invoke('convert_lead', 'rep', { id: theirs.id, title: 'x' }))
+        .content.error,
+    ).toBe('convertedReadOnly');
+    const deal = (
+      await service.list(actor('rep'), 'opportunities', { search: 'Tool deal' })
+    ).data[0]!;
+    const approval = await invoke('create_record', 'rep', {
+      entity: 'approvals',
+      title: 'x',
+      input: {
+        name: 'Tool approval',
+        opportunityId: deal.id,
+        topic: 'discount',
+        approverId: 'manager',
+      },
+    });
+    expect(approval.status).toBe('success');
+    const approvalId = toText(approval.content.id);
+    expect(
+      (
+        await invoke('approval_action', 'manager', {
+          id: approvalId,
+          action: 'approve',
+          title: 'x',
+        })
+      ).content.error,
+    ).toBe('forbidden');
+    expect(
+      (
+        await invoke('approval_action', 'rep', {
+          id: approvalId,
+          action: 'submit',
+          title: 'x',
+        })
+      ).status,
+    ).toBe('success');
+    expect(
+      (
+        await invoke('approval_action', 'rep', {
+          id: approvalId,
+          action: 'approve',
+          title: 'x',
+        })
+      ).content.error,
+    ).toBe('forbidden');
+    expect(
+      (
+        await invoke('approval_action', 'manager', {
+          id: approvalId,
+          action: 'approve',
+          title: 'x',
+          comment: 'Fine',
+        })
+      ).content.recordStatus,
+    ).toBe('approved');
+    // A converted lead is history; its owner cannot delete it either.
+    expect(
+      (
+        await invoke('delete_record', 'rep', {
+          entity: 'leads',
+          id: theirs.id,
+          title: 'x',
+        })
+      ).status,
+    ).toBe('error');
+    // A salesperson deletes nothing but their own approval drafts; the
+    // manager who created the lead may remove it.
+    expect(
+      (
+        await invoke('delete_record', 'other', {
+          entity: 'leads',
+          id: createdId,
+          title: 'x',
+        })
+      ).status,
+    ).toBe('error');
+    const removed = await invoke('delete_record', 'manager', {
+      entity: 'leads',
+      id: createdId,
+      title: 'x',
+    });
+    expect(removed.status).toBe('success');
+    await expect(
+      service.get(actor('other'), 'leads', createdId),
+    ).rejects.toMatchObject({ code: 'notFound' });
+    await expect(
+      byName.create_record!.invoke(
+        {},
+        { entity: 'leads', title: 'x', input: {} },
+        runtime,
+      ),
+    ).rejects.toThrow('signed-in user');
+  });
   it('exposes one CRM role per user to the Users page and keeps the last administrator', async () => {
     const scope = createCrmUserRoleScope(authorization);
     const connection = database.connection();
@@ -1245,45 +1392,6 @@ describe('CRM API security and domain rules', () => {
     await expect(
       scope.assertCanDisable?.('rep', connection),
     ).resolves.toBeUndefined();
-  });
-  it('requires AI confirmation and applies the current user permissions on execution', async () => {
-    const ai = new CrmAi(service, {} as AIManager);
-    const lead = await service.save(actor('other'), 'leads', {
-      name: 'Other user AI target',
-    });
-    await database
-      .query()
-      .insertInto('crmAiActions')
-      .values({
-        id: 'action-test',
-        ownerId: 'rep',
-        messageId: 'test',
-        entity: 'leads',
-        recordId: lead.id,
-        operation: 'update',
-        title: 'Unpermitted update',
-        input: JSON.stringify({ name: 'Wrong' }),
-        assumptions: '[]',
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-      })
-      .execute();
-    await expect(
-      ai.execute(actor('rep'), 'action-test', false),
-    ).rejects.toMatchObject({ code: 'confirmationRequired' });
-    await expect(
-      ai.execute(actor('rep'), 'action-test', true),
-    ).rejects.toMatchObject({ code: 'notFound' });
-    expect(
-      (
-        await database
-          .query()
-          .selectFrom('crmAiActions')
-          .select('status')
-          .where('id', '=', 'action-test')
-          .executeTakeFirst()
-      )?.status,
-    ).toBe('pending');
   });
 });
 
@@ -1541,13 +1649,6 @@ describe('resolved titles and paged filters', () => {
       (await request(`/accounts/${toText(account.id)}/history`, 'outsider'))
         .status,
     ).toBe(403);
-    // The action center reads its lists a page at a time, with counts.
-    const actions = (await request('/ai/actions?status=pending', 'rep').then(
-      (r) => r.json(),
-    )) as { data: unknown[]; total: number; counts: Record<string, number> };
-    expect(Array.isArray(actions.data)).toBe(true);
-    expect(actions.counts).toEqual(expect.any(Object));
-    expect((await request('/ai/actions?page=0', 'rep')).status).toBe(400);
   });
   it('pages the workspace lists in fives and only for the reader', async () => {
     // Seven overdue activities of the reader's own, one of somebody else's.
@@ -1713,10 +1814,10 @@ it('reverses the CRM migration on a real SQLite database', async () => {
       directory: resolve('database/main/migrations'),
       packageName: 'crm',
     });
-    expect((await migrator.latest()).executed).toHaveLength(25);
+    expect((await migrator.latest()).executed).toHaveLength(26);
     expect(await isolated.builder().hasCollection('crmLeads')).toBe(true);
     expect((await migrator.latest()).executed).toEqual([]);
-    expect((await migrator.rollback()).rolledBack).toHaveLength(25);
+    expect((await migrator.rollback()).rolledBack).toHaveLength(26);
     expect(await isolated.builder().hasCollection('crmLeads')).toBe(false);
     expect(await isolated.builder().hasCollection('crmAccounts')).toBe(false);
   } finally {

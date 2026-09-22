@@ -432,9 +432,6 @@ export interface CrmSettings {
   closeReminderDays: number;
   leadStaleDays: number;
   staleDays: number;
-  aiService: string;
-  aiModel: string;
-  aiInstructions: string;
   options: Record<string, string[]>;
 }
 export const defaultSettings: CrmSettings = {
@@ -445,9 +442,6 @@ export const defaultSettings: CrmSettings = {
   closeReminderDays: 7,
   leadStaleDays: 7,
   staleDays: 14,
-  aiService: '',
-  aiModel: '',
-  aiInstructions: '',
   options: {
     source: sources,
     industry: industries,
@@ -496,4 +490,27 @@ export function object(value: unknown): Row {
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new CrmError('invalidInput');
   return value as Row;
+}
+
+// The same field information as JSON.stringify(definitions) in roughly half
+// the characters, for the AI employee's prompt: one line per object, "!"
+// marks required, "->" names the related object, parentheses list the
+// allowed values. Derived from definitions, so a schema change still reaches
+// the model without touching the prompt.
+export function compactSchema(): string {
+  return Object.entries(definitions)
+    .map(([name, definition]) => {
+      const fields = definition.fields
+        .map((field) => {
+          const options = field.options?.length
+            ? `(${field.options.join('|')})`
+            : '';
+          return `${field.key}:${field.type}${field.required ? '!' : ''}${
+            field.relation ? `->${field.relation}` : ''
+          }${options}`;
+        })
+        .join(' ');
+      return `${name} [${fields}]`;
+    })
+    .join('\n');
 }

@@ -326,14 +326,21 @@ export default function EntityDetail({
   const fileNames = Object.fromEntries(
     (historyFiles.data ?? []).map((f) => [f.id, f.filename]),
   );
+  // The assistant panel attaches the record on screen to the conversation;
+  // its title follows once the record has loaded.
+  const contextName = detail
+    ? recordTitle(entity, detail.record, detail.titles)
+    : undefined;
   useEffect(() => {
     window.dispatchEvent(
-      new CustomEvent('crm-context', { detail: { entity, recordId: id } }),
+      new CustomEvent('crm-context', {
+        detail: { entity, recordId: id, name: contextName },
+      }),
     );
     return () => {
       window.dispatchEvent(new CustomEvent('crm-context', { detail: {} }));
     };
-  }, [entity, id]);
+  }, [entity, id, contextName]);
   if (isLoading || !meta) return <Loading />;
   if (!detail)
     return (

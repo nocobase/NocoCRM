@@ -5,7 +5,6 @@ import { toText } from '../components/crm/api.js';
 import { useState, type ReactElement } from 'react';
 import { Button } from '../components/ui/button.js';
 import { Input } from '../components/ui/input.js';
-import { Textarea } from '../components/ui/textarea.js';
 import { Checkbox } from '../components/ui/checkbox.js';
 import {
   Card,
@@ -22,9 +21,7 @@ import {
   useCrmQuery,
   useCrmText,
   useRefresh,
-  rows,
   type CrmSettings,
-  type Data,
 } from '../components/crm/api.js';
 interface DemoStatus {
   present: boolean;
@@ -34,7 +31,6 @@ interface DemoStatus {
 }
 interface SettingsResponse {
   settings: CrmSettings;
-  models: Data[];
   demo: DemoStatus;
 }
 export default function SettingsPage(): ReactElement {
@@ -311,52 +307,7 @@ function SettingsForm({
               'staleDays',
             ])
           ) : section === 'aiSettings' ? (
-            <>
-              {fields(['aiEnabled'])}
-              <p className='text-sm text-muted-foreground'>
-                {text('modelHint')}
-              </p>
-              <div className='grid gap-4 sm:grid-cols-2'>
-                <label className='grid gap-2 text-sm'>
-                  {text('fields.aiService')}
-                  <Choice
-                    label={text('fields.aiService')}
-                    value={settings.aiService}
-                    onChange={(v) => {
-                      set('aiService', v);
-                      set('aiModel', '');
-                    }}
-                    choices={initial.models.map((m) => ({
-                      value: toText(m.name),
-                      label: toText(m.title ?? m.name),
-                    }))}
-                  />
-                </label>
-                <label className='grid gap-2 text-sm'>
-                  {text('fields.aiModel')}
-                  <Choice
-                    label={text('fields.aiModel')}
-                    value={settings.aiModel}
-                    onChange={(v) => set('aiModel', v)}
-                    choices={rows(
-                      initial.models.find((m) => m.name === settings.aiService)
-                        ?.models,
-                    ).map((m) => ({
-                      value: toText(m.value),
-                      label: toText(m.label),
-                    }))}
-                  />
-                </label>
-              </div>
-              <label className='grid gap-2 text-sm'>
-                {text('fields.aiInstructions')}
-                <Textarea
-                  rows={8}
-                  value={settings.aiInstructions}
-                  onChange={(e) => set('aiInstructions', e.target.value)}
-                />
-              </label>
-            </>
+            <>{fields(['aiEnabled'])}</>
           ) : null}
         </CardContent>
       </Card>

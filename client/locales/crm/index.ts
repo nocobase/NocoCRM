@@ -27,6 +27,29 @@ const wording = {
     '客户、商机和下一步行动，尽在掌握',
   ],
   assistant: ['AI assistant', 'AI 助手'],
+  assistantEmployeeName: ['NocoCRM', 'NocoCRM'],
+  assistantEmployeeRole: ['Sales assistant', '销售助手'],
+  assistantEmployeeBio: [
+    'The CRM sales assistant: it reads the records the signed-in user may see, summarizes them and suggests next steps.',
+    'CRM 销售助手：按你的权限读取记录，做总结并建议下一步。',
+  ],
+  assistantEmployeeGreeting: [
+    'Ask about CRM records, capture data, get next steps or a summary. I read and write the CRM with your account permissions, and every change waits for your confirmation.',
+    '围绕 CRM 的记录进行提问，录入数据、建议下一步、总结报告等。我按你账号权限读写 CRM，每一项修改都需要你确认。',
+  ],
+  assistantLoading: ['Loading the AI configuration…', '正在加载 AI 配置…'],
+  assistantConfigError: [
+    'The AI configuration could not be loaded. Check the AI settings and reload the page.',
+    '无法加载 AI 配置。请检查 AI 设置后刷新页面。',
+  ],
+  assistantNoEmployee: [
+    'The CRM assistant is not available. An administrator can enable it under AI settings.',
+    'CRM 助手不可用。管理员可以在 AI 设置中启用它。',
+  ],
+  assistantNoModel: [
+    'No AI model is enabled. Enable one under AI settings and reload the page.',
+    '没有启用的 AI 模型。请在 AI 设置中启用一个后刷新页面。',
+  ],
   loading: ['Loading…', '正在加载…'],
   empty: ['A fresh start', '从这里开始'],
   emptyDescription: [
@@ -164,10 +187,6 @@ const wording = {
     'Cannot delete: these records point at it and would be left without a parent. Remove or move them first.',
     '无法删除：以下记录关联着它，删除后会成为孤儿记录。请先删除或转移它们。',
   ],
-  actionDeleteNotice: [
-    'Confirming deletes the {{entity}} "{{name}}" right away. This cannot be undone; records that pointed at it lose the link, as a delete from its page would.',
-    '确认后将立即删除{{entity}}「{{name}}」，无法撤销；关联它的记录会解除关联，效果与在详情页删除相同。',
-  ],
   deleteHint: [
     'This deletes the record. Related records must be removed or unlinked first.',
     '记录将被删除。存在关联记录时，请先解除关联或删除相关记录。',
@@ -190,7 +209,6 @@ const wording = {
   withdraw: ['Withdraw request', '撤回审批'],
   approve: ['Approve', '通过'],
   reject: ['Reject', '拒绝'],
-  actionPending: ['Pending', '待处理'],
   decisionTitle: {
     submit: ['Submit "{{name}}" for approval?', '提交审批「{{name}}」？'],
     withdraw: ['Withdraw "{{name}}"?', '撤回审批「{{name}}」？'],
@@ -270,24 +288,30 @@ const wording = {
     'Assignments, activity reminders, and approval updates.',
     '查看分配通知、活动提醒及审批进度',
   ],
-  actions: ['AI action center', 'AI 动作中心'],
-  actionsDescription: [
-    'Actions the assistant proposed: confirm or dismiss the pending ones, and look back at what was done.',
-    'AI 助手提出的动作：待处理的由你确认或忽略，下方保留已处理的记录',
-  ],
   askHint: [
     'Ask about customers, prepare a follow-up, or review your pipeline…',
     '分析客户、准备跟进计划，或复盘商机…',
   ],
   send: ['Send', '发送'],
-  thinking: ['Thinking…', '正在思考…'],
   assistantHint: [
-    'Suggestions use the records you can access. Review assumptions before confirming changes.',
-    '建议基于你有权访问的记录。确认操作前，请核对推测信息。',
+    'Answers and proposals use the records you can access; every change waits for your confirmation.',
+    '回答和建议基于你有权访问的记录；每一项修改都需要你确认。',
   ],
-  execute: ['Confirm and execute', '确认并执行'],
-  dismiss: ['Dismiss', '忽略'],
   assumptions: ['Assumptions to verify', '待核实的推测'],
+  toolCard: {
+    awaiting: ['Waiting for you', '待你确认'],
+    done: ['Done', '已执行'],
+    confirmed: ['Confirmed', '已确认'],
+    failed: ['Not applied', '未执行'],
+    confirmHint: [
+      'Nothing is written until you confirm.',
+      '确认后才会写入 CRM。',
+    ],
+    delete: [
+      'Confirming deletes this record right away. This cannot be undone; records that pointed at it lose the link.',
+      '确认后将立即删除这条记录，无法撤销；关联它的记录会解除关联。',
+    ],
+  },
   settings: ['System settings', '系统设置'],
   settingsDescription: [
     'Business defaults, reminders, and your AI assistant.',
@@ -328,10 +352,6 @@ const wording = {
   enabled: ['Enabled', '启用'],
   disabled: ['Disabled', '停用'],
   role: ['Sales role', '销售角色'],
-  modelHint: [
-    'Configure model credentials in config.yml under ai.llmServices, then choose an enabled model here.',
-    '先在 config.yml 的 ai.llmServices 中配置模型凭证，再在此选择已启用的模型。',
-  ],
   importHint: [
     'Use field keys as column headers. Download a template below. Related records use their IDs; array fields use JSON. Up to 500 rows, saved together or rolled back together.',
     '使用字段键作为表头，可下载模板。关联字段填写记录 ID，数组字段使用 JSON。最多 500 行，全部成功才保存，否则整体回滚。',
@@ -350,8 +370,6 @@ const wording = {
   newActivity: ['Schedule activity', '安排活动'],
   followUpLead: ['Follow up', '跟进线索'],
   newApproval: ['Request approval', '申请审批'],
-  viewActions: ['Open action center', '打开动作中心'],
-  actionHistory: ['History', '历史'],
   captureLead: ['Capture lead', '录入线索'],
   planFollowUps: ['Plan follow-ups', '安排跟进'],
   linkExisting: ['Link existing', '关联已有'],
@@ -505,41 +523,6 @@ const wording = {
   updatedSuffix: ['updated', '更新'],
   prepareActivity: ['Help me prepare', '帮我准备'],
   reportActivity: ['Report back', '我要反馈'],
-  edited: ['Edited', '已修改'],
-  proposedValue: ['Proposed', '原'],
-  clearChat: ['Clear my chat', '清空我的对话'],
-  aiSteps: {
-    web: ['Searching the web', '联网搜索'],
-    context: ['Gathering CRM context', '整理 CRM 上下文'],
-    contextRecord: [
-      'Reading {{entity}} "{{name}}" with its history and related records',
-      '读取{{entity}}「{{name}}」及其变更记录、关联记录',
-    ],
-    model: ['Writing the reply', '生成回复'],
-    modelAgain: [
-      'Writing the reply with what was found',
-      '结合查到的内容生成回复',
-    ],
-    search: ['Searching {{entity}}{{filters}}', '查询{{entity}}{{filters}}'],
-    get: ['Reading {{entity}} "{{name}}"', '读取{{entity}}「{{name}}」'],
-    found: ['{{count}} found', '找到 {{count}} 条'],
-    failed: ['failed', '失败'],
-    show: ['Show what it did ({{count}} steps)', '查看过程（{{count}} 步）'],
-    hide: ['Hide', '收起过程'],
-  },
-  noReply: [
-    'No reply arrived: the server stopped while it was being written.',
-    '没有收到回复：等待期间服务重启了。',
-  ],
-  resend: ['Resend', '重新发送'],
-  stopReply: ['Stop', '停止'],
-  replyStopped: ['Stopped before the reply came.', '已停止，未生成回复。'],
-  clearChatDetail: [
-    'Deletes every message between you and the assistant. Actions it proposed — pending and history — are kept. This cannot be undone.',
-    '删除你与 AI 助手的全部对话记录。已提出的动作（待处理和历史）不受影响。此操作不可撤销。',
-  ],
-  noPendingActions: ['Nothing waiting for your decision', '没有待处理的动作'],
-  noActionHistory: ['No actions in this state yet', '没有这个状态的动作'],
   more: ['View all', '查看全部'],
   prompts: {
     planToday: [
@@ -753,6 +736,8 @@ const wording = {
     actorId: ['Operator', '操作人'],
     timeZone: ['Business timezone', '业务时区'],
     aiEnabled: ['Enable AI assistant', '启用 AI 助手'],
+    decision: ['Decision', '处理'],
+    comment: ['Comment', '意见'],
     activityReminderMinutes: [
       'Activity reminder (minutes before)',
       '活动提前提醒（分钟）',
@@ -766,9 +751,6 @@ const wording = {
       'Account inactivity threshold (days)',
       '客户长期未联系阈值（天）',
     ],
-    aiService: ['Model service', '模型服务'],
-    aiModel: ['Model', '模型'],
-    aiInstructions: ['Business instructions for AI', 'AI 业务指导'],
     accountType: ['Account type', '客户类型'],
   },
   options: {
@@ -970,10 +952,6 @@ const wording = {
     aiAuthFailed: [
       'The model provider rejected the API key. Check ai.llmServices in config.yml and restart the server.',
       '模型服务拒绝了 API 密钥。请检查 config.yml 中的 ai.llmServices，并重启服务。',
-    ],
-    aiModelNotFound: [
-      'The provider does not recognise the selected model. Check the model name in config.yml.',
-      '模型服务不认识所选模型。请检查 config.yml 中的模型名称。',
     ],
     aiRateLimited: [
       'The model provider is rate limiting or out of quota. Try again later.',

@@ -12,12 +12,10 @@ import {
   ListChecks,
   Radar,
   Settings2,
-  Sparkles,
 } from 'lucide-react';
 
 // Navigation is read from these declarations: the sidebar follows their
-// order, so the action centre sits right under the workspace, before the two
-// object sections. A group without a path is menu-only; the sidebar renders it
+// order: the workspace first, then the two object sections. A group without a path is menu-only; the sidebar renders it
 // as a headed section. Detail pages carry no navigation entry and select the
 // nearest visible ancestor, which keeps an object highlighted on its records.
 const appRoutes: AppClientRouteContribution = defineAppRoutes([
@@ -27,13 +25,6 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     name: 'home',
     navigation: { title: 'navigation.home', icon: LayoutDashboard },
     path: '/',
-  },
-  {
-    name: 'crm-actions',
-    path: '/crm/actions',
-    auth: 'required',
-    navigation: { title: 'crm.actions', icon: Sparkles },
-    componentLoader: () => import('./pages/crm-actions.js'),
   },
   {
     name: 'crm-action',

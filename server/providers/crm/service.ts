@@ -131,11 +131,19 @@ export class CrmService {
     ) as Partial<CrmSettings> & {
       approvalEnabled?: unknown;
       firstContactDays?: unknown;
+      aiInstructions?: unknown;
+      aiService?: unknown;
+      aiModel?: unknown;
     };
     // Settings since retired (the approval switch, the first-contact
-    // threshold); a row from before still carries them.
+    // threshold, the AI business instructions now in the employee's role,
+    // the model choice now on the plugin's page); a row from before still
+    // carries them.
     delete stored.approvalEnabled;
     delete stored.firstContactDays;
+    delete stored.aiInstructions;
+    delete stored.aiService;
+    delete stored.aiModel;
     return {
       ...defaultSettings,
       ...stored,
@@ -194,7 +202,19 @@ export class CrmService {
     // rejected. Anything else unknown is a client bug worth surfacing.
     for (const key of Object.keys(input))
       if (!(key in defaultSettings)) {
-        if (['options', 'approvalEnabled', 'firstContactDays'].includes(key))
+        if (
+          [
+            'options',
+            'approvalEnabled',
+            'firstContactDays',
+            // The assistant is the AI Employee plugin's: its business
+            // guidance is in the employee's role (server/ai) and its model
+            // is chosen on the plugin's own settings page.
+            'aiInstructions',
+            'aiService',
+            'aiModel',
+          ].includes(key)
+        )
           delete input[key];
         else throw new CrmError('invalidInput', 400, key);
       }
@@ -217,9 +237,6 @@ export class CrmService {
         throw new CrmError('invalidInput', 400, key);
     if (typeof value.aiEnabled !== 'boolean')
       throw new CrmError('invalidInput', 400, 'aiEnabled');
-    for (const key of ['aiService', 'aiModel', 'aiInstructions'] as const)
-      if (typeof value[key] !== 'string' || value[key].length > 20000)
-        throw new CrmError('invalidInput', 400, key);
     await this.database.transaction(async ({ query }) => {
       const existing = await query
         .selectFrom('crmSettings')

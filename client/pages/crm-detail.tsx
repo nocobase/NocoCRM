@@ -310,16 +310,21 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<unknown>();
   const [busy, setBusy] = useState(false);
+  // The assistant panel attaches the lead on screen to the conversation;
+  // its title follows once the lead has loaded.
+  const contextName = detail
+    ? `${toText(detail.record.name)}${detail.record.company ? ` / ${toText(detail.record.company)}` : ''}`
+    : undefined;
   useEffect(() => {
     window.dispatchEvent(
       new CustomEvent('crm-context', {
-        detail: { entity: 'leads', recordId: id },
+        detail: { entity: 'leads', recordId: id, name: contextName },
       }),
     );
     return () => {
       window.dispatchEvent(new CustomEvent('crm-context', { detail: {} }));
     };
-  }, [id]);
+  }, [id, contextName]);
   if (isLoading || !meta) return <Loading />;
   if (!detail)
     return (
