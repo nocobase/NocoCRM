@@ -21,7 +21,7 @@ The interface follows the browser language on a first visit and remembers whatev
 
 ### Accounts and roles
 
-Accounts are created, disabled, given new passwords, and assigned their CRM role by an administrator in **Settings → Users**. The installer account holds the administrator role, which is the authorization plugin's own **System administrator** (root) set. Every other account needs a role before it can use the CRM, and each user holds exactly one:
+Accounts are created, disabled, given new passwords, and assigned their CRM role by an administrator in **Settings → Users**; there is no self-registration (the sign-up endpoint is disabled) and no forgot-password link on the login page, since passwords are reset there by the administrator. The installer account holds the administrator role, which is the authorization plugin's own **System administrator** (root) set. Every other account needs a role before it can use the CRM, and each user holds exactly one:
 
 | Role          | What it can do                                                                                      |
 | ------------- | --------------------------------------------------------------------------------------------------- |
