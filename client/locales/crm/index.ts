@@ -288,6 +288,26 @@ const wording = {
   execute: ['Confirm and execute', '确认并执行'],
   dismiss: ['Dismiss', '忽略'],
   assumptions: ['Assumptions to verify', '待核实的推测'],
+  // The CRM's permission model as the Permission Sets page shows it.
+  authz: {
+    group: ['CRM', 'CRM'],
+    capabilities: ['CRM capabilities', 'CRM 能力'],
+    sales: ['Sales capabilities', '销售能力'],
+    actions: {
+      view: ['View', '查看'],
+      create: ['Create', '新建'],
+      edit: ['Edit', '编辑'],
+      delete: ['Delete', '删除'],
+      assign: ['Assign records to others', '分配记录给他人'],
+      approve: ['Decide approvals', '审批'],
+      export: ['Export records', '导出记录'],
+    },
+    pages: {
+      home: ['Overview', '工作台'],
+      record: ['Record pages', '记录详情页'],
+      notifications: ['Notifications', '通知中心'],
+    },
+  },
   settings: ['System settings', '系统设置'],
   settingsDescription: [
     'Business defaults, reminders, and your AI assistant.',

@@ -1,5 +1,5 @@
 import { recordTitle } from '../components/crm/lookups.js';
-import { sentence, toText, useMore } from '../components/crm/api.js';
+import { editsAll, sentence, toText, useMore } from '../components/crm/api.js';
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 import {
@@ -1408,9 +1408,10 @@ function ContactItem({
   const contactLink = useRecordLink('contacts', toText(contact.id));
   const { data: meta } = useMetadata();
   const [open, setOpen] = useState(false);
-  // Mirrors the server rule: the owner edits their own, a manager edits any.
+  // Mirrors the server rule: the owner edits their own; a user whose edit
+  // scope covers every contact edits any.
   const editable = Boolean(
-    meta && (meta.manage || contact.ownerId === meta.userId),
+    meta && (editsAll(meta, 'contacts') || contact.ownerId === meta.userId),
   );
   const field = (key: string): Field =>
     meta?.definitions.contacts.fields.find((f) => f.key === key) ?? {
