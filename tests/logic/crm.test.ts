@@ -241,11 +241,14 @@ beforeAll(async () => {
       username: string;
       email: string;
       password: string;
-      roleScopes: Record<string, string>;
+      roleScopes: Record<string, string | readonly string[]>;
     }) {
-      // The users plugin's rule, which the demo accounts must satisfy.
+      // The users plugin's rules, which the demo accounts must satisfy.
       if (input.password.length < 8)
         throw new Error('Password must be at least 8 characters');
+      const roles = input.roleScopes.app;
+      if (!Array.isArray(roles))
+        throw new Error('Role scope "app" requires a multiple selection');
       const id = `demo-${input.username}`;
       await database
         .query()
@@ -257,10 +260,11 @@ beforeAll(async () => {
           email: input.email,
         })
         .execute();
-      await authorization.permissionSets.assign({
-        permissionSet: input.roleScopes.app,
-        subject: { type: 'user', id },
-      });
+      for (const permissionSet of roles)
+        await authorization.permissionSets.assign({
+          permissionSet,
+          subject: { type: 'user', id },
+        });
       return { id };
     },
     // A reused account gets the demo password back; the import relies on it.

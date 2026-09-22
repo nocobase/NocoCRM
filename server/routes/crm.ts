@@ -227,7 +227,9 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
               username: input.username,
               email: input.email,
               password: input.password,
-              roleScopes: { app: input.role },
+              // The CRM's role scope is a multiple selection: the plugin
+              // refuses a single value even for one role.
+              roleScopes: { app: [input.role] },
             });
           return { id: created.id };
         } catch (error) {
