@@ -18,6 +18,7 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { crmToken } from '../providers/crm/index.js';
+import { screenProposal } from '../ai/screen.js';
 import {
   capability,
   conditions,
@@ -275,6 +276,19 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         data: await service.saveSettings(c.get('actor'), await c.req.json()),
       }),
     );
+    // Whether the signed-in user could carry out a write the AI employee
+    // proposed: the confirmation card asks before offering to confirm.
+    routes.post('/ai/screen', async (c) => {
+      const body = object(await c.req.json());
+      return c.json({
+        data: await screenProposal(
+          service,
+          c.get('actor'),
+          toText(body.tool),
+          body.input,
+        ),
+      });
+    });
     routes.post('/files', async (c) => {
       const actor = c.get('actor');
       const entity = asEntity(c.req.query('entity') ?? 'leads');

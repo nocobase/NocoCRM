@@ -519,6 +519,7 @@ export default function EntityDetail({
           prompt: text(`prompts.${key}`),
           entity,
           recordId: id,
+          name: contextName,
           // "Report back" is an opening the user completes; the rest are
           // complete instructions.
           send: key !== 'reportActivity',

@@ -440,6 +440,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                             prompt: text(`prompts.${key}`),
                             entity: 'leads',
                             recordId: id,
+                            name: contextName,
                             send: true,
                             // Background research alone looks outside the CRM.
                             webSearch: key === 'researchCompany',

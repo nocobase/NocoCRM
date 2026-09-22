@@ -9,6 +9,8 @@ import {
   toText,
 } from '../../providers/crm/schema.js';
 import type { CrmService } from '../../providers/crm/service.js';
+import { resolveTitles } from '../../providers/crm/titles.js';
+import { accessLines } from '../screen.js';
 
 // The CRM's read tools for the AI employee: the two reads the CRM assistant
 // always had and the user list, registered with the AI Employee plugin.
@@ -107,7 +109,7 @@ export function crmRecordTools(
       definition: {
         name: 'search_records',
         description:
-          'Search one CRM object. Returns {total, showing, page, records}: total is every record matching the filter that this user may read, records holds that page only. Use this instead of guessing when you need older records, or when you need to filter by owner, status, account or date.',
+          'Search one CRM object. Returns {total, showing, page, records, names}: total is every record matching the filter that this user may read, records holds that page only, names maps the ids in the records (owners, accounts, ...) to display names — use those names, never show an id to the user. Use this instead of guessing when you need older records, or when you need to filter by owner, status, account or date.',
         schema: {
           type: 'object',
           properties: {
@@ -153,31 +155,34 @@ export function crmRecordTools(
         const actor = actorOf(ctx);
         return guarded(async () => {
           const args = (input ?? {}) as Row;
-          const page = await service.list(
-            actor,
-            asEntity(toText(args.entity)),
-            {
-              search: text(args.search),
-              status: text(args.status),
-              ownerId: text(args.ownerId),
-              accountId: text(args.accountId),
-              leadId: text(args.leadId),
-              opportunityId: text(args.opportunityId),
-              source: text(args.source),
-              from: text(args.from),
-              to: text(args.to),
-              page: Math.max(1, Number(args.page) || 1),
-              pageSize: Math.min(
-                MAX_PAGE_SIZE,
-                Math.max(1, Number(args.pageSize) || 25),
-              ),
-            },
-          );
+          const entity = asEntity(toText(args.entity));
+          const page = await service.list(actor, entity, {
+            search: text(args.search),
+            status: text(args.status),
+            ownerId: text(args.ownerId),
+            accountId: text(args.accountId),
+            leadId: text(args.leadId),
+            opportunityId: text(args.opportunityId),
+            source: text(args.source),
+            from: text(args.from),
+            to: text(args.to),
+            page: Math.max(1, Number(args.page) || 1),
+            pageSize: Math.min(
+              MAX_PAGE_SIZE,
+              Math.max(1, Number(args.pageSize) || 25),
+            ),
+          });
+          // Display names for the records and the ids they refer to
+          // (owners, accounts), so the model reads names instead of ids.
+          const { names } = await resolveTitles(service, actor, {
+            [entity]: page.data,
+          });
           return {
             total: page.total,
             showing: page.data.length,
             page: page.page,
             records: page.data,
+            names,
           };
         });
       },
@@ -209,11 +214,12 @@ export function crmRecordTools(
         const actor = actorOf(ctx);
         return guarded(async () => {
           const args = (input ?? {}) as Row;
-          return service.detail(
-            actor,
-            asEntity(toText(args.entity)),
-            toText(args.id),
-          );
+          const entity = asEntity(toText(args.entity));
+          const detail = await service.detail(actor, entity, toText(args.id));
+          const { names } = await resolveTitles(service, actor, {
+            [entity]: [detail.record],
+          });
+          return { ...detail, names };
         });
       },
     }),
@@ -230,10 +236,19 @@ export function crmRecordTools(
       definition: {
         name: 'list_users',
         description:
-          'List the CRM users: id, name, username, roles (sales-representative, sales-manager, system-administrator) and which one is the current user ("current": true, with "can": what they may do beyond their own records: assign a record to someone else, approve, manage settings). Call it to turn a person\'s name into the id that ownerId, approverId or internalParticipants take, to know who may approve, and to learn whether the current user can own records or give one to someone else. Only sales representatives and managers can own records; only managers approve.',
-        schema: { type: 'object', properties: {} },
+          'List the CRM users: id, name, username, roles (sales-representative, sales-manager, system-administrator) and which one is the current user ("current": true, with "can": what they may do beyond their own records — assign a record to someone else, approve, export — and "access": per object, the operations they may perform and on which records: all, own, created). Call it to turn a person\'s name into the id that ownerId, approverId or internalParticipants take, to know who may approve, and to learn whether the current user can own records or give one to someone else. Only sales representatives and managers can own records; only managers approve.',
+        schema: {
+          type: 'object',
+          properties: {
+            search: {
+              type: 'string',
+              description:
+                'A name or username to look up; leave it out to list everyone. Prefer a search when the request names a person.',
+            },
+          },
+        },
       },
-      invoke: async (ctx) => {
+      invoke: async (ctx, input) => {
         const actor = actorOf(ctx);
         return guarded(async () => {
           // What the caller may do beyond their own records, so the model
@@ -242,16 +257,33 @@ export function crmRecordTools(
           const can = {
             assign: await capability(actor, 'assign'),
             approve: await capability(actor, 'approve'),
-            manage: await capability(actor, 'manage'),
+            export: await capability(actor, 'export'),
           };
+          // And their access per object: the operations they may perform
+          // and on which records, so no write is proposed that their
+          // permissions rule out.
+          const access = await accessLines(actor);
+          const search = text(
+            (input as Row | undefined)?.search,
+          )?.toLowerCase();
           return (await service.users(actor))
             .filter((user) => !user.disabled)
+            .filter(
+              (user) =>
+                !search ||
+                toText(user.name).toLowerCase().includes(search) ||
+                toText(user.username ?? '')
+                  .toLowerCase()
+                  .includes(search),
+            )
             .map((user) => ({
               id: user.id,
               name: user.name,
               username: user.username,
               roles: user.roles,
-              ...(toText(user.id) === actor.id ? { current: true, can } : {}),
+              ...(toText(user.id) === actor.id
+                ? { current: true, can, access }
+                : {}),
             }));
         });
       },

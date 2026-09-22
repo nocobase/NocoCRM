@@ -54,6 +54,7 @@ import { run as remind } from '../../server/workflows/activity-reminder/server/r
 import { createCrmUserRoleScope } from '../../server/providers/crm/user-roles.js';
 import { crmRecordTools } from '../../server/ai/tools/crm-records.js';
 import { crmWriteTools } from '../../server/ai/tools/crm-writes.js';
+import { screenProposal } from '../../server/ai/screen.js';
 import crmEmployee, {
   crmAssistant,
 } from '../../server/ai/employees/crm-assistant.js';
@@ -1315,13 +1316,31 @@ describe('CRM API security and domain rules', () => {
     expect(users.find((user) => user.id === 'manager')?.roles).toEqual([
       'sales-manager',
     ]);
+    // A search narrows the list to the person named.
+    expect(
+      (
+        (await invoke('list_users', 'rep', { search: 'MANAGER' }))
+          .content as unknown as { id: string }[]
+      ).map((user) => user.id),
+    ).toEqual(['manager']);
+    // The current user's access per object, for the model to respect.
+    expect(
+      (users.find((user) => user.id === 'rep') as { access?: unknown })?.access,
+    ).toEqual({
+      leads: 'view:all create edit:own',
+      accounts: 'view:all create edit:own',
+      contacts: 'view:all create edit:own',
+      opportunities: 'view:all create edit:own',
+      activities: 'view:all create edit:own',
+      approvals: 'view:all create edit:own delete:own',
+    });
     // The caller is marked, so the model knows whether it may own records.
     expect(
       users.filter((user) => (user as { current?: boolean }).current),
     ).toEqual([
       expect.objectContaining({
         id: 'rep',
-        can: { assign: false, approve: false, manage: false },
+        can: { assign: false, approve: false, export: false },
       }),
     ]);
     const asManager = (await invoke('list_users', 'manager', {}))
@@ -1348,6 +1367,117 @@ describe('CRM API security and domain rules', () => {
     await expect(
       byName.get_record!.invoke({}, { entity: 'leads', id: lead.id }, runtime),
     ).rejects.toThrow('signed-in user');
+  });
+  it('screens a proposed write by the rules the tools apply, before the card offers confirmation', async () => {
+    const theirs = await service.save(actor('other'), 'leads', {
+      name: 'Screen target',
+    });
+    const mine = await service.save(actor('rep'), 'leads', {
+      name: 'Screen own',
+    });
+    const account = await service.save(actor('other'), 'accounts', {
+      name: 'Screen account',
+    });
+    const deal = await service.save(actor('other'), 'opportunities', {
+      name: 'Screen deal',
+      accountId: account.id,
+    });
+    const screen = (
+      who: string,
+      tool: string,
+      input: Record<string, unknown>,
+    ) => screenProposal(service, actor(who), tool, input);
+    // Editing a record the user may not see, and handing a record to
+    // someone else without the assign right, are refused; a manager may.
+    expect(
+      await screen('rep', 'update_record', {
+        entity: 'leads',
+        id: theirs.id,
+        input: { phone: '1' },
+      }),
+    ).toEqual({ ok: false, code: 'notFound' });
+    expect(
+      await screen('rep', 'update_record', {
+        entity: 'leads',
+        id: mine.id,
+        input: { phone: '1' },
+      }),
+    ).toEqual({ ok: true });
+    expect(
+      await screen('rep', 'create_record', {
+        entity: 'leads',
+        input: { name: 'x', ownerId: 'other' },
+      }),
+    ).toEqual({ ok: false, code: 'forbidden', field: 'ownerId' });
+    expect(
+      await screen('manager', 'create_record', {
+        entity: 'leads',
+        input: { name: 'x', ownerId: 'other' },
+      }),
+    ).toEqual({ ok: true });
+    // A salesperson deletes no leads; an approval is raised on a deal the
+    // user may edit; decisions belong to the approver while pending.
+    expect(
+      await screen('rep', 'delete_record', { entity: 'leads', id: mine.id }),
+    ).toEqual({ ok: false, code: 'forbidden' });
+    expect(
+      await screen('rep', 'create_record', {
+        entity: 'approvals',
+        input: { opportunityId: deal.id, topic: 'discount', name: 'x' },
+      }),
+    ).toEqual({
+      ok: false,
+      code: 'approvalOpportunity',
+      field: 'opportunityId',
+    });
+    const approval = await service.save(actor('other'), 'approvals', {
+      name: 'Screen approval',
+      opportunityId: deal.id,
+      topic: 'discount',
+      approverId: 'manager',
+    });
+    expect(
+      await screen('manager', 'approval_action', {
+        id: approval.id,
+        action: 'approve',
+      }),
+    ).toEqual({ ok: false, code: 'approvalLocked' });
+    await service.approvalAction(actor('other'), approval.id, 'submit');
+    expect(
+      await screen('manager', 'approval_action', {
+        id: approval.id,
+        action: 'approve',
+      }),
+    ).toEqual({ ok: true });
+    expect(
+      await screen('rep', 'approval_action', {
+        id: approval.id,
+        action: 'approve',
+      }),
+    ).toEqual({ ok: false, code: 'forbidden' });
+    expect(
+      await screen('other', 'approval_action', {
+        id: approval.id,
+        action: 'withdraw',
+      }),
+    ).toEqual({ ok: true });
+    // A step on an existing record that names none cannot be checked.
+    expect(
+      await screen('rep', 'update_record', {
+        entity: 'leads',
+        input: { phone: '1' },
+      }),
+    ).toEqual({ ok: false, code: 'invalidInput', field: 'id' });
+    // The card asks through the API, as the signed-in user.
+    const response = await request('/ai/screen', 'rep', 'POST', {
+      tool: 'delete_record',
+      input: { entity: 'leads', id: mine.id },
+    });
+    expect(response.status).toBe(200);
+    expect(((await response.json()) as { data: unknown }).data).toEqual({
+      ok: false,
+      code: 'forbidden',
+    });
   });
   it('proposes CRM writes through tools the user confirms, under their own permissions', async () => {
     const tools = crmWriteTools(service, authorization);
@@ -1539,7 +1669,6 @@ describe('CRM API security and domain rules', () => {
       ),
     ).rejects.toThrow('signed-in user');
   });
-
   it('exposes the CRM roles per user to the Users page and keeps the last administrator', async () => {
     const scope = createCrmUserRoleScope(authorization);
     const connection = database.connection();

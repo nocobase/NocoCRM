@@ -103,6 +103,10 @@ export type AIEmployeeTaskTrigger = {
   context?: AIWorkContextItem[];
   auto?: boolean;
   open?: boolean;
+  // Application change: run the task in the conversation already open with
+  // this employee instead of starting a new one, so a page shortcut
+  // continues the user's current conversation.
+  reuseConversation?: boolean;
 };
 
 export type AIChatTaskRuntime = {

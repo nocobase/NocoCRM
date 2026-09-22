@@ -1,6 +1,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type PropsWithChildren,
   type ReactElement,
@@ -21,6 +22,7 @@ import {
   type AIService,
   type AIWorkContextItem,
 } from '@/extensions/nocobase-ai';
+import { AI_DRAFT_CONVERSATION_ID } from '@/extensions/nocobase-ai/providers/types.js';
 import { Button } from '../ui/button.js';
 import {
   Sheet,
@@ -42,6 +44,11 @@ import { crmToolRenderers } from './ai-tool-renderers.js';
 
 const CRM_ASSISTANT = 'crm-assistant';
 const openKey = 'crm-assistant-open';
+// A shortcut used while the panel is closed opens it with the task queued
+// for the chat that mounts; that task starts a conversation of its own, so
+// the remembered conversation is not restored on that mount (restoring it
+// would change the active conversation under the queued task and drop it).
+let shortcutOpensPanel = false;
 
 interface RecordContext {
   entity: string;
@@ -176,6 +183,7 @@ function CrmAssistantPanel(): ReactElement | null {
       // The chat provider that runs tasks mounts only while the panel is
       // open, so open it first: the controller queues the task until the
       // provider binds, and a closed panel would otherwise swallow it.
+      if (!controller.getSnapshot().open) shortcutOpensPanel = true;
       controller.open();
       controller.triggerTask({
         aiEmployee: CRM_ASSISTANT,
@@ -189,6 +197,9 @@ function CrmAssistantPanel(): ReactElement | null {
         },
         auto: true,
         open: true,
+        // Continue the conversation already open rather than starting one
+        // per shortcut; a new conversation is one click away.
+        reuseConversation: true,
       });
     };
     const change = (event: Event): void =>
@@ -283,6 +294,7 @@ function ConfiguredChat({
         defaultEmployee={CRM_ASSISTANT}
       >
         <RecordContext record={record} />
+        <RememberConversation />
         <AIChatWindow
           className='h-full'
           showEmployeeSelector={false}
@@ -319,5 +331,67 @@ function RecordContext({
     if (current && !workContext.some((item) => item.id === current.id))
       addWorkContext(current);
   }, [record, workContext, addWorkContext, removeWorkContext]);
+  return null;
+}
+
+// Reopens the conversation the user had open before the page was reloaded
+// or left: the plugin starts every mount on a fresh draft, so the last
+// real conversation's id is kept in this browser and selected once the
+// catalog has loaded it. Starting a new conversation forgets it, so a
+// reload after that starts fresh as the user asked.
+const conversationKey = 'crm-assistant-conversation';
+
+function RememberConversation(): null {
+  const {
+    activeConversationId,
+    conversations,
+    conversationsLoading,
+    selectConversation,
+  } = useAIChat();
+  // Once per mount: a ref, since nothing renders from it.
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    try {
+      if (activeConversationId !== AI_DRAFT_CONVERSATION_ID)
+        localStorage.setItem(conversationKey, activeConversationId);
+      // The mount starts on the draft before the restore below has run;
+      // only a draft chosen after that (a new conversation) forgets.
+      else if (restoredRef.current) localStorage.removeItem(conversationKey);
+    } catch {
+      // Storage may be unavailable; the conversation is then not remembered.
+    }
+  }, [activeConversationId]);
+  // The catalog loads once the configuration is ready, so wait for a load
+  // to have run (or for a catalog that is already there) before choosing.
+  const loadedRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current) return;
+    if (conversationsLoading) {
+      loadedRef.current = true;
+      return;
+    }
+    if (!loadedRef.current && !conversations.length) return;
+    restoredRef.current = true;
+    if (shortcutOpensPanel) {
+      shortcutOpensPanel = false;
+      return;
+    }
+    if (activeConversationId !== AI_DRAFT_CONVERSATION_ID) return;
+    let remembered: string | null = null;
+    try {
+      remembered = localStorage.getItem(conversationKey);
+    } catch {
+      return;
+    }
+    // Only a conversation of this user's, as the catalog lists them; a
+    // stale id from another account or a deleted conversation is dropped.
+    if (remembered && conversations.some((item) => item.id === remembered))
+      selectConversation(remembered);
+  }, [
+    activeConversationId,
+    conversations,
+    conversationsLoading,
+    selectConversation,
+  ]);
   return null;
 }

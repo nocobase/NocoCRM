@@ -307,6 +307,10 @@ const wording = {
       'Nothing is written until you confirm.',
       '确认后才会写入 CRM。',
     ],
+    blocked: [
+      'You cannot make this change. Deny it and tell the assistant what to do instead.',
+      '你没有权限执行这项修改。请拒绝，并告诉助手换个做法。',
+    ],
     delete: [
       'Confirming deletes this record right away. This cannot be undone; records that pointed at it lose the link.',
       '确认后将立即删除这条记录，无法撤销；关联它的记录会解除关联。',
@@ -581,8 +585,8 @@ const wording = {
       '总结这个客户：我们认识哪些人、商机现状、最近活动说了什么、还有什么没解决。简短，最后给出最有价值的一个下一步。',
     ],
     researchCompany: [
-      'Search the web for this company (official site, what it does, size, recent news) and write a company introduction of at most 300 words, with sources. Then propose one update to this record: the company introduction, plus any other field the search settles or contradicts (such as website, industry, region, employees, address — only fields this record itself has). Fill the region (country, state, city) with the company’s registered or head-office location; when it has several sites, use the registered one. Only change a field when the source is reliable; if the search finds nothing reliable, say so instead of guessing.',
-      '联网搜索这家公司（官网、主营业务、规模、近况），写一段不超过 300 字的公司介绍并注明来源；然后提出一个更新这条记录的动作：「公司介绍」字段，以及搜索能确定或与现有记录不符的其他字段（如网站、行业、地区、员工数量、详细地址，只限这条记录本身有的字段）。地区（国家、省、市）按公司注册地或总部所在地填写，有多个基地时以注册地为准。只在来源可靠时才改字段；搜不到可靠信息就明说，不要编造。',
+      'Search the web for this company (official site, what it does, size, recent news) and write a company introduction of at most 300 words, with sources. Then propose one update to this record: the company introduction, plus any other field the search settles or contradicts (such as website, industry, region, employees, address — only fields this record itself has). Fill the region (country, state, city) with the company’s registered or head-office location; when it has several sites, use the registered one. Change a field only on a reliable source; a value the search points to but cannot fully confirm (a website with several candidate domains, an employee count from a single source) still goes on the card, with the candidates and the doubt listed under the assumptions, so the user decides; when the search finds nothing at all, say so instead of guessing.',
+      '联网搜索这家公司（官网、主营业务、规模、近况），写一段不超过 300 字的公司介绍并注明来源；然后提出一个更新这条记录的动作：「公司介绍」字段，以及搜索能确定或与现有记录不符的其他字段（如网站、行业、地区、员工数量、详细地址，只限这条记录本身有的字段）。地区（国家、省、市）按公司注册地或总部所在地填写，有多个基地时以注册地为准。来源可靠的字段直接改；搜到了但没能完全核实的值（比如官网有几个候选域名、员工人数只有单一来源）也放进卡片，在「待核实的推测」里列出候选和疑点，由用户决定；完全搜不到就明说，不要编造。',
     ],
     findOpportunities: [
       'Look for sales opportunities at this account: needs mentioned in activity feedback that no opportunity covers, expansion signals, renewals due. For each, say what evidence supports it and propose creating the opportunity or the activity to confirm it.',

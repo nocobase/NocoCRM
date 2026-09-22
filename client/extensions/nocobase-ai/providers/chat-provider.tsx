@@ -170,6 +170,9 @@ export function AIChatProvider({
     employeeUsername: string;
     task: AIEmployeeTask;
     auto: boolean;
+    // Application change: the conversation the task runs in; the draft
+    // (a new conversation) unless the trigger asked to reuse the open one.
+    conversationId?: string;
   }>();
   const getConfiguredTaskSet = useCallback(
     (employeeUsername: string) =>
@@ -274,8 +277,18 @@ export function AIChatProvider({
     [state.activeConversationId],
   );
 
+  // Application change: see declinePendingApprovals below; a ref, since it
+  // needs decideToolCall, which is created after sendText.
+  const declineRef = useRef<() => Promise<void>>(async () => undefined);
   const sendText = useCallback(
     async (rawValue: string) => {
+      // Application change: a card still waiting when the user moves on is
+      // declined first. The plugin's own handling of a message arriving
+      // over a pending call leaves the conversation unable to continue on
+      // the DeepSeek Responses API ("No tool output found"), whereas a
+      // rejection resumes the run properly; the message is sent once that
+      // run has finished.
+      await declineRef.current();
       const value = rawValue.trim();
       const operationVersion = interactionVersionRef.current + 1;
       interactionVersionRef.current = operationVersion;
@@ -450,6 +463,44 @@ export function AIChatProvider({
     dispatch,
     requestComposerFocus,
   });
+  // Application change: rejects every tool call of the last assistant
+  // message that still waits for the user's decision, and waits for the
+  // resumed run to finish. See sendText.
+  const declinePendingApprovals = useCallback(async () => {
+    const last = activeChat.messages[activeChat.messages.length - 1];
+    if (!last || last.role !== 'assistant') return;
+    const approvals = last.metadata?.toolApprovals ?? {};
+    for (const part of last.parts) {
+      if (!(part.type === 'dynamic-tool' || part.type.startsWith('tool-')))
+        continue;
+      const call = part as {
+        state?: string;
+        toolCallId?: string;
+        toolName?: string;
+        callProviderMetadata?: { nocobase?: { requiresApproval?: boolean } };
+      };
+      if (
+        call.state !== 'input-available' ||
+        call.callProviderMetadata?.nocobase?.requiresApproval !== true ||
+        !call.toolCallId
+      )
+        continue;
+      const decided = approvals[call.toolCallId]?.status;
+      if (decided === 'approved' || decided === 'rejected') continue;
+      await decideToolCall({
+        messageId: last.id,
+        toolCallId: call.toolCallId,
+        toolName:
+          part.type === 'dynamic-tool' ? part.toolName : part.type.slice(5),
+        decision: 'reject',
+        input:
+          'The user moved on to a new request without deciding on this proposal; treat it as declined, do not repeat it, and answer the new request only.',
+      });
+    }
+  }, [activeChat, decideToolCall]);
+  useEffect(() => {
+    declineRef.current = declinePendingApprovals;
+  }, [declinePendingApprovals]);
 
   const handleConversationFinished = useCallback(
     async (conversationId: string, targetChat: Chat<AIChatMessage>) => {
@@ -556,6 +607,33 @@ export function AIChatProvider({
       if (interactionVersionRef.current !== operationVersion) return;
       taskRuntimeRef.current = createAIChatTaskRuntime(task, workContext);
 
+      // Application change: a task may continue the conversation already
+      // open with this employee instead of starting a new one. The work
+      // context the task brings replaces the conversation's draft context,
+      // and the message is sent, or drafted, in that conversation.
+      const current = stateRef.current;
+      if (
+        options.reuseConversation &&
+        task &&
+        current.activeConversationId !== AI_DRAFT_CONVERSATION_ID &&
+        current.selectedEmployeeUsername === employee.username &&
+        current.conversations.some(
+          (item) => item.id === current.activeConversationId,
+        )
+      ) {
+        setConversationWorkContext(current.activeConversationId, workContext);
+        setActiveTaskSet(undefined);
+        setPendingTask({
+          key: crypto.randomUUID(),
+          employeeUsername: employee.username,
+          task,
+          auto: options.auto !== false,
+          conversationId: current.activeConversationId,
+        });
+        requestComposerFocus();
+        return;
+      }
+
       removeChatRuntime(AI_DRAFT_CONVERSATION_ID);
       invalidateConversationHistory();
       setConversationAttachments(AI_DRAFT_CONVERSATION_ID, []);
@@ -609,9 +687,10 @@ export function AIChatProvider({
   );
 
   useEffect(() => {
+    const targetId = pendingTask?.conversationId ?? AI_DRAFT_CONVERSATION_ID;
     if (
       !pendingTask ||
-      state.activeConversationId !== AI_DRAFT_CONVERSATION_ID ||
+      state.activeConversationId !== targetId ||
       currentEmployee.username !== pendingTask.employeeUsername
     ) {
       return;
@@ -620,16 +699,27 @@ export function AIChatProvider({
     const userMessage =
       pendingTask.task.message?.user ?? pendingTask.task.title ?? '';
     setPendingTask(undefined);
-    if (pendingTask.auto && pendingTask.task.autoSend && userMessage.trim()) {
+    // Application change: a reply still streaming cannot take a new
+    // message, and sendText would drop it silently; it lands in the
+    // composer instead, for the user to send once the reply is in.
+    const busy =
+      activeChat.status === 'streaming' || activeChat.status === 'submitted';
+    if (
+      pendingTask.auto &&
+      pendingTask.task.autoSend &&
+      userMessage.trim() &&
+      !busy
+    ) {
       void sendText(userMessage);
       return;
     }
     dispatch({
       type: 'set-draft',
-      conversationId: AI_DRAFT_CONVERSATION_ID,
+      conversationId: targetId,
       value: userMessage,
     });
   }, [
+    activeChat.status,
     currentEmployee.username,
     pendingTask,
     sendText,

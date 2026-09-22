@@ -1,11 +1,18 @@
 import { useState, type ReactElement, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Check, CircleAlert, LoaderCircle, Sparkles } from 'lucide-react';
+import {
+  Check,
+  CircleAlert,
+  LoaderCircle,
+  Pencil,
+  Sparkles,
+} from 'lucide-react';
 import type { AIToolRendererProps } from '@/extensions/nocobase-ai';
 import { useAITranslate } from '@/extensions/nocobase-ai/locales/use-ai-translate.js';
 import { Button } from '../ui/button.js';
 import { ErrorNotice } from './common.js';
 import { InlineField } from './inline.js';
+import { RecordForm } from './form.js';
 import {
   fieldLabelKey,
   toText,
@@ -13,6 +20,7 @@ import {
   useCrmScopeKey,
   useCrmText,
   useMetadata,
+  useRecord,
   type CrmRecord,
   type Data,
   type Entity,
@@ -317,6 +325,10 @@ export function CrmWriteCard({
   const metadata = metadataOf(part);
   const [action, setAction] = useState<'approve' | 'reject'>();
   const [decided, setDecided] = useState(false);
+  // The whole proposal in the record form, for a create or an update:
+  // every field at once, the same form the pages use, instead of one
+  // value at a time in place.
+  const [editing, setEditing] = useState(false);
   // The user's corrections to the proposal, kept here until they confirm;
   // confirming an edited proposal hands the plugin the edited values. The
   // draft remembers which proposal it corrects, so a new input drops it.
@@ -349,6 +361,12 @@ export function CrmWriteCard({
     setEdited({ of: part.toolCallId, value: next });
   };
   const entity = entityOf(tool, input);
+  const formable = tool === 'create_record' || tool === 'update_record';
+  // The record an update changes, read for the form's starting values.
+  const target = useRecord(
+    tool === 'update_record' ? entity : undefined,
+    input.id,
+  );
   // The plugin holds the call while the user decides; once allowed it runs
   // and the part carries the tool's own result.
   const awaiting =
@@ -357,6 +375,28 @@ export function CrmWriteCard({
     (metadata.invokeStatus === undefined ||
       metadata.invokeStatus === 'interrupted') &&
     !decided;
+  // Whether this user could make the change, asked of the server before
+  // confirmation is offered, so a refusal is shown here rather than after
+  // the confirm; the values as they stand are what is checked.
+  const api = useCrmApi();
+  const scopeKey = useCrmScopeKey();
+  const screen = useQuery({
+    queryKey: [
+      ...scopeKey,
+      'ai-screen',
+      part.toolCallId,
+      JSON.stringify(input),
+    ],
+    queryFn: () =>
+      api<{ data: { ok: boolean; code?: string; field?: string } }>(
+        'ai/screen',
+        'POST',
+        { tool, input },
+      ).then((r) => r.data),
+    enabled: awaiting,
+    staleTime: 10000,
+  });
+  const blocked = awaiting && screen.data && !screen.data.ok;
   // Allowed and run: the part carries what the tool returned (the record
   // written) or, for a refusal, the CRM's error body as the error text.
   // A confirmed call whose result the plugin did not relay shows as
@@ -489,12 +529,36 @@ export function CrmWriteCard({
           {toText(result.name)}
         </p>
       ) : null}
+      {blocked ? (
+        <div className='mt-3'>
+          <ErrorNotice
+            error={{
+              code: toText(screen.data?.code ?? 'forbidden'),
+              field: screen.data?.field,
+            }}
+          />
+          <p className='mt-2 text-xs text-muted-foreground'>
+            {text('toolCard.blocked')}
+          </p>
+        </div>
+      ) : null}
       {awaiting ? (
         <div className='mt-3 flex items-center justify-between gap-3 border-t pt-3'>
           <p className='text-xs text-muted-foreground'>
             {text('toolCard.confirmHint')}
           </p>
           <div className='flex shrink-0 gap-2'>
+            {formable ? (
+              <Button
+                variant='outline'
+                size='sm'
+                disabled={disabled || action !== undefined}
+                onClick={() => setEditing(true)}
+              >
+                <Pencil />
+                {text('edit')}
+              </Button>
+            ) : null}
             <Button
               variant='ghost'
               size='sm'
@@ -512,7 +576,12 @@ export function CrmWriteCard({
             <Button
               size='sm'
               className='bg-ai text-ai-foreground hover:bg-ai/90'
-              disabled={disabled || action !== undefined}
+              disabled={
+                disabled ||
+                action !== undefined ||
+                screen.isPending ||
+                Boolean(blocked)
+              }
               onClick={() =>
                 void decide('approve', () =>
                   draft ? onEdit(draft) : onApprove(),
@@ -523,6 +592,32 @@ export function CrmWriteCard({
             </Button>
           </div>
         </div>
+      ) : null}
+      {editing && formable ? (
+        <RecordForm
+          entity={entity}
+          id={tool === 'update_record' ? toText(input.id) : undefined}
+          initial={{ ...(target.data?.record ?? {}), ...object(input.input) }}
+          titles={target.data?.names}
+          onClose={() => setEditing(false)}
+          onSubmit={async (values) => {
+            // An update proposes only what changes; the form hands back
+            // every field, so keep the ones that differ from the record.
+            const current: Data = target.data?.record ?? {};
+            const changed =
+              tool === 'update_record'
+                ? Object.fromEntries(
+                    Object.entries(values).filter(
+                      ([key, value]) =>
+                        JSON.stringify(value ?? null) !==
+                        JSON.stringify(current[key] ?? null),
+                    ),
+                  )
+                : values;
+            edit(['input'], changed);
+            setEditing(false);
+          }}
+        />
       ) : null}
     </div>
   );
