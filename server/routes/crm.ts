@@ -118,6 +118,11 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
                 action === 'read'
                   ? outputFields(entity, access)
                   : access.fields,
+              // Whether the action reaches every record or only a scope
+              // (one's own): the pages use it to offer a change on a
+              // record the user does not own only to someone who may make
+              // it, without a parallel notion of "manager".
+              all: access.scope === true,
             };
           } catch {
             actions[action] = false;
@@ -137,7 +142,7 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           settings: publicSettings,
           userId: actor.id,
           users: await service.users(actor),
-          manage: await capability(actor, 'manage'),
+          export: await capability(actor, 'export'),
           assign: await capability(actor, 'assign'),
           approve: await capability(actor, 'approve'),
           settingsAccess: await capability(actor, 'manage', 'settings'),
@@ -401,9 +406,9 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         ),
       }),
     );
-    // Taking the data out of the system is a manager's call.
+    // Taking the data out of the system is a capability of its own.
     routes.get('/:entity/export', async (c) => {
-      if (!(await capability(c.get('actor'), 'manage')))
+      if (!(await capability(c.get('actor'), 'export')))
         throw new CrmError('forbidden', 403);
       return c.json({
         data: await allRecords(

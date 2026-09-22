@@ -5,7 +5,11 @@ import { notificationServiceToken } from '@nocobase/app-plugin-notification/serv
 import { notificationLocales } from '../../server/locales/crm-notifications/index.js';
 import { statistics } from '../../server/providers/crm/statistics.js';
 import { dashboard } from '../../server/providers/crm/dashboard.js';
-import { fieldsFor, toText } from '../../server/providers/crm/schema.js';
+import {
+  fieldsFor,
+  toText,
+  entities,
+} from '../../server/providers/crm/schema.js';
 import geographyMigration from '../../database/main/migrations/202609100001_crm_geography_codes.js';
 import legacyTimestampsMigration from '../../database/main/migrations/202609200001_legacy_epoch_timestamps.js';
 // @vitest-environment node
@@ -30,11 +34,19 @@ import { createAppPaths } from '@nocobase/app-server/config';
 import { ServiceContainer } from '@nocobase/service-provider';
 import { Hono, type MiddlewareHandler } from 'hono';
 import {
+  capability,
   registerCrmResources,
   provisionCrm,
   roleKey,
+  translateLegacyGrants,
   type Actor,
 } from '../../server/providers/crm/authorization.js';
+import {
+  crmPages,
+  entityGrant,
+  pageGrant,
+  salesGrant,
+} from '../../server/providers/crm/resources.js';
 import { CrmService } from '../../server/providers/crm/service.js';
 import { run as notify } from '../../server/workflows/approval-notification/server/notify.js';
 import { run as notifyRecord } from '../../server/workflows/record-notification/server/notify.js';
@@ -187,11 +199,16 @@ beforeAll(async () => {
     .latest();
   authorization = createAppAuthorization({
     connection: database.connection(),
-    // As in server/config/authorization.ts: the CRM administrator set is the
-    // root set, so administrators are unrestricted.
-    config: { permissionSets: { rootSet: roleKey('system-administrator') } },
   });
   registerCrmResources(authorization);
+  // The plugin's seed creates the root set on installation; the tests run
+  // only the migrations, so the set is created here as the seed does. The
+  // CRM's administrator is that set.
+  await authorization.permissionSets.create({
+    key: 'root',
+    title: 'System administrator',
+    grants: [],
+  });
   await provisionCrm(authorization, database);
   for (const [id, role] of [
     ['admin', 'system-administrator'],
@@ -790,6 +807,175 @@ describe('CRM API security and domain rules', () => {
     });
     expect(shared.attachments).toEqual(['private-file']);
   });
+  it('declares the CRM permissions as business operations the permission sets reference', async () => {
+    // Every object is a resource with the four operations, in the CRM's
+    // business group; the capabilities are a resource of their own.
+    const defined = authorization.resources.definitionsList();
+    for (const entity of entities) {
+      const resource = defined.find((d) => d.name === `crm.${entity}`);
+      expect(resource?.group).toBe('crm');
+      expect(resource?.actions.map((a) => a.name)).toEqual([
+        'view',
+        'create',
+        'edit',
+        'delete',
+      ]);
+      // View, edit and delete offer record scopes; create has none.
+      expect(Object.keys(resource!.actions[0]!.scopes ?? {})).toEqual([
+        'records',
+      ]);
+      expect(resource!.actions[1]!.scopes ?? {}).toEqual({});
+    }
+    expect(
+      defined.find((d) => d.name === 'crm.sales')?.actions.map((a) => a.name),
+    ).toEqual(['assign', 'approve', 'export']);
+    // The provisioned sets grant the operations and the pages, nothing raw.
+    const rep = await authorization.permissionSets.get(
+      roleKey('sales-representative'),
+    );
+    const types = new Set(rep!.grants.map((g) => g.resource.type));
+    expect([...types].sort()).toEqual(['page', 'resource']);
+    expect(
+      rep!.grants
+        .filter((g) => g.resource.type === 'page')
+        .map((g) => g.resource.id)
+        .sort(),
+    ).toEqual(crmPages.map((p) => p.name).sort());
+    const leads = rep!.grants.find((g) => g.resource.id === 'crm.leads');
+    expect(leads?.actions.map((a) => a.action)).toEqual([
+      'view',
+      'create',
+      'edit',
+    ]);
+    expect(
+      (
+        leads?.actions.find((a) => a.action === 'edit')?.policy as Record<
+          string,
+          unknown
+        >
+      )?.records,
+    ).toBe('recordsIOwn');
+    const manager = await authorization.permissionSets.get(
+      roleKey('sales-manager'),
+    );
+    expect(
+      manager!.grants
+        .find((g) => g.resource.id === 'crm.sales')
+        ?.actions.map((a) => a.action),
+    ).toEqual(['assign', 'approve', 'export']);
+    // The administrator is the plugin's root set: unrestricted by
+    // declaration, so it carries no CRM grants and is offered as the role.
+    expect((await authorization.permissionSets.get('root'))?.grants).toEqual(
+      [],
+    );
+    expect(await authorization.permissionSets.isUnrestricted('root')).toBe(
+      true,
+    );
+    expect(
+      (await service.users(actor('admin'))).find((u) => u.id === 'admin')
+        ?.roles,
+    ).toEqual(['system-administrator']);
+    // An installation from before, with the administrator as a set of the
+    // CRM's own, moves its holders to root once and drops the set.
+    await authorization.permissionSets.create({
+      key: 'crm-system-administrator',
+      title: 'Administrator / 管理员',
+      grants: [],
+    });
+    await authorization.permissionSets.assign({
+      permissionSet: 'crm-system-administrator',
+      subject: { type: 'user', id: 'legacy-admin' },
+    });
+    await database
+      .query()
+      .deleteFrom('crmSettings')
+      .where('id', '=', 'authz-root-v1')
+      .execute();
+    await provisionCrm(authorization, database);
+    expect(
+      await authorization.permissionSets.get('crm-system-administrator'),
+    ).toBeUndefined();
+    const moved = (
+      await authorization.permissionSets.listAssignments('root')
+    ).find((a) => a.subject.id === 'legacy-admin');
+    expect(moved).toBeDefined();
+    // Leave "admin" the only administrator for the tests that rely on it.
+    await authorization.permissionSets.revoke(moved!.id);
+    // A set that still grants the former "manage" capability on the
+    // operations is renamed to export once.
+    const managerSet = (await authorization.permissionSets.get(
+      roleKey('sales-manager'),
+    ))!;
+    await authorization.permissionSets.update(managerSet.key, {
+      ...managerSet,
+      grants: managerSet.grants.map((g) =>
+        g.resource.id === 'crm.sales'
+          ? {
+              ...g,
+              actions: g.actions.map((a) =>
+                a.action === 'export' ? { ...a, action: 'manage' } : a,
+              ),
+            }
+          : g,
+      ),
+    });
+    await database
+      .query()
+      .deleteFrom('crmSettings')
+      .where('id', '=', 'authz-export-v1')
+      .execute();
+    await provisionCrm(authorization, database);
+    expect(
+      (await authorization.permissionSets.get(roleKey('sales-manager')))!.grants
+        .find((g) => g.resource.id === 'crm.sales')
+        ?.actions.map((a) => a.action),
+    ).toEqual(['assign', 'approve', 'export']);
+    // A set provisioned before the operations existed is translated into
+    // them once, keeping its scopes; grants the CRM does not own stay.
+    const legacy = translateLegacyGrants([
+      authorization.db.grant('crmLeads', {
+        read: { fields: '*', recordAccess: ['allRecords'] },
+        create: { fields: '*' },
+        update: { fields: '*', recordAccess: ['recordsIOwn'] },
+      }),
+      authorization.db.grant('crmApprovals', {
+        read: { fields: '*', recordAccess: ['allRecords'] },
+        delete: { recordAccess: ['recordsICreated'] },
+      }),
+      { resource: { type: 'page', id: '*' }, actions: [{ action: 'access' }] },
+      {
+        resource: { type: 'crm', id: 'sales' },
+        actions: [
+          { action: 'assign' },
+          { action: 'approve' },
+          { action: 'manage' },
+        ],
+      },
+      {
+        resource: { type: 'settings', id: '*' },
+        actions: [{ action: 'read' }],
+      },
+    ]);
+    expect(legacy).toEqual([
+      ...crmPages.map((p) => pageGrant(p.name)),
+      entityGrant('leads', {
+        view: { records: 'allRecords' },
+        create: {},
+        edit: { records: 'recordsIOwn' },
+      }),
+      entityGrant('approvals', {
+        view: { records: 'allRecords' },
+        delete: { records: 'recordsICreated' },
+      }),
+      salesGrant('assign', 'approve', 'export'),
+      {
+        resource: { type: 'settings', id: '*' },
+        actions: [{ action: 'read' }],
+      },
+    ]);
+    // Already translated grants are left alone.
+    expect(translateLegacyGrants(legacy!)).toBeUndefined();
+  });
   it('enforces field permissions in records, history, export, search and updates', async () => {
     const readable = fieldsFor('leads').filter(
       (field) => !['email', 'message', 'attachments'].includes(field),
@@ -1353,35 +1539,49 @@ describe('CRM API security and domain rules', () => {
       ),
     ).rejects.toThrow('signed-in user');
   });
-  it('exposes one CRM role per user to the Users page and keeps the last administrator', async () => {
+
+  it('exposes the CRM roles per user to the Users page and keeps the last administrator', async () => {
     const scope = createCrmUserRoleScope(authorization);
     const connection = database.connection();
     expect((await scope.options()).map((o) => o.value)).toEqual([
       'crm-sales-representative',
       'crm-sales-manager',
-      'crm-system-administrator',
+      'root',
     ]);
-    expect(await scope.get('rep', connection)).toBe('crm-sales-representative');
+    expect(await scope.get('rep', connection)).toEqual([
+      'crm-sales-representative',
+    ]);
     expect(await scope.findUserIds('crm-sales-manager', connection)).toEqual([
       'manager',
     ]);
-    // Promotion replaces the role instead of adding a second one.
+    // The chosen roles replace the held ones; a user may hold several, and
+    // their grants add up.
     await scope.replace('other', 'crm-sales-manager', connection);
-    expect(await scope.get('other', connection)).toBe('crm-sales-manager');
-    await scope.replace('other', ['crm-sales-representative'], connection);
-    expect(await scope.get('other', connection)).toBe(
-      'crm-sales-representative',
+    expect(await scope.get('other', connection)).toEqual(['crm-sales-manager']);
+    await scope.replace(
+      'other',
+      ['crm-sales-manager', 'crm-sales-representative'],
+      connection,
     );
-    await expect(
-      scope.replace(
-        'other',
-        ['crm-sales-manager', 'crm-sales-representative'],
-        connection,
-      ),
-    ).rejects.toMatchObject({ code: 'INVALID_ROLE_SCOPE_VALUE' });
+    expect(await scope.get('other', connection)).toEqual([
+      'crm-sales-representative',
+      'crm-sales-manager',
+    ]);
+    expect(
+      (await service.users(actor('admin'))).find((u) => u.id === 'other')
+        ?.roles,
+    ).toEqual(['sales-representative', 'sales-manager']);
+    expect(await capability(actor('other'), 'assign')).toBe(true);
+    await scope.replace('other', ['crm-sales-representative'], connection);
+    expect(await scope.get('other', connection)).toEqual([
+      'crm-sales-representative',
+    ]);
     await expect(
       scope.replace('other', 'editor', connection),
     ).rejects.toMatchObject({ code: 'INVALID_ROLE_SCOPE_VALUE' });
+    await expect(scope.replace('other', [], connection)).rejects.toMatchObject({
+      code: 'INVALID_ROLE_SCOPE_VALUE',
+    });
     // The only administrator stays one, and stays enabled.
     await expect(
       scope.replace('admin', 'crm-sales-manager', connection),

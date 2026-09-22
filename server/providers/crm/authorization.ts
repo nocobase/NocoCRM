@@ -21,6 +21,25 @@ import {
   fieldsFor,
   type Entity,
 } from './schema.js';
+import { ROOT_SET, roleKey, roles } from './roles.js';
+import {
+  CRM_CAPABILITIES_GROUP,
+  CRM_GROUP,
+  CRM_SALES_RESOURCE,
+  crmEntityResources,
+  crmPages,
+  crmPermissionSet,
+  crmSalesResource,
+  entityGrant,
+  operationOf,
+  pageGrant,
+  salesGrant,
+  type CapabilityAction,
+  type EntityAction,
+  type EntityScopes,
+  type RecordScope,
+} from './resources.js';
+import type { PermissionGrant } from '@nocobase/authorization/permissions';
 
 export interface Actor {
   id: string;
@@ -34,26 +53,41 @@ export interface Actor {
   // actor, absent when a caller runs its own transaction.
   after?: (callback: () => Promise<void>) => void;
 }
-export const roles: string[] = [
-  'sales-representative',
-  'sales-manager',
-  'system-administrator',
-];
-export function roleKey(role: string): string {
-  return `crm-${toText(role)}`;
-}
+export { roles, roleKey, roleOf, ROOT_SET } from './roles.js';
 export function registerCrmResources(authz: AppAuthorizationService): void {
   // Field, primary-key and ownership metadata come from the database; the
   // record-access strategies read `ownerId` and `createdById` by default.
   for (const entity of entities)
     authz.db.collections.add({
       name: definitions[entity].table,
-      title: entity,
+      title: { key: `crm.entities.${entity}`, ns: 'crm' },
       actions: ['read', 'create', 'update', 'delete'],
     });
+  // The business operations the Permission Sets page shows and edits
+  // (resources.ts): one resource per object, one for the capabilities, in
+  // the CRM's own group; and the application's pages, so a set can grant
+  // entry page by page.
+  authz.resourceGroups.add({
+    name: CRM_GROUP,
+    title: { key: 'crm.authz.group', ns: 'crm' },
+    category: 'business',
+  });
+  authz.resourceGroups.add({
+    name: CRM_CAPABILITIES_GROUP,
+    title: { key: 'crm.authz.capabilities', ns: 'crm' },
+    category: 'administration',
+  });
+  for (const entity of entities)
+    crmEntityResources[entity].register(authz.resources);
+  crmSalesResource.register(authz.resources);
+  for (const page of crmPages)
+    authz.pages.add({
+      name: page.name,
+      title: page.title,
+      actions: ['access'],
+    });
   // The CRM's capability resource (`crm/sales`, `crm/settings`): a plain
-  // resource type resolved from grants, registered on the handler registry;
-  // `resources` now holds composed business operations.
+  // resource type resolved from grants, registered on the handler registry.
   authz.resourceTypes.add({
     resourceType: 'crm',
     async authorize(request, context) {
@@ -93,110 +127,95 @@ export async function provisionCrm(
   authz: AppAuthorizationService,
   database: DatabaseManager,
 ): Promise<void> {
-  for (const role of roles) {
-    const key = roleKey(role);
-    if (await authz.permissionSets.get(key)) continue;
-    const manager = role !== 'sales-representative';
-    const grants = entities.map((entity) =>
-      authz.db.grant(definitions[entity].table, {
-        read: { fields: '*', recordAccess: ['allRecords'] },
-        create: { fields: '*' },
-        update: {
-          fields: '*',
-          recordAccess: [manager ? 'allRecords' : 'recordsIOwn'],
-        },
-        // Deleting is the one write that is not "manage all": a manager
-        // removes only what they created themselves, an administrator
-        // anything, a salesperson only their own approval drafts.
-        ...(manager || entity === 'approvals'
-          ? {
-              delete: {
-                recordAccess: [
-                  role === 'system-administrator'
-                    ? 'allRecords'
-                    : manager
-                      ? 'recordsICreated'
-                      : 'recordsIOwn',
-                ],
-              },
-            }
-          : {}),
-      }),
-    );
-    grants.push({
-      resource: { type: 'page', id: '*' },
-      actions: [{ action: 'access' }],
-    });
-    if (manager)
-      grants.push({
-        resource: { type: 'crm', id: 'sales' },
-        actions: [
-          { action: 'assign' },
-          { action: 'approve' },
-          { action: 'manage' },
-        ],
-      });
-    // The administrator set is the application's root set (see
-    // server/config/authorization.ts), so its holders skip authorization; the
-    // grants below describe the role where the sets are listed and edited.
-    if (role === 'system-administrator') {
-      grants.push({
-        resource: { type: 'settings', id: '*' },
-        actions: ['read', 'create', 'update', 'delete', 'manage'].map(
-          (action) => ({ action }),
-        ),
-      });
-      grants.push({
-        resource: { type: 'crm', id: 'settings' },
-        actions: [{ action: 'manage' }],
-      });
-    }
-    await authz.permissionSets.create({
-      key,
-      title:
-        role === 'sales-representative'
-          ? 'Salesperson / 销售人员'
-          : role === 'sales-manager'
-            ? 'Sales manager / 销售经理'
-            : 'Administrator / 管理员',
-      grants,
-    });
+  const salesRoles = roles.filter((role) => role !== 'system-administrator');
+  for (const role of salesRoles) {
+    if (await authz.permissionSets.get(roleKey(role))) continue;
+    await authz.permissionSets.create(crmPermissionSet(role));
   }
-  const settingsPolicy = await database
-    .query()
-    .selectFrom('crmSettings')
-    .select('id')
-    .where('id', '=', 'settings-access-v1')
-    .executeTakeFirst();
-  if (!settingsPolicy) {
-    const admin = await authz.permissionSets.get(
-      roleKey('system-administrator'),
+  const marker = async (id: string): Promise<boolean> =>
+    Boolean(
+      await database
+        .query()
+        .selectFrom('crmSettings')
+        .select('id')
+        .where('id', '=', id)
+        .executeTakeFirst(),
     );
-    if (
-      admin &&
-      !admin.grants.some((grant) => grant.resource.type === 'settings')
-    )
-      await authz.permissionSets.update(admin.key, {
-        ...admin,
-        grants: [
-          ...admin.grants,
-          {
-            resource: { type: 'settings', id: '*' },
-            actions: ['read', 'create', 'update', 'delete', 'manage'].map(
-              (action) => ({ action }),
-            ),
-          },
-        ],
-      });
+  const mark = async (id: string): Promise<void> => {
     await database
       .query()
       .insertInto('crmSettings')
-      .values({
-        id: 'settings-access-v1',
-        value: '{"version":1}',
-        updatedAt: new Date(),
-      })
+      .values({ id, value: '{"version":1}', updatedAt: new Date() })
       .execute();
+  };
+  // The administrator used to be a set of the CRM's own, configured as the
+  // root set; it is the plugin's root set now. An installation from before
+  // moves that set's holders to root once and drops the set, so the
+  // Permission Sets page lists one administrator.
+  const legacyAdministrator = 'crm-system-administrator';
+  if (!(await marker('authz-root-v1'))) {
+    const legacy = await authz.permissionSets.get(legacyAdministrator);
+    if (legacy) {
+      const held = await authz.permissionSets.listAssignments(ROOT_SET);
+      for (const assignment of await authz.permissionSets.listAssignments(
+        legacyAdministrator,
+      ))
+        if (
+          assignment.subject.type === 'user' &&
+          !held.some(
+            (a) =>
+              a.subject.type === 'user' &&
+              a.subject.id === assignment.subject.id,
+          )
+        )
+          await authz.permissionSets.assign({
+            permissionSet: ROOT_SET,
+            subject: assignment.subject,
+          });
+      await authz.permissionSets.delete(legacyAdministrator);
+    }
+    await mark('authz-root-v1');
+  }
+  // Sets provisioned before the business operations existed hold raw
+  // collection grants, a page wildcard and the capability grant, which the
+  // Permission Sets page cannot show. Translate them once into the same
+  // access expressed through the operations; an administrator's later edits
+  // are then what the page shows and what the server enforces.
+  if (!(await marker('authz-resources-v1'))) {
+    for (const role of salesRoles) {
+      const set = await authz.permissionSets.get(roleKey(role));
+      if (!set) continue;
+      const grants = translateLegacyGrants(set.grants);
+      if (grants)
+        await authz.permissionSets.update(set.key, { ...set, grants });
+    }
+    await mark('authz-resources-v1');
+  }
+  // The "manage" capability became "export" (all it ever gated); a set
+  // translated while it was still called manage would hold a grant on an
+  // action the resource no longer declares, which the plugin rejects.
+  if (!(await marker('authz-export-v1'))) {
+    for (const role of salesRoles) {
+      const set = await authz.permissionSets.get(roleKey(role));
+      if (!set) continue;
+      let changed = false;
+      const grants = set.grants.map((grant) =>
+        grant.resource.type === 'resource' &&
+        grant.resource.id === CRM_SALES_RESOURCE &&
+        grant.actions.some((a) => a.action === 'manage')
+          ? ((changed = true),
+            {
+              ...grant,
+              actions: grant.actions.map((a) =>
+                a.action === 'manage' ? { ...a, action: 'export' } : a,
+              ),
+            })
+          : grant,
+      );
+      if (changed)
+        await authz.permissionSets.update(set.key, { ...set, grants });
+    }
+    await mark('authz-export-v1');
   }
   const approvalPolicy = await database
     .query()
@@ -244,11 +263,16 @@ export async function provisionCrm(
     // A generated app with one existing account has an unambiguous installer.
     // Never elevate an arbitrary member when multiple accounts already exist.
     const users = await listUsers(database);
-    if (users.length === 1)
-      await authz.permissionSets.assign({
-        permissionSet: roleKey('system-administrator'),
-        subject: { type: 'user', id: users[0].id },
-      });
+    if (users.length === 1) {
+      const subject = { type: 'user', id: users[0].id };
+      const held = await authz.permissionSets.listAssignments(ROOT_SET);
+      if (
+        !held.some(
+          (a) => a.subject.type === 'user' && a.subject.id === subject.id,
+        )
+      )
+        await authz.permissionSets.assign({ permissionSet: ROOT_SET, subject });
+    }
     if (users.length)
       await database
         .query()
@@ -260,6 +284,92 @@ export async function provisionCrm(
         })
         .execute();
   }
+}
+
+// Rewrites a set's grants from the raw form provisioning used to write
+// (collection grants per table, `page/*`, `crm/sales` capabilities) into
+// grants on the business operations, keeping the record scopes and the
+// operations each grant held; grants the CRM does not own stay as they are.
+// Returns undefined when nothing needed translating.
+export function translateLegacyGrants(
+  grants: readonly PermissionGrant[],
+): PermissionGrant[] | undefined {
+  const tables = new Map(
+    entities.map((entity) => [definitions[entity].table, entity] as const),
+  );
+  const actionOf = new Map(
+    (Object.entries(operationOf) as [EntityAction, string][]).map(
+      ([action, operation]) => [operation, action] as const,
+    ),
+  );
+  const scopes: Partial<Record<Entity, EntityScopes>> = {};
+  const capabilities: CapabilityAction[] = [];
+  const kept: PermissionGrant[] = [];
+  let legacy = false;
+  for (const grant of grants) {
+    const entity =
+      grant.resource.type === 'database.collection'
+        ? tables.get(toText(grant.resource.id))
+        : undefined;
+    if (entity) {
+      legacy = true;
+      const target = (scopes[entity] ??= {});
+      for (const operation of grant.actions) {
+        const action = actionOf.get(toText(operation.action));
+        if (!action) continue;
+        const policy = operation.policy as
+          { recordAccess?: readonly string[] } | undefined;
+        const scope = toText(policy?.recordAccess?.[0] ?? '');
+        if (action === 'create') target.create = {};
+        else if (action === 'delete')
+          target.delete = {
+            records: (['allRecords', 'recordsIOwn', 'recordsICreated'].includes(
+              scope,
+            )
+              ? scope
+              : 'recordsIOwn') as RecordScope,
+          };
+        else
+          target[action] = {
+            records: scope === 'allRecords' ? 'allRecords' : 'recordsIOwn',
+          };
+      }
+      continue;
+    }
+    if (grant.resource.type === 'page' && grant.resource.id === '*') {
+      legacy = true;
+      continue;
+    }
+    if (grant.resource.type === 'crm' && grant.resource.id === 'sales') {
+      legacy = true;
+      for (const operation of grant.actions) {
+        // The former "manage" capability gated exactly what "export" does.
+        const action =
+          toText(operation.action) === 'manage'
+            ? 'export'
+            : toText(operation.action);
+        if (['assign', 'approve', 'export'].includes(action))
+          capabilities.push(action as CapabilityAction);
+      }
+      continue;
+    }
+    kept.push(grant);
+  }
+  if (!legacy) return undefined;
+  const result: PermissionGrant[] = [];
+  for (const page of crmPages) result.push(pageGrant(page.name));
+  for (const entity of entities) {
+    const target = scopes[entity];
+    if (target && Object.keys(target).length)
+      result.push(entityGrant(entity, target));
+  }
+  if (capabilities.length)
+    result.push(
+      salesGrant(
+        ...(capabilities as [CapabilityAction, ...CapabilityAction[]]),
+      ),
+    );
+  return [...result, ...kept];
 }
 
 export async function conditions(

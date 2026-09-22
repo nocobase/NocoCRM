@@ -1,6 +1,6 @@
 import { RecordMultiPicker, RecordPicker } from './record-picker.js';
 import { FileDropZone, FileLinks } from './attachments.js';
-import { fieldLabelKey, toText } from './api.js';
+import { editsAll, fieldLabelKey, toText } from './api.js';
 import { CountryChoice, SubdivisionChoice } from './geography.js';
 import { useRef, useState, type ReactElement } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
@@ -408,7 +408,7 @@ export function RecordForm({
             ...(entity === 'approvals' &&
             field.key === 'opportunityId' &&
             meta &&
-            !meta.manage
+            !editsAll(meta, 'opportunities')
               ? { ownerId: meta.userId }
               : {}),
           }}

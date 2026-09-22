@@ -1,4 +1,5 @@
 import {
+  editsAll,
   fieldLabelKey,
   linkOf,
   sentence,
@@ -1049,10 +1050,10 @@ export function ActivityItem({
   const [open, setOpen] = useState(false);
   const [activityError, setActivityError] = useState<unknown>();
   const status = toText(activity.status);
-  // Mirrors the server rule for activities: the owner edits their own, a manager
-  // edits any.
+  // Mirrors the server rule for activities: the owner edits their own; a
+  // user whose edit scope covers every activity edits any.
   const editable = Boolean(
-    meta && (meta.manage || activity.ownerId === meta.userId),
+    meta && (editsAll(meta, 'activities') || activity.ownerId === meta.userId),
   );
   const activityField = (key: string): Field =>
     meta?.definitions.activities.fields.find((f) => f.key === key) ?? {

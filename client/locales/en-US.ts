@@ -5,8 +5,6 @@ const enUS = {
   crm: crmEn,
   'auth.welcome': 'Welcome back',
   'auth.loginDescription': 'Sign in with your username or email and password.',
-  'auth.registerTitle': 'Create an account',
-  'auth.registerDescription': 'Create an account to get started.',
   'auth.forgotTitle': 'Forgot password',
   'auth.forgotDescription':
     'Enter your email and we will send a reset link if the account exists.',

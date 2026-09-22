@@ -8,7 +8,10 @@ import { username } from 'better-auth/plugins';
 
 const auth: AppConfigFactory<AuthConfig> = defineAppConfig((_runtime) => ({
   plugins: [username({ displayUsername: false }), apiKey()],
-  emailAndPassword: { enabled: true, autoSignIn: false },
+  // Application change: accounts are created by an administrator on the
+  // Users page; nobody registers themselves, so the sign-up endpoint is off
+  // (the /register page and the login page's link to it are removed too).
+  emailAndPassword: { enabled: true, autoSignIn: false, disableSignUp: true },
   session: { storeSessionInDatabase: true },
   // Application change: the plugin's account table requires an issuer, but
   // the plugin never declares that column to better-auth, whose adapter only

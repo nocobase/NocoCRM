@@ -31,14 +31,16 @@ export interface User {
 export interface Metadata {
   definitions: Record<Entity, EntityDefinition>;
   probabilities: Record<string, number>;
+  // Per object and action: the fields allowed and whether the action
+  // reaches every record (`all`) or only a scope such as one's own.
   permissions: Record<
     Entity,
-    Record<string, false | { fields: string[] | '*' }>
+    Record<string, false | { fields: string[] | '*'; all?: boolean }>
   >;
   settings: CrmSettings;
   userId: string;
   users: User[];
-  manage: boolean;
+  export: boolean;
   assign: boolean;
   approve: boolean;
   settingsAccess: boolean;
@@ -323,6 +325,14 @@ export function toText(value: unknown): string {
         typeof value === 'symbol'
       ? String(value)
       : '';
+}
+
+// Whether the current user may change any record of the object, or only
+// those they own: the edit scope the server reported, which is what the
+// pages use in place of a notion of "manager".
+export function editsAll(meta: Metadata | undefined, entity: Entity): boolean {
+  const update = meta?.permissions[entity]?.update;
+  return Boolean(update && update.all);
 }
 
 export function fieldLabelKey(entity: Entity, field: string): string {

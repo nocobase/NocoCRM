@@ -12,7 +12,7 @@ import {
   conditions,
   outputFields,
   requireCapability,
-  roleKey,
+  roleOf,
   roles,
   type Actor,
   listUsers,
@@ -171,7 +171,7 @@ export class CrmService {
           prepared.decisions![`${toText(entity)}.${toText(action)}`] = null;
         }
       }
-    for (const action of ['assign', 'approve', 'manage'])
+    for (const action of ['assign', 'approve', 'export'])
       prepared.capabilities![`sales.${toText(action)}`] = await capability(
         actor,
         action,
@@ -273,14 +273,13 @@ export class CrmService {
       ).map((row) => toText(row.id)),
     );
     return users.map((user) => {
-      const userRoles = assignments
-        .filter(
-          (a) =>
-            a.subject.type === 'user' &&
-            a.subject.id === user.id &&
-            roles.some((r) => roleKey(r) === a.permissionSet),
-        )
-        .map((a) => a.permissionSet.replace(/^crm-/, ''));
+      // In the roles' own order, whatever order the sets were assigned in.
+      const held = new Set(
+        assignments
+          .filter((a) => a.subject.type === 'user' && a.subject.id === user.id)
+          .map((a) => roleOf(a.permissionSet)),
+      );
+      const userRoles = roles.filter((role) => held.has(role));
       return {
         id: user.id,
         name: user.name,
