@@ -4,9 +4,15 @@
     {
       "name": "crm-dev",
       "runtimeExecutable": "env",
-      "runtimeArgs": ["APP_SERVER_PORT=13000", "pnpm", "dev"],
-      "port": 13000,
-      "url": "http://127.0.0.1:13000"
+      "runtimeArgs": [
+        "APP_SERVER_PORT=13001",
+        "APP_PUBLIC_ORIGIN=http://127.0.0.1:13001",
+        "pnpm",
+        "dev"
+      ],
+      "port": 13001,
+      "autoPort": false,
+      "url": "http://127.0.0.1:13001"
     }
   ]
 }
