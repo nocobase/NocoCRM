@@ -21,7 +21,7 @@ The interface follows the browser language on a first visit and remembers whatev
 
 ### Accounts and roles
 
-Accounts are created, disabled, given new passwords, and assigned their CRM role by an administrator in **Settings → Users**. The installer account holds the CRM administrator preset. Every other account needs a role before it can use the CRM, and each user holds exactly one:
+Accounts are created, disabled, given new passwords, and assigned their CRM role by an administrator in **Settings → Users**; there is no self-registration (the sign-up endpoint is disabled) and no forgot-password link on the login page, since passwords are reset there by the administrator. The installer account holds the administrator role, which is the authorization plugin's own **System administrator** (root) set. Every other account needs a role before it can use the CRM, and each user holds exactly one:
 
 | Role          | What it can do                                                                                      |
 | ------------- | --------------------------------------------------------------------------------------------------- |
@@ -29,7 +29,7 @@ Accounts are created, disabled, given new passwords, and assigned their CRM role
 | Sales manager | Manages all sales data, assigns owners, approves requests, exports; deletes only records it created |
 | Salesperson   | Reads shared sales data, edits and deletes its own records, raises approvals; cannot export         |
 
-Disabling a user ends their sign-in, and they stop being offered as an owner or approver. The last administrator can neither be disabled nor lose the role. Record and field permissions can be refined further on the **Authorization → Permission sets** pages, and the APIs enforce them independently of navigation.
+Disabling a user ends their sign-in, and they stop being offered as an owner or approver. The last administrator can neither be disabled nor lose the role. The three roles are permission sets of the authorization plugin, shown in full on **Settings → Permission Sets**: every object with its view, create, edit and delete operations and their record scopes (all records, records I own, records I created), the assign, approve and export capabilities under Administration, and the pages a role may enter. The table above is the initial configuration; an administrator can change a role's operations and scopes there, and the APIs enforce the result independently of navigation. What each operation does, and which scopes it offers, is defined in code.
 
 ### Demo data
 

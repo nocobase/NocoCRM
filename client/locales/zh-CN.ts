@@ -5,8 +5,6 @@ const zhCN: AppResource = {
   crm: crmZh,
   'auth.welcome': '欢迎回来',
   'auth.loginDescription': '使用用户名或邮箱和密码登录。',
-  'auth.registerTitle': '创建账户',
-  'auth.registerDescription': '创建账户以开始使用。',
   'auth.forgotTitle': '忘记密码',
   'auth.forgotDescription': '输入邮箱，如果账户存在，我们将发送重置链接。',
   'auth.resetTitle': '重置密码',

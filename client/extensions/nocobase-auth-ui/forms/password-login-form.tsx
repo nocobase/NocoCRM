@@ -103,22 +103,10 @@ export function PasswordLoginForm(
       <Button className='w-full' disabled={action.isPending} type='submit'>
         {action.isPending ? pendingLabel : submitLabel}
       </Button>
-      <div className='pt-3 text-sm'>
-        <nav className='flex items-center justify-between text-muted-foreground'>
-          <a
-            className='hover:text-foreground hover:underline'
-            href='forgot-password'
-          >
-            {t('auth.forgotLink', { defaultValue: 'Forgot password?' })}
-          </a>
-          <a
-            className='font-semibold text-foreground underline underline-offset-4'
-            href='register'
-          >
-            {t('auth.signUp', { defaultValue: 'Sign up' })}
-          </a>
-        </nav>
-      </div>
+      {/* Application change: no sign-up or forgot-password link. The CRM has
+          no self-registration, and passwords are reset by an administrator
+          on the Users page; the forgot-password page would succeed without
+          sending anything, since no reset mail is configured. */}
     </form>
   );
 }

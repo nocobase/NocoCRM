@@ -4,7 +4,7 @@ import {
   useRefresh,
 } from '../components/crm/api.js';
 import { recordTitle } from '../components/crm/lookups.js';
-import { fieldLabelKey, toText } from '../components/crm/api.js';
+import { editsAll, fieldLabelKey, toText } from '../components/crm/api.js';
 import { useEffect, useState, type ReactElement } from 'react';
 import { useLocation } from 'react-router';
 import {
@@ -489,7 +489,7 @@ function EntityList({
           </Button>
         )}
         {/* Export is a manager's action; the server refuses it otherwise. */}
-        {meta?.manage && (
+        {meta?.export && (
           <Button
             variant='ghost'
             size='icon'
@@ -799,7 +799,7 @@ function EntityList({
                 if (
                   dragged.status === 'converted' ||
                   dragged[definition.statusField!] === stage ||
-                  !(meta?.manage || dragged.ownerId === meta?.userId)
+                  !(editsAll(meta, entity) || dragged.ownerId === meta?.userId)
                 )
                   return;
                 // Dragging is the whole gesture: the status changes on drop.
@@ -819,13 +819,14 @@ function EntityList({
                       : '',
                   )} ${toText(
                     record.status !== 'converted' &&
-                      (meta?.manage || record.ownerId === meta?.userId)
+                      (editsAll(meta, entity) ||
+                        record.ownerId === meta?.userId)
                       ? 'cursor-grab active:cursor-grabbing'
                       : '',
                   )}`}
                   draggable={
                     record.status !== 'converted' &&
-                    (meta?.manage || record.ownerId === meta?.userId)
+                    (editsAll(meta, entity) || record.ownerId === meta?.userId)
                   }
                   onDragEnd={() => setDragging(undefined)}
                   // The card carries what the drop needs, since the target
