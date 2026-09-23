@@ -27,6 +27,7 @@ import {
   type Field,
   type ListData,
 } from './api.js';
+import { useRefreshAfterWrite } from './ai-write-refresh.js';
 
 // The cards the CRM's write tools show in the conversation. The plugin
 // holds each call until the user allows it; these render the proposal the
@@ -410,6 +411,7 @@ export function CrmWriteCard({
     metadata.invokeStatus === 'confirmed';
   const failure =
     part.state === 'output-error' ? parseFailure(part.errorText) : undefined;
+  useRefreshAfterWrite(part.toolCallId, part.state, succeeded || confirmed);
   const assumptions = Array.isArray(input.assumptions)
     ? input.assumptions.map(toText).filter(Boolean)
     : [];
