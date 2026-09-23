@@ -1958,6 +1958,20 @@ describe('demo dataset', () => {
     expect(await count('opportunities')).toBe(before.opportunities + 30);
     expect(await count('leads')).toBe(before.leads + 16);
     expect(await count('approvals')).toBe(before.approvals + 3);
+    // Every demo account and lead carries its whole region: the province
+    // of its city as well as the country and the city.
+    for (const entity of ['accounts', 'leads'] as const) {
+      const { data } = await service.list(actor('admin'), entity, {
+        pageSize: 500,
+      });
+      const demo = data.filter((r) => r.city);
+      expect(demo.length).toBeGreaterThan(0);
+      expect(demo.filter((r) => !r.state)).toEqual([]);
+    }
+    const shenzhen = (
+      await service.list(actor('admin'), 'accounts', { pageSize: 500 })
+    ).data.find((r) => r.city === '深圳');
+    expect(shenzhen?.state).toBe('CN-44');
     // Activities cover a month back and three months ahead on every
     // working day, so the calendar and the agenda are never empty
     // whichever day the demo is opened on.

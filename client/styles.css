@@ -138,9 +138,13 @@
   }
 }
 
-@media (min-width: 768px) {
+/* Application change: the assistant panel (28rem, client/components/crm/
+   ai-chat.tsx) sits beside the page only where both fit, from 1280px; the
+   page makes room for exactly its width. Narrower screens show the panel
+   over the page, which is also where it starts closed. */
+@media (min-width: 1280px) {
   body.crm-assistant-open .crm-page-main {
-    margin-right: min(28rem, 40vw);
+    margin-right: 28rem;
     transition: margin-right 200ms ease-in-out;
   }
 }

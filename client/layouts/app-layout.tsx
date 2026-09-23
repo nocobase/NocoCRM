@@ -118,7 +118,12 @@ export function AppLayout({
                 >
                   <PanelLeft />
                 </Button>
-                <div className='md:hidden'>
+                {/* Application change: a phone's header has room for the mark only;
+                    the wordmark was cut to "Noco…" beside the header actions. */}
+                <div className='sm:hidden'>
+                  <AppBrand compact />
+                </div>
+                <div className='hidden sm:block md:hidden'>
                   <AppBrand />
                 </div>
                 <Button

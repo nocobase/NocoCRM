@@ -251,7 +251,6 @@ export async function populateDemo(
       return service.get(prepared, entity, toText(record.id), q);
     };
 
-
   // Who owns which account (by index): 王小芳 0,1,4 · 陈小浩 2,5,7 · 李明 3,6.
   // Leads rotate the same way by position; activities follow their record.
   const accountOwner = (i: number): Actor =>
@@ -652,6 +651,19 @@ export async function populateDemo(
         'du.nan',
       ],
     ];
+  // The province of each demo city (ISO 3166-2, as the region field
+  // stores it), so a demo record carries the whole region: country,
+  // province and city.
+  const provinceOf: Record<string, string> = {
+    北京: 'CN-11',
+    上海: 'CN-31',
+    南京: 'CN-32',
+    苏州: 'CN-32',
+    杭州: 'CN-33',
+    广州: 'CN-44',
+    深圳: 'CN-44',
+    成都: 'CN-51',
+  };
   const phone = (n: number): string =>
     `138 0${String(100 + n).slice(-3)} ${String(2000 + n * 37).slice(-4)}`;
 
@@ -676,6 +688,7 @@ export async function populateDemo(
           ownerId,
           industry,
           city,
+          state: provinceOf[city],
           country: 'CN',
           status,
           source,
@@ -803,6 +816,7 @@ export async function populateDemo(
             phone: i % 4 === 0 ? null : phone(40 + i),
             jobTitle: i % 2 ? '销售经理' : '运营主管',
             country: 'CN',
+            state: provinceOf[['上海', '北京', '深圳', '杭州'][i % 4]],
             city: ['上海', '北京', '深圳', '杭州'][i % 4],
             industry: [
               'manufacturing',

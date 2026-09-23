@@ -426,7 +426,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
           {!converted && meta?.assistant && (
             // The two assistant entries read as one group, tighter than the
             // gap between the primary actions.
-            <div className='flex items-center'>
+            <div className='flex flex-wrap items-center'>
               {(['leads', 'researchCompany', 'assessConversion'] as const).map(
                 (key) => (
                   <Button

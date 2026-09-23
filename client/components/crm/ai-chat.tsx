@@ -148,10 +148,12 @@ function CrmAssistantPanel(): ReactElement | null {
   const { open } = useAIChatControllerState(controller);
   const [record, setRecord] = useState<RecordContext>();
   // The panel starts open on a screen wide enough to hold it beside the
-  // page: the assistant is the CRM's front door, not a hidden extra. Once
-  // the user opens or closes it, that choice survives a reload of the tab.
+  // page (1280px, where styles.css pushes the page aside by the panel's
+  // width): the assistant is the CRM's front door, not a hidden extra.
+  // Narrower screens start with it closed, since it would cover the page.
+  // Once the user opens or closes it, that choice survives a reload.
   useEffect(() => {
-    let initial = window.matchMedia('(min-width: 768px)').matches;
+    let initial = window.matchMedia('(min-width: 1280px)').matches;
     try {
       const stored = sessionStorage.getItem(openKey);
       if (stored !== null) initial = stored === '1';

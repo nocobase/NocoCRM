@@ -597,7 +597,7 @@ export default function EntityDetail({
             <ApprovalActions approval={record} names={names} />
           )}
           {meta?.assistant && shortcuts[entity] && (
-            <div className='flex items-center'>
+            <div className='flex flex-wrap items-center'>
               {shortcuts[entity].map((key) => (
                 <Button
                   key={key}

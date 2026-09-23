@@ -373,7 +373,7 @@ function EntityList({
           metrics above into follow-up activities. */}
       {meta?.assistant &&
         ['leads', 'accounts', 'opportunities'].includes(entity) && (
-          <div className='flex items-center'>
+          <div className='flex flex-wrap items-center'>
             {entity === 'leads' && writable && (
               <Button
                 variant='ghost'
@@ -699,7 +699,18 @@ function EntityList({
                   {query.data.data.map((record) => (
                     <TableRow key={record.id}>
                       {columns.map((key) => (
-                        <TableCell className='max-w-72 px-4 py-4' key={key}>
+                        <TableCell
+                          // A long name wraps within its column; any other
+                          // value is cut with an ellipsis. Either way a cell
+                          // never runs over the next one, which on a phone
+                          // put two columns' text on top of each other.
+                          className={
+                            key === 'name'
+                              ? 'min-w-40 max-w-72 whitespace-normal break-words px-4 py-4'
+                              : 'max-w-72 truncate px-4 py-4'
+                          }
+                          key={key}
+                        >
                           {key === 'name' ? (
                             <RecordLink
                               entity={entity}
@@ -957,11 +968,13 @@ function EntityList({
               {text('thisMonth')}
             </Button>
           </div>
-          <div className='grid gap-px overflow-hidden rounded-xl border bg-border md:grid-cols-7'>
+          {/* The month grid needs about 110px a day, which a tablet beside the
+              sidebar does not have; below 1024px the days stack as a list. */}
+          <div className='grid gap-px overflow-hidden rounded-xl border bg-border lg:grid-cols-7'>
             {Array.from({ length: 7 }, (_, i) => (
               <div
                 key={i + 1}
-                className='hidden bg-card p-3 text-sm font-medium md:block'
+                className='hidden bg-card p-3 text-sm font-medium lg:block'
               >
                 {new Intl.DateTimeFormat(language, {
                   weekday: 'short',
@@ -981,7 +994,7 @@ function EntityList({
                 <div
                   key={i + 100}
                   aria-hidden
-                  className='hidden bg-muted md:block'
+                  className='hidden bg-muted lg:block'
                 />
               ),
             )}
