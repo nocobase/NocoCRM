@@ -8,7 +8,12 @@ import {
   entities,
   toText,
 } from '../../providers/crm/schema.js';
-import type { CrmService } from '../../providers/crm/service.js';
+import type { CrmService, ListOptions } from '../../providers/crm/service.js';
+import {
+  groupRelation,
+  summaryPeriods,
+  type SummaryPeriod,
+} from '../../providers/crm/summary.js';
 import { resolveTitles } from '../../providers/crm/titles.js';
 import { accessLines } from '../screen.js';
 
@@ -90,6 +95,61 @@ export function crmActor(
   };
 }
 
+// The filters search_records and summarize_records share: the list's own.
+const filterProperties = {
+  search: {
+    type: 'string',
+    description: 'Free text matched against name, company, email and phone.',
+  },
+  status: {
+    type: 'string',
+    description:
+      'Exact status value, or stage for opportunities. Use the enum values from the schema.',
+  },
+  ownerId: {
+    type: 'string',
+    description: 'Filter by owning user id.',
+  },
+  accountId: { type: 'string' },
+  leadId: { type: 'string' },
+  opportunityId: { type: 'string' },
+  source: { type: 'string' },
+  from: {
+    type: 'string',
+    description: 'ISO timestamp; keeps records created at or after it.',
+  },
+  to: {
+    type: 'string',
+    description: 'ISO timestamp; keeps records created at or before it.',
+  },
+  startFrom: {
+    type: 'string',
+    description:
+      'Activities only: ISO timestamp; keeps activities that start at or after it (when they take place, not when they were recorded).',
+  },
+  startTo: {
+    type: 'string',
+    description:
+      'Activities only: ISO timestamp; keeps activities that start at or before it.',
+  },
+};
+
+function filtersOf(args: Row): ListOptions {
+  return {
+    search: text(args.search),
+    status: text(args.status),
+    ownerId: text(args.ownerId),
+    accountId: text(args.accountId),
+    leadId: text(args.leadId),
+    opportunityId: text(args.opportunityId),
+    source: text(args.source),
+    from: text(args.from),
+    to: text(args.to),
+    startFrom: text(args.startFrom),
+    startTo: text(args.startTo),
+  };
+}
+
 export function crmRecordTools(
   service: CrmService,
   authz: Pick<AppAuthorizationService, 'for'>,
@@ -114,34 +174,7 @@ export function crmRecordTools(
           type: 'object',
           properties: {
             entity: entityProperty,
-            search: {
-              type: 'string',
-              description:
-                'Free text matched against name, company, email and phone.',
-            },
-            status: {
-              type: 'string',
-              description:
-                'Exact status value, or stage for opportunities. Use the enum values from the schema.',
-            },
-            ownerId: {
-              type: 'string',
-              description: 'Filter by owning user id.',
-            },
-            accountId: { type: 'string' },
-            leadId: { type: 'string' },
-            opportunityId: { type: 'string' },
-            source: { type: 'string' },
-            from: {
-              type: 'string',
-              description:
-                'ISO timestamp; keeps records created at or after it.',
-            },
-            to: {
-              type: 'string',
-              description:
-                'ISO timestamp; keeps records created at or before it.',
-            },
+            ...filterProperties,
             page: { type: 'number', description: 'One-based page number.' },
             pageSize: {
               type: 'number',
@@ -157,15 +190,7 @@ export function crmRecordTools(
           const args = (input ?? {}) as Row;
           const entity = asEntity(toText(args.entity));
           const page = await service.list(actor, entity, {
-            search: text(args.search),
-            status: text(args.status),
-            ownerId: text(args.ownerId),
-            accountId: text(args.accountId),
-            leadId: text(args.leadId),
-            opportunityId: text(args.opportunityId),
-            source: text(args.source),
-            from: text(args.from),
-            to: text(args.to),
+            ...filtersOf(args),
             page: Math.max(1, Number(args.page) || 1),
             pageSize: Math.min(
               MAX_PAGE_SIZE,
@@ -184,6 +209,87 @@ export function crmRecordTools(
             records: page.data,
             names,
           };
+        });
+      },
+    }),
+    defineTools({
+      scope: 'SPECIFIED',
+      execution: 'backend',
+      defaultPermission: 'ALLOW',
+      i18n: { namespace: 'crm' },
+      introduction: {
+        title: 'Summarize CRM records',
+        about:
+          'Counts and totals over the records the current user may read, grouped by a field or a period, for reports and analysis.',
+      },
+      definition: {
+        name: 'summarize_records',
+        description:
+          'Count and total the records of one CRM object that this user may read, with the same filters as search_records, optionally grouped by a field (stage, status, source, industry, ownerId, accountId, a country ...) or by a period of a date field (createdAt, closedAt, expectedCloseAt, startAt ...; period day, week, month, quarter or year, in the business time zone), with sum, average, min and max of number fields (measures, such as amount). Returns {total, truncated, groupBy, period, groups: [{key, count, measures}], overall, names}: total is every matching record, a group key is the field value (an enum value to put in words, or an id whose display name is in names) or the period ("2026-09", "2026-Q3", a week by its Monday), null for records without one; measures and overall hold {field, currency, sum, average, min, max, counted}, one entry per currency, since amounts in different currencies are never added together. A participants field counts a record once for each participant. Use it for every count, total, breakdown or trend instead of paging through search_records.',
+        schema: {
+          type: 'object',
+          properties: {
+            entity: entityProperty,
+            ...filterProperties,
+            groupBy: {
+              type: 'string',
+              description:
+                'The field to group by; leave it out for one total over every matching record.',
+            },
+            period: {
+              type: 'string',
+              enum: summaryPeriods,
+              description:
+                'For a date field in groupBy: the period records fall into (month when left out).',
+            },
+            measures: {
+              type: 'array',
+              items: { type: 'string' },
+              description:
+                'Number fields to sum and average, such as ["amount"]; the count is always returned.',
+            },
+          },
+          required: ['entity'],
+        },
+      },
+      invoke: async (ctx, input) => {
+        const actor = actorOf(ctx);
+        return guarded(async () => {
+          const args = (input ?? {}) as Row;
+          const entity = asEntity(toText(args.entity));
+          const summary = await service.summarize(
+            actor,
+            entity,
+            filtersOf(args),
+            {
+              groupBy: text(args.groupBy),
+              period: text(args.period) as SummaryPeriod | undefined,
+              measures: Array.isArray(args.measures)
+                ? args.measures.map((m) => toText(m)).filter(Boolean)
+                : undefined,
+            },
+          );
+          // Group keys that are ids get their display names, like the
+          // records search_records returns.
+          const relation = summary.groupBy
+            ? groupRelation(entity, summary.groupBy)
+            : undefined;
+          const keys = summary.groups
+            .map((g) => g.key)
+            .filter((k): k is string => k !== null);
+          let names: Record<string, string> = {};
+          if (relation === 'users') {
+            const wanted = new Set(keys);
+            names = Object.fromEntries(
+              (await service.users(actor))
+                .filter((u) => wanted.has(toText(u.id)))
+                .map((u) => [toText(u.id), toText(u.name ?? u.id)]),
+            );
+          } else if (relation && keys.length)
+            names = (
+              await resolveTitles(service, actor, {}, { [relation]: keys })
+            ).names;
+          return { ...summary, names };
         });
       },
     }),

@@ -1283,6 +1283,7 @@ describe('CRM API security and domain rules', () => {
       'get_record',
       'list_users',
       'search_records',
+      'summarize_records',
     ]);
     expect(crmEmployee.tools?.map((tool) => tool.name).sort()).toEqual([
       'approval_action',
@@ -1292,8 +1293,13 @@ describe('CRM API security and domain rules', () => {
       'get_record',
       'list_users',
       'search_records',
+      'summarize_records',
       'update_record',
     ]);
+    // Reports come from the plugin's report skill, whose tool the model
+    // activates by loading it; skills have to be on for that.
+    expect(crmEmployee.skills).toEqual(['business-analysis-report']);
+    expect(crmEmployee.chatSettings?.enableSkills).toBe(true);
     expect(crmAssistant({ avatar: 'https://crm.example/x.png' }).avatar).toBe(
       'https://crm.example/x.png',
     );
@@ -1393,6 +1399,163 @@ describe('CRM API security and domain rules', () => {
     await expect(
       byName.get_record!.invoke({}, { entity: 'leads', id: lead.id }, runtime),
     ).rejects.toThrow('signed-in user');
+  });
+  it("summarizes records by field and period within the reader's scope, per currency", async () => {
+    const account = await service.save(actor('rep'), 'accounts', {
+      name: 'Summary account',
+    });
+    for (const [name, stage, amount, currency, expectedCloseAt] of [
+      ['Summary A', 'contact', 100, 'CNY', '2026-07-15'],
+      ['Summary B', 'contact', 50, 'CNY', '2026-08-01'],
+      ['Summary C', 'qualification', 30, 'USD', '2026-08-20'],
+    ] as const)
+      await service.save(actor('rep'), 'opportunities', {
+        name,
+        accountId: account.id,
+        stage,
+        amount,
+        currency,
+        expectedCloseAt,
+      });
+    const byStage = await service.summarize(
+      actor('rep'),
+      'opportunities',
+      { accountId: toText(account.id) },
+      { groupBy: 'stage', measures: ['amount'] },
+    );
+    expect(byStage.total).toBe(3);
+    expect(byStage.truncated).toBe(false);
+    // Largest group first; amounts are never added across currencies.
+    expect(byStage.groups).toEqual([
+      {
+        key: 'contact',
+        count: 2,
+        measures: [
+          {
+            field: 'amount',
+            currency: 'CNY',
+            sum: 150,
+            average: 75,
+            min: 50,
+            max: 100,
+            counted: 2,
+          },
+        ],
+      },
+      {
+        key: 'qualification',
+        count: 1,
+        measures: [
+          {
+            field: 'amount',
+            currency: 'USD',
+            sum: 30,
+            average: 30,
+            min: 30,
+            max: 30,
+            counted: 1,
+          },
+        ],
+      },
+    ]);
+    expect(byStage.overall.map((m) => [m.currency, m.sum])).toEqual([
+      ['CNY', 150],
+      ['USD', 30],
+    ]);
+    // A date groups by period, in time order.
+    const byMonth = await service.summarize(
+      actor('rep'),
+      'opportunities',
+      { accountId: toText(account.id) },
+      { groupBy: 'expectedCloseAt', period: 'month' },
+    );
+    expect(byMonth.groups.map((g) => [g.key, g.count])).toEqual([
+      ['2026-07', 1],
+      ['2026-08', 2],
+    ]);
+    expect(
+      (
+        await service.summarize(
+          actor('rep'),
+          'opportunities',
+          { accountId: toText(account.id) },
+          { groupBy: 'expectedCloseAt', period: 'quarter' },
+        )
+      ).groups.map((g) => g.key),
+    ).toEqual(['2026-Q3']);
+    // Free text cannot be a group, and only numbers add up.
+    await expect(
+      service.summarize(actor('rep'), 'opportunities', {}, { groupBy: 'name' }),
+    ).rejects.toMatchObject({ code: 'invalidInput', field: 'groupBy' });
+    await expect(
+      service.summarize(
+        actor('rep'),
+        'opportunities',
+        {},
+        { measures: ['stage'] },
+      ),
+    ).rejects.toMatchObject({ code: 'invalidInput', field: 'measures' });
+    // Someone without read access gets no numbers either.
+    await expect(
+      service.summarize(actor('outsider'), 'opportunities', {}, {}),
+    ).rejects.toMatchObject({ code: 'forbidden' });
+    // The tool names the owners it groups by.
+    const tool = crmRecordTools(service, authorization).find(
+      (t) => t.definition.name === 'summarize_records',
+    )!;
+    const byOwner = (await tool.invoke(
+      { actor: { id: 'rep', roles: [], isRoot: false } },
+      {
+        entity: 'opportunities',
+        accountId: account.id,
+        groupBy: 'ownerId',
+      },
+      { toolCallId: 'call', writer: () => undefined },
+    )) as {
+      groups: { key: string; count: number }[];
+      names: Record<string, string>;
+    };
+    expect(byOwner.groups).toEqual([{ key: 'rep', count: 3, measures: [] }]);
+    // (The test users are named after their ids.)
+    expect(byOwner.names).toEqual({ rep: 'rep' });
+    const byAccount = (await tool.invoke(
+      { actor: { id: 'rep', roles: [], isRoot: false } },
+      { entity: 'opportunities', accountId: account.id, groupBy: 'accountId' },
+      { toolCallId: 'call', writer: () => undefined },
+    )) as { names: Record<string, string> };
+    // Activities filter by when they take place.
+    await service.save(actor('rep'), 'activities', {
+      name: 'Summary call',
+      type: 'call',
+      accountId: account.id,
+      status: 'planned',
+      startAt: '2026-08-10T02:00:00.000Z',
+      endAt: '2026-08-10T03:00:00.000Z',
+    });
+    await service.save(actor('rep'), 'activities', {
+      name: 'Summary meeting',
+      type: 'meeting',
+      accountId: account.id,
+      status: 'planned',
+      startAt: '2026-10-10T02:00:00.000Z',
+      endAt: '2026-10-10T03:00:00.000Z',
+    });
+    const inQuarter = (await tool.invoke(
+      { actor: { id: 'rep', roles: [], isRoot: false } },
+      {
+        entity: 'activities',
+        accountId: account.id,
+        startFrom: '2026-07-01T00:00:00.000Z',
+        startTo: '2026-09-30T23:59:59.999Z',
+        groupBy: 'type',
+      },
+      { toolCallId: 'call', writer: () => undefined },
+    )) as { total: number; groups: { key: string }[] };
+    expect(inQuarter.total).toBe(1);
+    expect(inQuarter.groups.map((g) => g.key)).toEqual(['call']);
+    expect(byAccount.names).toEqual({
+      [toText(account.id)]: 'Summary account',
+    });
   });
   it('screens a proposed write by the rules the tools apply, before the card offers confirmation', async () => {
     const theirs = await service.save(actor('other'), 'leads', {

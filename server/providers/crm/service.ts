@@ -1,5 +1,13 @@
 import type { WorkflowServiceContract } from '@nocobase/app-plugin-workflow/server';
 import { decodeRow, encodeRow, jsonValue } from './values.js';
+import {
+  hasCurrency,
+  summarizeRows,
+  SUMMARY_ROW_LIMIT,
+  validateSummary,
+  type Summary,
+  type SummaryRequest,
+} from './summary.js';
 import { toText } from './schema.js';
 import { CRM_ASSISTANT } from '../../ai/employees/crm-assistant.js';
 import { isCountry, isSubdivision, subdivisionCode } from './geography.js';
@@ -338,18 +346,19 @@ export class CrmService {
         .values({ id: actor.id, locale: actor.locale })
         .execute();
   }
-  async list(
+  // The records of one object this actor may read that match the list
+  // filters, as a query still to be ordered and paged: the list and the
+  // summary read the same rows.
+  private async filtered(
     actor: Actor,
     entity: Entity,
-    options: ListOptions = {},
-    query: QueryAdapter = this.database.query(),
-  ): Promise<ListResult> {
+    options: ListOptions,
+    query: QueryAdapter,
+  ) {
     const access = await conditions(actor, entity, 'read');
     const fields = outputFields(entity, access);
     if (!fields.length) throw new CrmError('forbidden', 403);
     const definition = definitions[entity];
-    const page = Math.max(1, options.page ?? 1);
-    const pageSize = Math.min(1000, Math.max(1, options.pageSize ?? 25));
     let select = query
       .selectFrom(definition.table)
       .select(fields)
@@ -421,6 +430,17 @@ export class CrmService {
         ),
       );
     }
+    return { select, fields };
+  }
+  async list(
+    actor: Actor,
+    entity: Entity,
+    options: ListOptions = {},
+    query: QueryAdapter = this.database.query(),
+  ): Promise<ListResult> {
+    const page = Math.max(1, options.page ?? 1);
+    const pageSize = Math.min(1000, Math.max(1, options.pageSize ?? 25));
+    const { select } = await this.filtered(actor, entity, options, query);
     if (!options.contactId) {
       const count = await select
         .clearSelect()
@@ -461,6 +481,62 @@ export class CrmService {
       page,
       pageSize,
     };
+  }
+  // Counts and totals over the records the list filters match, grouped by a
+  // field or a period (summary.ts): the numbers a report is built on, read
+  // within the same permission scope as the list.
+  async summarize(
+    actor: Actor,
+    entity: Entity,
+    options: ListOptions,
+    request: SummaryRequest,
+    query: QueryAdapter = this.database.query(),
+  ): Promise<Summary> {
+    // Contact membership is filtered after the query in the list; a
+    // summary does not take it.
+    const { select, fields } = await this.filtered(
+      actor,
+      entity,
+      { ...options, contactId: undefined },
+      query,
+    );
+    const settled = validateSummary(entity, fields, request);
+    const count = await select
+      .clearSelect()
+      .select((eb) => [eb.fn.countAll().as('total')])
+      .executeTakeFirst();
+    const total = Number(count?.total ?? 0);
+    const columns = [
+      ...new Set(
+        [
+          settled.groupBy,
+          ...(settled.measures ?? []),
+          ...(hasCurrency(entity) && settled.measures?.length
+            ? ['currency']
+            : []),
+        ].filter((c): c is string => !!c && fields.includes(c)),
+      ),
+    ];
+    const rows = columns.length
+      ? (
+          await select
+            .clearSelect()
+            .select(columns)
+            .orderBy('id', 'asc')
+            .limit(SUMMARY_ROW_LIMIT)
+            .execute()
+        ).map((row) => decodeRow(row))
+      : [];
+    const { timeZone } = await this.settings(query);
+    // Without a grouping or a measure, the count is the whole answer.
+    if (!columns.length)
+      return {
+        total,
+        truncated: false,
+        groups: [{ key: null, count: total, measures: [] }],
+        overall: [],
+      };
+    return summarizeRows(entity, rows, settled, { total, timeZone });
   }
   async get(
     actor: Actor,
