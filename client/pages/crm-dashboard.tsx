@@ -234,7 +234,7 @@ export default function DashboardPage(): ReactElement {
               ))}
             </div>
           }
-          {meta?.permissions.leads.create && (
+          {meta?.assistant && meta.permissions.leads.create && (
             <Button
               variant='ghost'
               className='text-ai hover:text-ai'
@@ -250,22 +250,26 @@ export default function DashboardPage(): ReactElement {
               {text('captureLead')}
             </Button>
           )}
-          <Button
-            variant='ghost'
-            className='text-ai hover:text-ai'
-            onClick={() => ask('planToday')}
-          >
-            <Sparkles />
-            {text('planToday')}
-          </Button>
-          <Button
-            variant='ghost'
-            className='text-ai hover:text-ai'
-            onClick={() => ask('analyzeSales')}
-          >
-            <Sparkles />
-            {text('analyzeSales')}
-          </Button>
+          {meta?.assistant && (
+            <>
+              <Button
+                variant='ghost'
+                className='text-ai hover:text-ai'
+                onClick={() => ask('planToday')}
+              >
+                <Sparkles />
+                {text('planToday')}
+              </Button>
+              <Button
+                variant='ghost'
+                className='text-ai hover:text-ai'
+                onClick={() => ask('analyzeSales')}
+              >
+                <Sparkles />
+                {text('analyzeSales')}
+              </Button>
+            </>
+          )}
         </>
       }
     >
@@ -662,7 +666,7 @@ function AgendaCard({
                   </span>
                 )}
               </p>
-              {entity === 'activities' && (
+              {entity === 'activities' && meta?.assistant && (
                 <div className='mt-1 flex gap-1'>
                   {(['prepareActivity', 'reportActivity'] as const).map(
                     (key) => (

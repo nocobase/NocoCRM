@@ -17,7 +17,8 @@ import {
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
-import { crmToken, crmAiToken } from '../providers/crm/index.js';
+import { crmToken } from '../providers/crm/index.js';
+import { screenProposal } from '../ai/screen.js';
 import {
   capability,
   conditions,
@@ -63,29 +64,6 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
     const router = new Hono();
     const routes = new Hono<CrmEnv>();
     const service = app.container.resolve(crmToken);
-    const ai = app.container.resolve(crmAiToken);
-    // An action names the record it targets and the records its proposal
-    // points at; both are titled so a card reads as names, not ids.
-    const actionTitles = (actor: Actor, data: Row) => {
-      const rows: Partial<Record<Entity, Row[]>> = {};
-      const add = (entity: unknown, row: Row): void => {
-        const name = toText(entity ?? '');
-        if (entities.includes(name as Entity))
-          (rows[name as Entity] ??= []).push(row);
-      };
-      for (const action of array(data.actions)) {
-        const item = object(action);
-        add(item.entity, {
-          ...object(item.input ?? {}),
-          id: item.recordId ?? '',
-        });
-      }
-      // A reply's trail names the records it looked at.
-      for (const message of array(data.messages))
-        for (const step of array(object(message).steps))
-          add(object(step).entity, { id: object(step).id ?? '' });
-      return resolveTitles(service, actor, rows);
-    };
     routes.use(
       '*',
       app.container.resolve(authenticationToken).required(),
@@ -154,8 +132,7 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         permissions[entity] = actions;
       }
       await conditions(actor, 'leads', 'read');
-      const settings = await service.settings();
-      const { aiInstructions: _instructions, ...publicSettings } = settings;
+      const publicSettings = await service.settings();
       return c.json({
         data: {
           definitions,
@@ -170,6 +147,8 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           assign: await capability(actor, 'assign'),
           approve: await capability(actor, 'approve'),
           settingsAccess: await capability(actor, 'manage', 'settings'),
+          // Whether the pages offer the assistant at all.
+          assistant: await service.assistantEnabled(),
         },
       });
     });
@@ -232,7 +211,6 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         data: {
           settings: await service.settings(),
           users: await service.users(c.get('actor')),
-          models: await ai.models(),
           demo: await demoStatus(service, c.get('actor')),
         },
       });
@@ -251,7 +229,9 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
               username: input.username,
               email: input.email,
               password: input.password,
-              roleScopes: { app: input.role },
+              // The CRM's role scope is a multiple selection: the plugin
+              // refuses a single value even for one role.
+              roleScopes: { app: [input.role] },
             });
           return { id: created.id };
         } catch (error) {
@@ -300,70 +280,16 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         data: await service.saveSettings(c.get('actor'), await c.req.json()),
       }),
     );
-    // The reader's proposed actions, a page at a time: the action center's
-    // pending queue and its record of what was decided.
-    routes.get('/ai/actions', async (c) => {
-      await conditions(c.get('actor'), 'leads', 'read');
-      const page = Number(c.req.query('page') ?? 1);
-      const pageSize = Number(c.req.query('pageSize') ?? RELATED_PAGE);
-      if (![page, pageSize].every((n) => Number.isSafeInteger(n) && n > 0))
-        throw new CrmError('invalidInput');
-      const result = await ai.actions(c.get('actor'), {
-        status: c.req.query('status'),
-        page,
-        pageSize,
-      });
-      return c.json({
-        ...result,
-        ...(await actionTitles(c.get('actor'), { actions: result.data })),
-      });
-    });
-    routes.get('/ai/history', async (c) => {
-      await conditions(c.get('actor'), 'leads', 'read');
-      const data = await ai.history(c.get('actor'));
-      return c.json({
-        data: { ...data, ...(await actionTitles(c.get('actor'), data)) },
-      });
-    });
-    routes.delete('/ai/history', async (c) =>
-      c.json({ data: await ai.clearMessages(c.get('actor')) }),
-    );
-    routes.post('/ai/chat', async (c) => {
-      await conditions(c.get('actor'), 'leads', 'read');
-      const body = object(await c.req.json());
-      // The panel asks for background: the question is written and the
-      // reply reaches it by polling, so the request returns at once.
-      return c.json({
-        data: await ai.chat(c.get('actor'), body, {
-          background: body.background === true,
-        }),
-      });
-    });
-    routes.post('/ai/messages/:id/cancel', async (c) =>
-      c.json({ data: await ai.cancel(c.get('actor'), c.req.param('id')) }),
-    );
-    routes.post('/ai/messages/:id/retry', async (c) => {
-      await conditions(c.get('actor'), 'leads', 'read');
-      return c.json({
-        data: await ai.retry(c.get('actor'), c.req.param('id')),
-      });
-    });
-    routes.put('/ai/actions/:id', async (c) => {
-      await ai.updateAction(
-        c.get('actor'),
-        c.req.param('id'),
-        await c.req.json(),
-      );
-      return c.json({ data: true });
-    });
-    routes.post('/ai/actions/:id/execute', async (c) => {
+    // Whether the signed-in user could carry out a write the AI employee
+    // proposed: the confirmation card asks before offering to confirm.
+    routes.post('/ai/screen', async (c) => {
       const body = object(await c.req.json());
       return c.json({
-        data: await ai.execute(
+        data: await screenProposal(
+          service,
           c.get('actor'),
-          c.req.param('id'),
-          body.confirmed,
-          body.continue === true,
+          toText(body.tool),
+          body.input,
         ),
       });
     });

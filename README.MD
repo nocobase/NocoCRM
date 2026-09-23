@@ -40,13 +40,13 @@ Disabling a user ends their sign-in, and they stop being offered as an owner or 
 | `liming`, `zhaomin`                          | 李明, 赵敏             | Sales manager |
 | `wangxiaofang`, `chenxiaohao`, `liuxiaoyang` | 王小芳, 陈小浩, 刘小洋 | Salesperson   |
 
-The import runs once; **Remove demo data** on the same page deletes exactly the records it created, using the manifest it keeps in the settings table, and leaves the accounts and anything created by hand. When the AI business guidance is empty, the import fills in the firm's example guidance. The server side lives in `server/providers/crm/demo.ts`.
+The import runs once; **Remove demo data** on the same page deletes exactly the records it created, using the manifest it keeps in the settings table, and leaves the accounts and anything created by hand. The server side lives in `server/providers/crm/demo.ts`.
 
 ### Configure AI
 
-No model credentials are bundled. Declare an LLM service under `ai.llmServices` in `config.yml` (`config.example.yml` shows the shape, with the API key read from an environment variable), then select the service and model in **Settings → System settings → AI configuration**. Until then the assistant reports that a model is required.
+No model credentials are bundled. Declare an LLM service under `ai.llmServices` in `config.yml` (`config.example.yml` shows the shape, with the API key read from an environment variable); the AI Employee plugin lists it under **Settings → AI Employees → LLM services**, and the **Enabled** switch of the NocoCRM employee on its **Settings → AI Employees** page shows or hides the assistant: the header button, the page shortcuts and the panel.
 
-The assistant reads authorized records, drafts recommendations, and proposes creates, updates, conversions, and approval actions as cards that the user confirms one by one; it never writes without confirmation, and it screens every proposal against the user's permissions and the record's state before offering it. The company research shortcut uses the provider's own web search, so it needs a provider that offers one. Model-generated dates, amounts, and identities still need review, and AI context is bounded to the most recent records per object.
+The assistant is the plugin's chat talking to the CRM's own employee, NocoCRM (**Settings → AI Employees**, where its role, including the deployment's business guidance, is visible read-only). It reads authorized records through tools and proposes creates, updates, deletions, lead conversions and approval actions as confirmation cards in the conversation; nothing is written until the user confirms a card, and every write runs as that user through the same service the pages use, so a change they could not make in the UI is refused and the reason shown. Model-generated dates, amounts and identities still need review.
 
 ### Notifications
 

@@ -22,13 +22,12 @@ import {
 import { CrmService, array } from './service.js';
 import { CrmError } from './schema.js';
 import { createCrmUserRoleScope } from './user-roles.js';
+import { CrmAiResources } from '../../ai/index.js';
+import { LOGO_AVATAR_PATH } from '../../ai/employees/crm-assistant.js';
 import { userRoleScopeRegistryToken } from '@nocobase/app-plugin-users/server/tokens';
-import { CrmAi } from './ai.js';
 
 export const crmToken: ServiceToken<CrmService> =
   createServiceToken<CrmService>('crm/service');
-export const crmAiToken: ServiceToken<CrmAi> =
-  createServiceToken<CrmAi>('crm/ai');
 export default class CrmProvider extends ServiceProvider<Application> {
   public readonly name: string = 'crm/provider';
   private cron?: CronJobManager;
@@ -58,14 +57,6 @@ export default class CrmProvider extends ServiceProvider<Application> {
               : undefined,
         ),
     );
-    this.app.container.singleton(
-      crmAiToken,
-      () =>
-        new CrmAi(
-          this.app.container.resolve(crmToken),
-          this.app.container.resolve(aiManagerToken),
-        ),
-    );
     registerCrmResources(this.app.container.resolve(authorizationToken));
   }
   public override async boot(): Promise<void> {
@@ -73,6 +64,24 @@ export default class CrmProvider extends ServiceProvider<Application> {
       this.app.container.resolve(authorizationToken),
       this.app.container.resolve(databaseManagerToken),
     );
+    // The CRM assistant employee and its tools, for the AI Employee
+    // plugin's chat (server/ai). Registered here, after every provider has
+    // registered its services and before the plugin serves conversations.
+    if (this.app.container.has(aiManagerToken)) {
+      // The employee's avatar is the application's mark: an absolute URL
+      // when the public origin is configured (APP_PUBLIC_ORIGIN), so the
+      // plugin's own settings pages show it too.
+      const identity = this.app.config.get<{ publicOrigin?: string }>('app');
+      const origin = toText(identity?.publicOrigin ?? '').replace(/\/+$/, '');
+      const avatar = origin
+        ? `${origin}${this.app.publicBasePath.replace(/\/+$/, '')}${LOGO_AVATAR_PATH}`
+        : LOGO_AVATAR_PATH;
+      await new CrmAiResources(
+        this.app.container.resolve(crmToken),
+        this.app.container.resolve(authorizationToken),
+        { avatar },
+      ).registerAIResources(this.app.container.resolve(aiManagerToken));
+    }
     // The Users page shows and assigns the CRM's roles through this scope.
     if (this.app.container.has(userRoleScopeRegistryToken))
       this.unregisterRoleScope = this.app.container
@@ -84,8 +93,6 @@ export default class CrmProvider extends ServiceProvider<Application> {
         );
   }
   public override async start(): Promise<void> {
-    // Replies awaited when the previous process stopped will never arrive.
-    await this.app.container.resolve(crmAiToken).failAbandoned();
     this.cron = createCronJobManager();
     this.cron.addJob({ cronTime: '*/30 * * * * *', onTick: () => this.scan() });
     this.cron.start();

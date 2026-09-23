@@ -1,6 +1,7 @@
 import type { WorkflowServiceContract } from '@nocobase/app-plugin-workflow/server';
 import { decodeRow, encodeRow, jsonValue } from './values.js';
 import { toText } from './schema.js';
+import { CRM_ASSISTANT } from '../../ai/employees/crm-assistant.js';
 import { isCountry, isSubdivision, subdivisionCode } from './geography.js';
 import { randomUUID } from 'node:crypto';
 import type { DatabaseManager, QueryAdapter, Row } from '@nocobase/db';
@@ -131,16 +132,46 @@ export class CrmService {
     ) as Partial<CrmSettings> & {
       approvalEnabled?: unknown;
       firstContactDays?: unknown;
+      aiInstructions?: unknown;
+      aiService?: unknown;
+      aiModel?: unknown;
+      aiEnabled?: unknown;
     };
     // Settings since retired (the approval switch, the first-contact
-    // threshold); a row from before still carries them.
+    // threshold, the AI business instructions now in the employee's role,
+    // the model choice now on the plugin's page, the AI switch now the
+    // employee's own Enabled switch there); a row from before still
+    // carries them.
     delete stored.approvalEnabled;
     delete stored.firstContactDays;
+    delete stored.aiInstructions;
+    delete stored.aiService;
+    delete stored.aiModel;
+    delete stored.aiEnabled;
     return {
       ...defaultSettings,
       ...stored,
       options: defaultSettings.options,
     };
+  }
+  // Whether the CRM's AI employee is switched on: its Enabled switch on the
+  // AI Employee plugin's settings page is the assistant's only on/off, so
+  // the pages show the assistant's entries only when the plugin would
+  // answer. Without the plugin's table (an application without it, the
+  // tests) there is no assistant.
+  async assistantEnabled(
+    query: QueryAdapter = this.database.query(),
+  ): Promise<boolean> {
+    try {
+      const row = await query
+        .selectFrom('aiEmployees')
+        .select('enabled')
+        .where('username', '=', CRM_ASSISTANT)
+        .executeTakeFirst();
+      return Boolean(row?.enabled);
+    } catch {
+      return false;
+    }
   }
   async mutate<T>(
     actor: Actor,
@@ -194,7 +225,21 @@ export class CrmService {
     // rejected. Anything else unknown is a client bug worth surfacing.
     for (const key of Object.keys(input))
       if (!(key in defaultSettings)) {
-        if (['options', 'approvalEnabled', 'firstContactDays'].includes(key))
+        if (
+          [
+            'options',
+            'approvalEnabled',
+            'firstContactDays',
+            // The assistant is the AI Employee plugin's: its business
+            // guidance is in the employee's role (server/ai) and its model
+            // is chosen on the plugin's own settings page.
+            'aiInstructions',
+            'aiService',
+            'aiModel',
+            // Switched on and off as the employee itself (assistantEnabled).
+            'aiEnabled',
+          ].includes(key)
+        )
           delete input[key];
         else throw new CrmError('invalidInput', 400, key);
       }
@@ -214,11 +259,6 @@ export class CrmService {
       'staleDays',
     ] as const)
       if (!Number.isFinite(value[key]) || value[key] < 0 || value[key] > 525600)
-        throw new CrmError('invalidInput', 400, key);
-    if (typeof value.aiEnabled !== 'boolean')
-      throw new CrmError('invalidInput', 400, 'aiEnabled');
-    for (const key of ['aiService', 'aiModel', 'aiInstructions'] as const)
-      if (typeof value[key] !== 'string' || value[key].length > 20000)
         throw new CrmError('invalidInput', 400, key);
     await this.database.transaction(async ({ query }) => {
       const existing = await query

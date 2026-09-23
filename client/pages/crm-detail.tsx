@@ -311,16 +311,21 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<unknown>();
   const [busy, setBusy] = useState(false);
+  // The assistant panel attaches the lead on screen to the conversation;
+  // its title follows once the lead has loaded.
+  const contextName = detail
+    ? `${toText(detail.record.name)}${detail.record.company ? ` / ${toText(detail.record.company)}` : ''}`
+    : undefined;
   useEffect(() => {
     window.dispatchEvent(
       new CustomEvent('crm-context', {
-        detail: { entity: 'leads', recordId: id },
+        detail: { entity: 'leads', recordId: id, name: contextName },
       }),
     );
     return () => {
       window.dispatchEvent(new CustomEvent('crm-context', { detail: {} }));
     };
-  }, [id]);
+  }, [id, contextName]);
   if (isLoading || !meta) return <Loading />;
   if (!detail)
     return (
@@ -418,7 +423,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
               {text('convert')}
             </Button>
           )}
-          {!converted && (
+          {!converted && meta?.assistant && (
             // The two assistant entries read as one group, tighter than the
             // gap between the primary actions.
             <div className='flex items-center'>
@@ -435,6 +440,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                             prompt: text(`prompts.${key}`),
                             entity: 'leads',
                             recordId: id,
+                            name: contextName,
                             send: true,
                             // Background research alone looks outside the CRM.
                             webSearch: key === 'researchCompany',
@@ -1111,7 +1117,7 @@ export function ActivityItem({
           one can still have its feedback added to. Cancelled and no-show ones
           have neither. Both buttons pre-fill the assistant and leave sending
           to the user, so "feedback" is finished in their own words. */}
-      {(status === 'planned' || status === 'completed') && (
+      {meta?.assistant && (status === 'planned' || status === 'completed') && (
         <div className='mt-0.5 flex gap-1 px-2 pb-1'>
           {(status === 'planned'
             ? (['prepareActivity', 'reportActivity'] as const)

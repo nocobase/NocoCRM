@@ -21,6 +21,7 @@ import {
   localDate,
   money,
   useMetadata,
+  useAssistantAvailable,
   type CrmRecord,
   type Entity,
   type Field,
@@ -46,6 +47,7 @@ export function CrmFrame({
   children: ReactNode;
 }): ReactElement {
   const { text } = useCrmText();
+  const assistantAvailable = useAssistantAvailable();
   // Inside the record drawer the frame is a section of the drawer, not the
   // page's main landmark, and sits tighter.
   const inDrawer = useRecordDrawer()?.inDrawer ?? false;
@@ -85,7 +87,7 @@ export function CrmFrame({
         </div>
         <div className='flex flex-wrap items-center gap-2'>
           {actions}
-          {assistant && (
+          {assistant && assistantAvailable && (
             <Button
               variant='outline'
               onClick={() =>

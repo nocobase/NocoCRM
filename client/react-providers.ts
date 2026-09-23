@@ -4,7 +4,7 @@ import {
 } from '@nocobase/app-client/plugins';
 
 import { AppThemeProvider } from './theme/theme-provider.js';
-import { CrmAssistantProvider } from './components/crm/assistant.js';
+import { CrmAssistantProvider } from './components/crm/ai-chat.js';
 import { CrmQueryProvider } from './components/crm/query-provider.js';
 
 export const reactProviders: readonly AppClientReactProviderDefinition[] =

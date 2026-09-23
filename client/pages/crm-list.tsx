@@ -371,43 +371,44 @@ function EntityList({
       {/* The list page's assistant entries are about the funnel as a whole:
           capture a lead in prose instead of a form, or turn the attention
           metrics above into follow-up activities. */}
-      {['leads', 'accounts', 'opportunities'].includes(entity) && (
-        <div className='flex items-center'>
-          {entity === 'leads' && writable && (
+      {meta?.assistant &&
+        ['leads', 'accounts', 'opportunities'].includes(entity) && (
+          <div className='flex items-center'>
+            {entity === 'leads' && writable && (
+              <Button
+                variant='ghost'
+                className='text-ai hover:text-ai'
+                onClick={() =>
+                  window.dispatchEvent(
+                    new CustomEvent('crm-assistant', {
+                      detail: { prompt: text('prompts.captureLead') },
+                    }),
+                  )
+                }
+              >
+                <Sparkles />
+                {text('captureLead')}
+              </Button>
+            )}
             <Button
               variant='ghost'
               className='text-ai hover:text-ai'
               onClick={() =>
                 window.dispatchEvent(
                   new CustomEvent('crm-assistant', {
-                    detail: { prompt: text('prompts.captureLead') },
+                    detail: {
+                      prompt: text(`prompts.planFollowUps.${toText(entity)}`),
+                      send: true,
+                    },
                   }),
                 )
               }
             >
               <Sparkles />
-              {text('captureLead')}
+              {text('planFollowUps')}
             </Button>
-          )}
-          <Button
-            variant='ghost'
-            className='text-ai hover:text-ai'
-            onClick={() =>
-              window.dispatchEvent(
-                new CustomEvent('crm-assistant', {
-                  detail: {
-                    prompt: text(`prompts.planFollowUps.${toText(entity)}`),
-                    send: true,
-                  },
-                }),
-              )
-            }
-          >
-            <Sparkles />
-            {text('planFollowUps')}
-          </Button>
-        </div>
-      )}
+          </div>
+        )}
     </>
   );
   const change =

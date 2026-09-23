@@ -55,6 +55,32 @@ const zhCN: AppResource = {
   'status.denied': '无权访问',
   'status.pageFailed': '无法加载页面',
   'status.retry': '重试',
+  // Display text of the CRM's AI tools (server/ai/tools), keyed by their
+  // English source text as the AI Employee plugin requires.
+  'Search CRM records': '搜索 CRM 记录',
+  'Finds leads, accounts, contacts, opportunities, activities and approvals the current user may read, a page at a time.':
+    '按页查找当前用户可读的线索、客户、联系人、商机、活动和审批。',
+  'Read a CRM record': '读取一条 CRM 记录',
+  'Reads one record in full, with its change history, related records and what the current user may do to it.':
+    '完整读取一条记录，包括变更历史、关联记录和当前用户可执行的操作。',
+  'Create a CRM record': '创建 CRM 记录',
+  'Creates a lead, account, contact, opportunity, activity or approval once the user confirms the values.':
+    '在用户确认字段值后创建线索、客户、联系人、商机、活动或审批。',
+  'Update a CRM record': '修改 CRM 记录',
+  'Changes the fields of an existing record once the user confirms the new values.':
+    '在用户确认新值后修改已有记录的字段。',
+  'Delete a CRM record': '删除 CRM 记录',
+  'Deletes one record once the user confirms; it cannot be undone.':
+    '在用户确认后删除一条记录，无法撤销。',
+  'Convert a lead': '转化线索',
+  'Turns a lead into an account and a contact, optionally with an opportunity, once the user confirms.':
+    '在用户确认后把线索转化为客户和联系人，可同时创建商机。',
+  'Decide on an approval': '处理审批',
+  'Submits, withdraws, approves or rejects an approval request once the user confirms.':
+    '在用户确认后提交、撤回、通过或拒绝一条审批申请。',
+  'List CRM users': '列出 CRM 用户',
+  'Lists the users who hold a CRM role, with their ids, so a record can be given an owner or an approver by name.':
+    '列出拥有 CRM 角色的用户及其 ID，以便按姓名指定负责人或审批人。',
   'navigation.brandHome': 'NocoCRM 首页',
   'navigation.brandApps': 'NocoBase 应用',
   'auth.passwordMismatch': '两次输入的密码不一致。',

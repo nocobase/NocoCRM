@@ -326,14 +326,21 @@ export default function EntityDetail({
   const fileNames = Object.fromEntries(
     (historyFiles.data ?? []).map((f) => [f.id, f.filename]),
   );
+  // The assistant panel attaches the record on screen to the conversation;
+  // its title follows once the record has loaded.
+  const contextName = detail
+    ? recordTitle(entity, detail.record, detail.titles)
+    : undefined;
   useEffect(() => {
     window.dispatchEvent(
-      new CustomEvent('crm-context', { detail: { entity, recordId: id } }),
+      new CustomEvent('crm-context', {
+        detail: { entity, recordId: id, name: contextName },
+      }),
     );
     return () => {
       window.dispatchEvent(new CustomEvent('crm-context', { detail: {} }));
     };
-  }, [entity, id]);
+  }, [entity, id, contextName]);
   if (isLoading || !meta) return <Loading />;
   if (!detail)
     return (
@@ -512,6 +519,7 @@ export default function EntityDetail({
           prompt: text(`prompts.${key}`),
           entity,
           recordId: id,
+          name: contextName,
           // "Report back" is an opening the user completes; the rest are
           // complete instructions.
           send: key !== 'reportActivity',
@@ -588,7 +596,7 @@ export default function EntityDetail({
           {entity === 'approvals' && (
             <ApprovalActions approval={record} names={names} />
           )}
-          {shortcuts[entity] && (
+          {meta?.assistant && shortcuts[entity] && (
             <div className='flex items-center'>
               {shortcuts[entity].map((key) => (
                 <Button
@@ -605,7 +613,7 @@ export default function EntityDetail({
           )}
           {/* The approver's one entry: a briefing before deciding. It
               analyses only — the decision stays with the buttons above. */}
-          {detail.permissions.approve && (
+          {meta?.assistant && detail.permissions.approve && (
             <Button
               variant='ghost'
               className='text-ai hover:text-ai'
