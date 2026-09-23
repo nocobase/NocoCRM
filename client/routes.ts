@@ -10,6 +10,7 @@ import {
   Handshake,
   LayoutDashboard,
   ListChecks,
+  Palette,
   Radar,
   Settings2,
 } from 'lucide-react';
@@ -104,6 +105,21 @@ const settingsRoutes: AppClientRouteContribution = defineSettingsRoutes([
       action: 'manage',
     },
     componentLoader: () => import('./pages/crm-settings.js'),
+  },
+  {
+    // The template's appearance page. A settings page carries no access rule on its own. Asking for a page grant keeps
+    // the application's own appearance settings with the administrators who own the configuration, and lets them grant
+    // the page onward instead of exposing it to every signed-in user. "order" keeps this preference page below the
+    // operational ones.
+    authz: { resource: { type: 'page', id: 'theme' }, action: 'access' },
+    componentLoader: () => import('./pages/settings/theme/index.js'),
+    name: 'theme',
+    navigation: {
+      title: 'appearance.theme.title',
+      icon: Palette,
+      order: 100,
+    },
+    path: '/theme',
   },
 ]);
 

@@ -174,12 +174,12 @@ export function NotificationInbox(): ReactElement {
                   >
                     {localDate(item.createdAt, language, timeZone)}
                   </time>
-                  {item.actionUrl ? (
+                  {item.target?.type === 'route' ? (
                     <Link
                       className='inline-flex items-center gap-1 font-medium hover:text-primary hover:underline'
-                      // The plugin stores the app-prefixed path; the router
-                      // adds the base path itself.
-                      to={item.actionUrl.replace(/^\/[^/]+(?=\/crm\/)/, '')}
+                      // A route target carries no deployment prefix; the
+                      // router adds the base path itself.
+                      to={item.target.path}
                       onClick={() => {
                         if (!item.readAt) void mutate(item, 'read');
                       }}
@@ -187,6 +187,19 @@ export function NotificationInbox(): ReactElement {
                       {recordName(item)}
                       <ArrowUpRight className='size-3 text-muted-foreground' />
                     </Link>
+                  ) : item.target?.type === 'url' ? (
+                    <a
+                      className='inline-flex items-center gap-1 font-medium hover:text-primary hover:underline'
+                      href={item.target.url}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      onClick={() => {
+                        if (!item.readAt) void mutate(item, 'read');
+                      }}
+                    >
+                      {recordName(item)}
+                      <ArrowUpRight className='size-3 text-muted-foreground' />
+                    </a>
                   ) : (
                     <span>{recordName(item)}</span>
                   )}

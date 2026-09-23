@@ -20,12 +20,10 @@ auth:
 
 # In-app notifications use the application's database.
 notification:
+  # The CRM sends every notification through the in-app Channel named inbox.
   channels:
-    - type: in-app
-      enabled: true
-      providers:
-        - type: database
-          name: default
+    inbox:
+      provider: in-app
 
 database:
   default: main

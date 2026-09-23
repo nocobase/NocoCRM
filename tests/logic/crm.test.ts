@@ -59,7 +59,10 @@ import crmEmployee, {
   crmAssistant,
 } from '../../server/ai/employees/crm-assistant.js';
 import { convertLead } from '../../server/providers/crm/conversion.js';
-import { crmToken } from '../../server/providers/crm/index.js';
+import {
+  CRM_INBOX_CHANNEL,
+  crmToken,
+} from '../../server/providers/crm/index.js';
 import { crmRoutes } from '../../server/routes/crm.js';
 import { userManagementServiceToken } from '@nocobase/app-plugin-users/server/tokens';
 import {
@@ -1203,22 +1206,30 @@ describe('CRM API security and domain rules', () => {
     } as Application);
     const scan = Reflect.get(provider, 'scan') as () => Promise<void>;
     await scan.call(provider);
+    // One complete message per send, keyed by the in-app Channel's name.
+    type Sent = {
+      messages: Record<
+        string,
+        {
+          to: string;
+          title: string;
+          body: string;
+          target: { type: string; path: string };
+        }
+      >;
+    };
+    const inbox = (call: unknown[]) =>
+      (call[0] as Sent).messages[CRM_INBOX_CHANNEL]!;
     const delivered = send.mock.calls
-      .map(
-        (call) =>
-          call[0] as {
-            to: { id: string };
-            content: { title: string; body: string; actionUrl: string };
-          },
-      )
-      .filter((call) => call.content.actionUrl.endsWith(meeting.id));
+      .map(inbox)
+      .filter((message) => message.target.path.endsWith(meeting.id));
     expect(delivered).toHaveLength(1);
     expect(delivered[0]).toMatchObject({
-      to: { id: 'rep' },
-      content: {
-        title: '活动即将开始',
-        body: expect.stringContaining('即将开始的会议'),
-      },
+      to: 'rep',
+      title: '活动即将开始',
+      body: expect.stringContaining('即将开始的会议'),
+      // A route without the deployment prefix, which the router adds.
+      target: { type: 'route', path: `/crm/activities/${meeting.id}` },
     });
     // A lead is named by person and company, as the pages name it.
     await service.enqueue(
@@ -1232,9 +1243,9 @@ describe('CRM API security and domain rules', () => {
     );
     await scan.call(provider);
     const leadMessage = send.mock.calls
-      .map((call) => call[0] as { content: { body: string } })
-      .find((call) => call.content.body.includes('提醒测试'));
-    expect(leadMessage?.content.body).toContain('提醒测试 / 提醒公司');
+      .map(inbox)
+      .find((message) => message.body.includes('提醒测试'));
+    expect(leadMessage?.body).toContain('提醒测试 / 提醒公司');
     const count = send.mock.calls.length;
     await scan.call(provider);
     expect(send).toHaveBeenCalledTimes(count);

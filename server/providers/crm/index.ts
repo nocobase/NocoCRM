@@ -26,6 +26,11 @@ import { CrmAiResources } from '../../ai/index.js';
 import { LOGO_AVATAR_PATH } from '../../ai/employees/crm-assistant.js';
 import { userRoleScopeRegistryToken } from '@nocobase/app-plugin-users/server/tokens';
 
+// The Channel the CRM's notifications go through: the in-app inbox, named
+// `inbox` in the notification configuration (`notification.channels.inbox`
+// with `provider: in-app`, the template's name for it).
+export const CRM_INBOX_CHANNEL = 'inbox';
+
 export const crmToken: ServiceToken<CrmService> =
   createServiceToken<CrmService>('crm/service');
 export default class CrmProvider extends ServiceProvider<Application> {
@@ -224,11 +229,19 @@ export default class CrmProvider extends ServiceProvider<Application> {
               // is deduplicated by the service instead of sent twice.
               idempotencyKey: `crm:${toText(row.id)}`,
               source: { type: 'crm', referenceId: toText(row.id) },
-              to: { type: 'user', id: toText(row.recipientId) },
-              channels: ['in-app'],
-              content: {
-                ...content,
-                actionUrl: `${toText(this.app.publicBasePath)}/crm/${toText(row.entity)}/${toText(row.recordId)}`,
+              // The in-app Channel the configuration names `inbox`
+              // (CRM_INBOX_CHANNEL); its message is addressed to the user and
+              // links the record by an application route, without the
+              // deployment prefix the router adds itself.
+              messages: {
+                [CRM_INBOX_CHANNEL]: {
+                  to: toText(row.recipientId),
+                  ...content,
+                  target: {
+                    type: 'route',
+                    path: `/crm/${toText(row.entity)}/${toText(row.recordId)}`,
+                  },
+                },
               },
             });
           await query
