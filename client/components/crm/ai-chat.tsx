@@ -300,6 +300,11 @@ function ConfiguredChat({
           showEmployeeSelector={false}
           disclaimer={false}
           placeholder={toText(text('askHint'))}
+          // Files picked, dropped or pasted go to the plugin's storage and
+          // reach the model with the message: documents (PDF, Word, Excel,
+          // PowerPoint, text, CSV, JSON) as extracted text; images only for
+          // a model that reads them (DeepSeek does not).
+          enableAttachments
         />
       </AIChatProvider>
     </AIPageContextScope>
