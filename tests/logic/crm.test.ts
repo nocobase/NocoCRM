@@ -1304,6 +1304,7 @@ describe('CRM API security and domain rules', () => {
       'get_record',
       'list_users',
       'search_records',
+      'subAgentWebSearch',
       'summarize_records',
       'update_record',
     ]);
