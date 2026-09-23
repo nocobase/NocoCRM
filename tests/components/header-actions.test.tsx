@@ -10,6 +10,11 @@ vi.mock('../../client/layouts/components/user-menu.js', () => ({
 vi.mock('../../client/components/crm/notification-bell.js', () => ({
   NotificationBell: () => <button aria-label='Notifications' />,
 }));
+// Whether the CRM's AI employee is enabled, as the metadata reports it.
+const assistant = vi.hoisted(() => ({ available: true }));
+vi.mock('../../client/components/crm/api.js', () => ({
+  useAssistantAvailable: () => assistant.available,
+}));
 it('hides Settings when navigation has no accessible pages', () => {
   render(
     <MemoryRouter>
@@ -55,5 +60,24 @@ it('preserves CRM notifications and the assistant action on application pages', 
     expect(listener).toHaveBeenCalledOnce();
   } finally {
     window.removeEventListener('crm-assistant', listener);
+  }
+});
+
+it('hides the assistant action while the AI employee is disabled', () => {
+  assistant.available = false;
+  try {
+    render(
+      <MemoryRouter initialEntries={['/leads']}>
+        <HeaderActions showSettings showDev={false} />
+      </MemoryRouter>,
+    );
+    expect(
+      screen.getByRole('button', { name: 'Notifications' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'AI 助手' }),
+    ).not.toBeInTheDocument();
+  } finally {
+    assistant.available = true;
   }
 });

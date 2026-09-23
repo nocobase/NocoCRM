@@ -43,8 +43,8 @@ const wording = {
     '无法加载 AI 配置。请检查 AI 设置后刷新页面。',
   ],
   assistantNoEmployee: [
-    'The CRM assistant is not available. An administrator can enable it under AI settings.',
-    'CRM 助手不可用。管理员可以在 AI 设置中启用它。',
+    'The CRM assistant is not available. An administrator can enable it under AI settings → AI employees.',
+    'CRM 助手不可用。管理员可以在「AI 设置 → AI 员工」中启用它。',
   ],
   assistantNoModel: [
     'No AI model is enabled. Enable one under AI settings and reload the page.',
@@ -338,12 +338,11 @@ const wording = {
   },
   settings: ['System settings', '系统设置'],
   settingsDescription: [
-    'Business defaults, reminders, and your AI assistant.',
-    '配置业务选项、提醒和 AI 助手',
+    'Business defaults, reminders, and the demo dataset.',
+    '配置业务选项、提醒和演示数据',
   ],
   business: ['Business defaults', '业务配置'],
   reminders: ['Reminders', '提醒设置'],
-  aiSettings: ['AI configuration', 'AI 配置'],
   settingsSaved: ['Settings saved', '设置已保存'],
   searchRecords: ['Type to search', '输入关键字搜索'],
   noMatches: ['No matching records', '没有匹配的记录'],
@@ -759,7 +758,6 @@ const wording = {
     createdById: ['Created by', '创建人'],
     actorId: ['Operator', '操作人'],
     timeZone: ['Business timezone', '业务时区'],
-    aiEnabled: ['Enable AI assistant', '启用 AI 助手'],
     decision: ['Decision', '处理'],
     comment: ['Comment', '意见'],
     activityReminderMinutes: [

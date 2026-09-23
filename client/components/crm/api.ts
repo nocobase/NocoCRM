@@ -44,6 +44,9 @@ export interface Metadata {
   assign: boolean;
   approve: boolean;
   settingsAccess: boolean;
+  // Whether the CRM's AI employee is switched on (its Enabled switch on the
+  // AI Employee plugin's settings page): every assistant entry follows it.
+  assistant: boolean;
 }
 // Display names for every record a response refers to, resolved by the
 // server: `titles` are composed ("account / deal"), `names` bare.
@@ -224,6 +227,11 @@ export function useMore<T = CrmRecord>(
 }
 export function useMetadata(enabled = true) {
   return useCrmQuery<Metadata>('metadata', enabled);
+}
+// Whether the pages offer the assistant: the header button, the page
+// shortcuts and the panel all hide while the CRM's AI employee is disabled.
+export function useAssistantAvailable(): boolean {
+  return useMetadata().data?.assistant === true;
 }
 export function useRefresh() {
   const client = useQueryClient();

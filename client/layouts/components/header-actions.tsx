@@ -15,6 +15,7 @@ import { UserMenu } from './user-menu.js';
 // is reached from here (a bell with the unread count) rather than from the
 // sidebar, so it is one click away on every page without taking a menu row.
 import { NotificationBell } from '../../components/crm/notification-bell.js';
+import { useAssistantAvailable } from '../../components/crm/api.js';
 
 const ACTION_LINK_CLASS =
   'inline-flex size-10 items-center justify-center rounded-xl border border-border/70 bg-background/60 text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50';
@@ -32,6 +33,7 @@ export function HeaderActions({
 }): ReactElement {
   const { t } = useTranslation();
   const { pathname } = useLocation();
+  const assistant = useAssistantAvailable();
   const surface = pathname.startsWith('/settings')
     ? 'settings'
     : pathname.startsWith('/dev')
@@ -44,7 +46,7 @@ export function HeaderActions({
         {surface === 'app' ? (
           <NotificationBell className={ACTION_LINK_CLASS} />
         ) : null}
-        {surface === 'app' ? (
+        {surface === 'app' && assistant ? (
           <Tooltip>
             <TooltipTrigger
               render={<button className={ACTION_LINK_CLASS} type='button' />}

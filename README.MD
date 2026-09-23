@@ -44,7 +44,7 @@ The import runs once; **Remove demo data** on the same page deletes exactly the 
 
 ### Configure AI
 
-No model credentials are bundled. Declare an LLM service under `ai.llmServices` in `config.yml` (`config.example.yml` shows the shape, with the API key read from an environment variable); the AI Employee plugin lists it under **Settings → AI Employees → LLM services**, and the switch under **Settings → System settings → AI configuration** shows or hides the assistant.
+No model credentials are bundled. Declare an LLM service under `ai.llmServices` in `config.yml` (`config.example.yml` shows the shape, with the API key read from an environment variable); the AI Employee plugin lists it under **Settings → AI Employees → LLM services**, and the **Enabled** switch of the NocoCRM employee on its **Settings → AI Employees** page shows or hides the assistant: the header button, the page shortcuts and the panel.
 
 The assistant is the plugin's chat talking to the CRM's own employee, NocoCRM (**Settings → AI Employees**, where its role, including the deployment's business guidance, is visible read-only). It reads authorized records through tools and proposes creates, updates, deletions, lead conversions and approval actions as confirmation cards in the conversation; nothing is written until the user confirms a card, and every write runs as that user through the same service the pages use, so a change they could not make in the UI is refused and the reason shown. Model-generated dates, amounts and identities still need review.
 

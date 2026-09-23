@@ -427,7 +427,6 @@ export function fieldsFor(entity: Entity): string[] {
 export interface CrmSettings {
   currency: string;
   timeZone: string;
-  aiEnabled: boolean;
   activityReminderMinutes: number;
   closeReminderDays: number;
   leadStaleDays: number;
@@ -437,7 +436,6 @@ export interface CrmSettings {
 export const defaultSettings: CrmSettings = {
   currency: 'USD',
   timeZone: 'Asia/Shanghai',
-  aiEnabled: true,
   activityReminderMinutes: 30,
   closeReminderDays: 7,
   leadStaleDays: 7,

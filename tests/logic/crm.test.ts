@@ -333,6 +333,28 @@ describe('CRM API security and domain rules', () => {
     ).toBe(403);
     expect((await router.request('/unrelated')).status).toBe(404);
   });
+  it('offers the assistant only as the enabled AI employee and drops the retired AI switch', async () => {
+    // Without the AI Employee plugin's table there is no employee to answer,
+    // so the pages offer no assistant entry.
+    const meta = (await (await request('/metadata', 'admin')).json()) as {
+      data: { assistant: boolean; settings: Record<string, unknown> };
+    };
+    expect(meta.data.assistant).toBe(false);
+    expect(meta.data.settings).not.toHaveProperty('aiEnabled');
+    // An open settings tab from before still sends the switch; it is dropped.
+    const current = (await (await request('/settings', 'admin')).json()) as {
+      data: { settings: Record<string, unknown> };
+    };
+    const saved = await request('/settings', 'admin', 'PUT', {
+      ...current.data.settings,
+      aiEnabled: false,
+    });
+    expect(saved.status).toBe(200);
+    const after = (await (await request('/metadata', 'admin')).json()) as {
+      data: { settings: Record<string, unknown> };
+    };
+    expect(after.data.settings).not.toHaveProperty('aiEnabled');
+  });
   it('allows shared reads, own updates, creator-only manager deletes and admin deletes', async () => {
     const lead = await service.save(actor('rep'), 'leads', {
       name: 'Permission test',

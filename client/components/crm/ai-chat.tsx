@@ -211,7 +211,7 @@ function CrmAssistantPanel(): ReactElement | null {
       window.removeEventListener('crm-context', change);
     };
   }, [controller]);
-  if (!meta?.settings.aiEnabled) return null;
+  if (!meta?.assistant) return null;
   return (
     // Clicking a nav link counts as an outside press, which would close the panel on every page switch.
     <Sheet

@@ -423,7 +423,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
               {text('convert')}
             </Button>
           )}
-          {!converted && (
+          {!converted && meta?.assistant && (
             // The two assistant entries read as one group, tighter than the
             // gap between the primary actions.
             <div className='flex items-center'>
@@ -1117,7 +1117,7 @@ export function ActivityItem({
           one can still have its feedback added to. Cancelled and no-show ones
           have neither. Both buttons pre-fill the assistant and leave sending
           to the user, so "feedback" is finished in their own words. */}
-      {(status === 'planned' || status === 'completed') && (
+      {meta?.assistant && (status === 'planned' || status === 'completed') && (
         <div className='mt-0.5 flex gap-1 px-2 pb-1'>
           {(status === 'planned'
             ? (['prepareActivity', 'reportActivity'] as const)

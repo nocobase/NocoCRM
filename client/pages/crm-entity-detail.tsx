@@ -596,7 +596,7 @@ export default function EntityDetail({
           {entity === 'approvals' && (
             <ApprovalActions approval={record} names={names} />
           )}
-          {shortcuts[entity] && (
+          {meta?.assistant && shortcuts[entity] && (
             <div className='flex items-center'>
               {shortcuts[entity].map((key) => (
                 <Button
@@ -613,7 +613,7 @@ export default function EntityDetail({
           )}
           {/* The approver's one entry: a briefing before deciding. It
               analyses only — the decision stays with the buttons above. */}
-          {detail.permissions.approve && (
+          {meta?.assistant && detail.permissions.approve && (
             <Button
               variant='ghost'
               className='text-ai hover:text-ai'

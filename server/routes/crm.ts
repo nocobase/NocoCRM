@@ -147,6 +147,8 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           assign: await capability(actor, 'assign'),
           approve: await capability(actor, 'approve'),
           settingsAccess: await capability(actor, 'manage', 'settings'),
+          // Whether the pages offer the assistant at all.
+          assistant: await service.assistantEnabled(),
         },
       });
     });

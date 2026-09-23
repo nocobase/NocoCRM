@@ -5,7 +5,6 @@ import { toText } from '../components/crm/api.js';
 import { useState, type ReactElement } from 'react';
 import { Button } from '../components/ui/button.js';
 import { Input } from '../components/ui/input.js';
-import { Checkbox } from '../components/ui/checkbox.js';
 import {
   Card,
   CardContent,
@@ -20,6 +19,7 @@ import {
   useCrmApi,
   useCrmQuery,
   useCrmText,
+  useAssistantAvailable,
   useRefresh,
   type CrmSettings,
 } from '../components/crm/api.js';
@@ -46,8 +46,9 @@ export default function SettingsPage(): ReactElement {
     );
   return <SettingsForm initial={query.data} />;
 }
-function AssistantAction(): ReactElement {
+function AssistantAction(): ReactElement | null {
   const { text } = useCrmText();
+  if (!useAssistantAvailable()) return null;
   return (
     <Button
       variant='outline'
@@ -103,69 +104,55 @@ function SettingsForm({
   };
   const fields = (keys: (keyof CrmSettings)[]): ReactElement => (
     <div className='grid gap-4 sm:grid-cols-2'>
-      {keys.map((key) =>
-        typeof settings[key] === 'boolean' ? (
-          // A switch reads as "[x] label", the way the forms do it.
-          <label
-            key={key}
-            className='flex items-center gap-2 text-sm sm:col-span-2'
-          >
-            <Checkbox
-              checked={Boolean(settings[key])}
-              onCheckedChange={(v) => set(key, v)}
+      {keys.map((key) => (
+        <label key={key} className='grid gap-2 text-sm'>
+          {text(`fields.${toText(key)}`)}
+          {key === 'timeZone' ? (
+            // IANA zones the browser knows, with the saved one kept even when
+            // it is not among them; a typed zone name is easy to get wrong
+            // and everything date-related hangs on it.
+            <Choice
+              label={text('fields.timeZone')}
+              value={toText(settings.timeZone)}
+              choices={[
+                ...new Set([
+                  toText(settings.timeZone),
+                  ...Intl.supportedValuesOf('timeZone'),
+                ]),
+              ]
+                .filter(Boolean)
+                .map((v) => ({ value: v, label: v }))}
+              onChange={(v) => set(key, v)}
             />
-            {text(`fields.${toText(key)}`)}
-          </label>
-        ) : (
-          <label key={key} className='grid gap-2 text-sm'>
-            {text(`fields.${toText(key)}`)}
-            {key === 'timeZone' ? (
-              // IANA zones the browser knows, with the saved one kept even when
-              // it is not among them; a typed zone name is easy to get wrong
-              // and everything date-related hangs on it.
-              <Choice
-                label={text('fields.timeZone')}
-                value={toText(settings.timeZone)}
-                choices={[
-                  ...new Set([
-                    toText(settings.timeZone),
-                    ...Intl.supportedValuesOf('timeZone'),
-                  ]),
-                ]
-                  .filter(Boolean)
-                  .map((v) => ({ value: v, label: v }))}
-                onChange={(v) => set(key, v)}
-              />
-            ) : key === 'currency' ? (
-              // The default for new opportunities, from the currency list
-              // defined in code (server/providers/crm/schema.ts).
-              <Choice
-                label={text('fields.currency')}
-                value={toText(settings.currency)}
-                choices={(settings.options.currency ?? []).map((v) => ({
-                  value: v,
-                  label: v,
-                }))}
-                onChange={(v) => set(key, v)}
-              />
-            ) : (
-              <Input
-                value={toText(settings[key])}
-                type={typeof settings[key] === 'number' ? 'number' : 'text'}
-                min={0}
-                onChange={(e) =>
-                  set(
-                    key,
-                    typeof settings[key] === 'number'
-                      ? Number(e.target.value)
-                      : e.target.value,
-                  )
-                }
-              />
-            )}
-          </label>
-        ),
-      )}
+          ) : key === 'currency' ? (
+            // The default for new opportunities, from the currency list
+            // defined in code (server/providers/crm/schema.ts).
+            <Choice
+              label={text('fields.currency')}
+              value={toText(settings.currency)}
+              choices={(settings.options.currency ?? []).map((v) => ({
+                value: v,
+                label: v,
+              }))}
+              onChange={(v) => set(key, v)}
+            />
+          ) : (
+            <Input
+              value={toText(settings[key])}
+              type={typeof settings[key] === 'number' ? 'number' : 'text'}
+              min={0}
+              onChange={(e) =>
+                set(
+                  key,
+                  typeof settings[key] === 'number'
+                    ? Number(e.target.value)
+                    : e.target.value,
+                )
+              }
+            />
+          )}
+        </label>
+      ))}
     </div>
   );
   return (
@@ -206,7 +193,7 @@ function SettingsForm({
         </p>
       )}
       <div className='flex gap-1 overflow-x-auto border-b'>
-        {['business', 'reminders', 'aiSettings', 'demoData'].map((key) => (
+        {['business', 'reminders', 'demoData'].map((key) => (
           <Button
             key={key}
             variant='ghost'
@@ -306,8 +293,6 @@ function SettingsForm({
               'leadStaleDays',
               'staleDays',
             ])
-          ) : section === 'aiSettings' ? (
-            <>{fields(['aiEnabled'])}</>
           ) : null}
         </CardContent>
       </Card>
