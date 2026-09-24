@@ -82,7 +82,7 @@
   --info: oklch(0.52 0.15 250);
   --sidebar: var(--card);
   --sidebar-foreground: var(--card-foreground);
-  --sidebar-primary: color-mix(in oklch, var(--primary) 18%, var(--sidebar));
+  --sidebar-primary: color-mix(in oklch, var(--primary) 8%, var(--sidebar));
   --sidebar-primary-foreground: var(--primary);
   --sidebar-accent: var(--muted);
   --sidebar-accent-foreground: var(--foreground);
@@ -125,7 +125,7 @@
   --info: oklch(0.74 0.13 250);
   --sidebar: var(--card);
   --sidebar-foreground: var(--card-foreground);
-  --sidebar-primary: color-mix(in oklch, var(--primary) 18%, var(--sidebar));
+  --sidebar-primary: color-mix(in oklch, var(--primary) 8%, var(--sidebar));
   --sidebar-primary-foreground: var(--primary);
   --sidebar-accent: var(--muted);
   --sidebar-accent-foreground: var(--foreground);
