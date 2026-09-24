@@ -487,7 +487,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                 ['opportunities', 'convertedOpportunityId'],
               ].map(([e, key]) => (
                 <div className='flex min-w-0 items-center gap-2' key={key}>
-                  <dt className='shrink-0 text-xs text-muted-foreground'>
+                  <dt className='shrink-0 text-sm text-muted-foreground'>
                     {text(`entities.${toText(e)}`)}
                   </dt>
                   <dd className='min-w-0 flex-1 truncate text-sm'>
@@ -529,7 +529,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                     key={key}
                     className='grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-2 py-0.5'
                   >
-                    <dt className='flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium text-muted-foreground'>
+                    <dt className='flex items-center gap-1.5 px-2 py-1.5 text-sm text-muted-foreground'>
                       {(() => {
                         const Icon = leadFieldIcons[key];
                         return Icon ? (
@@ -924,7 +924,7 @@ export function LeadRow({
 }): ReactElement {
   return (
     <div className='flex min-w-0 items-center gap-2'>
-      <span className='flex shrink-0 items-center gap-1.5 text-xs font-medium text-muted-foreground'>
+      <span className='flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground'>
         {Icon ? <Icon className='size-3.5 shrink-0' /> : null}
         {label}
       </span>
@@ -1110,7 +1110,7 @@ export function Attachments({
   };
   return (
     <div className='space-y-2 px-2'>
-      <p className='text-xs text-muted-foreground'>
+      <p className='text-sm text-muted-foreground'>
         {text('fields.attachments')}
       </p>
       {/* The drop zone sits between the heading and the list, so adding a

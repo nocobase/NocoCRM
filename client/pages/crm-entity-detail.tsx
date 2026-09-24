@@ -739,7 +739,7 @@ export default function EntityDetail({
                           key='convertedFrom'
                           className='grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-2 py-0.5'
                         >
-                          <dt className='flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium text-muted-foreground'>
+                          <dt className='flex items-center gap-1.5 px-2 py-1.5 text-sm text-muted-foreground'>
                             <Radar className='size-3.5 shrink-0' />
                             <span className='min-w-0 leading-snug'>
                               {text('convertedFrom')}
@@ -770,7 +770,7 @@ export default function EntityDetail({
                         key={key}
                         className='grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-2 py-0.5'
                       >
-                        <dt className='flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium text-muted-foreground'>
+                        <dt className='flex items-center gap-1.5 px-2 py-1.5 text-sm text-muted-foreground'>
                           {Icon ? <Icon className='size-3.5 shrink-0' /> : null}
                           <span className='min-w-0 leading-snug'>
                             {text(
@@ -1437,7 +1437,7 @@ function ContactItem({
   );
   const cell = (key: string): ReactElement => (
     <div key={key}>
-      <dt className='px-2 text-xs text-muted-foreground'>
+      <dt className='px-2 text-sm text-muted-foreground'>
         {text(fieldLabelKey('contacts', key))}
       </dt>
       <dd>{editableField(key)}</dd>
@@ -1492,7 +1492,7 @@ function ContactItem({
             {['employed', 'source', 'ownerId'].map(cell)}
           </dl>
           <div>
-            <p className='px-2 text-xs text-muted-foreground'>
+            <p className='px-2 text-sm text-muted-foreground'>
               {text('fields.notes')}
             </p>
             {editableField('notes')}

@@ -94,7 +94,7 @@ export function StageStepper({
   return (
     <div className='space-y-3 rounded-xl border bg-card p-4'>
       <div className='flex flex-wrap items-center justify-between gap-2'>
-        <p className='flex items-center gap-1.5 text-xs font-medium text-muted-foreground'>
+        <p className='flex items-center gap-1.5 text-sm text-muted-foreground'>
           <CircleDot className='size-3.5 shrink-0' />
           {text('fields.stage')}
         </p>
