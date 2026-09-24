@@ -1893,8 +1893,11 @@ function ApprovalItem({ approval }: { approval: Data }): ReactElement {
       >
         <div className='flex flex-wrap items-center gap-2'>
           <KindTag value={approval.topic} />
-          <span className='min-w-0 flex-1 truncate text-sm font-medium'>
-            {toText(approval.name)}
+          <span className='flex min-w-0 flex-1 items-center gap-1'>
+            <span className='truncate text-sm font-medium'>
+              {toText(approval.name)}
+            </span>
+            <ArrowUpRight className='size-3 shrink-0 text-muted-foreground' />
           </span>
           {/* Which side of the request the reader is on: it is theirs to
               decide, or theirs to wait for. */}
@@ -1905,7 +1908,8 @@ function ApprovalItem({ approval }: { approval: Data }): ReactElement {
           )}
           <Status value={approval.status} />
         </div>
-        <p className='mt-1 text-xs text-muted-foreground'>
+        <p className='mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground'>
+          <Clock className='size-3 shrink-0' />
           {localDate(
             approval.updatedAt,
             language,

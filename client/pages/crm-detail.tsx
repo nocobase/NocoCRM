@@ -16,10 +16,12 @@ import {
 } from '../components/crm/record-drawer.js';
 import {
   ArrowRightLeft,
+  ArrowUpRight,
   Briefcase,
   Building2,
   CalendarPlus,
   CircleDot,
+  Clock,
   Factory,
   FileText,
   Globe,
@@ -1014,61 +1016,72 @@ export function ActivityItem({ activity }: { activity: Data }): ReactElement {
         )}`}
       />
       {/* The activity opens in the page's drawer (its full page on a phone
-          or in a new tab); its fields are edited there. */}
-      <Link
-        className='block w-full rounded-md px-2 py-2 text-left transition-colors hover:bg-muted'
-        {...activityLink}
-      >
+          or in a new tab); its fields are edited there. The name is the link,
+          stretched over the whole entry, so the assistant shortcuts can sit
+          on the time's line above it: a button may not sit inside a link. */}
+      <div className='relative rounded-md px-2 py-2 transition-colors hover:bg-muted'>
         <div className='flex flex-wrap items-center gap-2'>
           <KindTag value={activity.type} />
-          <span className='min-w-0 flex-1 truncate text-sm font-medium'>
-            {toText(activity.name)}
-          </span>
+          <Link
+            className='flex min-w-0 flex-1 items-center gap-1 outline-none after:absolute after:inset-0 after:rounded-md focus-visible:after:ring-2 focus-visible:after:ring-ring'
+            {...activityLink}
+          >
+            <span className='truncate text-sm font-medium'>
+              {toText(activity.name)}
+            </span>
+            <ArrowUpRight className='size-3 shrink-0 text-muted-foreground' />
+          </Link>
           <Status value={activity.status} />
         </div>
-        <p className='mt-1 text-xs text-muted-foreground'>
-          {localDate(
-            activity.startAt,
-            language,
-            meta?.settings.timeZone ?? 'Asia/Shanghai',
-          )}
-        </p>
-      </Link>
-      {/* An upcoming activity can be prepared for and reported on; a finished
-          one can still have its feedback added to. Cancelled and no-show ones
-          have neither. Both buttons pre-fill the assistant and leave sending
-          to the user, so "feedback" is finished in their own words. */}
-      {meta?.assistant && (status === 'planned' || status === 'completed') && (
-        <div className='mt-0.5 flex gap-1 px-2 pb-1'>
-          {(status === 'planned'
-            ? (['prepareActivity', 'reportActivity'] as const)
-            : (['reportActivity'] as const)
-          ).map((key) => (
-            <Button
-              key={key}
-              size='sm'
-              variant='ghost'
-              className='h-7 px-2 text-xs text-ai hover:text-ai'
-              onClick={() =>
-                window.dispatchEvent(
-                  new CustomEvent('crm-assistant', {
-                    detail: {
-                      prompt: text(`prompts.${key}`),
-                      entity: 'activities',
-                      recordId: activity.id,
-                      // "Report back" is only an opening the user completes.
-                      send: key === 'prepareActivity',
-                    },
-                  }),
-                )
-              }
-            >
-              <Sparkles />
-              {text(key)}
-            </Button>
-          ))}
+        <div className='mt-1 flex flex-wrap items-center gap-x-3 gap-y-1'>
+          <p className='inline-flex items-center gap-1 text-xs text-muted-foreground'>
+            <Clock className='size-3 shrink-0' />
+            {localDate(
+              activity.startAt,
+              language,
+              meta?.settings.timeZone ?? 'Asia/Shanghai',
+            )}
+          </p>
+          {/* An upcoming activity can be prepared for and reported on; a
+              finished one can still have its feedback added to. Cancelled and
+              no-show ones have neither. Both buttons pre-fill the assistant
+              and leave sending to the user, so "feedback" is finished in
+              their own words. */}
+          {meta?.assistant &&
+            (status === 'planned' || status === 'completed') && (
+              <div className='relative z-10 -my-1 flex gap-1'>
+                {(status === 'planned'
+                  ? (['prepareActivity', 'reportActivity'] as const)
+                  : (['reportActivity'] as const)
+                ).map((key) => (
+                  <Button
+                    key={key}
+                    size='sm'
+                    variant='ghost'
+                    className='h-6 px-1.5 text-xs text-ai hover:bg-background hover:text-ai'
+                    onClick={() =>
+                      window.dispatchEvent(
+                        new CustomEvent('crm-assistant', {
+                          detail: {
+                            prompt: text(`prompts.${key}`),
+                            entity: 'activities',
+                            recordId: activity.id,
+                            // "Report back" is only an opening the user
+                            // completes.
+                            send: key === 'prepareActivity',
+                          },
+                        }),
+                      )
+                    }
+                  >
+                    <Sparkles />
+                    {text(key)}
+                  </Button>
+                ))}
+              </div>
+            )}
         </div>
-      )}
+      </div>
     </li>
   );
 }
