@@ -1,6 +1,12 @@
 import { toText } from './api.js';
 import { CountryLabel, SubdivisionLabel } from './geography.js';
-import type { ReactElement, ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import { Link } from 'react-router';
 import { useRecordDrawer, useRecordLink } from './record-drawer.js';
 import {
@@ -457,7 +463,61 @@ export function Value({
       />
     );
   if (Array.isArray(value)) return <>{value.length}</>;
+  if (field.type === 'textarea') return <LongText value={toText(value)} />;
   return (
     <span className='whitespace-pre-wrap break-words'>{toText(value)}</span>
+  );
+}
+
+// A long text (a description, a message, notes) shows its first four lines
+// and offers the rest; the toggle appears only when there is more to show.
+// Its clicks and keys stay its own: the field around it opens its editor on
+// a double-click or Enter.
+function LongText({ value }: { value: string }): ReactElement {
+  const { text } = useCrmText();
+  const ref = useRef<HTMLSpanElement>(null);
+  const [open, setOpen] = useState(false);
+  const [overflows, setOverflows] = useState(false);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const measure = (): void => {
+      setOverflows(element.scrollHeight > element.clientHeight + 1);
+    };
+    // The observer reports once when it starts, then on every resize.
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+    };
+  }, [value]);
+  return (
+    <span className='block'>
+      <span
+        ref={ref}
+        // line-clamp brings its own display, which block would override.
+        className={`whitespace-pre-wrap break-words ${open ? 'block' : 'line-clamp-4'}`}
+      >
+        {value}
+      </span>
+      {(overflows || open) && (
+        <button
+          type='button'
+          className='mt-1 text-xs font-medium text-ai hover:underline'
+          onClick={(event) => {
+            event.stopPropagation();
+            setOpen((current) => !current);
+          }}
+          onDoubleClick={(event) => {
+            event.stopPropagation();
+          }}
+          onKeyDown={(event) => {
+            event.stopPropagation();
+          }}
+        >
+          {text(open ? 'showLess' : 'showMore')}
+        </button>
+      )}
+    </span>
   );
 }

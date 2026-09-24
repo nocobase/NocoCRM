@@ -544,6 +544,8 @@ const wording = {
   prepareActivity: ['Help me prepare', '帮我准备'],
   reportActivity: ['Report back', '我要反馈'],
   more: ['View all', '查看全部'],
+  showMore: ['Show more', '展开'],
+  showLess: ['Show less', '收起'],
   prompts: {
     planToday: [
       "Plan my day: look at today's and overdue activities, the approvals waiting for me, and the leads, accounts and opportunities needing attention. Say what to do first and why, and create or reschedule activities for the three most urgent items.",
