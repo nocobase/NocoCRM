@@ -48,13 +48,19 @@ export function selectedNavigationId(
           route.navigation &&
           visible.has(routeKey(route)),
       ) ??
-    (matches
-      ? undefined
-      : pages
-          .filter((route) =>
-            matchPath({ path: route.path, end: false }, pathname),
-          )
-          .sort((a, b) => b.path.length - a.path.length)[0]);
+    // Application change: the template falls back to the longest menu path
+    // containing the URL only when no route matches, so a page without a
+    // menu entry of its own (the CRM's record page, /crm/leads/:id) left the
+    // menu without a selection. It now falls back whenever the matched pages
+    // carry no entry, never to the root: every URL starts with "/", and a
+    // page like the notifications would otherwise select the home entry.
+    pages
+      .filter(
+        (route) =>
+          (!matches || route.path !== '/') &&
+          matchPath({ path: route.path, end: false }, pathname),
+      )
+      .sort((a, b) => b.path.length - a.path.length)[0];
   return selected ? routeKey(selected) : undefined;
 }
 
