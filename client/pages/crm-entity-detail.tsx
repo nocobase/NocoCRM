@@ -1,5 +1,5 @@
 import { recordTitle } from '../components/crm/lookups.js';
-import { editsAll, sentence, toText, useMore } from '../components/crm/api.js';
+import { sentence, toText, useMore } from '../components/crm/api.js';
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 import {
@@ -1354,7 +1354,6 @@ function RelatedList({
           <ContactItem
             key={r.id}
             contact={r}
-            names={names}
             leading={!left(r) && <PrimaryStar contact={r} siblings={records} />}
           />
         ))}
@@ -1401,55 +1400,23 @@ function RelatedList({
   }
 }
 
-// One contact in an account's contacts tab: a row that opens in place with
-// the fields editable, the way an activity does in the activities tab. The
-// star sits beside the row rather than inside it, so toggling the primary
-// contact does not also expand the row.
+// One contact on a record's contacts tab: a row that opens the contact in
+// the page's drawer (its full page on a phone or in a new tab), where its
+// fields are edited, the way an activity does in the activities tab. The
+// star and the opportunity's role and remove control sit beside the link
+// rather than inside it, so using them does not also open the contact.
 function ContactItem({
   contact,
-  names,
   leading,
   trailing,
 }: {
   contact: CrmRecord;
-  names: Record<string, string>;
   // What sits before the name (the account page's primary star) and at the
   // row's end (the opportunity page's role and remove control).
   leading?: ReactNode;
   trailing?: ReactNode;
 }): ReactElement {
-  const { text } = useCrmText();
   const contactLink = useRecordLink('contacts', toText(contact.id));
-  const { data: meta } = useMetadata();
-  const [open, setOpen] = useState(false);
-  // Mirrors the server rule: the owner edits their own; a user whose edit
-  // scope covers every contact edits any.
-  const editable = Boolean(
-    meta && (editsAll(meta, 'contacts') || contact.ownerId === meta.userId),
-  );
-  const field = (key: string): Field =>
-    meta?.definitions.contacts.fields.find((f) => f.key === key) ?? {
-      key,
-      type: 'text',
-    };
-  const editableField = (key: string): ReactElement => (
-    <InlineField
-      entity='contacts'
-      record={contact}
-      field={field(key)}
-      editable={editable}
-      lookup={names}
-      label={text(fieldLabelKey('contacts', key))}
-    />
-  );
-  const cell = (key: string): ReactElement => (
-    <div key={key}>
-      <dt className='px-2 text-sm text-muted-foreground'>
-        {text(fieldLabelKey('contacts', key))}
-      </dt>
-      <dd>{editableField(key)}</dd>
-    </div>
-  );
   const summary = ['jobTitle', 'phone', 'email']
     .map((key) => toText(contact[key]))
     .filter(Boolean);
@@ -1462,18 +1429,19 @@ function ContactItem({
             {leading}
           </span>
         ) : null}
-        <button
-          type='button'
+        <Link
           className='min-w-0 flex-1 rounded-md px-2 py-2 text-left'
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
+          {...contactLink}
         >
           <div className='flex flex-wrap items-baseline gap-x-3 gap-y-0.5'>
-            <span
-              className='max-w-full truncate text-sm font-medium'
-              title={toText(contact.name)}
-            >
-              {toText(contact.name)}
+            <span className='flex max-w-full min-w-0 items-center gap-1'>
+              <span
+                className='truncate text-sm font-medium'
+                title={toText(contact.name)}
+              >
+                {toText(contact.name)}
+              </span>
+              <ArrowUpRight className='size-3 shrink-0 text-muted-foreground' />
             </span>
             {summary.map((value) => (
               <span
@@ -1484,40 +1452,13 @@ function ContactItem({
               </span>
             ))}
           </div>
-        </button>
+        </Link>
         {trailing ? (
           <span className='mt-1.5 flex shrink-0 items-center justify-center'>
             {trailing}
           </span>
         ) : null}
       </div>
-      {open && (
-        <div className='mt-1 mb-4 divide-y divide-border rounded-md bg-muted/40 px-3 py-0.5 text-sm [&>*]:py-1.5'>
-          <dl className='grid gap-x-3 gap-y-1 sm:grid-cols-3'>
-            {['name', 'jobTitle', 'gender'].map(cell)}
-          </dl>
-          {/* Email gets two thirds: addresses run long, phone numbers do not. */}
-          <dl className='grid gap-x-3 gap-y-1 sm:grid-cols-[1fr_2fr]'>
-            {['phone', 'email'].map(cell)}
-          </dl>
-          <dl className='grid gap-x-3 gap-y-1 sm:grid-cols-3'>
-            {['employed', 'source', 'ownerId'].map(cell)}
-          </dl>
-          <div>
-            <p className='px-2 text-sm text-muted-foreground'>
-              {text('fields.notes')}
-            </p>
-            {editableField('notes')}
-          </div>
-          <Link
-            className='mx-2 inline-flex items-center gap-1 font-medium hover:text-primary hover:underline'
-            {...contactLink}
-          >
-            {text('viewDetails')}
-            <ArrowUpRight className='size-3 text-muted-foreground' />
-          </Link>
-        </div>
-      )}
     </li>
   );
 }
@@ -1638,7 +1579,6 @@ function OpportunityContacts({
                 <ContactItem
                   key={item.contactId}
                   contact={contact}
-                  names={names}
                   leading={
                     <PrimaryStar contact={contact} siblings={contactsOf} />
                   }
@@ -1706,7 +1646,6 @@ function OpportunityContacts({
               <ContactItem
                 key={c.id}
                 contact={c}
-                names={names}
                 leading={<PrimaryStar contact={c} siblings={contactsOf} />}
                 trailing={
                   editable ? (
