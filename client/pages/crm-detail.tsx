@@ -1400,6 +1400,11 @@ export function ConfirmDialog({
 
 // "Updated" on its own says nothing, so each changed field is listed with the
 // value it was given. Old values are not stored, so this shows the new one only.
+// A long text shown on one line, as history chips show every value: the
+// value renderer otherwise draws it as a collapsible block.
+const asLine = (field: Field): Field =>
+  field.type === 'textarea' ? { ...field, type: 'text' } : field;
+
 export function HistoryChanges({
   entity = 'leads',
   record,
@@ -1450,7 +1455,9 @@ export function HistoryChanges({
         // Merged so fields the formatter leans on — a currency for an
         // amount — resolve even when this save did not include them.
         record={{ ...record, ...values }}
-        field={fields.find((f) => f.key === key) ?? { key, type: 'text' }}
+        field={asLine(
+          fields.find((f) => f.key === key) ?? { key, type: 'text' },
+        )}
         lookup={names}
       />
     );
@@ -1481,7 +1488,9 @@ export function HistoryChanges({
           >
             {before && key in before && (
               <>
-                <span className='min-w-0 truncate text-muted-foreground line-through decoration-muted-foreground/50'>
+                {/* Each side keeps at most half the chip, so a long
+                    value on one side never squeezes the other away. */}
+                <span className='min-w-0 max-w-48 truncate text-muted-foreground line-through decoration-muted-foreground/50'>
                   {show(before, key)}
                 </span>
                 <span aria-hidden className='shrink-0 text-muted-foreground'>
@@ -1489,7 +1498,9 @@ export function HistoryChanges({
                 </span>
               </>
             )}
-            <span className='min-w-0 truncate'>{show(changed, key)}</span>
+            <span className='min-w-0 max-w-48 truncate'>
+              {show(changed, key)}
+            </span>
           </dd>
         </div>
       ))}
