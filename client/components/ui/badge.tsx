@@ -23,8 +23,10 @@ const badgeVariants = cva(
         // Application variant: something the assistant is waiting on.
         ai: 'bg-ai/10 text-ai dark:bg-ai/20',
         // Application variant: what kind of thing a row is (an activity's
-        // type, an approval's topic) rather than where it stands.
-        muted: 'bg-muted text-muted-foreground',
+        // type, an approval's topic) rather than where it stands. A tint of
+        // the text colour rather than the muted surface, which is also the
+        // rows' hover colour: on a hovered row the tag would disappear.
+        muted: 'bg-foreground/7 text-muted-foreground',
         // Application variants for statuses: done, under way, waiting.
         success: 'bg-success/10 text-success dark:bg-success/20',
         info: 'bg-info/10 text-info dark:bg-info/20',
