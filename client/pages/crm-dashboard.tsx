@@ -1,7 +1,17 @@
 import { TrendChart } from '../components/crm/trend-chart.js';
 import { SortableTable } from '../components/crm/sortable-table.js';
 import { toText } from '../components/crm/api.js';
-import { useState, type ReactElement, type ReactNode } from 'react';
+import {
+  Suspense,
+  lazy,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
+import {
+  RecordDrawerContext,
+  useRecordDrawerState,
+} from '../components/crm/record-drawer.js';
 import { Link, useNavigate } from 'react-router';
 import {
   AlertCircle,
@@ -116,7 +126,19 @@ const attentionCards: {
   { key: 'toSubmit', entity: 'approvals', metric: 'toSubmit', icon: FilePen },
 ];
 
+// The activity and approval cards open their record in the detail page's
+// drawer; its code loads only when a record is first opened.
+const RecordDrawer = lazy(() =>
+  import('./crm-detail.js').then((module) => ({
+    default: module.RecordDrawer,
+  })),
+);
+
 export default function DashboardPage(): ReactElement {
+  const drawer = useRecordDrawerState();
+  // Loaded on the first open and kept mounted after, so closing animates.
+  const [drawerLoaded, setDrawerLoaded] = useState(false);
+  if (drawer.opened && !drawerLoaded) setDrawerLoaded(true);
   const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
   const navigate = useNavigate();
@@ -222,353 +244,368 @@ export default function DashboardPage(): ReactElement {
   );
 
   return (
-    <CrmFrame
-      title={text('dashboard')}
-      description={text('dashboardDescription')}
-      assistant={false}
-      titleAside={
-        <div className='flex rounded-lg border p-0.5'>
-          {(['mine', 'team'] as const).map((value) => (
-            <Button
-              key={value}
-              size='sm'
-              variant={scope === value ? 'secondary' : 'ghost'}
-              onClick={() => setScope(value)}
-            >
-              {text(value === 'mine' ? 'scopeMine' : 'scopeTeam')}
-            </Button>
-          ))}
-        </div>
-      }
-      actions={
-        <>
-          {meta?.assistant && meta.permissions.leads.create && (
-            <Button
-              variant='ghost'
-              className='text-ai hover:text-ai'
-              onClick={() =>
-                window.dispatchEvent(
-                  new CustomEvent('crm-assistant', {
-                    detail: { prompt: text('prompts.captureLead') },
-                  }),
-                )
-              }
-            >
-              <Sparkles />
-              {text('captureLead')}
-            </Button>
-          )}
-          {meta?.assistant && (
-            <>
-              <Button
-                variant='ghost'
-                className='text-ai hover:text-ai'
-                onClick={() => ask('planToday')}
-              >
-                <Sparkles />
-                {text('planToday')}
-              </Button>
-              <Button
-                variant='ghost'
-                className='text-ai hover:text-ai'
-                onClick={() => ask('analyzeSales')}
-              >
-                <Sparkles />
-                {text('analyzeSales')}
-              </Button>
-            </>
-          )}
-        </>
-      }
+    <RecordDrawerContext.Provider
+      value={{ open: drawer.open, close: drawer.close, inDrawer: false }}
     >
-      <ErrorNotice error={query.error} />
-      {query.isLoading || !data ? (
-        <Loading />
-      ) : (
-        <>
-          {section(
-            text('todaysWork'),
-            <div className='grid gap-4 lg:grid-cols-3'>
-              {agenda(
-                'today',
-                text('noToday'),
-                '/crm/activities?metric=todayActivities',
-              )}
-              {agenda(
-                'overdue',
-                text('noOverdue'),
-                '/crm/activities?metric=overdueActivities',
-              )}
-              {agenda(
-                'approvals',
-                text('overdueApprovalHint'),
-                scope === 'team'
-                  ? '/crm/approvals?status=pending'
-                  : '/crm/approvals?metric=myDecisions',
-              )}
-            </div>,
-          )}
-          {section(
-            text('overall'),
-            <>
-              <div className='grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(10rem,1fr))]'>
-                <Metric
-                  title={text('pipeline')}
-                  icon={Layers}
-                  value={moneyTotals(business.pipeline, language)}
-                  note={text('metricNotes.pipeline')}
-                  onClick={() => openList('opportunities', 'open')}
-                />
-                <Metric
-                  title={text('weighted')}
-                  icon={Scale}
-                  value={moneyTotals(business.weighted, language)}
-                  note={text('metricNotes.weighted')}
-                  onClick={() => openList('opportunities', 'open')}
-                />
-                <Metric
-                  title={text('leadConversionRate')}
-                  icon={Percent}
-                  value={
-                    overall.conversionRate == null
-                      ? '—'
-                      : `${toText(Math.round(Number(overall.conversionRate) * 100))}%`
-                  }
-                  note={
-                    overall.conversionRate == null
-                      ? text('noRate')
-                      : text('metricNotes.conversionRate')
-                  }
-                />
-                <Metric
-                  title={text('winRate')}
-                  icon={Percent}
-                  value={
-                    overall.winRate == null
-                      ? '—'
-                      : `${toText(Math.round(Number(overall.winRate) * 100))}%`
-                  }
-                  note={
-                    overall.winRate == null
-                      ? text('noRate')
-                      : text('metricNotes.winRate')
-                  }
-                />
-                <Metric
-                  title={text('customers')}
-                  icon={Building2}
-                  value={Number(overall.customers ?? 0)}
-                  note={text('metricNotes.customers', {
-                    share: Number(overall.accounts)
-                      ? `${toText(Math.round((Number(overall.customers ?? 0) / Number(overall.accounts)) * 100))}%`
-                      : '0%',
-                  })}
-                  onClick={() => openList('accounts', 'customers')}
-                />
-              </div>
-              <Card className='shadow-none'>
-                <CardHeader className='flex flex-row items-center justify-between'>
-                  <CardTitle className='text-base'>{text('funnel')}</CardTitle>
-                  <Link
-                    className='text-xs text-muted-foreground hover:text-primary'
-                    to='/crm/opportunities'
-                  >
-                    {text('more')} ↗
-                  </Link>
-                </CardHeader>
-                <CardContent className='space-y-3'>
-                  {funnel.map((stage) => (
-                    <div
-                      key={toText(stage.stage)}
-                      className='grid grid-cols-[7rem_1fr_auto] items-center gap-3 text-xs'
-                    >
-                      <span>{text(`options.${toText(stage.stage)}`)}</span>
-                      <div className='h-6 rounded-md bg-muted'>
-                        <div
-                          className='h-full rounded-md bg-primary/75'
-                          style={{
-                            width: `${toText((Number(stage.count) / maxCount) * 100)}%`,
-                          }}
-                        />
-                      </div>
-                      <span className='text-right tabular-nums'>
-                        <span className='font-medium'>
-                          {Number(stage.count)}
-                        </span>
-                        <span className='ml-2 text-muted-foreground'>
-                          {moneyTotals(stage.amount, language)}
-                        </span>
-                      </span>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            </>,
-          )}
-          {section(
-            text('risks'),
-            // The same grid as the other sections, so every group of figures
-            // lays out alike: two to a row on a phone, as many as fit wider.
-            <div className='grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(10rem,1fr))]'>
-              {attentionCards.map((card) => (
-                <Metric
-                  key={card.key}
-                  title={text(card.key)}
-                  icon={card.icon}
-                  value={Number(attention[card.key] ?? 0)}
-                  tone={
-                    Number(attention[card.key] ?? 0) > 0
-                      ? 'attention'
-                      : 'neutral'
-                  }
-                  note={text(`metricNotes.${card.key}`, {
-                    defaultValue: '',
-                    days: card.days ? meta?.settings[card.days] : undefined,
-                  })}
-                  onClick={() => openList(card.entity, card.metric)}
-                />
-              ))}
-            </div>,
-          )}
-          {section(
-            text('monthBusiness'),
-            <>
-              <div className='grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(10rem,1fr))]'>
-                <Metric
-                  title={text('newLeads')}
-                  icon={Inbox}
-                  value={Number(business.newLeads ?? 0)}
-                  note={text('metricNotes.newLeads')}
-                  onClick={() => openList('leads', 'newThisMonth')}
-                />
-                <Metric
-                  title={text('convertedLeads')}
-                  icon={CheckCircle2}
-                  value={Number(business.convertedLeads ?? 0)}
-                  note={text('metricNotes.convertedLeads')}
-                  onClick={() => openList('leads', 'convertedThisMonth')}
-                />
-                <Metric
-                  title={text('wonThisMonth')}
-                  icon={Trophy}
-                  value={moneyTotals(business.wonThisMonth, language)}
-                  note={text('metricNotes.wonThisMonth')}
-                  onClick={() => openList('opportunities', 'wonThisMonth')}
-                />
-                <Metric
-                  title={text('completedThisMonth')}
-                  icon={CheckCircle2}
-                  value={Number(business.completedThisMonth ?? 0)}
-                  note={text('metricNotes.completedThisMonth')}
-                  onClick={() => openList('activities', 'completedThisMonth')}
-                />
-                <Metric
-                  title={text('churnedThisMonth')}
-                  icon={UserMinus}
-                  value={Number(business.churnedThisMonth ?? 0)}
-                  tone={
-                    Number(business.churnedThisMonth ?? 0) > 0
-                      ? 'attention'
-                      : 'neutral'
-                  }
-                  note={text('metricNotes.churnedThisMonth', {
-                    added: Number(business.newAccounts ?? 0),
-                  })}
-                  onClick={() => openList('accounts', 'churnedThisMonth')}
-                />
-                <Metric
-                  title={text('approvedThisMonth')}
-                  icon={ShieldCheck}
-                  value={Number(business.approvedThisMonth ?? 0)}
-                  note={text('metricNotes.approvedThisMonth')}
-                  onClick={() => openList('approvals', 'approvedThisMonth')}
-                />
-                <Metric
-                  title={text('rejectedThisMonth')}
-                  icon={XCircle}
-                  value={Number(business.rejectedThisMonth ?? 0)}
-                  note={text('metricNotes.rejectedThisMonth', {
-                    rate:
-                      business.approvalRate == null
-                        ? '—'
-                        : `${toText(Math.round(Number(business.approvalRate) * 100))}%`,
-                  })}
-                  onClick={() => openList('approvals', 'rejectedThisMonth')}
-                />
-              </div>
-            </>,
-          )}
-          {scope === 'team' &&
-            section(
-              text('teamSection'),
-              <div className='space-y-4'>
-                {table(
-                  'sellers',
-                  rows(data.sellers),
-                  [
-                    ['name', 'owner'],
-                    ['pipeline', 'pipeline'],
-                    ['wonThisMonth', 'wonThisMonth'],
-                    ['uncontacted', 'uncontacted'],
-                    ['staleLeads', 'staleLeads'],
-                    ['staleAccounts', 'staleAccounts'],
-                    ['overdueActivities', 'overdueActivities'],
-                  ],
-                  (row) => toText(row.id),
+      <CrmFrame
+        title={text('dashboard')}
+        description={text('dashboardDescription')}
+        assistant={false}
+        titleAside={
+          <div className='flex rounded-lg border p-0.5'>
+            {(['mine', 'team'] as const).map((value) => (
+              <Button
+                key={value}
+                size='sm'
+                variant={scope === value ? 'secondary' : 'ghost'}
+                onClick={() => setScope(value)}
+              >
+                {text(value === 'mine' ? 'scopeMine' : 'scopeTeam')}
+              </Button>
+            ))}
+          </div>
+        }
+        actions={
+          <>
+            {meta?.assistant && meta.permissions.leads.create && (
+              <Button
+                variant='ghost'
+                className='text-ai hover:text-ai'
+                onClick={() =>
+                  window.dispatchEvent(
+                    new CustomEvent('crm-assistant', {
+                      detail: { prompt: text('prompts.captureLead') },
+                    }),
+                  )
+                }
+              >
+                <Sparkles />
+                {text('captureLead')}
+              </Button>
+            )}
+            {meta?.assistant && (
+              <>
+                <Button
+                  variant='ghost'
+                  className='text-ai hover:text-ai'
+                  onClick={() => ask('planToday')}
+                >
+                  <Sparkles />
+                  {text('planToday')}
+                </Button>
+                <Button
+                  variant='ghost'
+                  className='text-ai hover:text-ai'
+                  onClick={() => ask('analyzeSales')}
+                >
+                  <Sparkles />
+                  {text('analyzeSales')}
+                </Button>
+              </>
+            )}
+          </>
+        }
+      >
+        <ErrorNotice error={query.error} />
+        {query.isLoading || !data ? (
+          <Loading />
+        ) : (
+          <>
+            {section(
+              text('todaysWork'),
+              <div className='grid gap-4 lg:grid-cols-3'>
+                {agenda(
+                  'today',
+                  text('noToday'),
+                  '/crm/activities?metric=todayActivities',
                 )}
-                {/* Side by side only when the section itself is wide enough (72rem),
-                    not the screen, and the source table takes the larger share:
-                    its five sortable columns need about 690px. */}
-                <div className='@container'>
-                  <div className='grid gap-4 @6xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]'>
-                    {table(
-                      'sources',
-                      rows(data.sources),
-                      [
-                        ['source', 'fields.source'],
-                        ['leads', 'entities.leads'],
-                        ['converted', 'converted'],
-                        ['conversionRate', 'conversionRate'],
-                        ['won', 'won'],
-                      ],
-                      (row) => toText(row.source),
-                    )}
-                    <TrendChart
-                      title={text('trends')}
-                      rows={rows(data.trends)}
-                      language={language}
-                      table={
-                        <SortableTable
-                          rows={rows(data.trends)}
-                          rowKey={(row) => toText(row.month)}
-                          columns={(
-                            [
-                              ['month', 'month'],
-                              ['won', 'options.won'],
-                              ['lost', 'options.lost'],
-                            ] as const
-                          ).map(([key, label]) => ({
-                            id: key,
-                            title: text(label),
-                            sortValue: (row: Data) =>
-                              key === 'month'
-                                ? toText(row.month)
-                                : Number(row[key] ?? 0),
-                            cell: (row: Data) =>
-                              key === 'month'
-                                ? toText(row.month)
-                                : Number(row[key] ?? 0),
-                          }))}
-                        />
-                      }
-                    />
-                  </div>
-                </div>
+                {agenda(
+                  'overdue',
+                  text('noOverdue'),
+                  '/crm/activities?metric=overdueActivities',
+                )}
+                {agenda(
+                  'approvals',
+                  text('overdueApprovalHint'),
+                  scope === 'team'
+                    ? '/crm/approvals?status=pending'
+                    : '/crm/approvals?metric=myDecisions',
+                )}
               </div>,
             )}
-        </>
+            {section(
+              text('overall'),
+              <>
+                <div className='grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(10rem,1fr))]'>
+                  <Metric
+                    title={text('pipeline')}
+                    icon={Layers}
+                    value={moneyTotals(business.pipeline, language)}
+                    note={text('metricNotes.pipeline')}
+                    onClick={() => openList('opportunities', 'open')}
+                  />
+                  <Metric
+                    title={text('weighted')}
+                    icon={Scale}
+                    value={moneyTotals(business.weighted, language)}
+                    note={text('metricNotes.weighted')}
+                    onClick={() => openList('opportunities', 'open')}
+                  />
+                  <Metric
+                    title={text('leadConversionRate')}
+                    icon={Percent}
+                    value={
+                      overall.conversionRate == null
+                        ? '—'
+                        : `${toText(Math.round(Number(overall.conversionRate) * 100))}%`
+                    }
+                    note={
+                      overall.conversionRate == null
+                        ? text('noRate')
+                        : text('metricNotes.conversionRate')
+                    }
+                  />
+                  <Metric
+                    title={text('winRate')}
+                    icon={Percent}
+                    value={
+                      overall.winRate == null
+                        ? '—'
+                        : `${toText(Math.round(Number(overall.winRate) * 100))}%`
+                    }
+                    note={
+                      overall.winRate == null
+                        ? text('noRate')
+                        : text('metricNotes.winRate')
+                    }
+                  />
+                  <Metric
+                    title={text('customers')}
+                    icon={Building2}
+                    value={Number(overall.customers ?? 0)}
+                    note={text('metricNotes.customers', {
+                      share: Number(overall.accounts)
+                        ? `${toText(Math.round((Number(overall.customers ?? 0) / Number(overall.accounts)) * 100))}%`
+                        : '0%',
+                    })}
+                    onClick={() => openList('accounts', 'customers')}
+                  />
+                </div>
+                <Card className='shadow-none'>
+                  <CardHeader className='flex flex-row items-center justify-between'>
+                    <CardTitle className='text-base'>
+                      {text('funnel')}
+                    </CardTitle>
+                    <Link
+                      className='text-xs text-muted-foreground hover:text-primary'
+                      to='/crm/opportunities'
+                    >
+                      {text('more')} ↗
+                    </Link>
+                  </CardHeader>
+                  <CardContent className='space-y-3'>
+                    {funnel.map((stage) => (
+                      <div
+                        key={toText(stage.stage)}
+                        className='grid grid-cols-[7rem_1fr_auto] items-center gap-3 text-xs'
+                      >
+                        <span>{text(`options.${toText(stage.stage)}`)}</span>
+                        <div className='h-6 rounded-md bg-muted'>
+                          <div
+                            className='h-full rounded-md bg-primary/75'
+                            style={{
+                              width: `${toText((Number(stage.count) / maxCount) * 100)}%`,
+                            }}
+                          />
+                        </div>
+                        <span className='text-right tabular-nums'>
+                          <span className='font-medium'>
+                            {Number(stage.count)}
+                          </span>
+                          <span className='ml-2 text-muted-foreground'>
+                            {moneyTotals(stage.amount, language)}
+                          </span>
+                        </span>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </>,
+            )}
+            {section(
+              text('risks'),
+              // The same grid as the other sections, so every group of figures
+              // lays out alike: two to a row on a phone, as many as fit wider.
+              <div className='grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(10rem,1fr))]'>
+                {attentionCards.map((card) => (
+                  <Metric
+                    key={card.key}
+                    title={text(card.key)}
+                    icon={card.icon}
+                    value={Number(attention[card.key] ?? 0)}
+                    tone={
+                      Number(attention[card.key] ?? 0) > 0
+                        ? 'attention'
+                        : 'neutral'
+                    }
+                    note={text(`metricNotes.${card.key}`, {
+                      defaultValue: '',
+                      days: card.days ? meta?.settings[card.days] : undefined,
+                    })}
+                    onClick={() => openList(card.entity, card.metric)}
+                  />
+                ))}
+              </div>,
+            )}
+            {section(
+              text('monthBusiness'),
+              <>
+                <div className='grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(10rem,1fr))]'>
+                  <Metric
+                    title={text('newLeads')}
+                    icon={Inbox}
+                    value={Number(business.newLeads ?? 0)}
+                    note={text('metricNotes.newLeads')}
+                    onClick={() => openList('leads', 'newThisMonth')}
+                  />
+                  <Metric
+                    title={text('convertedLeads')}
+                    icon={CheckCircle2}
+                    value={Number(business.convertedLeads ?? 0)}
+                    note={text('metricNotes.convertedLeads')}
+                    onClick={() => openList('leads', 'convertedThisMonth')}
+                  />
+                  <Metric
+                    title={text('wonThisMonth')}
+                    icon={Trophy}
+                    value={moneyTotals(business.wonThisMonth, language)}
+                    note={text('metricNotes.wonThisMonth')}
+                    onClick={() => openList('opportunities', 'wonThisMonth')}
+                  />
+                  <Metric
+                    title={text('completedThisMonth')}
+                    icon={CheckCircle2}
+                    value={Number(business.completedThisMonth ?? 0)}
+                    note={text('metricNotes.completedThisMonth')}
+                    onClick={() => openList('activities', 'completedThisMonth')}
+                  />
+                  <Metric
+                    title={text('churnedThisMonth')}
+                    icon={UserMinus}
+                    value={Number(business.churnedThisMonth ?? 0)}
+                    tone={
+                      Number(business.churnedThisMonth ?? 0) > 0
+                        ? 'attention'
+                        : 'neutral'
+                    }
+                    note={text('metricNotes.churnedThisMonth', {
+                      added: Number(business.newAccounts ?? 0),
+                    })}
+                    onClick={() => openList('accounts', 'churnedThisMonth')}
+                  />
+                  <Metric
+                    title={text('approvedThisMonth')}
+                    icon={ShieldCheck}
+                    value={Number(business.approvedThisMonth ?? 0)}
+                    note={text('metricNotes.approvedThisMonth')}
+                    onClick={() => openList('approvals', 'approvedThisMonth')}
+                  />
+                  <Metric
+                    title={text('rejectedThisMonth')}
+                    icon={XCircle}
+                    value={Number(business.rejectedThisMonth ?? 0)}
+                    note={text('metricNotes.rejectedThisMonth', {
+                      rate:
+                        business.approvalRate == null
+                          ? '—'
+                          : `${toText(Math.round(Number(business.approvalRate) * 100))}%`,
+                    })}
+                    onClick={() => openList('approvals', 'rejectedThisMonth')}
+                  />
+                </div>
+              </>,
+            )}
+            {scope === 'team' &&
+              section(
+                text('teamSection'),
+                <div className='space-y-4'>
+                  {table(
+                    'sellers',
+                    rows(data.sellers),
+                    [
+                      ['name', 'owner'],
+                      ['pipeline', 'pipeline'],
+                      ['wonThisMonth', 'wonThisMonth'],
+                      ['uncontacted', 'uncontacted'],
+                      ['staleLeads', 'staleLeads'],
+                      ['staleAccounts', 'staleAccounts'],
+                      ['overdueActivities', 'overdueActivities'],
+                    ],
+                    (row) => toText(row.id),
+                  )}
+                  {/* Side by side only when the section itself is wide enough (72rem),
+                    not the screen, and the source table takes the larger share:
+                    its five sortable columns need about 690px. */}
+                  <div className='@container'>
+                    <div className='grid gap-4 @6xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]'>
+                      {table(
+                        'sources',
+                        rows(data.sources),
+                        [
+                          ['source', 'fields.source'],
+                          ['leads', 'entities.leads'],
+                          ['converted', 'converted'],
+                          ['conversionRate', 'conversionRate'],
+                          ['won', 'won'],
+                        ],
+                        (row) => toText(row.source),
+                      )}
+                      <TrendChart
+                        title={text('trends')}
+                        rows={rows(data.trends)}
+                        language={language}
+                        table={
+                          <SortableTable
+                            rows={rows(data.trends)}
+                            rowKey={(row) => toText(row.month)}
+                            columns={(
+                              [
+                                ['month', 'month'],
+                                ['won', 'options.won'],
+                                ['lost', 'options.lost'],
+                              ] as const
+                            ).map(([key, label]) => ({
+                              id: key,
+                              title: text(label),
+                              sortValue: (row: Data) =>
+                                key === 'month'
+                                  ? toText(row.month)
+                                  : Number(row[key] ?? 0),
+                              cell: (row: Data) =>
+                                key === 'month'
+                                  ? toText(row.month)
+                                  : Number(row[key] ?? 0),
+                            }))}
+                          />
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>,
+              )}
+          </>
+        )}
+      </CrmFrame>
+      {drawerLoaded && (
+        <Suspense fallback={null}>
+          <RecordDrawer
+            target={drawer.opened}
+            open={drawer.open}
+            close={drawer.close}
+          />
+        </Suspense>
       )}
-    </CrmFrame>
+    </RecordDrawerContext.Provider>
   );
 }
 

@@ -4,18 +4,13 @@ import {
   sentence,
   toText,
 } from '../components/crm/api.js';
-import {
-  useCallback,
-  useEffect,
-  useState,
-  type ReactElement,
-  type ReactNode,
-} from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
+import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
+import { Link, useNavigate, useParams } from 'react-router';
 import { Sheet, SheetContent, SheetTitle } from '../components/ui/sheet.js';
 import {
   RecordDrawerContext,
   useRecordDrawer,
+  useRecordDrawerState,
   useRecordLink,
   type RecordDrawerApi,
 } from '../components/crm/record-drawer.js';
@@ -110,33 +105,7 @@ const drawerEntities: Entity[] = [
 
 export default function CrmDetailPage(): ReactElement {
   const params = useParams();
-  const navigate = useNavigate();
-  // The record shown in the drawer lives in the URL ("?open=entity/id"),
-  // so a reload, the back button and a copied link all restore it.
-  const [searchParams, setSearchParams] = useSearchParams();
-  const opened = toText(searchParams.get('open') ?? '');
-  const open = useCallback<RecordDrawerApi['open']>(
-    (target, id) => {
-      // A phone has no room for a drawer over a page: go to the record.
-      if (window.matchMedia('(max-width: 767px)').matches) {
-        void navigate(`/crm/${toText(target)}/${toText(id)}`);
-        return;
-      }
-      setSearchParams((previous) => {
-        const next = new URLSearchParams(previous);
-        next.set('open', `${toText(target)}/${toText(id)}`);
-        return next;
-      });
-    },
-    [navigate, setSearchParams],
-  );
-  const close = useCallback(() => {
-    setSearchParams((previous) => {
-      const next = new URLSearchParams(previous);
-      next.delete('open');
-      return next;
-    });
-  }, [setSearchParams]);
+  const { opened, open, close } = useRecordDrawerState();
   const entity = params.entity as Entity;
   const key = `${toText(params.entity)}/${toText(params.id)}`;
   // The route can render once more with empty params while it is being left
@@ -154,11 +123,11 @@ export default function CrmDetailPage(): ReactElement {
   );
 }
 
-// The drawer a detail page opens other records in: the same detail
-// component as the full page, over the page the reader came from. Links
-// inside it replace what it shows (the back button steps back through
+// The drawer a detail page or the workspace opens records in: the same
+// detail component as the full page, over the page the reader came from.
+// Links inside it replace what it shows (the back button steps back through
 // them), and the toolbar offers the full page.
-function RecordDrawer({
+export function RecordDrawer({
   target,
   open,
   close,
