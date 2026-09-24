@@ -1,6 +1,12 @@
 import { recordTitle } from '../components/crm/lookups.js';
 import { sentence, toText, useMore } from '../components/crm/api.js';
-import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
+import {
+  useEffect,
+  useState,
+  type MouseEvent,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import { Link, useNavigate } from 'react-router';
 import {
   useRecordDrawer,
@@ -1331,6 +1337,21 @@ function RelatedList({
 }): ReactElement {
   const { text } = useCrmText();
   const { data: meta } = useMetadata();
+  const navigate = useNavigate();
+  const drawer = useRecordDrawer();
+  // A row opens its record like the other tabs' entries: in the page's
+  // drawer, or its full page where there is none (a phone). A click on a link
+  // in the row keeps its own target, and a click that ends a text selection
+  // opens nothing.
+  const openRow = (
+    event: MouseEvent<HTMLTableRowElement>,
+    id: string,
+  ): void => {
+    if ((event.target as HTMLElement).closest('a,button')) return;
+    if (window.getSelection()?.toString()) return;
+    if (drawer) drawer.open(entity, id);
+    else void navigate(`/crm/${toText(entity)}/${id}`);
+  };
   const more = useMore(base, {
     data: firstPage,
     total: total ?? firstPage.length,
@@ -1406,8 +1427,8 @@ function RelatedList({
       )}
     </div>
   );
-  // Contacts expand in place the way activities do, so a phone number or a
-  // job title is corrected without leaving the account.
+  // Contacts open in the drawer the way activities do, so a phone number or
+  // a job title is corrected without leaving the account.
   function contactList(list: CrmRecord[]): ReactElement {
     return (
       <ul className='divide-y divide-border'>
@@ -1435,7 +1456,11 @@ function RelatedList({
         </TableHeader>
         <TableBody>
           {list.map((r) => (
-            <TableRow key={r.id}>
+            <TableRow
+              key={r.id}
+              className='cursor-pointer'
+              onClick={(event) => openRow(event, r.id)}
+            >
               {columns.map((key) => (
                 <TableCell key={key}>
                   {key === 'name' ? (
