@@ -193,8 +193,8 @@ const wording = {
   ],
   convert: ['Convert lead', '转化线索'],
   convertedHint: [
-    'This lead has been converted and is read-only. Continue from the linked customer records.',
-    '此线索已转化，为只读状态。请在关联的客户记录中继续跟进。',
+    'This lead has been converted and is read-only. Continue from the records it was converted into.',
+    '此线索已转化，为只读状态，请在转化的记录中继续跟进。',
   ],
   conversionHint: [
     'Create or link an account and contact. Existing values are preserved unless you select fields to overwrite. All changes are saved together.',
