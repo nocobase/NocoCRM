@@ -1,6 +1,14 @@
-import { useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { Check, CircleDot, Pause, Trophy, XCircle } from 'lucide-react';
 import { Button } from '../ui/button.js';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog.js';
 import { ReasonDialog } from './reasons.js';
 import { reasonFor } from './reason-rules.js';
 import {
@@ -43,10 +51,22 @@ export function StageStepper({
   const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
   const [asking, setAsking] = useState<string>();
+  // A stage change without a reason to give is confirmed first: one click on
+  // the row would otherwise move the deal (and a win, its account).
+  const [confirming, setConfirming] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const current = toText(record.stage);
   const currentIndex = openStages.indexOf(current);
+  // Where the row scrolls, open it on the current stage, centred. The row's
+  // own scroll position is set, so the page itself does not move.
+  const rowRef = useRef<HTMLOListElement>(null);
+  useEffect(() => {
+    const row = rowRef.current;
+    const step = row?.querySelector<HTMLElement>('[data-current]');
+    if (!row || !step) return;
+    row.scrollLeft = step.offsetLeft - (row.clientWidth - step.offsetWidth) / 2;
+  }, [current]);
   const probability = (stage: string): string =>
     `${Math.round((meta?.probabilities[stage] ?? 0) * 100)}%`;
   const commit = async (values: Data): Promise<void> => {
@@ -60,6 +80,7 @@ export function StageStepper({
       });
       setError('');
       setAsking(undefined);
+      setConfirming(undefined);
     } catch (cause) {
       setError(text(`errors.${errorCode(cause).code}`, { defaultValue: '' }));
     } finally {
@@ -69,7 +90,7 @@ export function StageStepper({
   const move = (stage: string): void => {
     if (stage === current) return;
     if (reasonFor('opportunities', stage)) setAsking(stage);
-    else void commit({ stage });
+    else setConfirming(stage);
   };
   const reasonKey =
     current === 'lost'
@@ -134,8 +155,14 @@ export function StageStepper({
       </div>
       {/* Chevrons rather than boxes: each step points at the next, so the
           row reads as a path. clip-path leaves no room for a border, so the
-          three states are told apart by fill alone. */}
-      <ol className='flex'>
+          three states are told apart by fill alone. A step never shrinks
+          below its name: where the row is too narrow (a phone, a tablet) it
+          scrolls sideways, opened on the current stage, instead of cutting
+          every name down to a letter. */}
+      <ol
+        ref={rowRef}
+        className='relative flex overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+      >
         {openStages.map((stage, index) => {
           // Passed stages are ticked; on a won deal every stage is passed.
           const passed = current === 'won' || index < currentIndex;
@@ -144,7 +171,8 @@ export function StageStepper({
           return (
             <li
               key={stage}
-              className={`min-w-0 flex-1 ${toText(first ? '' : '-ml-2')}`}
+              data-current={active || undefined}
+              className={`flex-1 ${toText(first ? '' : '-ml-2')}`}
             >
               <button
                 type='button'
@@ -172,7 +200,7 @@ export function StageStepper({
                 {active && (
                   <Check className='size-3.5 shrink-0 text-primary-foreground' />
                 )}
-                <span className='min-w-0 flex-1 truncate text-sm font-medium'>
+                <span className='flex-1 text-sm font-medium whitespace-nowrap'>
                   {text(`options.${stage}`)}
                 </span>
                 <span
@@ -189,6 +217,43 @@ export function StageStepper({
           );
         })}
       </ol>
+      {confirming && (
+        <Dialog
+          open
+          onOpenChange={(next) => {
+            if (!next && !busy) setConfirming(undefined);
+          }}
+        >
+          <DialogContent showCloseButton={false}>
+            <DialogHeader>
+              <DialogTitle>{text('changeStageTitle')}</DialogTitle>
+              <DialogDescription>
+                {text('changeStageDescription', {
+                  from: `${toText(text(`options.${current}`))} (${probability(current)})`,
+                  to: `${toText(text(`options.${confirming}`))} (${probability(confirming)})`,
+                })}
+                {confirming === 'won' && ` ${toText(text('changeStageWon'))}`}
+              </DialogDescription>
+            </DialogHeader>
+            {error && <p className='text-sm text-destructive'>{error}</p>}
+            <DialogFooter>
+              <Button
+                variant='outline'
+                disabled={busy}
+                onClick={() => setConfirming(undefined)}
+              >
+                {text('cancel')}
+              </Button>
+              <Button
+                disabled={busy}
+                onClick={() => void commit({ stage: confirming })}
+              >
+                {busy ? text('saving') : text('confirm')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
       {asking && (
         <ReasonDialog
           entity='opportunities'

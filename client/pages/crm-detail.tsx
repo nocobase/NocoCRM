@@ -1399,7 +1399,8 @@ export function ConfirmDialog({
 }
 
 // "Updated" on its own says nothing, so each changed field is listed with the
-// value it was given. Old values are not stored, so this shows the new one only.
+// value it was given, after the value it replaced where the entry kept one
+// (entries recorded before earlier values were stored show the new one only).
 // A long text shown on one line, as history chips show every value: the
 // value renderer otherwise draws it as a collapsible block.
 const asLine = (field: Field): Field =>

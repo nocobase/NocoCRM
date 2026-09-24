@@ -96,6 +96,12 @@ const wording = {
   editRecord: ['Edit {{entity}}', '编辑{{entity}}'],
   deleteRecord: ['Delete {{entity}}', '删除{{entity}}'],
   changeAccountTitle: ['Change the account?', '更换所属客户？'],
+  changeStageTitle: ['Change the stage?', '修改商机阶段？'],
+  changeStageDescription: ['{{from}} → {{to}}', '{{from}} → {{to}}'],
+  changeStageWon: [
+    'Winning the deal also makes its account a customer.',
+    '赢单后，所属客户将自动变为正式客户。',
+  ],
   changeAccountContacts: [
     "The deal's contacts belong to the current account and will be removed from it: {{names}}.",
     '此商机的联系人属于原客户，更换后将从此商机移除：{{names}}。',
