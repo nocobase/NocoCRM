@@ -5,11 +5,13 @@ import {
   toText,
 } from '../components/crm/api.js';
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, Outlet, useNavigate, useParams } from 'react-router';
 import { Sheet, SheetContent, SheetTitle } from '../components/ui/sheet.js';
 import {
   RecordDrawerContext,
   useRecordDrawer,
+  resolveTab,
+  useDetailTab,
   useRecordDrawerState,
   useRecordLink,
   type RecordDrawerApi,
@@ -121,6 +123,9 @@ export default function CrmDetailPage(): ReactElement {
         <EntityDetail key={key} entity={entity} id={params.id} />
       )}
       <RecordDrawer target={opened} open={open} close={close} />
+      {/* The tab's child route (crm-record-tab) draws nothing; the page
+          shows the tab its address names. */}
+      <Outlet />
     </RecordDrawerContext.Provider>
   );
 }
@@ -228,7 +233,10 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   const navigate = useNavigate();
   const drawer = useRecordDrawer();
   const { text, language } = useCrmText();
-  const [tab, setTab] = useState('activities');
+  const [tabSlug, setTab] = useDetailTab();
+  const tab =
+    resolveTab(tabSlug, ['activities', 'attachments', 'historyTab']) ??
+    'activities';
   // The activities and the history arrive one page each with the lead;
   // these grow them from the list and history endpoints.
   const moreActivities = useMore(

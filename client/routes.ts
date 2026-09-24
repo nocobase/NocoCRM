@@ -68,6 +68,15 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     path: '/crm/:entity/:id',
     auth: 'required',
     componentLoader: () => import('./pages/crm-detail.js'),
+    // A tab has an address of its own (/crm/accounts/<id>/contacts), read by
+    // useDetailTab; the page draws the tab, see pages/crm-record-tab.tsx.
+    children: [
+      {
+        name: 'crm-record-tab',
+        path: ':tab',
+        componentLoader: () => import('./pages/crm-record-tab.js'),
+      },
+    ],
   },
   {
     name: 'crm-notifications',

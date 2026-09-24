@@ -9,6 +9,8 @@ import {
 } from 'react';
 import { Link, useNavigate } from 'react-router';
 import {
+  resolveTab,
+  useDetailTab,
   useRecordDrawer,
   useRecordLink,
 } from '../components/crm/record-drawer.js';
@@ -270,7 +272,9 @@ export default function EntityDetail({
   const navigate = useNavigate();
   const drawer = useRecordDrawer();
   const { text, language } = useCrmText();
-  const [tab, setTab] = useState<string>();
+  // The tab the address names (…/contacts), resolved once the page knows
+  // which tabs it shows; an address naming another opens the first.
+  const [tabSlug, setTab] = useDetailTab();
   // The related lists and the history arrive one page each with the
   // record; these grow them from the list and history endpoints.
   const linkParam =
@@ -530,7 +534,11 @@ export default function EntityDetail({
       : []),
     ['historyTab', 'historyTab', moreHistory.total],
   ];
-  const activeTab = tab ?? tabs[0][0];
+  const activeTab =
+    resolveTab(
+      tabSlug,
+      tabs.map(([name]) => name),
+    ) ?? tabs[0][0];
   const blockerEntries = Object.entries(detail.blockers ?? {}).filter(
     ([, n]) => Number(n) > 0,
   ) as [Entity, number][];

@@ -1,5 +1,16 @@
-import { createContext, useCallback, useContext, type MouseEvent } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useState,
+  type MouseEvent,
+} from 'react';
+import {
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router';
 import { toText, type Entity } from './api.js';
 
 // A detail page (and the workspace) opens the records it links to in a
@@ -85,4 +96,46 @@ export function useRecordDrawerState(): {
     });
   }, [setSearchParams]);
   return { opened, open, close };
+}
+
+// A detail page's tab is the last segment of its address
+// (/crm/accounts/<id>/contacts, the record route's child), so a link or a
+// reload opens it and Back returns to the tab before. A record in the drawer
+// keeps its tab to itself and leaves the page's alone. The address says "history" and "contacts" where the pages' own names
+// are historyTab and opportunityContacts.
+const tabSlugs: Record<string, string> = {
+  historyTab: 'history',
+  opportunityContacts: 'contacts',
+};
+// The page's tab named by an address segment, among the tabs it shows.
+export function resolveTab(
+  slug: string | undefined,
+  names: readonly string[],
+): string | undefined {
+  return names.find((name) => name === slug || tabSlugs[name] === slug);
+}
+export function useDetailTab(): [string | undefined, (tab: string) => void] {
+  const inDrawer = useRecordDrawer()?.inDrawer ?? false;
+  const params = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [local, setLocal] = useState<string>();
+  const setTab = useCallback(
+    (name: string) => {
+      const slug = tabSlugs[name] ?? name;
+      if (inDrawer) {
+        setLocal(slug);
+        return;
+      }
+      void navigate({
+        pathname: `/crm/${toText(params.entity)}/${toText(params.id)}/${slug}`,
+        search: location.search,
+      });
+    },
+    [inDrawer, navigate, params.entity, params.id, location.search],
+  );
+  // Read from the path: the tab is the child route's segment, which the
+  // record page's own params do not carry.
+  const pageTab = location.pathname.split('/')[4] || undefined;
+  return [inDrawer ? local : pageTab, setTab];
 }
