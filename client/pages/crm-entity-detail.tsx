@@ -1584,10 +1584,10 @@ function OpportunityContacts({
                   }
                   trailing={
                     <span className='flex items-center gap-1'>
-                      <span className='w-32'>
+                      <span className='flex'>
                         {editable ? (
                           <Choice
-                            variant='inline'
+                            variant='tag'
                             label={text('fields.role')}
                             value={item.role}
                             disabled={busy}
@@ -1602,11 +1602,11 @@ function OpportunityContacts({
                               )
                             }
                           />
-                        ) : (
-                          <span className='text-sm text-muted-foreground'>
+                        ) : item.role ? (
+                          <Badge variant='muted'>
                             {text(`options.${item.role}`)}
-                          </span>
-                        )}
+                          </Badge>
+                        ) : null}
                       </span>
                       {editable && (
                         <Button

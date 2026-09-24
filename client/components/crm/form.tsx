@@ -145,7 +145,9 @@ export function Choice({
   onOpenChange?: (open: boolean) => void;
   // "inline": a quiet trigger for a pick that sits inside a list row — no
   // border until hovered, small type — so the row does not read as a form.
-  variant?: 'default' | 'inline';
+  // "tag": the pick drawn as the grey tag it is read as (a contact's role on
+  // a deal), with the chevron saying it can be changed.
+  variant?: 'default' | 'inline' | 'tag';
   // Drop the list under the trigger instead of over it: a picker beside
   // other text (a currency next to its amount) must not cover that text.
   below?: boolean;
@@ -168,15 +170,20 @@ export function Choice({
         className={
           variant === 'inline'
             ? 'h-7 w-full min-w-0 border-transparent bg-transparent text-xs hover:border-border hover:bg-muted data-[size=default]:h-7'
-            : 'w-full min-w-32'
+            : variant === 'tag'
+              ? 'h-5 w-auto min-w-0 gap-0.5 rounded-md border-transparent bg-foreground/7 px-1.5 py-0 text-xs font-medium text-muted-foreground hover:bg-foreground/12 data-[size=default]:h-5 [&_svg]:size-3'
+              : 'w-full min-w-32'
         }
         aria-label={label}
       >
         <SelectValue />
       </SelectTrigger>
       <SelectContent
-        alignItemWithTrigger={!below}
-        align={below ? 'start' : 'center'}
+        // A tag is narrower than its choices, so its list opens below it at
+        // a width of its own.
+        alignItemWithTrigger={!below && variant !== 'tag'}
+        align={below ? 'start' : variant === 'tag' ? 'end' : 'center'}
+        className={variant === 'tag' ? 'min-w-40' : undefined}
       >
         {items.map((item) => (
           <SelectItem key={item.value} value={item.value}>
