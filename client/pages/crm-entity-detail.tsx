@@ -1024,15 +1024,21 @@ export default function EntityDetail({
                               ? ` · ${toText(text(`options.${toText(event.fromValue)}`, { defaultValue: toText(event.fromValue) }))} → ${toText(text(`options.${toText(event.toValue)}`, { defaultValue: toText(event.toValue) }))}`
                               : ''}
                           </span>
-                          <HistoryChanges
-                            entity={entity}
-                            record={record}
-                            changes={event.changes}
-                            previous={event.previous}
-                            movedField={event.fromValue ? statusKey : undefined}
-                            names={names}
-                            fileNames={fileNames}
-                          />
+                          {/* A creation says only that it happened: the values it
+                              started with are the record's own first state. */}
+                          {event.action !== 'created' && (
+                            <HistoryChanges
+                              entity={entity}
+                              record={record}
+                              changes={event.changes}
+                              previous={event.previous}
+                              movedField={
+                                event.fromValue ? statusKey : undefined
+                              }
+                              names={names}
+                              fileNames={fileNames}
+                            />
+                          )}
                         </span>
                         <span className='shrink-0 text-right text-xs text-muted-foreground tabular-nums'>
                           {meta.users.find((u) => u.id === event.actorId)?.name}{' '}

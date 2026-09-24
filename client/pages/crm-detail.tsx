@@ -706,14 +706,20 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                               ? ` · ${toText(text(`options.${toText(event.fromValue)}`, { defaultValue: toText(event.fromValue) }))} → ${toText(text(`options.${toText(event.toValue)}`, { defaultValue: toText(event.toValue) }))}`
                               : ''}
                           </span>
-                          <HistoryChanges
-                            record={record}
-                            changes={event.changes}
-                            previous={event.previous}
-                            movedField={event.fromValue ? 'status' : undefined}
-                            names={names}
-                            fileNames={fileNames}
-                          />
+                          {/* A creation says only that it happened: the values it
+                              started with are the record's own first state. */}
+                          {event.action !== 'created' && (
+                            <HistoryChanges
+                              record={record}
+                              changes={event.changes}
+                              previous={event.previous}
+                              movedField={
+                                event.fromValue ? 'status' : undefined
+                              }
+                              names={names}
+                              fileNames={fileNames}
+                            />
+                          )}
                         </span>
                         {/* Who and when are the same kind of context, so they
                             sit together on the right and leave the left edge to
