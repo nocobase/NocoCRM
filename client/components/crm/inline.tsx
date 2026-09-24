@@ -345,6 +345,7 @@ export function InlineField({
       ) : picker.includes(field.type) ? (
         <Choice
           below
+          compact={field.key === 'currency'}
           label={label}
           value={draft}
           onOpenChange={(open) => {

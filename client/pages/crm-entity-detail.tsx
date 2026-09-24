@@ -807,9 +807,11 @@ export default function EntityDetail({
                             </div>
                           ) : key === 'money' ? (
                             // Currency, then the bare number: both edit in
-                            // place, and the sign is not repeated.
+                            // place, and the sign is not repeated. The
+                            // currency takes its own width, so the number
+                            // follows it; its picker widens only while open.
                             <div className='flex items-center'>
-                              <div className='w-24 shrink-0'>
+                              <div className='shrink-0'>
                                 {inline('currency')}
                               </div>
                               <div className='min-w-0 flex-1'>

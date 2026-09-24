@@ -134,6 +134,7 @@ export function Choice({
   onOpenChange,
   variant = 'default',
   below = false,
+  compact = false,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -151,6 +152,9 @@ export function Choice({
   // Drop the list under the trigger instead of over it: a picker beside
   // other text (a currency next to its amount) must not cover that text.
   below?: boolean;
+  // As wide as its value rather than a full field: a short code (a currency)
+  // edited in place keeps the width it is read at.
+  compact?: boolean;
 }): ReactElement {
   const { text } = useCrmText();
   const items = [
@@ -172,7 +176,9 @@ export function Choice({
             ? 'h-7 w-full min-w-0 border-transparent bg-transparent text-xs hover:border-border hover:bg-muted data-[size=default]:h-7'
             : variant === 'tag'
               ? 'h-5 w-auto min-w-0 gap-0.5 rounded-md border-transparent bg-foreground/7 px-1.5 py-0 text-xs font-medium text-muted-foreground hover:bg-foreground/12 data-[size=default]:h-5 [&_svg]:size-3'
-              : 'w-full min-w-32'
+              : compact
+                ? 'w-auto min-w-0'
+                : 'w-full min-w-32'
         }
         aria-label={label}
       >
@@ -183,7 +189,9 @@ export function Choice({
         // a width of its own.
         alignItemWithTrigger={!below && variant !== 'tag'}
         align={below ? 'start' : variant === 'tag' ? 'end' : 'center'}
-        className={variant === 'tag' ? 'min-w-40' : undefined}
+        className={
+          variant === 'tag' ? 'min-w-40' : compact ? 'min-w-32' : undefined
+        }
       >
         {items.map((item) => (
           <SelectItem key={item.value} value={item.value}>
