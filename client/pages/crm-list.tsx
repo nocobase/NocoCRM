@@ -1463,8 +1463,11 @@ function BoardColumn({
   const [overCount, setOverCount] = useState(0);
   const over = droppable && overCount > 0;
   return (
+    // The columns share the board's width, so a wide screen shows the board
+    // whole with roomier cards; each keeps at least its former width (the
+    // board scrolls sideways when they do not fit) and at most 24rem.
     <section
-      className={`flex w-72 shrink-0 flex-col rounded-xl border p-3 transition-colors ${toText(
+      className={`flex max-w-sm min-w-72 flex-1 basis-0 flex-col rounded-xl border p-3 transition-colors ${toText(
         over ? 'border-dashed border-primary bg-primary/5' : 'bg-muted/40',
       )}`}
       // A non-droppable column (converted, reached only through the
