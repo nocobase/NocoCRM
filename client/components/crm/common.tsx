@@ -169,6 +169,42 @@ export function Empty({ action }: { action?: ReactNode }): ReactElement {
     </div>
   );
 }
+// A status's colour says where the record stands: done, under way, waiting,
+// failed, or not started (and withdrawn). A deal's open stages are under way.
+const statusTones: Record<
+  string,
+  'success' | 'info' | 'warning' | 'destructive' | 'secondary'
+> = {
+  converted: 'success',
+  customer: 'success',
+  won: 'success',
+  completed: 'success',
+  approved: 'success',
+  new: 'info',
+  working: 'info',
+  qualified: 'info',
+  planned: 'info',
+  contact: 'info',
+  qualification: 'info',
+  validation: 'info',
+  proposal: 'info',
+  negotiation: 'info',
+  contract: 'info',
+  pending: 'warning',
+  nurturing: 'warning',
+  paused: 'warning',
+  inactive: 'warning',
+  noShow: 'warning',
+  invalid: 'destructive',
+  churned: 'destructive',
+  lost: 'destructive',
+  cancelled: 'destructive',
+  rejected: 'destructive',
+};
+const statusTone = (
+  status: string,
+): 'success' | 'info' | 'warning' | 'destructive' | 'secondary' =>
+  statusTones[status] ?? 'secondary';
 // label overrides the option wording where the same code means something
 // else: a pending AI action awaits the user, a pending approval its approver.
 export function Status({
@@ -181,28 +217,7 @@ export function Status({
   const { text } = useCrmText();
   const status = toText(value ?? '');
   return (
-    <Badge
-      variant={
-        [
-          'won',
-          'approved',
-          'completed',
-          'customer',
-          'converted',
-          'executed',
-        ].includes(status)
-          ? 'default'
-          : ['lost', 'rejected', 'invalid', 'cancelled', 'churned'].includes(
-                status,
-              )
-            ? 'destructive'
-            : status === 'pending'
-              ? 'ai'
-              : ['dismissed', 'superseded'].includes(status)
-                ? 'outline'
-                : 'secondary'
-      }
-    >
+    <Badge variant={statusTone(status)}>
       {label ?? text(`options.${toText(status)}`, { defaultValue: status })}
     </Badge>
   );

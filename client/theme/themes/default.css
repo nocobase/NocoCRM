@@ -75,6 +75,11 @@
      inherits it unless it sets its own. */
   --ai: oklch(0.55 0.2 290);
   --ai-foreground: oklch(0.985 0 0);
+  /* Status tags: done, under way and waiting, beside --destructive for what
+     failed. Text colours, dark enough to read on their own 10% tint. */
+  --success: oklch(0.52 0.14 150);
+  --warning: oklch(0.56 0.14 65);
+  --info: oklch(0.52 0.15 250);
   --sidebar: var(--card);
   --sidebar-foreground: var(--card-foreground);
   --sidebar-primary: color-mix(in oklch, var(--primary) 18%, var(--sidebar));
@@ -114,6 +119,10 @@
   /* AI entry points and proposals: one hue for anything the assistant offers. */
   --ai: oklch(0.76 0.16 290);
   --ai-foreground: oklch(0.2 0.04 290);
+  /* Status tags: done, under way and waiting. */
+  --success: oklch(0.76 0.15 150);
+  --warning: oklch(0.8 0.14 75);
+  --info: oklch(0.74 0.13 250);
   --sidebar: var(--card);
   --sidebar-foreground: var(--card-foreground);
   --sidebar-primary: color-mix(in oklch, var(--primary) 18%, var(--sidebar));

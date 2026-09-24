@@ -1,15 +1,15 @@
 import type { ReactElement } from 'react';
+import { Badge } from '../ui/badge.js';
 import { toText, useCrmText } from './api.js';
 
 // An activity's type and an approval's topic say what kind of thing a row is,
-// not where it stands, so they are drawn apart from the status badges: a
-// muted square tag, where a status is a coloured pill.
+// not where it stands, so they take the muted colour beside a status's.
 export function KindTag({ value }: { value: unknown }): ReactElement {
   const { text } = useCrmText();
   const kind = toText(value ?? '');
   return (
-    <span className='inline-flex h-5 shrink-0 items-center rounded-md bg-muted px-1.5 text-xs font-medium whitespace-nowrap text-muted-foreground'>
+    <Badge variant='muted'>
       {text(`options.${kind}`, { defaultValue: kind })}
-    </span>
+    </Badge>
   );
 }
