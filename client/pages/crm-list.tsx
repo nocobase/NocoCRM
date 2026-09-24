@@ -55,6 +55,7 @@ import {
   type Data,
   useCrmQuery,
   money,
+  localTime,
 } from '../components/crm/api.js';
 import {
   CrmFrame,
@@ -1124,11 +1125,10 @@ function EntityList({
                         <p className='mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-muted-foreground'>
                           <span className='inline-flex items-center gap-1 tabular-nums'>
                             <Clock className='size-3 shrink-0' />
-                            {new Intl.DateTimeFormat(language, {
-                              timeStyle: 'short',
-                              timeZone:
-                                meta?.settings.timeZone ?? 'Asia/Shanghai',
-                            }).format(new Date(toText(r.startAt)))}
+                            {localTime(
+                              r.startAt,
+                              meta?.settings.timeZone ?? 'Asia/Shanghai',
+                            )}
                           </span>
                           <span className='inline-flex items-center gap-1'>
                             <User className='size-3 shrink-0' />

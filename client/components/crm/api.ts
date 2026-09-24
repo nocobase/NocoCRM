@@ -298,19 +298,49 @@ export function moneyTotals(value: unknown, language: string): string {
         .join(' · ')
     : '—';
 }
+// Dates read the same in every language: 2026-09-24, and with the time
+// 2026-09-24 14:30 on a 24-hour clock, in the business time zone. The
+// language is kept for callers; the format no longer depends on it.
+function dateParts(
+  value: unknown,
+  timeZone: string,
+  time: boolean,
+): Record<string, string> {
+  return Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      ...(time
+        ? { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' as const }
+        : {}),
+      timeZone,
+    })
+      .formatToParts(new Date(toText(value)))
+      .map((part) => [part.type, part.value]),
+  );
+}
 export function localDate(
   value: unknown,
-  language: string,
+  _language: string,
   timeZone: string,
   time = true,
 ): string {
   if (!value) return '—';
   try {
-    return new Intl.DateTimeFormat(language, {
-      dateStyle: 'medium',
-      ...(time ? { timeStyle: 'short' as const } : {}),
-      timeZone,
-    }).format(new Date(toText(value)));
+    const parts = dateParts(value, timeZone, time);
+    const date = `${parts.year ?? ''}-${parts.month ?? ''}-${parts.day ?? ''}`;
+    return time ? `${date} ${parts.hour ?? ''}:${parts.minute ?? ''}` : date;
+  } catch {
+    return '—';
+  }
+}
+// The time of day alone, 14:30, where the date is already on screen.
+export function localTime(value: unknown, timeZone: string): string {
+  if (!value) return '—';
+  try {
+    const parts = dateParts(value, timeZone, true);
+    return `${parts.hour ?? ''}:${parts.minute ?? ''}`;
   } catch {
     return '—';
   }
