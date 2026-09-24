@@ -558,29 +558,33 @@ function EntityList({
   // The view switch, the activity scope, the search toggle and the CSV
   // actions sit in the header beside the create button, not on a row of
   // their own.
+  const views: [string, typeof LayoutList][] = [
+    ['list', LayoutList],
+    ...(['leads', 'accounts', 'opportunities'].includes(entity)
+      ? [['board', Columns3] as [string, typeof LayoutList]]
+      : []),
+    ...(entity === 'activities'
+      ? [['calendar', CalendarDays] as [string, typeof LayoutList]]
+      : []),
+  ];
   const toolbar = (
     <>
-      <div className='flex gap-1 rounded-lg border p-1'>
-        {[
-          ['list', LayoutList],
-          ...(['leads', 'accounts', 'opportunities'].includes(entity)
-            ? [['board', Columns3]]
-            : []),
-          ...(entity === 'activities' ? [['calendar', CalendarDays]] : []),
-        ].map(([name, Icon]) => {
-          const Component = Icon as typeof LayoutList;
-          return (
+      {/* A switch with one position says nothing: an object with only the
+          list (contacts, approvals) shows none. */}
+      {views.length > 1 && (
+        <div className='flex gap-1 rounded-lg border p-1'>
+          {views.map(([name, Icon]) => (
             <Button
-              key={toText(name)}
+              key={name}
               variant={view === name ? 'secondary' : 'ghost'}
-              onClick={() => setView(toText(name))}
+              onClick={() => setView(name)}
             >
-              <Component />
-              {text(toText(name))}
+              <Icon />
+              {text(name)}
             </Button>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
       <Button
         variant={filtersOpen || filtering ? 'secondary' : 'ghost'}
         size='icon'
