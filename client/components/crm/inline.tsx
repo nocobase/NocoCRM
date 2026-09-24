@@ -180,7 +180,13 @@ export function InlineField({
         tabIndex={0}
         aria-label={label}
         className={`${titled ? 'w-auto max-w-full' : 'w-full'} cursor-text rounded-md px-2 py-1.5 text-left transition-colors select-text hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${readText}`}
-        onDoubleClick={startEditing}
+        onDoubleClick={() => {
+          // The double-click also selected the word under it; left alone, that
+          // selection lands on the new value once the editor closes, so a
+          // saved status reads as highlighted text.
+          window.getSelection()?.removeAllRanges();
+          startEditing();
+        }}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === 'F2') {
             event.preventDefault();

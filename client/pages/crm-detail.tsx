@@ -1,5 +1,4 @@
 import {
-  editsAll,
   fieldLabelKey,
   linkOf,
   sentence,
@@ -22,7 +21,6 @@ import {
 } from '../components/crm/record-drawer.js';
 import {
   ArrowRightLeft,
-  ArrowUpRight,
   Briefcase,
   Building2,
   CalendarPlus,
@@ -676,8 +674,6 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                           <ActivityItem
                             key={toText(activity.id)}
                             activity={activity}
-                            titles={names}
-                            names={detail.names}
                           />
                         ))}
                       </ol>
@@ -1031,53 +1027,11 @@ export function WebsiteField({
   );
 }
 
-export function ActivityItem({
-  activity,
-  titles = {},
-  names: bareNames = {},
-}: {
-  activity: Data;
-  // Resolved by the server with the page this item sits on: composed
-  // titles for links, bare names for the participants.
-  titles?: Record<string, string>;
-  names?: Record<string, string>;
-}): ReactElement {
+export function ActivityItem({ activity }: { activity: Data }): ReactElement {
   const { text, language } = useCrmText();
   const activityLink = useRecordLink('activities', toText(activity.id));
   const { data: meta } = useMetadata();
-  const names = titles;
-  // External participants are shown by bare name: the activity's account is
-  // already on screen, so "name / account" would only repeat it.
-  const contactNames = bareNames;
-  const [open, setOpen] = useState(false);
-  const [activityError, setActivityError] = useState<unknown>();
   const status = toText(activity.status);
-  // Mirrors the server rule for activities: the owner edits their own; a
-  // user whose edit scope covers every activity edits any.
-  const editable = Boolean(
-    meta && (editsAll(meta, 'activities') || activity.ownerId === meta.userId),
-  );
-  const activityField = (key: string): Field =>
-    meta?.definitions.activities.fields.find((f) => f.key === key) ?? {
-      key,
-      type: 'text',
-    };
-  // External participants come from the activity's account, as in the form.
-  const editableField = (key: string): ReactElement => (
-    <InlineField
-      entity='activities'
-      record={activity as CrmRecord}
-      field={activityField(key)}
-      editable={editable}
-      lookup={key === 'externalParticipants' ? contactNames : names}
-      relationFilter={
-        activity.accountId
-          ? { accountId: toText(activity.accountId) }
-          : undefined
-      }
-      label={text(fieldLabelKey('activities', key))}
-    />
-  );
   return (
     <li className='relative pl-5'>
       <span
@@ -1090,10 +1044,11 @@ export function ActivityItem({
               : 'bg-background ring-2 ring-primary/40',
         )}`}
       />
-      <button
-        type='button'
-        className='w-full rounded-md px-2 py-2 text-left transition-colors hover:bg-muted'
-        onClick={() => setOpen((v) => !v)}
+      {/* The activity opens in the page's drawer (its full page on a phone
+          or in a new tab); its fields are edited there. */}
+      <Link
+        className='block w-full rounded-md px-2 py-2 text-left transition-colors hover:bg-muted'
+        {...activityLink}
       >
         <div className='flex flex-wrap items-center gap-2'>
           <KindTag value={activity.type} />
@@ -1109,7 +1064,7 @@ export function ActivityItem({
             meta?.settings.timeZone ?? 'Asia/Shanghai',
           )}
         </p>
-      </button>
+      </Link>
       {/* An upcoming activity can be prepared for and reported on; a finished
           one can still have its feedback added to. Cancelled and no-show ones
           have neither. Both buttons pre-fill the assistant and leave sending
@@ -1143,80 +1098,6 @@ export function ActivityItem({
               {text(key)}
             </Button>
           ))}
-        </div>
-      )}
-      {open && (
-        <div className='mt-1 mb-4 divide-y divide-border rounded-md bg-muted/40 px-3 py-0.5 text-sm [&>*]:py-1.5'>
-          <dl className='grid gap-x-3 gap-y-1 sm:grid-cols-[7rem_minmax(0,1fr)]'>
-            {['type', 'name'].map((key) => (
-              <div key={key}>
-                <dt className='px-2 text-xs text-muted-foreground'>
-                  {text(fieldLabelKey('activities', key))}
-                </dt>
-                <dd>{editableField(key)}</dd>
-              </div>
-            ))}
-          </dl>
-          <dl className='grid gap-x-3 gap-y-1 sm:grid-cols-[7rem_minmax(0,1fr)]'>
-            <div>
-              <dt className='px-2 text-xs text-muted-foreground'>
-                {text('fields.status')}
-              </dt>
-              <dd>{editableField('status')}</dd>
-            </div>
-            {/* One "time" cell: start and end read as a range, each half
-                still editable on its own. */}
-            <div>
-              <dt className='px-2 text-xs text-muted-foreground'>
-                {text('fields.time')}
-              </dt>
-              {/* The inline editor is full-width by default; here each half
-                  shrinks to its value so the two sit on one line. */}
-              <dd className='flex flex-wrap items-center [&>div>div]:w-auto'>
-                <div>{editableField('startAt')}</div>
-                <span className='text-muted-foreground'>–</span>
-                <div>{editableField('endAt')}</div>
-              </dd>
-            </div>
-          </dl>
-          {['description', 'feedback'].map((key) => (
-            <div key={key}>
-              <p className='px-2 text-xs text-muted-foreground'>
-                {text(fieldLabelKey('activities', key))}
-              </p>
-              {editableField(key)}
-            </div>
-          ))}
-          <Attachments
-            entity='activities'
-            record={activity}
-            editable={editable}
-            onError={setActivityError}
-          />
-          <dl className='grid gap-x-3 gap-y-1 sm:grid-cols-3'>
-            <div>
-              <dt className='px-2 text-xs text-muted-foreground'>
-                {text('fields.ownerId')}
-              </dt>
-              <dd>{editableField('ownerId')}</dd>
-            </div>
-            {['internalParticipants', 'externalParticipants'].map((key) => (
-              <div key={key}>
-                <dt className='px-2 text-xs text-muted-foreground'>
-                  {text(`fields.${key}`)}
-                </dt>
-                <dd>{editableField(key)}</dd>
-              </div>
-            ))}
-          </dl>
-          <ErrorNotice error={activityError} />
-          <Link
-            className='mx-2 inline-flex items-center gap-1 font-medium hover:text-primary hover:underline'
-            {...activityLink}
-          >
-            {text('viewDetails')}
-            <ArrowUpRight className='size-3 text-muted-foreground' />
-          </Link>
         </div>
       )}
     </li>

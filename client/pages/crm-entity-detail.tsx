@@ -101,7 +101,6 @@ import { StageStepper } from '../components/crm/stage-stepper.js';
 import { ApprovalActions } from '../components/crm/approval-actions.js';
 import {
   ActivityItem,
-  Attachments,
   ConfirmDialog,
   HistoryChanges,
   LeadRow,
@@ -918,7 +917,6 @@ export default function EntityDetail({
                           <ApprovalItem
                             key={toText(approval.id)}
                             approval={approval}
-                            names={names}
                           />
                         ))}
                       </ol>
@@ -966,8 +964,6 @@ export default function EntityDetail({
                           <ActivityItem
                             key={toText(activity.id)}
                             activity={activity}
-                            titles={names}
-                            names={bareNames}
                           />
                         ))}
                       </ol>
@@ -1871,50 +1867,14 @@ function PrimaryStar({
 }
 
 // One approval on an opportunity's approvals tab: a timeline entry that
-// opens in place, the way an activity does. The applicant edits their own
-// draft or withdrawn request; anything submitted or decided is read here.
-function ApprovalItem({
-  approval,
-  names,
-}: {
-  approval: Data;
-  names: Record<string, string>;
-}): ReactElement {
+// opens the approval in the page's drawer, the way an activity does, where
+// it is edited and decided.
+function ApprovalItem({ approval }: { approval: Data }): ReactElement {
   const { text, language } = useCrmText();
   const approvalLink = useRecordLink('approvals', toText(approval.id));
   const { data: meta } = useMetadata();
-  const [open, setOpen] = useState(false);
-  const [error, setError] = useState<unknown>();
   const status = toText(approval.status);
   const mine = Boolean(meta && approval.approverId === meta.userId);
-  // The server's rule: the applicant, while the request is theirs to change.
-  const editable = Boolean(
-    meta &&
-    approval.ownerId === meta.userId &&
-    ['draft', 'withdrawn'].includes(status),
-  );
-  const approvalField = (key: string): Field =>
-    meta?.definitions.approvals.fields.find((f) => f.key === key) ?? {
-      key,
-      type: 'text',
-    };
-  const cell = (key: string, readOnly = false): ReactElement => (
-    <div key={key}>
-      <dt className='px-2 text-xs text-muted-foreground'>
-        {text(fieldLabelKey('approvals', key))}
-      </dt>
-      <dd>
-        <InlineField
-          entity='approvals'
-          record={approval as CrmRecord}
-          field={approvalField(key)}
-          editable={editable && !readOnly}
-          lookup={names}
-          label={text(fieldLabelKey('approvals', key))}
-        />
-      </dd>
-    </div>
-  );
   return (
     <li className='relative pl-5'>
       <span
@@ -1927,11 +1887,9 @@ function ApprovalItem({
               : 'bg-background ring-2 ring-primary/40',
         )}`}
       />
-      <button
-        type='button'
-        className='w-full rounded-md px-2 py-2 text-left transition-colors hover:bg-muted'
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
+      <Link
+        className='block w-full rounded-md px-2 py-2 text-left transition-colors hover:bg-muted'
+        {...approvalLink}
       >
         <div className='flex flex-wrap items-center gap-2'>
           <KindTag value={approval.topic} />
@@ -1954,63 +1912,7 @@ function ApprovalItem({
             meta?.settings.timeZone ?? 'Asia/Shanghai',
           )}
         </p>
-      </button>
-      {open && (
-        <div className='mt-1 mb-4 divide-y divide-border rounded-md bg-muted/40 px-3 py-0.5 text-sm [&>*]:py-1.5'>
-          <dl className='grid gap-x-3 gap-y-1 sm:grid-cols-[7rem_minmax(0,1fr)]'>
-            {cell('topic')}
-            {cell('name')}
-          </dl>
-          <dl className='grid gap-x-3 gap-y-1'>
-            {/* The opportunity is the page itself; shown, never re-pointed. */}
-            {cell('opportunityId', true)}
-          </dl>
-          <div>
-            <p className='px-2 text-xs text-muted-foreground'>
-              {text('fields.description')}
-            </p>
-            <InlineField
-              entity='approvals'
-              record={approval as CrmRecord}
-              field={approvalField('description')}
-              editable={editable}
-              lookup={names}
-              label={text('fields.description')}
-            />
-          </div>
-          <Attachments
-            entity='approvals'
-            record={approval}
-            editable={editable}
-            onError={setError}
-          />
-          <dl className='grid gap-x-3 gap-y-1 sm:grid-cols-2'>
-            {cell('ownerId', true)}
-            {cell('approverId')}
-          </dl>
-          <div>
-            <p className='px-2 text-xs text-muted-foreground'>
-              {text('fields.decisionComment')}
-            </p>
-            <p className='px-2 py-1.5 whitespace-pre-wrap'>
-              {toText(approval.decisionComment) || (
-                <span className='text-muted-foreground'>—</span>
-              )}
-            </p>
-          </div>
-          <ErrorNotice error={error} />
-          <div className='px-2'>
-            <ApprovalActions approval={approval} names={names} withDelete />
-          </div>
-          <Link
-            className='mx-2 inline-flex items-center gap-1 font-medium hover:text-primary hover:underline'
-            {...approvalLink}
-          >
-            {text('viewDetails')}
-            <ArrowUpRight className='size-3 text-muted-foreground' />
-          </Link>
-        </div>
-      )}
+      </Link>
     </li>
   );
 }
