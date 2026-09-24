@@ -67,7 +67,9 @@ export function CrmFrame({
       }
     >
       <header className='flex flex-wrap items-start justify-between gap-4'>
-        <div className={titleAside ? 'w-full md:w-auto' : undefined}>
+        {/* Grows into the space the actions leave, so an editable title's
+            editor can take the whole line. */}
+        <div className={`min-w-0 grow ${titleAside ? 'w-full md:w-auto' : ''}`}>
           <div className='flex items-center justify-between gap-3'>
             {typeof title === 'string' ? (
               <h1 className='font-heading text-3xl font-semibold tracking-tight'>
@@ -79,7 +81,7 @@ export function CrmFrame({
               <div
                 role='heading'
                 aria-level={1}
-                className='flex flex-wrap items-center font-heading text-3xl font-semibold tracking-tight'
+                className='flex min-w-0 flex-1 flex-wrap items-center font-heading text-3xl font-semibold tracking-tight'
               >
                 {title}
               </div>

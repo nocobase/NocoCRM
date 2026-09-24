@@ -29,6 +29,13 @@ const picker = [
   'multi',
 ];
 
+// Sizes a textarea to its content where CSS field-sizing is unavailable.
+const fitHeight = (element: HTMLTextAreaElement | null): void => {
+  if (!element || CSS.supports('field-sizing', 'content')) return;
+  element.style.height = 'auto';
+  element.style.height = `${String(element.scrollHeight)}px`;
+};
+
 export function InlineField({
   entity,
   record,
@@ -237,7 +244,9 @@ export function InlineField({
   return (
     <div
       ref={boxRef}
-      className='rounded-md ring-2 ring-ring/40'
+      // A title's editor is as wide as its text, like the title it replaces,
+      // and wraps only once it reaches the edge of the heading.
+      className={`rounded-md ring-2 ring-ring/40 ${titled ? 'min-w-0 max-w-full' : ''}`}
       // Saving on blur is the whole point, but focus moving between the parts of
       // one control (a select and its popup) must not count as leaving.
       onBlur={(event) => {
@@ -350,6 +359,33 @@ export function InlineField({
           disabled={saving}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {
+            if (event.key === 'Escape') setEditing(false);
+          }}
+        />
+      ) : titled && field.type === 'text' ? (
+        // A title is one line of text that may be long: a textarea sized to
+        // its content (field-sizing, with a height fallback for browsers
+        // without it) widens with it and then wraps, while Enter still saves
+        // and a pasted line break becomes a space.
+        <Textarea
+          aria-label={label}
+          rows={1}
+          // The title's own box: its padding (in the theme's spacing) less
+          // the 1px border, and its line height, so opening the editor
+          // moves no text.
+          className='min-h-0 w-auto max-w-full min-w-24 resize-none overflow-hidden rounded-md px-[calc(--spacing(2)-1px)] py-[calc(--spacing(1.5)-1px)] font-heading text-3xl font-semibold tracking-tight md:text-3xl'
+          value={draft}
+          disabled={saving}
+          ref={fitHeight}
+          onChange={(event) => {
+            setDraft(event.target.value.replace(/\s*\n\s*/g, ' '));
+            fitHeight(event.target);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              void save(draft);
+            }
             if (event.key === 'Escape') setEditing(false);
           }}
         />
