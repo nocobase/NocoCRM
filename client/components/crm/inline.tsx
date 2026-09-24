@@ -426,6 +426,19 @@ export function InlineField({
           }}
         />
       )}
+      {/* One line of typed text: its count once it nears the limit. */}
+      {!picker.includes(field.type) &&
+        !['textarea', 'number', 'date', 'datetime', 'boolean'].includes(
+          field.type,
+        ) && (
+          <div className='px-2'>
+            <LengthHint
+              length={draft.length}
+              language={language}
+              max={TEXT_LIMIT}
+            />
+          </div>
+        )}
       {error ? <p className='px-2 text-xs text-destructive'>{error}</p> : null}
     </div>
   );

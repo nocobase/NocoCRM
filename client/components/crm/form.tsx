@@ -617,34 +617,44 @@ export function RecordForm({
               .slice(0, 16)
           : datetimeValue.toISOString().slice(0, 10)
         : toText(value ?? '');
+    const typed = !['number', 'date', 'datetime'].includes(field.type);
     return (
-      <Input
-        {...common}
-        type={
-          field.type === 'datetime'
-            ? 'datetime-local'
-            : ['date', 'email', 'number'].includes(field.type)
-              ? field.type
-              : 'text'
-        }
-        value={display}
-        maxLength={lengthLimit(field.type)}
-        required={field.required}
-        min={field.type === 'number' ? 0 : undefined}
-        step={field.type === 'number' ? '0.01' : undefined}
-        onChange={(e) =>
-          set(
-            field.key,
-            field.type === 'number'
-              ? e.target.value === ''
-                ? null
-                : Number(e.target.value)
-              : field.type === 'datetime' && e.target.value
-                ? new Date(e.target.value).toISOString()
-                : e.target.value,
-          )
-        }
-      />
+      <div>
+        <Input
+          {...common}
+          type={
+            field.type === 'datetime'
+              ? 'datetime-local'
+              : ['date', 'email', 'number'].includes(field.type)
+                ? field.type
+                : 'text'
+          }
+          value={display}
+          maxLength={lengthLimit(field.type)}
+          required={field.required}
+          min={field.type === 'number' ? 0 : undefined}
+          step={field.type === 'number' ? '0.01' : undefined}
+          onChange={(e) =>
+            set(
+              field.key,
+              field.type === 'number'
+                ? e.target.value === ''
+                  ? null
+                  : Number(e.target.value)
+                : field.type === 'datetime' && e.target.value
+                  ? new Date(e.target.value).toISOString()
+                  : e.target.value,
+            )
+          }
+        />
+        {typed && (
+          <LengthHint
+            length={display.length}
+            language={language}
+            max={lengthLimit(field.type)}
+          />
+        )}
+      </div>
     );
   };
   return (
