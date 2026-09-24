@@ -34,7 +34,7 @@ import {
   CardHeader,
   CardTitle,
 } from '../components/ui/card.js';
-import { Badge } from '../components/ui/badge.js';
+import { KindTag } from '../components/crm/kind-tag.js';
 import {
   CrmFrame,
   Loading,
@@ -639,11 +639,7 @@ function AgendaCard({
               className='border-b pb-3 text-sm last:border-0 last:pb-0'
             >
               <div className='flex items-center gap-2'>
-                <Badge variant='outline'>
-                  {text(`options.${toText(r.type ?? r.topic)}`, {
-                    defaultValue: toText(r.type ?? r.topic),
-                  })}
-                </Badge>
+                <KindTag value={r.type ?? r.topic} />
                 <span className='min-w-0 flex-1 truncate'>
                   <RecordLink entity={entity} record={r} />
                 </span>

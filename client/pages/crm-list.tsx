@@ -33,6 +33,7 @@ import {
   History,
 } from 'lucide-react';
 import { Button } from '../components/ui/button.js';
+import { KindTag } from '../components/crm/kind-tag.js';
 import { Badge } from '../components/ui/badge.js';
 import { Input } from '../components/ui/input.js';
 import { Card, CardContent } from '../components/ui/card.js';
@@ -788,6 +789,13 @@ function EntityList({
                                 '—'
                               );
                             })()
+                          ) : (entity === 'activities' && key === 'type') ||
+                            (entity === 'approvals' && key === 'topic') ? (
+                            record[key] ? (
+                              <KindTag value={record[key]} />
+                            ) : (
+                              '—'
+                            )
                           ) : key === 'status' &&
                             entity === 'approvals' &&
                             record.status === 'pending' &&

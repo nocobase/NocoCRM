@@ -46,7 +46,7 @@ import {
   Users,
 } from 'lucide-react';
 import { Button } from '../components/ui/button.js';
-import { Badge } from '../components/ui/badge.js';
+import { KindTag } from '../components/crm/kind-tag.js';
 import {
   Card,
   CardContent,
@@ -1096,11 +1096,7 @@ export function ActivityItem({
         onClick={() => setOpen((v) => !v)}
       >
         <div className='flex flex-wrap items-center gap-2'>
-          <Badge variant='outline'>
-            {text(`options.${toText(activity.type)}`, {
-              defaultValue: toText(activity.type),
-            })}
-          </Badge>
+          <KindTag value={activity.type} />
           <span className='min-w-0 flex-1 truncate text-sm font-medium'>
             {toText(activity.name)}
           </span>

@@ -46,6 +46,7 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
+import { KindTag } from '../components/crm/kind-tag.js';
 import { Badge } from '../components/ui/badge.js';
 import { Button } from '../components/ui/button.js';
 import {
@@ -1933,11 +1934,7 @@ function ApprovalItem({
         onClick={() => setOpen((v) => !v)}
       >
         <div className='flex flex-wrap items-center gap-2'>
-          <Badge variant='outline'>
-            {text(`options.${toText(approval.topic)}`, {
-              defaultValue: toText(approval.topic),
-            })}
-          </Badge>
+          <KindTag value={approval.topic} />
           <span className='min-w-0 flex-1 truncate text-sm font-medium'>
             {toText(approval.name)}
           </span>
