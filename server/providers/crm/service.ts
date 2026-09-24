@@ -1,3 +1,4 @@
+import { LIST_LIMIT, lengthLimit } from './limits.js';
 import type { WorkflowServiceContract } from '@nocobase/app-plugin-workflow/server';
 import { decodeRow, encodeRow, jsonValue } from './values.js';
 import {
@@ -949,13 +950,10 @@ export class CrmService {
           throw new CrmError('invalidInput', 400, field.key);
         input[field.key] = new Date(toText(value)).toISOString();
       } else if (['multi', 'contacts', 'files'].includes(field.type)) {
-        if (!Array.isArray(value) || value.length > 100)
+        if (!Array.isArray(value) || value.length > LIST_LIMIT)
           throw new CrmError('invalidInput', 400, field.key);
       } else {
-        if (
-          typeof value !== 'string' ||
-          value.length > (field.type === 'textarea' ? 30000 : 500)
-        )
+        if (typeof value !== 'string' || value.length > lengthLimit(field.type))
           throw new CrmError('invalidInput', 400, field.key);
       }
       const options =

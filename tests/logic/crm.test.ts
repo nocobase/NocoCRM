@@ -1073,6 +1073,30 @@ describe('CRM API security and domain rules', () => {
       false,
     );
   });
+  it('keeps a field within what its column holds', async () => {
+    const save = (input: Record<string, unknown>) =>
+      service.save(actor('rep'), 'leads', {
+        name: 'Limit lead',
+        source: 'website',
+        ...input,
+      });
+    // A single-line value fits the 255-character column on any database.
+    expect((await save({ company: 'x'.repeat(255) })).company).toHaveLength(
+      255,
+    );
+    await expect(save({ company: 'x'.repeat(256) })).rejects.toMatchObject({
+      code: 'invalidInput',
+      field: 'company',
+    });
+    // A long text takes up to 30,000 characters.
+    expect((await save({ message: 'x'.repeat(30000) })).message).toHaveLength(
+      30000,
+    );
+    await expect(save({ message: 'x'.repeat(30001) })).rejects.toMatchObject({
+      code: 'invalidInput',
+      field: 'message',
+    });
+  });
   it('sorts a list by a column the reader may read, by what the page shows', async () => {
     const leads = (sort: string, page = 1, pageSize = 10) =>
       service

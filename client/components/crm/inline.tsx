@@ -1,3 +1,9 @@
+import {
+  LONG_TEXT_LIMIT,
+  TEXT_LIMIT,
+  lengthLimit,
+} from '../../../server/providers/crm/limits.js';
+import { LengthHint } from './length-hint.js';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { Input } from '../ui/input.js';
 import { Textarea } from '../ui/textarea.js';
@@ -69,7 +75,7 @@ export function InlineField({
   // Passed to Value: a status or stage as text rather than a badge.
   plain?: boolean;
 }): ReactElement {
-  const { text } = useCrmText();
+  const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
   const api = useCrmApi();
   const refresh = useRefresh();
@@ -352,16 +358,20 @@ export function InlineField({
           }}
         />
       ) : field.type === 'textarea' ? (
-        <Textarea
-          aria-label={label}
-          rows={4}
-          value={draft}
-          disabled={saving}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') setEditing(false);
-          }}
-        />
+        <>
+          <Textarea
+            aria-label={label}
+            rows={4}
+            maxLength={LONG_TEXT_LIMIT}
+            value={draft}
+            disabled={saving}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') setEditing(false);
+            }}
+          />
+          <LengthHint length={draft.length} language={language} />
+        </>
       ) : titled && field.type === 'text' ? (
         // A title is one line of text that may be long: a textarea sized to
         // its content (field-sizing, with a height fallback for browsers
@@ -370,6 +380,7 @@ export function InlineField({
         <Textarea
           aria-label={label}
           rows={1}
+          maxLength={TEXT_LIMIT}
           // The title's own box: its padding (in the theme's spacing) less
           // the 1px border, and its line height, so opening the editor
           // moves no text.
@@ -405,6 +416,7 @@ export function InlineField({
                 : 'text'
           }
           value={draft}
+          maxLength={lengthLimit(field.type)}
           disabled={saving}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {

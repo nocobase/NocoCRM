@@ -1,3 +1,8 @@
+import {
+  LONG_TEXT_LIMIT,
+  lengthLimit,
+} from '../../../server/providers/crm/limits.js';
+import { LengthHint } from './length-hint.js';
 import { RecordMultiPicker, RecordPicker } from './record-picker.js';
 import { FileDropZone, FileLinks } from './attachments.js';
 import { editsAll, fieldLabelKey, toText } from './api.js';
@@ -211,7 +216,7 @@ export function RecordForm({
   const { data: meta } = useMetadata();
   const api = useCrmApi();
   const refresh = useRefresh();
-  const { text } = useCrmText();
+  const { text, language } = useCrmText();
   const [error, setError] = useState<unknown>();
   const [busy, setBusy] = useState(false);
   // The bare names of records picked in this form, for the deal name a new
@@ -454,13 +459,17 @@ export function RecordForm({
       );
     if (field.type === 'textarea')
       return (
-        <Textarea
-          {...common}
-          value={toText(value ?? '')}
-          rows={4}
-          required={field.required}
-          onChange={(e) => set(field.key, e.target.value)}
-        />
+        <div>
+          <Textarea
+            {...common}
+            value={toText(value ?? '')}
+            rows={4}
+            maxLength={LONG_TEXT_LIMIT}
+            required={field.required}
+            onChange={(e) => set(field.key, e.target.value)}
+          />
+          <LengthHint length={toText(value ?? '').length} language={language} />
+        </div>
       );
     if (field.type === 'multi')
       return (
@@ -604,6 +613,7 @@ export function RecordForm({
               : 'text'
         }
         value={display}
+        maxLength={lengthLimit(field.type)}
         required={field.required}
         min={field.type === 'number' ? 0 : undefined}
         step={field.type === 'number' ? '0.01' : undefined}
