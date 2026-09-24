@@ -1468,7 +1468,12 @@ function ContactItem({
           onClick={() => setOpen((v) => !v)}
         >
           <div className='flex flex-wrap items-baseline gap-x-3 gap-y-0.5'>
-            <span className='text-sm font-medium'>{toText(contact.name)}</span>
+            <span
+              className='max-w-full truncate text-sm font-medium'
+              title={toText(contact.name)}
+            >
+              {toText(contact.name)}
+            </span>
             {summary.map((value) => (
               <span
                 key={value}

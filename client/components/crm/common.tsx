@@ -291,21 +291,31 @@ export function Metric({
     <Card className={frame}>{body}</Card>
   );
 }
+// A link to a record by its name. Long names never wrap into the layout
+// around them: they are cut with an ellipsis after one line (two where a card
+// has the room, the board), and the full name shows on hover.
 export function RecordLink({
   entity,
   record,
+  lines = 1,
 }: {
   entity: Entity;
   record: { id: string; name: string };
+  lines?: 1 | 2;
 }): ReactElement {
   const link = useRecordLink(entity, toText(record.id));
   return (
     <Link
-      className='inline-flex items-center gap-1 font-medium hover:text-primary hover:underline'
+      className={`inline-flex max-w-full min-w-0 gap-1 font-medium hover:text-primary hover:underline ${lines === 1 ? 'items-center' : 'items-start'}`}
+      title={record.name}
       {...link}
     >
-      {record.name}
-      <ArrowUpRight className='size-3 text-muted-foreground' />
+      <span className={lines === 1 ? 'truncate' : 'line-clamp-2 break-words'}>
+        {record.name}
+      </span>
+      <ArrowUpRight
+        className={`size-3 shrink-0 text-muted-foreground ${lines === 1 ? '' : 'mt-1'}`}
+      />
     </Link>
   );
 }

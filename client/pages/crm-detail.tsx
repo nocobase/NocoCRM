@@ -1173,7 +1173,8 @@ function SourceLink({
   const link = useRecordLink(entity, id);
   return (
     <Link
-      className='text-muted-foreground hover:text-primary hover:underline'
+      className='inline-block max-w-full truncate align-bottom text-muted-foreground hover:text-primary hover:underline'
+      title={name}
       {...link}
     >
       {name}

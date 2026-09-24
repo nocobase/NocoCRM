@@ -750,15 +750,11 @@ function EntityList({
                     <TableRow key={record.id}>
                       {columns.map((key) => (
                         <TableCell
-                          // A long name wraps within its column; any other
-                          // value is cut with an ellipsis. Either way a cell
-                          // never runs over the next one, which on a phone
-                          // put two columns' text on top of each other.
-                          className={
-                            key === 'name'
-                              ? 'min-w-40 max-w-72 whitespace-normal break-words px-4 py-4'
-                              : 'max-w-72 truncate px-4 py-4'
-                          }
+                          // Every value, the name included, is cut with an
+                          // ellipsis, so a cell never runs over the next one,
+                          // which on a phone put two columns' text on top of
+                          // each other.
+                          className='max-w-72 truncate px-4 py-4'
                           key={key}
                         >
                           {key === 'name' ? (
@@ -924,6 +920,7 @@ function EntityList({
                         id: record.id,
                         name: recordTitle(entity, record, titles),
                       }}
+                      lines={2}
                     />
                     <div className='space-y-0.5 text-xs text-muted-foreground'>
                       {/* Same icons as the detail pages' field labels, so
