@@ -554,11 +554,11 @@ function LeadDetail({ id }: { id: string }): ReactElement {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <dl className='divide-y'>
+              <dl>
                 {leadFields.map((key) => (
                   <div
                     key={key}
-                    className='grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-2 py-2'
+                    className='grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-2 py-0.5'
                   >
                     <dt className='flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium text-muted-foreground'>
                       {(() => {

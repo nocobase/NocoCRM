@@ -728,7 +728,7 @@ export default function EntityDetail({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <dl className='divide-y'>
+                <dl>
                   {detailKeys.map((key) => {
                     // Only origin and not a working relation, so it is the last
                     // line of the card rather than a tab of its own.
@@ -737,7 +737,7 @@ export default function EntityDetail({
                       convertedFrom.length > 0 ? (
                         <div
                           key='convertedFrom'
-                          className='grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-2 py-2'
+                          className='grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-2 py-0.5'
                         >
                           <dt className='flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium text-muted-foreground'>
                             <Radar className='size-3.5 shrink-0' />
@@ -768,7 +768,7 @@ export default function EntityDetail({
                     const row = (
                       <div
                         key={key}
-                        className='grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-2 py-2'
+                        className='grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-2 py-0.5'
                       >
                         <dt className='flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium text-muted-foreground'>
                           {Icon ? <Icon className='size-3.5 shrink-0' /> : null}
