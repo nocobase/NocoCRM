@@ -575,6 +575,7 @@ export default function EntityDetail({
   );
   return (
     <CrmFrame
+      editableTitle
       title={heading}
       description={`${toText(text(`entities.${toText(entity)}`))} ID: ${toText(record.id)}`}
       // Pages with shortcuts have their own entries; the contact and

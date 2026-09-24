@@ -31,6 +31,7 @@ export function CrmFrame({
   title,
   description,
   titleAside,
+  editableTitle = false,
   actions,
   assistant = true,
   fill = false,
@@ -41,6 +42,9 @@ export function CrmFrame({
   // A control that sits beside the title on a phone, where the actions wrap
   // onto rows of their own below it, and leads the actions on wider screens.
   titleAside?: ReactNode;
+  // The title is an inline field (a detail page's), which carries the
+  // field's padding around its line.
+  editableTitle?: boolean;
   actions?: ReactNode;
   // The action center is where the assistant's proposals already live, so a
   // button to open the assistant there adds nothing.
@@ -94,7 +98,12 @@ export function CrmFrame({
             </p>
           )}
         </div>
-        <div className='flex flex-wrap items-center gap-2'>
+        {/* Beside the title, the actions are centred on its first line: a
+            line of the title's type size (1lh at text-3xl), plus the padding
+            an editable title carries. */}
+        <div
+          className={`flex flex-wrap items-center gap-2 md:font-heading md:text-3xl ${editableTitle ? 'md:min-h-[calc(1lh+--spacing(3))]' : 'md:min-h-lh'}`}
+        >
           {titleAside && <div className='hidden md:block'>{titleAside}</div>}
           {actions}
           {assistant && assistantAvailable && (

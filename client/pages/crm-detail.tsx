@@ -352,6 +352,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   );
   return (
     <CrmFrame
+      editableTitle
       // "name / company", both edited in place; the card below omits them.
       title={
         <span className='-mx-2 flex flex-wrap items-center'>
