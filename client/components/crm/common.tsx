@@ -308,7 +308,8 @@ export function Metric({
 }
 // A link to a record by its name. Long names never wrap into the layout
 // around them: they are cut with an ellipsis after one line (two where a card
-// has the room, the board), and the full name shows on hover.
+// has the room, the board), and the full name shows on hover. The arrow
+// follows the name's last character.
 export function RecordLink({
   entity,
   record,
@@ -319,19 +320,68 @@ export function RecordLink({
   lines?: 1 | 2;
 }): ReactElement {
   const link = useRecordLink(entity, toText(record.id));
-  return (
+  const arrow = (
+    <ArrowUpRight className='inline size-3 shrink-0 text-muted-foreground' />
+  );
+  return lines === 1 ? (
     <Link
-      className={`inline-flex max-w-full min-w-0 gap-1 font-medium hover:text-primary hover:underline ${lines === 1 ? 'items-center' : 'items-start'}`}
+      className='inline-flex max-w-full min-w-0 items-center gap-1 font-medium hover:text-primary hover:underline'
       title={record.name}
       {...link}
     >
-      <span className={lines === 1 ? 'truncate' : 'line-clamp-2 break-words'}>
-        {record.name}
-      </span>
-      <ArrowUpRight
-        className={`size-3 shrink-0 text-muted-foreground ${lines === 1 ? '' : 'mt-1'}`}
-      />
+      <span className='truncate'>{record.name}</span>
+      {arrow}
     </Link>
+  ) : (
+    <Link
+      className='block max-w-full font-medium hover:text-primary hover:underline'
+      title={record.name}
+      {...link}
+    >
+      <TwoLineName name={record.name} arrow={arrow} />
+    </Link>
+  );
+}
+
+// A name in at most two lines with the arrow after its last character: in
+// the text while it fits, and when the name is cut, after the ellipsis at the
+// end of the second line, which leaves the arrow's room on each line.
+function TwoLineName({
+  name,
+  arrow,
+}: {
+  name: string;
+  arrow: ReactElement;
+}): ReactElement {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [cut, setCut] = useState(false);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    // The observer reports once when it starts, then on every resize.
+    const observer = new ResizeObserver(() => {
+      setCut(element.scrollHeight > element.clientHeight + 1);
+    });
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+    };
+  }, [name]);
+  return (
+    <span className='relative block'>
+      <span
+        ref={ref}
+        className={`line-clamp-2 break-words ${cut ? 'pr-4' : ''}`}
+      >
+        {name}
+        {!cut && <> {arrow}</>}
+      </span>
+      {cut && (
+        <span className='absolute right-0 bottom-0 flex h-[1lh] items-center'>
+          {arrow}
+        </span>
+      )}
+    </span>
   );
 }
 export function Value({
