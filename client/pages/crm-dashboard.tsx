@@ -1,4 +1,5 @@
 import { TrendChart } from '../components/crm/trend-chart.js';
+import { SortableTable } from '../components/crm/sortable-table.js';
 import { toText } from '../components/crm/api.js';
 import { useState, type ReactElement, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
@@ -33,14 +34,6 @@ import {
   CardHeader,
   CardTitle,
 } from '../components/ui/card.js';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../components/ui/table.js';
 import { Badge } from '../components/ui/badge.js';
 import {
   CrmFrame,
@@ -172,6 +165,37 @@ export default function DashboardPage(): ReactElement {
     </section>
   );
 
+  // The value a cell shows and the value its column sorts by: an amount by
+  // its total, a source by its label, a rate or a count as a number.
+  const display = (row: Data, key: string): ReactNode =>
+    key === 'conversionRate'
+      ? row[key] == null
+        ? '—'
+        : `${toText(Math.round(Number(row[key]) * 100))}%`
+      : typeof row[key] === 'object' && row[key] !== null
+        ? moneyTotals(row[key], language)
+        : key === 'source'
+          ? text(`options.${toText(row[key])}`, {
+              defaultValue: toText(row[key]),
+            })
+          : toText(row[key] ?? '—');
+  const sortValue = (row: Data, key: string): number | string | undefined => {
+    const value = row[key];
+    if (value === null || value === undefined || value === '') return undefined;
+    if (key === 'source') return toText(display(row, key));
+    if (typeof value === 'number') return value;
+    if (typeof value === 'object') {
+      // No amount at all shows as "—" and sorts with the other blanks.
+      const amounts = Object.values(value as Record<string, unknown>);
+      if (!amounts.length) return undefined;
+      return amounts.reduce<number>(
+        (sum, amount) => sum + Number(amount ?? 0),
+        0,
+      );
+    }
+    const number = Number(value);
+    return Number.isFinite(number) ? number : toText(value);
+  };
   const table = (
     title: string,
     items: Data[],
@@ -183,32 +207,16 @@ export default function DashboardPage(): ReactElement {
         <CardTitle className='text-base'>{text(title)}</CardTitle>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {columns.map(([key, label]) => (
-                <TableHead key={key}>{text(label)}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.map((row) => (
-              <TableRow key={keyOf(row)}>
-                {columns.map(([key]) => (
-                  <TableCell key={key} className='tabular-nums'>
-                    {typeof row[key] === 'object' && row[key] !== null
-                      ? moneyTotals(row[key], language)
-                      : key === 'source'
-                        ? text(`options.${toText(row[key])}`, {
-                            defaultValue: toText(row[key]),
-                          })
-                        : toText(row[key] ?? '—')}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <SortableTable
+          rows={items}
+          rowKey={keyOf}
+          columns={columns.map(([key, label]) => ({
+            id: key,
+            title: text(label),
+            sortValue: (row: Data) => sortValue(row, key),
+            cell: (row: Data) => display(row, key),
+          }))}
+        />
       </CardContent>
     </Card>
   );
@@ -218,22 +226,22 @@ export default function DashboardPage(): ReactElement {
       title={text('dashboard')}
       description={text('dashboardDescription')}
       assistant={false}
+      titleAside={
+        <div className='flex rounded-lg border p-0.5'>
+          {(['mine', 'team'] as const).map((value) => (
+            <Button
+              key={value}
+              size='sm'
+              variant={scope === value ? 'secondary' : 'ghost'}
+              onClick={() => setScope(value)}
+            >
+              {text(value === 'mine' ? 'scopeMine' : 'scopeTeam')}
+            </Button>
+          ))}
+        </div>
+      }
       actions={
         <>
-          {
-            <div className='flex rounded-lg border p-0.5'>
-              {(['mine', 'team'] as const).map((value) => (
-                <Button
-                  key={value}
-                  size='sm'
-                  variant={scope === value ? 'secondary' : 'ghost'}
-                  onClick={() => setScope(value)}
-                >
-                  {text(value === 'mine' ? 'scopeMine' : 'scopeTeam')}
-                </Button>
-              ))}
-            </div>
-          }
           {meta?.assistant && meta.permissions.leads.create && (
             <Button
               variant='ghost'
@@ -399,7 +407,9 @@ export default function DashboardPage(): ReactElement {
           )}
           {section(
             text('risks'),
-            <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'>
+            // The same grid as the other sections, so every group of figures
+            // lays out alike: two to a row on a phone, as many as fit wider.
+            <div className='grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(10rem,1fr))]'>
               {attentionCards.map((card) => (
                 <Metric
                   key={card.key}
@@ -506,51 +516,53 @@ export default function DashboardPage(): ReactElement {
                   ],
                   (row) => toText(row.id),
                 )}
-                <div className='grid gap-4 lg:grid-cols-2'>
-                  {table(
-                    'sources',
-                    rows(data.sources),
-                    [
-                      ['source', 'fields.source'],
-                      ['leads', 'entities.leads'],
-                      ['converted', 'converted'],
-                      ['won', 'won'],
-                    ],
-                    (row) => toText(row.source),
-                  )}
-                  <TrendChart
-                    title={text('trends')}
-                    rows={rows(data.trends)}
-                    language={language}
-                    table={
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            {(
-                              ['month', 'options.won', 'options.lost'] as const
-                            ).map((label) => (
-                              <TableHead key={label}>{text(label)}</TableHead>
-                            ))}
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {rows(data.trends).map((row) => (
-                            <TableRow key={toText(row.month)}>
-                              <TableCell className='tabular-nums'>
-                                {toText(row.month)}
-                              </TableCell>
-                              <TableCell className='tabular-nums'>
-                                {Number(row.won ?? 0)}
-                              </TableCell>
-                              <TableCell className='tabular-nums'>
-                                {Number(row.lost ?? 0)}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    }
-                  />
+                {/* Side by side only when the section itself is wide enough (72rem),
+                    not the screen, and the source table takes the larger share:
+                    its five sortable columns need about 690px. */}
+                <div className='@container'>
+                  <div className='grid gap-4 @6xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]'>
+                    {table(
+                      'sources',
+                      rows(data.sources),
+                      [
+                        ['source', 'fields.source'],
+                        ['leads', 'entities.leads'],
+                        ['converted', 'converted'],
+                        ['conversionRate', 'conversionRate'],
+                        ['won', 'won'],
+                      ],
+                      (row) => toText(row.source),
+                    )}
+                    <TrendChart
+                      title={text('trends')}
+                      rows={rows(data.trends)}
+                      language={language}
+                      table={
+                        <SortableTable
+                          rows={rows(data.trends)}
+                          rowKey={(row) => toText(row.month)}
+                          columns={(
+                            [
+                              ['month', 'month'],
+                              ['won', 'options.won'],
+                              ['lost', 'options.lost'],
+                            ] as const
+                          ).map(([key, label]) => ({
+                            id: key,
+                            title: text(label),
+                            sortValue: (row: Data) =>
+                              key === 'month'
+                                ? toText(row.month)
+                                : Number(row[key] ?? 0),
+                            cell: (row: Data) =>
+                              key === 'month'
+                                ? toText(row.month)
+                                : Number(row[key] ?? 0),
+                          }))}
+                        />
+                      }
+                    />
+                  </div>
                 </div>
               </div>,
             )}

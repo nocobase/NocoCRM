@@ -1,6 +1,14 @@
 import type { WorkflowServiceContract } from '@nocobase/app-plugin-workflow/server';
 import { decodeRow, encodeRow, jsonValue } from './values.js';
 import {
+  DATABASE_ORDERS,
+  ORDER_IN_MEMORY_LIMIT,
+  orderKey,
+  orderKind,
+  orderRecords,
+} from './list-order.js';
+import { resolveTitles } from './titles.js';
+import {
   hasCurrency,
   summarizeRows,
   SUMMARY_ROW_LIMIT,
@@ -65,9 +73,11 @@ export interface ListOptions {
   excludeStatus?: string;
   // Activities a user runs or takes part in: their own agenda.
   involvedId?: string;
-  // The order rows come in; the default is newest first by creation. A
-  // leading minus means descending.
-  sort?: 'startAt' | '-startAt' | '-submittedAt' | '-updatedAt';
+  // The order rows come in: a column this reader may read, a leading minus
+  // for descending; the default is newest first by creation. The columns a
+  // list page's headers sort by are ordered by what the page shows
+  // (list-order.ts).
+  sort?: string;
   // Restrict to these records: how a statistic's count becomes the list it
   // counted. Comma-separated in the query string. An empty list matches
   // nothing, which is what a zero count should show.
@@ -440,15 +450,72 @@ export class CrmService {
   ): Promise<ListResult> {
     const page = Math.max(1, options.page ?? 1);
     const pageSize = Math.min(1000, Math.max(1, options.pageSize ?? 25));
-    const { select } = await this.filtered(actor, entity, options, query);
+    const { select, fields } = await this.filtered(
+      actor,
+      entity,
+      options,
+      query,
+    );
+    const sortField = (options.sort ?? '-createdAt').replace(/^-/, '');
+    const direction = options.sort?.startsWith('-') === false ? 'asc' : 'desc';
+    // A sort is by a column the reader may read: ordering by another would
+    // leak its values through the order.
+    if (!DATABASE_ORDERS.has(sortField) && !fields.includes(sortField))
+      throw new CrmError('invalidInput', 400, 'sort');
     if (!options.contactId) {
       const count = await select
         .clearSelect()
         .select((eb) => [eb.fn.countAll().as('total')])
         .executeTakeFirst();
-      const sortField = (options.sort ?? '-createdAt').replace(/^-/, '');
-      const direction =
-        options.sort?.startsWith('-') === false ? 'asc' : 'desc';
+      const total = Number(count?.total ?? 0);
+      if (!DATABASE_ORDERS.has(sortField) && total <= ORDER_IN_MEMORY_LIMIT) {
+        const keyed = await select
+          .clearSelect()
+          .select(['id', sortField])
+          .execute();
+        const order = orderKind(entity, sortField);
+        let names: Record<string, string> = {};
+        if (order.kind === 'relation') {
+          const ids = [
+            ...new Set(keyed.map((r) => toText(r[sortField] ?? ''))),
+          ].filter(Boolean);
+          names =
+            order.target === 'users'
+              ? Object.fromEntries(
+                  (await this.users(actor)).map((u) => [
+                    toText(u.id),
+                    toText(u.name ?? ''),
+                  ]),
+                )
+              : (await resolveTitles(this, actor, {}, { [order.target]: ids }))
+                  .titles;
+        }
+        const keys = new Map(
+          keyed.map((r) => [
+            toText(r.id),
+            orderKey(order, decodeRow(r)[sortField], names),
+          ]),
+        );
+        const pageIds = orderRecords(
+          keyed,
+          keys,
+          direction,
+          actor.locale,
+        ).slice((page - 1) * pageSize, page * pageSize);
+        const rows = pageIds.length
+          ? await select.where('id', 'in', pageIds).execute()
+          : [];
+        const byId = new Map(rows.map((r) => [toText(r.id), r]));
+        return {
+          data: pageIds
+            .map((id) => byId.get(id))
+            .filter((r): r is Row => Boolean(r))
+            .map((row) => decodeRow(row) as CrmRecord),
+          total,
+          page,
+          pageSize,
+        };
+      }
       const records = await select
         .orderBy(sortField, direction)
         .orderBy('id', 'asc')
@@ -457,7 +524,7 @@ export class CrmService {
         .execute();
       return {
         data: records.map((row) => decodeRow(row) as CrmRecord),
-        total: Number(count?.total ?? 0),
+        total,
         page,
         pageSize,
       };
@@ -600,6 +667,15 @@ export class CrmService {
           readable.includes(key),
         ),
       ),
+      // Null for entries written before earlier values were kept.
+      previous:
+        event.previous == null
+          ? null
+          : Object.fromEntries(
+              Object.entries(object(jsonValue(event.previous) ?? {})).filter(
+                ([key]) => readable.includes(key),
+              ),
+            ),
       ...(!readable.includes(definitions[entity].statusField ?? '')
         ? { fromValue: null, toValue: null }
         : {}),
@@ -1163,16 +1239,33 @@ export class CrmService {
     const moved = Boolean(
       id && movedField && previous?.[movedField] !== input[movedField],
     );
-    await this.history(
-      tx,
-      actor,
-      entity,
-      toText(input.id),
-      !id ? 'created' : moved ? (movedField as string) : 'updated',
-      moved ? previous?.[movedField as string] : undefined,
-      moved ? input[movedField as string] : undefined,
-      supplied,
-    );
+    // An update records the fields that actually changed, each with the
+    // value it held before, so the history can show "old → new"; a field the
+    // save resent unchanged is not a change.
+    const changedKeys = previous
+      ? Object.keys(supplied).filter(
+          (key) => !sameValue(previous[key], input[key]),
+        )
+      : Object.keys(supplied);
+    // A save that changed nothing leaves no entry.
+    if (!previous || moved || changedKeys.length)
+      await this.history(
+        tx,
+        actor,
+        entity,
+        toText(input.id),
+        !id ? 'created' : moved ? (movedField as string) : 'updated',
+        moved ? previous?.[movedField as string] : undefined,
+        moved ? input[movedField as string] : undefined,
+        previous
+          ? Object.fromEntries(changedKeys.map((key) => [key, input[key]]))
+          : supplied,
+        previous
+          ? Object.fromEntries(
+              changedKeys.map((key) => [key, previous[key] ?? null]),
+            )
+          : undefined,
+      );
     await this.recordNotifications(tx, actor, entity, input, previous);
     return this.get(actor, entity, toText(input.id), tx);
   }
@@ -1358,6 +1451,8 @@ export class CrmService {
     fromValue?: unknown,
     toValue?: unknown,
     changes?: Row,
+    // The values the changed fields held before an update.
+    previousValues?: Row,
   ): Promise<void> {
     await query
       .insertInto('crmHistory')
@@ -1370,6 +1465,7 @@ export class CrmService {
         fromValue: fromValue == null ? null : toText(fromValue),
         toValue: toValue == null ? null : toText(toValue),
         changes: JSON.stringify(changes ?? {}),
+        previous: previousValues ? JSON.stringify(previousValues) : null,
         createdAt: new Date().toISOString(),
       })
       .execute();
@@ -1636,6 +1732,13 @@ export class CrmService {
           ),
         );
   }
+}
+// Whether a field kept its value through a save: instants compare as the
+// same moment, and JSON values (participants, contact roles) by content.
+function sameValue(before: unknown, after: unknown): boolean {
+  const plain = (value: unknown): unknown =>
+    value instanceof Date ? value.toISOString() : (value ?? null);
+  return JSON.stringify(plain(before)) === JSON.stringify(plain(after));
 }
 export function array(value: unknown): unknown[] {
   if (Array.isArray(value)) return value;

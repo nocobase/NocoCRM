@@ -30,6 +30,7 @@ import {
 export function CrmFrame({
   title,
   description,
+  titleAside,
   actions,
   assistant = true,
   fill = false,
@@ -37,6 +38,9 @@ export function CrmFrame({
 }: {
   title: ReactNode;
   description?: ReactNode;
+  // A control that sits beside the title on a phone, where the actions wrap
+  // onto rows of their own below it, and leads the actions on wider screens.
+  titleAside?: ReactNode;
   actions?: ReactNode;
   // The action center is where the assistant's proposals already live, so a
   // button to open the assistant there adds nothing.
@@ -63,22 +67,25 @@ export function CrmFrame({
       }
     >
       <header className='flex flex-wrap items-start justify-between gap-4'>
-        <div>
-          {typeof title === 'string' ? (
-            <h1 className='font-heading text-3xl font-semibold tracking-tight'>
-              {title}
-            </h1>
-          ) : (
-            // An editable title brings its own block elements, which a <h1>
-            // may not contain; the role keeps it a heading for readers.
-            <div
-              role='heading'
-              aria-level={1}
-              className='flex flex-wrap items-center font-heading text-3xl font-semibold tracking-tight'
-            >
-              {title}
-            </div>
-          )}
+        <div className={titleAside ? 'w-full md:w-auto' : undefined}>
+          <div className='flex items-center justify-between gap-3'>
+            {typeof title === 'string' ? (
+              <h1 className='font-heading text-3xl font-semibold tracking-tight'>
+                {title}
+              </h1>
+            ) : (
+              // An editable title brings its own block elements, which a <h1>
+              // may not contain; the role keeps it a heading for readers.
+              <div
+                role='heading'
+                aria-level={1}
+                className='flex flex-wrap items-center font-heading text-3xl font-semibold tracking-tight'
+              >
+                {title}
+              </div>
+            )}
+            {titleAside && <div className='md:hidden'>{titleAside}</div>}
+          </div>
           {description && (
             <p className='mt-2 max-w-2xl text-sm text-muted-foreground'>
               {description}
@@ -86,6 +93,7 @@ export function CrmFrame({
           )}
         </div>
         <div className='flex flex-wrap items-center gap-2'>
+          {titleAside && <div className='hidden md:block'>{titleAside}</div>}
           {actions}
           {assistant && assistantAvailable && (
             <Button
@@ -221,7 +229,8 @@ export function Metric({
   active?: boolean;
 }): ReactElement {
   const body = (
-    <CardContent className='space-y-1.5 px-4'>
+    // A container, so a long value can size itself to the card's width.
+    <CardContent className='@container space-y-1.5 px-4'>
       <div className='flex items-center gap-1.5 text-xs font-medium text-muted-foreground'>
         {Icon && <Icon className='size-3.5' aria-hidden />}
         {title}
@@ -229,7 +238,9 @@ export function Metric({
       <p
         className={`font-semibold tracking-tight tabular-nums ${toText(
           typeof value === 'string' && value.length > 8
-            ? 'text-2xl'
+            ? // An amount like "CN¥1,696,000" sizes to the card: on a phone,
+              // two to a row, a fixed size ran past the card's edge.
+              'text-[clamp(1.125rem,11cqi,1.5rem)] leading-tight break-words'
             : 'text-3xl',
         )} ${toText(tone === 'attention' ? 'text-destructive' : '')}`}
       >

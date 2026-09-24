@@ -1028,8 +1028,10 @@ export default function EntityDetail({
                               : ''}
                           </span>
                           <HistoryChanges
+                            entity={entity}
                             record={record}
                             changes={event.changes}
+                            previous={event.previous}
                             movedField={event.fromValue ? statusKey : undefined}
                             names={names}
                             fileNames={fileNames}

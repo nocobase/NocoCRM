@@ -1073,6 +1073,97 @@ describe('CRM API security and domain rules', () => {
       false,
     );
   });
+  it('sorts a list by a column the reader may read, by what the page shows', async () => {
+    const leads = (sort: string, page = 1, pageSize = 10) =>
+      service
+        .list(actor('rep'), 'leads', {
+          search: 'Sortcase',
+          sort,
+          page,
+          pageSize,
+        })
+        .then((result) => result.data.map((lead) => lead.name));
+    for (const [name, source, company] of [
+      ['Sortcase b', 'partner', 'Beta'],
+      ['Sortcase A', 'outbound', ''],
+      ['Sortcase c', 'website', 'alpha'],
+      ['Sortcase 10', 'exhibition', 'Gamma'],
+    ])
+      await service.save(actor('rep'), 'leads', { name, source, company });
+    // Text by the reader's language, numbers within it numerically.
+    expect(await leads('name')).toEqual([
+      'Sortcase 10',
+      'Sortcase A',
+      'Sortcase b',
+      'Sortcase c',
+    ]);
+    expect(await leads('-name')).toEqual([
+      'Sortcase c',
+      'Sortcase b',
+      'Sortcase A',
+      'Sortcase 10',
+    ]);
+    // An option field in the order its options are defined, and pages cut
+    // from that order.
+    expect(await leads('source')).toEqual([
+      'Sortcase c',
+      'Sortcase 10',
+      'Sortcase b',
+      'Sortcase A',
+    ]);
+    expect(await leads('-source', 2, 2)).toEqual(['Sortcase 10', 'Sortcase c']);
+    // A blank sorts last in either direction.
+    expect(await leads('company')).toEqual([
+      'Sortcase c',
+      'Sortcase b',
+      'Sortcase 10',
+      'Sortcase A',
+    ]);
+    expect(await leads('-company')).toEqual([
+      'Sortcase 10',
+      'Sortcase b',
+      'Sortcase c',
+      'Sortcase A',
+    ]);
+    // A relation by the name it shows rather than its id.
+    const zeta = await service.save(actor('rep'), 'accounts', {
+      name: 'Sortcase Zeta',
+      source: 'website',
+    });
+    const alpha = await service.save(actor('rep'), 'accounts', {
+      name: 'Sortcase Alpha',
+      source: 'website',
+    });
+    for (const [name, accountId] of [
+      ['Sortcase at Zeta', zeta.id],
+      ['Sortcase at Alpha', alpha.id],
+    ])
+      await service.save(actor('rep'), 'contacts', {
+        name,
+        accountId,
+        gender: 'unknown',
+      });
+    expect(
+      (
+        await service.list(actor('rep'), 'contacts', {
+          search: 'Sortcase',
+          sort: 'accountId',
+        })
+      ).data.map((contact) => contact.name),
+    ).toEqual(['Sortcase at Alpha', 'Sortcase at Zeta']);
+    // A column the reader may not read, or no column at all, is refused:
+    // its order would reveal its values.
+    for (const [user, sort] of [
+      ['restricted', 'email'],
+      ['rep', 'password'],
+    ])
+      await expect(
+        service.list(actor(user), 'leads', { sort }),
+      ).rejects.toMatchObject({ code: 'invalidInput' });
+    expect((await request('/leads?sort=-email', 'restricted')).status).toBe(
+      400,
+    );
+  });
   it('computes statistics with real money, dates, status history, pagination and contact links', async () => {
     const account = await service.save(actor('rep'), 'accounts', {
       name: 'Statistics account',
@@ -1112,6 +1203,22 @@ describe('CRM API security and domain rules', () => {
     expect(
       (board.funnel as { stage: string; count: number }[])[0],
     ).toMatchObject({ stage: 'contact' });
+    // Each source's conversion rate follows the overall one: converted over
+    // that source's leads that are not invalid.
+    for (const row of board.sources as {
+      source: string;
+      converted: number;
+      conversionRate: number | null;
+    }[]) {
+      const { data: fromSource } = await service.list(actor('rep'), 'leads', {
+        source: row.source,
+        pageSize: 500,
+      });
+      const eligible = fromSource.filter((r) => r.status !== 'invalid').length;
+      expect(row.conversionRate).toBe(
+        eligible ? row.converted / eligible : null,
+      );
+    }
     const stats = await statistics(service, actor('rep'), 'opportunities', {
       search: 'Statistics opportunity',
     });
@@ -1411,6 +1518,37 @@ describe('CRM API security and domain rules', () => {
     await expect(
       byName.get_record!.invoke({}, { entity: 'leads', id: lead.id }, runtime),
     ).rejects.toThrow('signed-in user');
+  });
+  it('records what an update changed with the values it replaced', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'History lead',
+      company: 'Before company',
+      jobTitle: 'Buyer',
+    });
+    const id = toText(lead.id);
+    // The form resends unchanged fields; only real changes are recorded.
+    await service.save(
+      actor('rep'),
+      'leads',
+      { name: 'History lead', company: 'After company', jobTitle: 'Buyer' },
+      id,
+    );
+    const { data } = await service.historyOf(actor('rep'), 'leads', id);
+    const update = data.find((e) => e.action === 'updated')!;
+    expect(update.changes).toEqual({ company: 'After company' });
+    expect(update.previous).toEqual({ company: 'Before company' });
+    // A creation has nothing before it.
+    expect(data.find((e) => e.action === 'created')?.previous).toBeNull();
+    // A save that changes nothing adds no entry.
+    await service.save(
+      actor('rep'),
+      'leads',
+      { name: 'History lead', company: 'After company' },
+      id,
+    );
+    expect(
+      (await service.historyOf(actor('rep'), 'leads', id)).data,
+    ).toHaveLength(data.length);
   });
   it("summarizes records by field and period within the reader's scope, per currency", async () => {
     const account = await service.save(actor('rep'), 'accounts', {
@@ -2358,10 +2496,10 @@ it('reverses the CRM migration on a real SQLite database', async () => {
       directory: resolve('database/main/migrations'),
       packageName: 'crm',
     });
-    expect((await migrator.latest()).executed).toHaveLength(26);
+    expect((await migrator.latest()).executed).toHaveLength(27);
     expect(await isolated.builder().hasCollection('crmLeads')).toBe(true);
     expect((await migrator.latest()).executed).toEqual([]);
-    expect((await migrator.rollback()).rolledBack).toHaveLength(26);
+    expect((await migrator.rollback()).rolledBack).toHaveLength(27);
     expect(await isolated.builder().hasCollection('crmLeads')).toBe(false);
     expect(await isolated.builder().hasCollection('crmAccounts')).toBe(false);
   } finally {

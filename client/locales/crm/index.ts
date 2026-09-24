@@ -6,7 +6,7 @@ const wording = {
   converted: ['Converted leads', '已转化线索'],
   newThisMonth: ['New this month', '本月新增'],
   customers: ['Customers', '成交客户'],
-  churnedThisMonth: ['Churned this month', '本月流失'],
+  churnedThisMonth: ['Churned this month', '本月流失客户'],
   inactiveContacts: ['Former employees', '已离职人数'],
   missingContact: ['Missing phone and email', '缺少联系方式'],
   todayActivities: ['Today’s activities', '今日活动'],
@@ -420,7 +420,7 @@ const wording = {
     ],
     conversionRate: [
       'All time: converted ÷ all leads except invalid',
-      '全部时间：已转化 ÷ 除无效外的全部线索',
+      '全部时间：已转化 ÷ 无效外的全部线索',
     ],
     customers: [
       'Status is customer; {{share}} of all accounts',
@@ -477,13 +477,10 @@ const wording = {
       '我发起、正在审批中的申请',
     ],
     toSubmit: ['My drafts and withdrawn requests', '我的草稿和已撤回的申请'],
-    approvedThisMonth: [
-      'Decided as approved this month',
-      '本月决定为通过的审批',
-    ],
+    approvedThisMonth: ['Decided as approved this month', '本月通过的审批'],
     rejectedThisMonth: [
       'Decided as rejected this month; approval rate {{rate}}',
-      '本月决定为拒绝的审批；本月通过率 {{rate}}',
+      '本月拒绝的审批；本月通过率 {{rate}}',
     ],
     overdueActivities: [
       'Not started, and the start time has passed',

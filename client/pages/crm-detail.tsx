@@ -742,6 +742,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                           <HistoryChanges
                             record={record}
                             changes={event.changes}
+                            previous={event.previous}
                             movedField={event.fromValue ? 'status' : undefined}
                             names={names}
                             fileNames={fileNames}
@@ -1533,14 +1534,20 @@ export function ConfirmDialog({
 // "Updated" on its own says nothing, so each changed field is listed with the
 // value it was given. Old values are not stored, so this shows the new one only.
 export function HistoryChanges({
+  entity = 'leads',
   record,
   changes,
+  previous,
   movedField,
   names,
   fileNames,
 }: {
+  entity?: Entity;
   record: CrmRecord;
   changes: unknown;
+  // What the changed fields held before an update, shown as "old → new";
+  // absent for a creation and for entries older than this record keeping.
+  previous?: unknown;
   movedField?: string;
   names: Record<string, string>;
   fileNames: Record<string, string>;
@@ -1549,7 +1556,9 @@ export function HistoryChanges({
   const { data: meta } = useMetadata();
   const changed =
     changes && typeof changes === 'object' ? (changes as Data) : {};
-  const fields = meta?.definitions.leads.fields ?? [];
+  const before =
+    previous && typeof previous === 'object' ? (previous as Data) : undefined;
+  const fields = meta?.definitions[entity]?.fields ?? [];
   const shown = Object.keys(changed).filter((key) => {
     if (key === movedField || key === 'id') return false;
     // Leaving "invalid" clears the reason in the same save; reporting that as
@@ -1559,6 +1568,25 @@ export function HistoryChanges({
     return true;
   });
   if (!shown.length) return null;
+  const show = (values: Data, key: string): ReactNode =>
+    key === 'attachments' ? (
+      // A count says nothing about which documents changed.
+      arrayValues(values.attachments).length ? (
+        arrayValues(values.attachments)
+          .map((id) => fileNames[toText(id)] ?? toText(id).slice(0, 8))
+          .join('、')
+      ) : (
+        <span className='text-muted-foreground'>{text('noAttachments')}</span>
+      )
+    ) : (
+      <Value
+        // Merged so fields the formatter leans on — a currency for an
+        // amount — resolve even when this save did not include them.
+        record={{ ...record, ...values }}
+        field={fields.find((f) => f.key === key) ?? { key, type: 'text' }}
+        lookup={names}
+      />
+    );
   return (
     <dl className='flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs'>
       {shown.map((key) => (
@@ -1567,7 +1595,7 @@ export function HistoryChanges({
           key={key}
         >
           <dt className='text-muted-foreground'>
-            {text(fieldLabelKey('leads', key), {
+            {text(fieldLabelKey(entity, key), {
               defaultValue: key,
             })}
           </dt>
@@ -1577,31 +1605,24 @@ export function HistoryChanges({
             // The descendant rule is needed because the shared value renderer
             // sets whitespace-pre-wrap on its own span, which would otherwise
             // win over the clamp here.
-            className='min-w-0 max-w-80 truncate [&_*]:whitespace-nowrap'
-            title={toText(changed[key])}
+            className='flex min-w-0 max-w-96 items-baseline gap-1 [&_*]:whitespace-nowrap'
+            title={
+              before && key in before
+                ? `${toText(before[key] ?? '')} → ${toText(changed[key] ?? '')}`
+                : toText(changed[key])
+            }
           >
-            {key === 'attachments' ? (
-              // A count says nothing about which documents changed.
-              arrayValues(changed.attachments).length ? (
-                arrayValues(changed.attachments)
-                  .map((id) => fileNames[toText(id)] ?? toText(id).slice(0, 8))
-                  .join('、')
-              ) : (
-                <span className='text-muted-foreground'>
-                  {text('noAttachments')}
+            {before && key in before && (
+              <>
+                <span className='min-w-0 truncate text-muted-foreground line-through decoration-muted-foreground/50'>
+                  {show(before, key)}
                 </span>
-              )
-            ) : (
-              <Value
-                // Merged so fields the formatter leans on — a currency for an
-                // amount — resolve even when this save did not include them.
-                record={{ ...record, ...changed }}
-                field={
-                  fields.find((f) => f.key === key) ?? { key, type: 'text' }
-                }
-                lookup={names}
-              />
+                <span aria-hidden className='shrink-0 text-muted-foreground'>
+                  →
+                </span>
+              </>
             )}
+            <span className='min-w-0 truncate'>{show(changed, key)}</span>
           </dd>
         </div>
       ))}

@@ -186,14 +186,22 @@ export async function dashboard(
   const allLeads = await allRecords(service, actor, 'leads');
   const wonDeals = deals.filter((r) => r.stage === 'won');
   const sources = [...new Set(allLeads.map((r) => toText(r.source)))].map(
-    (source) => ({
-      source,
-      leads: allLeads.filter((r) => r.source === source).length,
-      converted: allLeads.filter(
-        (r) => r.source === source && r.status === 'converted',
-      ).length,
-      won: totals(wonDeals.filter((r) => r.source === source)),
-    }),
+    (source) => {
+      const fromSource = allLeads.filter((r) => r.source === source);
+      const converted = fromSource.filter(
+        (r) => r.status === 'converted',
+      ).length;
+      // The overall rate's definition, per source: converted over the
+      // source's leads that are not invalid; null when there are none.
+      const eligible = fromSource.filter((r) => r.status !== 'invalid').length;
+      return {
+        source,
+        leads: fromSource.length,
+        converted,
+        conversionRate: eligible ? converted / eligible : null,
+        won: totals(wonDeals.filter((r) => r.source === source)),
+      };
+    },
   );
   // Won / lost by month over the last six months, oldest first.
   const closed = deals.filter((r) => ['won', 'lost'].includes(toText(r.stage)));

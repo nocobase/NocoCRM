@@ -69,6 +69,7 @@ import { ReasonDialog } from '../components/crm/reasons.js';
 import { reasonFor } from '../components/crm/reason-rules.js';
 import { ImportDialog } from '../components/crm/import-export.js';
 import { downloadCsv } from '../components/crm/csv.js';
+import { SortableHead } from '../components/crm/sortable-table.js';
 
 // A calendar cell lists this many before asking to show the rest.
 const CALENDAR_DAY_LIMIT = 5;
@@ -134,6 +135,12 @@ function EntityList({
         : 'list',
   );
   const [page, setPage] = useState(1);
+  // The column the list is sorted by, from a header click; unset, the server
+  // lists the newest first.
+  const [sort, setSort] = useState<{
+    key: string;
+    direction: 'asc' | 'desc';
+  }>();
   const [filtersOpen, setFiltersOpen] = useState(false);
   // A statistic card clicked into a filter: the key names the chip, the ids
   // are what the server restricts the list to.
@@ -289,7 +296,13 @@ function EntityList({
   // takes the filters without page, size or status.
   const columnParams = new URLSearchParams(params);
   for (const key of ['page', 'pageSize', 'status']) columnParams.delete(key);
-  const path = `${toText(entity)}?${params.toString()}`;
+  const listParams = new URLSearchParams(params);
+  if (sort)
+    listParams.set(
+      'sort',
+      sort.direction === 'desc' ? `-${sort.key}` : sort.key,
+    );
+  const path = `${toText(entity)}?${listParams.toString()}`;
   const query = useQuery({
     queryKey: [...scopeKey, path],
     queryFn: () => api<ListData>(path),
@@ -356,6 +369,30 @@ function EntityList({
           ? [key, 'opportunityAmount']
           : [key],
       ) ?? [];
+  // A header click sorts by its column: numbers and dates start from the
+  // largest and latest, the rest from A; a second click reverses it and a
+  // third returns to the default order. The opportunity's amount beside an
+  // approval is not a field of the approval, so it does not sort.
+  const firstDirection = (key: string): 'asc' | 'desc' => {
+    const type = definition?.fields.find((field) => field.key === key)?.type;
+    return type === 'number' ||
+      type === 'date' ||
+      type === 'datetime' ||
+      (!type && key.endsWith('At'))
+      ? 'desc'
+      : 'asc';
+  };
+  const sortBy = (key: string): void => {
+    const first = firstDirection(key);
+    setSort(
+      sort?.key !== key
+        ? { key, direction: first }
+        : sort.direction === first
+          ? { key, direction: first === 'asc' ? 'desc' : 'asc' }
+          : undefined,
+    );
+    setPage(1);
+  };
   const opportunityOf = (
     record: CrmRecord,
   ): { amount: number; currency: string } | undefined =>
@@ -686,13 +723,25 @@ function EntityList({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    {columns.map((key) => (
-                      <TableHead className='px-4 py-3' key={key}>
-                        {key === 'name' && entity === 'leads'
+                    {columns.map((key) => {
+                      const title =
+                        key === 'name' && entity === 'leads'
                           ? text('leadTitle')
-                          : text(fieldLabelKey(entity, toText(key)))}
-                      </TableHead>
-                    ))}
+                          : text(fieldLabelKey(entity, toText(key)));
+                      return key === 'opportunityAmount' ? (
+                        <TableHead className='px-4 py-3' key={key}>
+                          {title}
+                        </TableHead>
+                      ) : (
+                        <SortableHead
+                          className='px-4 py-3'
+                          key={key}
+                          title={title}
+                          direction={sort?.key === key && sort.direction}
+                          onClick={() => sortBy(key)}
+                        />
+                      );
+                    })}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
