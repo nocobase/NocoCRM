@@ -306,6 +306,14 @@ export default function EntityDetail({
   const [form, setForm] = useState<{ entity: Entity; initial: Data }>();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<unknown>();
+  // A deal's account change waiting for the user to confirm it takes the
+  // deal's contacts off (see changeAccount below).
+  const [accountMove, setAccountMove] = useState<{
+    accountId: unknown;
+    resolve: () => void;
+    reject: (cause: unknown) => void;
+  }>();
+  const [moving, setMoving] = useState(false);
   const [busy, setBusy] = useState(false);
   // History entries name attachments by id; this resolves the ones on this
   // record (and its activities) to filenames for display.
@@ -368,6 +376,33 @@ export default function EntityDetail({
     await api(`${toText(entity)}/${toText(id)}`, 'PATCH', values);
     await refresh();
   };
+  // Moving a deal to another account takes its contacts off it: they are
+  // the old account's people. The move is confirmed first, naming them, and
+  // saved with the empty list in one request. A deal with activities goes
+  // straight to the server, which refuses the move and says why.
+  const dealContacts =
+    entity === 'opportunities' && Array.isArray(record.contacts)
+      ? (record.contacts as { contactId?: unknown }[])
+      : [];
+  const changeAccount = (accountId: unknown): Promise<void> =>
+    dealContacts.length && !moreActivities.total
+      ? new Promise((resolve, reject) => {
+          setAccountMove({ accountId, resolve, reject });
+        })
+      : patch({ accountId });
+  const confirmAccountMove = async (): Promise<void> => {
+    if (!accountMove) return;
+    setMoving(true);
+    try {
+      await patch({ accountId: accountMove.accountId, contacts: [] });
+      accountMove.resolve();
+    } catch (cause) {
+      accountMove.reject(cause);
+    } finally {
+      setMoving(false);
+      setAccountMove(undefined);
+    }
+  };
   // An activity's external participants come from its account, shown by bare
   // name: the account is already on the page.
   const inline = (key: string): ReactElement => (
@@ -381,6 +416,11 @@ export default function EntityDetail({
         record.accountId ? { accountId: toText(record.accountId) } : undefined
       }
       label={text(fieldLabelKey(entity, key))}
+      onSave={
+        entity === 'opportunities' && key === 'accountId'
+          ? changeAccount
+          : undefined
+      }
     />
   );
   const convertedFrom = rows(detail.related.leads) as CrmRecord[];
@@ -1122,6 +1162,25 @@ export default function EntityDetail({
                 }
               : undefined
           }
+        />
+      )}
+      {accountMove && (
+        <ConfirmDialog
+          title={text('changeAccountTitle')}
+          description={text('changeAccountContacts', {
+            names: dealContacts
+              .map((c) => {
+                const contactId = toText(c.contactId ?? '');
+                return bareNames[contactId] ?? names[contactId] ?? contactId;
+              })
+              .join('、'),
+          })}
+          busy={moving}
+          onCancel={() => {
+            accountMove.resolve();
+            setAccountMove(undefined);
+          }}
+          onConfirm={() => void confirmAccountMove()}
         />
       )}
       {confirmDelete && (

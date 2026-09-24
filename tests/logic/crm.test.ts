@@ -638,6 +638,56 @@ describe('CRM API security and domain rules', () => {
       (await service.get(actor('rep'), 'accounts', account.id)).status,
     ).toBe('customer');
   });
+  it('moves a deal to another account without its contacts, and never with activities', async () => {
+    const [from, to] = await Promise.all(
+      ['Move from', 'Move to'].map((name) =>
+        service.save(actor('rep'), 'accounts', { name, source: 'website' }),
+      ),
+    );
+    const contact = await service.save(actor('rep'), 'contacts', {
+      name: 'Old account person',
+      accountId: from.id,
+      gender: 'unknown',
+    });
+    const deal = await service.save(actor('rep'), 'opportunities', {
+      name: 'Moving deal',
+      accountId: from.id,
+      contacts: [{ contactId: contact.id, role: 'other' }],
+    });
+    // Its contacts are the old account's people: moving it alone is refused.
+    await expect(
+      service.save(
+        actor('rep'),
+        'opportunities',
+        { accountId: to.id },
+        deal.id,
+      ),
+    ).rejects.toMatchObject({ code: 'accountMismatch' });
+    // Moved together with the contacts taken off, as the page confirms it.
+    const moved = await service.save(
+      actor('rep'),
+      'opportunities',
+      { accountId: to.id, contacts: [] },
+      deal.id,
+    );
+    expect(moved.accountId).toBe(to.id);
+    expect(moved.contacts).toEqual([]);
+    // Once it has activities it stays with its account, and says so first.
+    await service.save(actor('rep'), 'activities', {
+      name: 'Deal call',
+      opportunityId: deal.id,
+      startAt: '2026-09-01T02:00:00.000Z',
+      endAt: '2026-09-01T03:00:00.000Z',
+    });
+    await expect(
+      service.save(
+        actor('rep'),
+        'opportunities',
+        { accountId: from.id, contacts: [] },
+        deal.id,
+      ),
+    ).rejects.toMatchObject({ code: 'opportunityHasActivities' });
+  });
   it('enforces approval ownership, lock states, assigned approver and no self approval', async () => {
     const account = await service.save(actor('rep'), 'accounts', {
       name: 'Approval account',

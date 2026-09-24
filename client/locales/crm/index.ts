@@ -95,6 +95,11 @@ const wording = {
   newRecord: ['New {{entity}}', '新建{{entity}}'],
   editRecord: ['Edit {{entity}}', '编辑{{entity}}'],
   deleteRecord: ['Delete {{entity}}', '删除{{entity}}'],
+  changeAccountTitle: ['Change the account?', '更换所属客户？'],
+  changeAccountContacts: [
+    "The deal's contacts belong to the current account and will be removed from it: {{names}}.",
+    '此商机的联系人属于原客户，更换后将从此商机移除：{{names}}。',
+  ],
   deleteRecordTitle: [
     'Delete {{entity}} "{{name}}"?',
     '删除{{entity}}「{{name}}」？',
@@ -933,6 +938,10 @@ const wording = {
     accountMismatch: [
       'The related contacts and opportunities must belong to the same account.',
       '关联联系人和商机必须属于同一客户。',
+    ],
+    opportunityHasActivities: [
+      'This deal has activities with its current account, so it cannot move to another account.',
+      '此商机已有与当前客户的活动，不能更换到其他客户。',
     ],
     activityRelation: [
       'Link the activity to a lead, account, or opportunity.',

@@ -1031,6 +1031,20 @@ export class CrmService {
     if (entity === 'opportunities') {
       if (!/^[A-Z]{3}$/.test(toText(input.currency)))
         throw new CrmError('invalidInput', 400, 'currency');
+      // A deal's activities were held with its account's people, so a deal
+      // that has any stays with that account. Checked before the contacts,
+      // which the page takes off the deal when it moves: this is the reason
+      // a move with both cannot go ahead.
+      if (
+        previous &&
+        previous.accountId !== input.accountId &&
+        (await tx
+          .selectFrom('crmActivities')
+          .select('id')
+          .where('opportunityId', '=', id)
+          .executeTakeFirst())
+      )
+        throw new CrmError('opportunityHasActivities', 409);
       if (input.stage === 'lost' && !input.lostReason)
         throw new CrmError('required', 400, 'lostReason');
       if (input.stage === 'paused' && !input.pauseReason)
@@ -1071,16 +1085,6 @@ export class CrmService {
         const contact = object(value);
         return { contactId: contact.contactId, role: contact.role };
       });
-      if (
-        previous &&
-        previous.accountId !== input.accountId &&
-        (await tx
-          .selectFrom('crmActivities')
-          .select('id')
-          .where('opportunityId', '=', id)
-          .executeTakeFirst())
-      )
-        throw new CrmError('relatedRecords', 409);
       if (previous?.stage !== input.stage) {
         input.closedAt = ['won', 'lost'].includes(toText(input.stage))
           ? now
