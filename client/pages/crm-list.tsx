@@ -5,7 +5,7 @@ import {
 } from '../components/crm/api.js';
 import { recordTitle } from '../components/crm/lookups.js';
 import { editsAll, fieldLabelKey, toText } from '../components/crm/api.js';
-import { useEffect, useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { useLocation } from 'react-router';
 import {
   useInfiniteQuery,
@@ -180,6 +180,11 @@ function EntityList({
   const [expandedDays, setExpandedDays] = useState<Set<string>>(
     () => new Set(),
   );
+  // The day a phone's calendar shows the activities of; unset, today when
+  // the month shown is this one, else its first day.
+  const [pickedDay, setPickedDay] = useState<string>();
+  // Where a swipe across the phone's calendar started.
+  const swipeStartRef = useRef<number | undefined>(undefined);
   // Today's date in the business timezone, the key the calendar cells use.
   // Read once on mount: a page open across midnight is rare enough.
   const [now] = useState(() => new Date());
@@ -351,6 +356,93 @@ function EntityList({
     enabled: Boolean(definition) && view === 'calendar',
   });
   const filtered = calendar.data ?? [];
+  const calendarTimeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
+  // The month's activities by the day they start on in the business time
+  // zone, morning first, the way a day is read.
+  const byDay = new Map<string, CrmRecord[]>();
+  for (const r of [...filtered].sort((a, b) =>
+    toText(a.startAt).localeCompare(toText(b.startAt)),
+  )) {
+    if (!r.startAt) continue;
+    const day = new Intl.DateTimeFormat('en-CA', {
+      timeZone: calendarTimeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date(toText(r.startAt)));
+    byDay.set(day, [...(byDay.get(day) ?? []), r]);
+  }
+  const monthDays = Array.from(
+    {
+      length: new Date(
+        Number(month.slice(0, 4)),
+        Number(month.slice(5)),
+        0,
+      ).getDate(),
+    },
+    (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`,
+  );
+  const monthTitle = new Intl.DateTimeFormat(language, {
+    year: 'numeric',
+    month: 'long',
+    timeZone: 'UTC',
+  }).format(
+    new Date(
+      Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5)) - 1, 1),
+    ),
+  );
+  // Whole weeks for a phone's month: the days before the 1st and after the
+  // last come from the neighbouring months, drawn faint.
+  const calendarWeeks = (() => {
+    const first = Date.UTC(
+      Number(month.slice(0, 4)),
+      Number(month.slice(5)) - 1,
+      1,
+    );
+    const lead = new Date(first).getUTCDay();
+    const cells = Math.ceil((lead + monthDays.length) / 7) * 7;
+    return Array.from({ length: cells }, (_, i) => {
+      const day = new Date(first + (i - lead) * 86400000)
+        .toISOString()
+        .slice(0, 10);
+      return { day, inMonth: day.startsWith(month) };
+    });
+  })();
+  const shownDay = pickedDay?.startsWith(month)
+    ? pickedDay
+    : today.startsWith(month)
+      ? today
+      : `${month}-01`;
+  // An activity on the calendar: its title, then the clock time and owner,
+  // the way the workspace's agenda cards read; the date is the cell's or the
+  // heading's. On today's tinted cell a card sits on the card surface, so it
+  // still reads as a card; under a phone's month it is a full-size card.
+  const calendarCard = (
+    r: CrmRecord,
+    onToday: boolean,
+    large = false,
+  ): ReactElement => (
+    <div
+      key={r.id}
+      className={`rounded-lg ${toText(
+        large
+          ? 'border bg-card p-3 text-sm'
+          : `p-2 text-xs ${toText(onToday ? 'bg-card' : 'bg-muted')}`,
+      )}`}
+    >
+      <RecordLink entity={entity} record={r} />
+      <p className='mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground'>
+        <span className='inline-flex items-center gap-1 tabular-nums'>
+          <Clock className='size-3 shrink-0' />
+          {localTime(r.startAt, calendarTimeZone)}
+        </span>
+        <span className='inline-flex items-center gap-1'>
+          <User className='size-3 shrink-0' />
+          {meta?.users.find((u) => u.id === r.ownerId)?.name}
+        </span>
+      </p>
+    </div>
+  );
   const writable = Boolean(meta?.permissions[entity]?.create);
   const lookup = query.data?.titles ?? {};
   const read = meta?.permissions[entity]?.read;
@@ -981,8 +1073,9 @@ function EntityList({
       ) : (
         <section className='space-y-4'>
           {/* Own month stepper rather than <input type="month">: the native
-              control speaks the browser's language, not the app's. */}
-          <div className='flex items-center gap-1'>
+              control speaks the browser's language, not the app's. On a
+              phone the calendar card carries its own. */}
+          <div className='hidden items-center gap-1 lg:flex'>
             <Button
               variant='ghost'
               size='icon-sm'
@@ -1023,9 +1116,161 @@ function EntityList({
               {text('thisMonth')}
             </Button>
           </div>
-          {/* The month grid needs about 110px a day, which a tablet beside the
-              sidebar does not have; below 1024px the days stack as a list. */}
-          <div className='grid gap-px overflow-hidden rounded-xl border bg-border lg:grid-cols-7'>
+          {/* The month grid needs about 110px a day, which a phone or a tablet
+              beside the sidebar does not have: below 1024px the month is a
+              grid of dates, and the activities of the date picked show under
+              it. */}
+          <div className='space-y-4 lg:hidden'>
+            <div
+              className='rounded-2xl border bg-card p-3 shadow-sm'
+              // A sideways swipe turns the month, the way a phone's own
+              // calendar does.
+              onTouchStart={(event) => {
+                swipeStartRef.current = event.touches[0]?.clientX;
+              }}
+              onTouchEnd={(event) => {
+                const from = swipeStartRef.current;
+                const to = event.changedTouches[0]?.clientX;
+                swipeStartRef.current = undefined;
+                if (from === undefined || to === undefined) return;
+                if (Math.abs(to - from) > 60)
+                  setMonth(shiftMonth(month, to < from ? 1 : -1));
+              }}
+            >
+              <div className='mb-2 flex items-center gap-1 px-1'>
+                <span className='flex-1 text-base font-semibold tabular-nums'>
+                  {monthTitle}
+                </span>
+                {!today.startsWith(month) && (
+                  <Button
+                    variant='ghost'
+                    size='sm'
+                    className='h-7 text-xs'
+                    onClick={() => {
+                      setMonth(today.slice(0, 7));
+                      setPickedDay(today);
+                    }}
+                  >
+                    {text('todayButton')}
+                  </Button>
+                )}
+                <Button
+                  variant='ghost'
+                  size='icon-sm'
+                  aria-label={text('previousMonth')}
+                  onClick={() => setMonth(shiftMonth(month, -1))}
+                >
+                  <ChevronLeft />
+                </Button>
+                <Button
+                  variant='ghost'
+                  size='icon-sm'
+                  aria-label={text('nextMonth')}
+                  onClick={() => setMonth(shiftMonth(month, 1))}
+                >
+                  <ChevronRight />
+                </Button>
+              </div>
+              <div className='grid grid-cols-7 text-center'>
+                {Array.from({ length: 7 }, (_, i) => (
+                  <div
+                    key={`weekday-${String(i)}`}
+                    className={`pb-1 text-xs font-medium ${toText(
+                      i === 0 || i === 6
+                        ? 'text-muted-foreground/60'
+                        : 'text-muted-foreground',
+                    )}`}
+                  >
+                    {new Intl.DateTimeFormat(language, {
+                      weekday: 'narrow',
+                      timeZone: 'UTC',
+                    }).format(new Date(Date.UTC(2026, 8, 6 + i)))}
+                  </div>
+                ))}
+                {calendarWeeks.map(({ day, inMonth }) => {
+                  const count = inMonth ? (byDay.get(day)?.length ?? 0) : 0;
+                  const isToday = day === today;
+                  const picked = inMonth && day === shownDay;
+                  const weekday = new Date(`${day}T00:00:00Z`).getUTCDay();
+                  const quiet =
+                    !picked &&
+                    !isToday &&
+                    (day < today || weekday === 0 || weekday === 6);
+                  return (
+                    <button
+                      key={day}
+                      type='button'
+                      aria-pressed={picked}
+                      aria-current={isToday ? 'date' : undefined}
+                      aria-label={`${day}${count ? ` · ${String(count)}` : ''}`}
+                      className='flex h-12 flex-col items-center justify-center gap-0.5'
+                      onClick={() => {
+                        // A neighbouring month's day turns to that month.
+                        if (!inMonth) setMonth(day.slice(0, 7));
+                        setPickedDay(day);
+                      }}
+                    >
+                      <span
+                        className={`flex size-9 items-center justify-center rounded-full text-sm tabular-nums transition-colors ${toText(
+                          picked
+                            ? 'bg-primary font-semibold text-primary-foreground'
+                            : isToday
+                              ? 'bg-ai/10 font-semibold text-ai dark:bg-ai/20'
+                              : !inMonth
+                                ? 'text-muted-foreground/35'
+                                : quiet
+                                  ? 'text-muted-foreground'
+                                  : 'text-foreground',
+                        )}`}
+                      >
+                        {Number(day.slice(8))}
+                      </span>
+                      {/* Up to three dots for how busy the day is, kept in
+                          place on days without, so the rows stay level. */}
+                      <span aria-hidden className='flex h-1 gap-0.5'>
+                        {Array.from({ length: Math.min(count, 3) }, (_, i) => (
+                          <span
+                            key={i}
+                            className={`size-1 rounded-full ${toText(
+                              isToday ? 'bg-ai' : 'bg-primary/50',
+                            )}`}
+                          />
+                        ))}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className='space-y-2'>
+              <p className='flex items-baseline gap-2 px-1 text-sm font-medium tabular-nums'>
+                {shownDay}
+                <span className='text-muted-foreground'>
+                  {new Intl.DateTimeFormat(language, {
+                    weekday: 'short',
+                    timeZone: 'UTC',
+                  }).format(new Date(`${shownDay}T00:00:00Z`))}
+                </span>
+                {(byDay.get(shownDay) ?? []).length > 0 && (
+                  <span className='ml-auto text-xs font-normal text-muted-foreground'>
+                    {text('dayTotal', {
+                      count: (byDay.get(shownDay) ?? []).length,
+                    })}
+                  </span>
+                )}
+              </p>
+              {(byDay.get(shownDay) ?? []).length ? (
+                (byDay.get(shownDay) ?? []).map((r) =>
+                  calendarCard(r, false, true),
+                )
+              ) : (
+                <p className='rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground'>
+                  {text('noActivitiesOnDay')}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className='hidden gap-px overflow-hidden rounded-xl border bg-border lg:grid lg:grid-cols-7'>
             {Array.from({ length: 7 }, (_, i) => (
               <div
                 key={i + 1}
@@ -1063,21 +1308,7 @@ function EntityList({
               },
               (_, i) => {
                 const day = `${toText(month)}-${toText(toText(i + 1).padStart(2, '0'))}`;
-                const items = filtered
-                  .filter(
-                    (r) =>
-                      r.startAt &&
-                      new Intl.DateTimeFormat('en-CA', {
-                        timeZone: meta?.settings.timeZone ?? 'Asia/Shanghai',
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                      }).format(new Date(toText(r.startAt))) === day,
-                  )
-                  // Morning first, the way a day is read.
-                  .sort((a, b) =>
-                    toText(a.startAt).localeCompare(toText(b.startAt)),
-                  );
+                const items = byDay.get(day) ?? [];
                 const isToday = day === today;
                 return (
                   <div
@@ -1109,34 +1340,7 @@ function EntityList({
                     {(expandedDays.has(day)
                       ? items
                       : items.slice(0, CALENDAR_DAY_LIMIT)
-                    ).map((r) => (
-                      <div
-                        key={r.id}
-                        // On today's tinted cell the cards sit on the card
-                        // surface, so they still read as cards.
-                        className={`rounded-lg p-2 text-xs ${toText(
-                          isToday ? 'bg-card' : 'bg-muted',
-                        )}`}
-                      >
-                        <RecordLink entity={entity} record={r} />
-                        {/* The cell is the date, so the card carries only
-                            the clock time, with the owner, under the title
-                            the way the workspace's agenda cards do. */}
-                        <p className='mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-muted-foreground'>
-                          <span className='inline-flex items-center gap-1 tabular-nums'>
-                            <Clock className='size-3 shrink-0' />
-                            {localTime(
-                              r.startAt,
-                              meta?.settings.timeZone ?? 'Asia/Shanghai',
-                            )}
-                          </span>
-                          <span className='inline-flex items-center gap-1'>
-                            <User className='size-3 shrink-0' />
-                            {meta?.users.find((u) => u.id === r.ownerId)?.name}
-                          </span>
-                        </p>
-                      </div>
-                    ))}
+                    ).map((r) => calendarCard(r, isToday))}
                     {!expandedDays.has(day) &&
                       items.length > CALENDAR_DAY_LIMIT && (
                         <Button
