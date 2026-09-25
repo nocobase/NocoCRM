@@ -44,6 +44,10 @@ function isDesktop() {
 interface NavigationTreeProps {
   readonly collapsed: boolean;
   readonly inPopover?: boolean;
+  // Application change: menu-only groups render as always-open sections (see
+  // below). Only the application layout asks for it; Settings and Dev keep
+  // the template's collapsible groups.
+  readonly sections?: boolean;
   readonly item: RouteNavigationItem;
   readonly onNavigate: () => void;
   readonly selectedKey: string | undefined;
@@ -54,6 +58,7 @@ export function NavigationTree({
   inPopover = false,
   item,
   onNavigate,
+  sections = false,
   selectedKey,
 }: NavigationTreeProps): ReactElement | null {
   const desktop = useSyncExternalStore(
@@ -87,13 +92,19 @@ export function NavigationTree({
   const expanded = disclosure.expanded;
   if (popoverOpen && (!collapsed || !desktop)) setPopoverOpen(false);
 
-  // Application change to the template's sidebar: a menu-only group is a
-  // section, a small heading with its children always shown, rather than
-  // the template's collapsible (or, collapsed, its popover). The CRM's
-  // primary objects sit in two such sections, and a menu that hides them
-  // behind a click on every visit would defeat the grouping. A collapsed
-  // sidebar drops the heading and keeps the children's icons.
-  if (children.length > 0 && !item.route.componentLoader && !inPopover) {
+  // Application change to the template's sidebar, in the application layout
+  // only (`sections`): a menu-only group is a section, a small heading with
+  // its children always shown, rather than the template's collapsible (or,
+  // collapsed, its popover). The CRM's primary objects sit in two such
+  // sections, and a menu that hides them behind a click on every visit would
+  // defeat the grouping. A collapsed sidebar drops the heading and keeps the
+  // children's icons. Settings and Dev keep the template's groups.
+  if (
+    sections &&
+    children.length > 0 &&
+    !item.route.componentLoader &&
+    !inPopover
+  ) {
     return (
       <section aria-label={label} className='pt-2'>
         <p
@@ -108,6 +119,7 @@ export function NavigationTree({
               item={child}
               key={routeKey(child.route)}
               onNavigate={onNavigate}
+              sections
               selectedKey={selectedKey}
             />
           ))}

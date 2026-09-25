@@ -4,7 +4,7 @@ import { expect, it, vi } from 'vitest';
 import { HeaderActions } from '../../client/layouts/components/header-actions.js';
 
 vi.mock('../../client/theme/index.js', () => ({
-  ThemeModeToggle: () => null,
+  ThemeSettings: () => null,
 }));
 vi.mock('../../client/layouts/components/user-menu.js', () => ({
   UserMenu: () => null,

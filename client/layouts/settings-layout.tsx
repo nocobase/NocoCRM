@@ -99,8 +99,6 @@ export function SettingsLayout({
         desktopState={desktopSidebarCollapsed ? 'collapsed' : 'expanded'}
         mobileOpen={mobileSidebarOpen}
         onMobileOpenChange={setMobileSidebarOpen}
-        // Application change: a narrower expanded sidebar suits the CRM's short menus.
-        className={desktopSidebarCollapsed ? undefined : 'md:w-56'}
       >
         <div
           className={`flex h-16 shrink-0 items-center justify-between overflow-hidden border-b border-sidebar-border/70 px-5 ${desktopSidebarCollapsed ? 'md:justify-center md:px-0' : ''}`}

@@ -6,12 +6,16 @@ A CRM built as a NocoBase 3 application: leads, accounts, contacts, opportunitie
 
 ## Getting started
 
-Use Node 24 or later and the pnpm version pinned in `package.json`:
+Use Node 24 or later and the pnpm version pinned in `package.json`. Configure the application, then start the development server:
 
 ```bash
 pnpm install
+pnpm config:init
+pnpm config:check
 pnpm dev
 ```
+
+`pnpm config:init` writes `config.yml` from `config.example.yml`, keeping its comments and filling in `auth.secret` and `session.secret`. It is only needed once; `pnpm dev` and `pnpm start` refuse to run until it has been. `pnpm config:check` loads the configuration the way a start would, connects to any database other than SQLite, and reports what would stop the application from starting or quietly misbehave.
 
 `pnpm dev` starts the API server and the Vite client together, picks free ports if the defaults are taken, and prints the URL to open, `http://127.0.0.1:13000/main/` by default. Use the printed URL rather than assuming a port; `APP_SERVER_PORT` moves the server when the default is taken by something else. Keep the terminal running; `Ctrl+C` stops the development server.
 
@@ -54,9 +58,10 @@ In-app notifications for assignments, activity participation, activity reminders
 
 ### Review your configuration
 
-`config.yml` was written when the project was created, carrying the database you chose and a generated `auth.secret`. It gets you running; adjust it for your situation:
+`pnpm config:init` wrote `config.yml` from `config.example.yml`, with `auth.secret` and `session.secret` filled in. It gets you running on SQLite; adjust it for your situation:
 
-- **Database.** Point the connection at the database you actually intend to use — dialect, host, port, and credentials.
+- **Database.** SQLite needs no server and works as it is. Another one means installing its driver first — `pnpm add @nocobase/db-postgres`, and `pnpm remove @nocobase/db-sqlite` if nothing else uses SQLite — then `pnpm config:init --dialect postgres --force` to rewrite the connection, and `pnpm config:set` for its settings, with `--from-env` for the password so it stays out of the shell history. Which dialects the application can run on is decided by what it depends on, not by this file: a driver it does not have cannot be introduced from here.
+- **Change a value** with `pnpm config:set key=value`, which keeps the comments and refuses a section the application does not know. Values that differ per machine — `APP_SERVER_PORT`, `APP_SERVER_HOST`, `APP_PUBLIC_ORIGIN` — are better set in the environment, which is applied over this file; `config:set` says when an environment variable overrides what it wrote.
 - **Where the application is served.** `APP_BASE_PATH` is the public mount path, `/main` by default, so the development URL looks like `http://127.0.0.1:13000/main/`. `APP_SERVER_PORT` and `APP_SERVER_HOST` change what the server binds to.
 - **Anything a feature you enable requires** — AI services, mail delivery, IM webhooks, storage. `config.example.yml` documents every available option, including sections your `config.yml` does not yet have.
 
@@ -161,7 +166,7 @@ database/
 tests/                   Unit and integration tests
 e2e/                     Browser tests needing a real server
 storage/                 SQLite database and uploads; gitignored
-config.yml               Your configuration, generated at setup; gitignored
+config.yml               Your configuration, written by pnpm config:init; gitignored
 config.example.yml       Documented configuration template
 SPEC.md                  Product specification the CRM implements
 ```
@@ -367,7 +372,7 @@ Set `NOCOBASE_STRICT_STARTUP=true` when running `pnpm dev` or `pnpm start` in au
 
 ## Configuration
 
-`server/config/` and `client/config/` contain editable TypeScript defaults. `config.yml` holds environment-specific overrides, written for you at generation time and yours to edit from there. It is gitignored because it carries your `auth.secret`; deploy it through your secret management rather than committing it. It is generated from `config.example.yml`, which is kept beside it as the reference for every option.
+`server/config/` and `client/config/` contain editable TypeScript defaults. `config.yml` holds environment-specific overrides, written by `pnpm config:init` and yours to edit from there. It is gitignored because it carries your `auth.secret`; deploy it through your secret management rather than committing it. It is generated from `config.example.yml`, which is kept beside it as the reference for every option.
 
 Two settings decide where the application is reachable:
 
@@ -403,6 +408,14 @@ is submitted.
 MIT
 
 ## Publish to an application Hub
+
+### Create a publishing key
+
+`HUB_API_KEY` is a Hub publishing key, created in Hub rather than in this application. Open **API Keys** in the Hub navigation (`<HUB_URL>/api-keys`); reaching that page requires `hub.app / manage-api-keys`, granted to `hub-administrator` and `hub-operator` by default. In **Create API Key**, select this application under **Applications**, or **All applications (including future apps)**, then grant the permissions the commands below need: **Upload release** for `pnpm run upload`, and both **Upload release** and **Deploy release** for `pnpm run upload --deploy` or `pnpm run deploy`.
+
+The plaintext key is shown once at creation; while the key stays active its creator can copy it again from the same page. Bound applications and granted permissions cannot be changed afterwards, so a key created without `Deploy release` has to be deleted and recreated rather than edited. A key never exceeds its creator's current permissions, so uploads fail if the creator later loses access to the bound application. See [Publish applications with Hub](https://docs.nocobase.com/deployment/hub-publishing) for the console walkthrough.
+
+### Upload and deploy
 
 The Default template includes `upload` and `deploy` scripts. Run `pnpm run upload` or `pnpm run deploy` from the App root; these forward all arguments to the `app upload` and `app deploy` commands of the application's own CLI, respectively. Use `pnpm run deploy` explicitly because `pnpm deploy` is also a pnpm built-in command. Existing applications need to add these scripts if they already have the publishing CLI but predate the shortcuts.
 

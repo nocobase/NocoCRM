@@ -9,7 +9,7 @@ import {
   TooltipProvider,
 } from '@/components/ui/tooltip';
 
-import { ThemeModeToggle } from '../../theme/index.js';
+import { ThemeSettings } from '../../theme/index.js';
 import { UserMenu } from './user-menu.js';
 // Application change to the template's header: the CRM's notification centre
 // is reached from here (a bell with the unread count) rather than from the
@@ -106,7 +106,7 @@ export function HeaderActions({
             </TooltipContent>
           </Tooltip>
         ) : null}
-        <ThemeModeToggle />
+        <ThemeSettings />
         <UserMenu />
       </div>
     </TooltipProvider>
