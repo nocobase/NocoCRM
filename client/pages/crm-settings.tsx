@@ -1,4 +1,3 @@
-import { Sparkles } from 'lucide-react';
 import { PageContainer } from '../components/page-container.js';
 import { PageHeader } from '../components/page-header.js';
 import { toText } from '../components/crm/api.js';
@@ -19,7 +18,6 @@ import {
   useCrmApi,
   useCrmQuery,
   useCrmText,
-  useAssistantAvailable,
   useRefresh,
   type CrmSettings,
 } from '../components/crm/api.js';
@@ -40,26 +38,11 @@ export default function SettingsPage(): ReactElement {
   if (!query.data)
     return (
       <PageContainer>
-        <PageHeader title={text('settings')} actions={<AssistantAction />} />
+        <PageHeader title={text('settings')} />
         <ErrorNotice error={query.error} />
       </PageContainer>
     );
   return <SettingsForm initial={query.data} />;
-}
-function AssistantAction(): ReactElement | null {
-  const { text } = useCrmText();
-  if (!useAssistantAvailable()) return null;
-  return (
-    <Button
-      variant='outline'
-      onClick={() =>
-        window.dispatchEvent(new CustomEvent('crm-assistant', { detail: {} }))
-      }
-    >
-      <Sparkles />
-      {text('assistant')}
-    </Button>
-  );
 }
 function SettingsForm({
   initial,
@@ -182,7 +165,6 @@ function SettingsForm({
             >
               {busy ? text('saving') : text('save')}
             </Button>
-            <AssistantAction />
           </>
         }
       />
