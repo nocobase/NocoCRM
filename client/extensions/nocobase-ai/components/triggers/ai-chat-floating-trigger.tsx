@@ -80,6 +80,12 @@ export function AIChatFloatingTrigger({
   const { open } = useAIChatControllerState(controller);
   const triggerRef = useRef<HTMLDivElement>(null);
   const dragSessionRef = useRef<VerticalDragSession | null>(null);
+  // Application change (NocoCRM): the whole launcher drags, the icon too, not
+  // only the thin rim around it. The pointer is captured on the press so a
+  // fast drag keeps tracking; a press on the icon that never moved past the
+  // threshold opens the chat when it ends, and keyboard activation still
+  // opens it through the button's click.
+  const pressedIconRef = useRef(false);
   const [top, setTop] = useState<number | null>(null);
 
   useEffect(() => {
@@ -124,6 +130,9 @@ export function AIChatFloatingTrigger({
       maxTop: bounds.maxTop,
       moved: false,
     };
+    pressedIconRef.current =
+      event.target instanceof Element &&
+      event.target.closest('button') !== null;
     event.currentTarget.setPointerCapture?.(event.pointerId);
   };
 
@@ -153,6 +162,8 @@ export function AIChatFloatingTrigger({
     if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
+    if (!session.moved && pressedIconRef.current) openChat();
+    pressedIconRef.current = false;
   };
 
   const handlePointerCancel = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -182,9 +193,12 @@ export function AIChatFloatingTrigger({
       <button
         type='button'
         aria-label={t('surface.openChat', 'Open AI chat')}
-        className='relative flex size-[42px] touch-auto cursor-pointer items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
-        onPointerDown={(event) => event.stopPropagation()}
-        onClick={openChat}
+        className='relative flex size-[42px] touch-none cursor-pointer items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
+        // Pointer presses open the chat on release (above); a click with no
+        // pointer behind it (detail 0) is Enter or Space.
+        onClick={(event) => {
+          if (event.detail === 0) openChat();
+        }}
       >
         <span className='flex size-full items-center justify-center overflow-hidden rounded-lg'>
           <NocoBaseAIChatIcon

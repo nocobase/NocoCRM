@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { expect, it, vi } from 'vitest';
 import { HeaderActions } from '../../client/layouts/components/header-actions.js';
@@ -11,11 +11,6 @@ vi.mock('../../client/layouts/components/user-menu.js', () => ({
 }));
 vi.mock('../../client/components/crm/notification-bell.js', () => ({
   NotificationBell: () => <button aria-label='Notifications' />,
-}));
-// Whether the CRM's AI employee is enabled, as the metadata reports it.
-const assistant = vi.hoisted(() => ({ available: true }));
-vi.mock('../../client/components/crm/api.js', () => ({
-  useAssistantAvailable: () => assistant.available,
 }));
 it('hides Settings when navigation has no accessible pages', () => {
   render(
@@ -46,40 +41,17 @@ it('keeps Settings visible and current on an accessible settings page', () => {
   ).not.toBeInTheDocument();
 });
 
-it('preserves CRM notifications and the assistant action on application pages', () => {
-  const listener = vi.fn();
-  window.addEventListener('crm-assistant', listener);
-  try {
-    render(
-      <MemoryRouter initialEntries={['/leads']}>
-        <HeaderActions showSettings showDev={false} />
-      </MemoryRouter>,
-    );
-    expect(
-      screen.getByRole('button', { name: 'Notifications' }),
-    ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'AI 助手' }));
-    expect(listener).toHaveBeenCalledOnce();
-  } finally {
-    window.removeEventListener('crm-assistant', listener);
-  }
-});
-
-it('hides the assistant action while the AI employee is disabled', () => {
-  assistant.available = false;
-  try {
-    render(
-      <MemoryRouter initialEntries={['/leads']}>
-        <HeaderActions showSettings showDev={false} />
-      </MemoryRouter>,
-    );
-    expect(
-      screen.getByRole('button', { name: 'Notifications' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: 'AI 助手' }),
-    ).not.toBeInTheDocument();
-  } finally {
-    assistant.available = true;
-  }
+it('keeps CRM notifications on application pages and leaves the assistant to its launcher', () => {
+  render(
+    <MemoryRouter initialEntries={['/leads']}>
+      <HeaderActions showSettings showDev={false} />
+    </MemoryRouter>,
+  );
+  expect(
+    screen.getByRole('button', { name: 'Notifications' }),
+  ).toBeInTheDocument();
+  // The assistant opens from the floating launcher, not the header.
+  expect(
+    screen.queryByRole('button', { name: 'AI 助手' }),
+  ).not.toBeInTheDocument();
 });

@@ -5,12 +5,15 @@ import {
   useState,
   type PropsWithChildren,
   type ReactElement,
+  type ReactNode,
 } from 'react';
-import { Sparkles, X } from 'lucide-react';
+import { Maximize2, PanelRight, Sparkles, X } from 'lucide-react';
 import {
+  AIChatFloatingTrigger,
   AIChatProvider,
   AIChatWindow,
   AIPageContextScope,
+  ChatSurface,
   NocoBaseAIRootProvider,
   nocobaseAIService,
   useAI,
@@ -24,13 +27,6 @@ import {
 } from '@/extensions/nocobase-ai';
 import { AI_DRAFT_CONVERSATION_ID } from '@/extensions/nocobase-ai/providers/types.js';
 import { Button } from '../ui/button.js';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '../ui/sheet.js';
 import { toText, useCrmText, useMetadata, type Data } from './api.js';
 import { crmToolRenderers } from './ai-tool-renderers.js';
 
@@ -147,6 +143,26 @@ function CrmAssistantPanel(): ReactElement | null {
   const controller = useAIChatController();
   const { open } = useAIChatControllerState(controller);
   const [record, setRecord] = useState<RecordContext>();
+  // The panel expands into a centred dialog for a longer conversation; the
+  // same chat window stays mounted, so nothing is lost either way.
+  const [expanded, setExpanded] = useState(false);
+  const setPanelOpen = (next: boolean): void => {
+    if (!next) setExpanded(false);
+    controller.setOpen(next);
+  };
+  // The plugin's launcher opens the chat by starting a task with the
+  // employee, which begins a new conversation; the CRM's launcher reopens
+  // the conversation already in progress, as the page shortcuts do.
+  const launcher = useMemo<AIChatController>(
+    () => ({
+      ...controller,
+      triggerTask: (options) => {
+        if (options.task) controller.triggerTask(options);
+        else controller.open();
+      },
+    }),
+    [controller],
+  );
   // The panel starts open on a screen wide enough to hold it beside the
   // page (1280px, where styles.css pushes the page aside by the panel's
   // width): the assistant is the CRM's front door, not a hidden extra.
@@ -163,14 +179,16 @@ function CrmAssistantPanel(): ReactElement | null {
     controller.setOpen(initial);
   }, [controller]);
   useEffect(() => {
-    document.body.classList.toggle('crm-assistant-open', open);
+    // The page makes room only for the side panel; the expanded dialog lies
+    // over it.
+    document.body.classList.toggle('crm-assistant-open', open && !expanded);
     try {
       sessionStorage.setItem(openKey, open ? '1' : '0');
     } catch {
       // Storage may be unavailable; the panel then simply starts closed.
     }
     return () => document.body.classList.remove('crm-assistant-open');
-  }, [open]);
+  }, [open, expanded]);
   useEffect(() => {
     const show = (event: Event): void => {
       const data = (event as CustomEvent<Data>).detail ?? {};
@@ -213,41 +231,71 @@ function CrmAssistantPanel(): ReactElement | null {
       window.removeEventListener('crm-context', change);
     };
   }, [controller]);
+  // Expand and close, as the plugin's ChatSurfaceActions offers them but
+  // without its tooltips, in the chat window's toolbar row as the plugin's
+  // floating demo places them. In the top-right corner they sat exactly
+  // where the account avatar lands once the page widens again, so closing
+  // left the pointer on it and its hover menu opened.
+  const actions = (
+    <>
+      <Button
+        variant='ghost'
+        size='icon-sm'
+        aria-label={text(expanded ? 'assistantCollapse' : 'assistantExpand')}
+        title={text(expanded ? 'assistantCollapse' : 'assistantExpand')}
+        onClick={() => setExpanded(!expanded)}
+      >
+        {expanded ? <PanelRight /> : <Maximize2 />}
+      </Button>
+      <Button
+        variant='ghost'
+        size='icon-sm'
+        aria-label={text('assistantClose')}
+        title={text('assistantClose')}
+        onClick={() => setPanelOpen(false)}
+      >
+        <X />
+      </Button>
+    </>
+  );
   if (!meta?.assistant) return null;
   return (
-    // Clicking a nav link counts as an outside press, which would close the panel on every page switch.
-    <Sheet
-      modal={false}
-      disablePointerDismissal
-      open={open}
-      onOpenChange={(value) => controller.setOpen(value)}
-    >
-      <SheetContent
-        showCloseButton={false}
-        showOverlay={false}
-        className='data-[side=right]:w-[min(28rem,calc(100vw-1rem))] data-[side=right]:sm:max-w-md'
+    <>
+      {/* The assistant's one entry: the plugin's floating launcher at the
+          lower right, hidden while the chat is open. */}
+      <AIChatFloatingTrigger aiEmployee={CRM_ASSISTANT} controller={launcher} />
+      {/* The plugin's surface: a side panel that stays open across pages and
+          lets the page be used beside it (non-modal, no outside dismissal),
+          or, expanded, a dialog. The panel is the width styles.css pushes the
+          page aside by. Escape closes only the dialog: in the panel it would
+          also fire while cancelling an edit on the page. */}
+      <ChatSurface
+        open={open}
+        variant={expanded ? 'dialog' : 'side-panel'}
+        onOpenChange={setPanelOpen}
+        width='28rem'
+        closeOnEscape={expanded}
       >
-        <SheetHeader className='border-b pr-12'>
-          <SheetTitle className='flex items-center gap-2'>
-            <Sparkles className='size-5' />
-            {text('assistant')}
-          </SheetTitle>
-          <SheetDescription>{text('assistantHint')}</SheetDescription>
-          <Button
-            className='absolute right-3 top-3'
-            variant='ghost'
-            size='icon'
-            aria-label={text('cancel')}
-            onClick={() => controller.close()}
-          >
-            <X />
-          </Button>
-        </SheetHeader>
-        <div className='flex min-h-0 flex-1 flex-col'>
-          <ConfiguredChat controller={controller} record={record} />
+        <div className='flex h-full min-h-0 flex-col'>
+          <header className='space-y-1 border-b p-4'>
+            <h2 className='flex items-center gap-2 font-heading text-base font-medium'>
+              <Sparkles className='size-5' />
+              {text('assistant')}
+            </h2>
+            <p className='text-sm text-muted-foreground'>
+              {text('assistantHint')}
+            </p>
+          </header>
+          <div className='flex min-h-0 flex-1 flex-col'>
+            <ConfiguredChat
+              controller={controller}
+              record={record}
+              actions={actions}
+            />
+          </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </ChatSurface>
+    </>
   );
 }
 
@@ -256,9 +304,13 @@ function CrmAssistantPanel(): ReactElement | null {
 function ConfiguredChat({
   controller,
   record,
+  actions,
 }: {
   controller: AIChatController;
   record: RecordContext | undefined;
+  // The panel's expand and close buttons, in the chat's toolbar; above a
+  // notice while the chat cannot start.
+  actions: ReactNode;
 }): ReactElement {
   const { text } = useCrmText();
   const {
@@ -269,12 +321,15 @@ function ConfiguredChat({
     hasEnabledModels,
   } = useAI();
   const notice = (message: string, alert = true): ReactElement => (
-    <p
-      role={alert ? 'alert' : 'status'}
-      className='m-4 rounded-xl bg-muted p-4 text-sm text-muted-foreground'
-    >
-      {message}
-    </p>
+    <>
+      <div className='flex justify-end gap-1 border-b px-3 py-2'>{actions}</div>
+      <p
+        role={alert ? 'alert' : 'status'}
+        className='m-4 rounded-xl bg-muted p-4 text-sm text-muted-foreground'
+      >
+        {message}
+      </p>
+    </>
   );
   if (configurationStatus === 'loading')
     return notice(toText(text('assistantLoading')), false);
@@ -302,6 +357,7 @@ function ConfiguredChat({
           showEmployeeSelector={false}
           disclaimer={false}
           placeholder={toText(text('askHint'))}
+          headerActions={actions}
           // Files picked, dropped or pasted go to the plugin's storage and
           // reach the model with the message: documents (PDF, Word, Excel,
           // PowerPoint, text, CSV, JSON) as extracted text; images only for

@@ -311,6 +311,9 @@ const wording = {
     'Answers and proposals use the records you can access; every change waits for your confirmation.',
     '回答和建议基于你有权访问的记录；每一项修改都需要你确认。',
   ],
+  assistantExpand: ['Expand the assistant', '放大 AI 助手'],
+  assistantCollapse: ['Back to the side panel', '收回到侧边栏'],
+  assistantClose: ['Close the assistant', '关闭 AI 助手'],
   assumptions: ['Assumptions to verify', '待核实的推测'],
   toolCard: {
     awaiting: ['Waiting for you', '待你确认'],
