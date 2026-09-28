@@ -3,7 +3,7 @@ name: nococrm
 
 services:
   app:
-    image: ${NOCOBASE_IMAGE:-ghcr.io/nocobase/crm:latest}
+    image: ${NOCOBASE_IMAGE:-ghcr.io/nocobase/nococrm:latest}
     platform: linux/amd64
     restart: unless-stopped
     stop_grace_period: 30s

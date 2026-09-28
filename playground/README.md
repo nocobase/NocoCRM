@@ -1,6 +1,6 @@
 # Docker Compose playground
 
-Run the published NocoCRM image (`ghcr.io/nocobase/crm:latest`) with SQLite and a named volume for its database and uploads. This directory has its own `.env` and editable `config.yml`; it does not mount the application's root configuration or local data. Run the commands below from `playground/`.
+Run the published NocoCRM image (`ghcr.io/nocobase/nococrm:latest`) with SQLite and a named volume for its database and uploads. This directory has its own `.env` and editable `config.yml`; it does not mount the application's root configuration or local data. Run the commands below from `playground/`.
 
 ## Start
 

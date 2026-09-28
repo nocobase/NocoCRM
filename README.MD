@@ -98,7 +98,7 @@ Open `http://localhost:13000/main/`. See the [playground instructions](playgroun
 
 ### Build and publish
 
-`.github/workflows/docker.yml` builds a `linux/amd64` image for pull requests to `main`, pushes to `main`, `v*` tags, and manual runs. Every image must pass a container smoke test covering startup on a fresh SQLite database, the health endpoint, rejection of anonymous CRM API requests, client JavaScript and CSS, and shutdown. Only successful builds on `main` or a `v*` tag are published to `ghcr.io/nocobase/crm`; other manual runs and pull requests only validate the image.
+`.github/workflows/docker.yml` builds a `linux/amd64` image for pull requests to `main`, pushes to `main`, `v*` tags, and manual runs. Every image must pass a container smoke test covering startup on a fresh SQLite database, the health endpoint, rejection of anonymous CRM API requests, client JavaScript and CSS, and shutdown. Only successful builds on `main` or a `v*` tag are published to `ghcr.io/nocobase/nococrm`; other manual runs and pull requests only validate the image.
 
 Published images have a `sha-<full-commit-sha>` tag. Builds from `main` also update `latest`; release tags retain their Git name, such as `v1.0.0`. Publishing uses the repository's `GITHUB_TOKEN` with `packages: write`, so no registry password or SSH key is needed. The organization must allow Actions to publish packages; an existing package must grant this repository write access.
 
