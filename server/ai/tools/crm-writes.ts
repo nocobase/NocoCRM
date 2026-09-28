@@ -1,5 +1,5 @@
 import { defineTools } from '@nocobase/ai-employee';
-import type { AppAuthorizationService } from '@nocobase/app-plugin-authorization/server';
+import type { AppAuthorization } from '@nocobase/app-plugin-authorization/server';
 import type { Row } from '@nocobase/db';
 import type { Actor } from '../../providers/crm/authorization.js';
 import { convertLead } from '../../providers/crm/conversion.js';
@@ -54,7 +54,7 @@ function summary(entity: Entity, record: Row, values: unknown): Row {
 
 export function crmWriteTools(
   service: CrmService,
-  authz: Pick<AppAuthorizationService, 'for'>,
+  authz: Pick<AppAuthorization, 'for'>,
 ) {
   const actorOf = (ctx: unknown): Actor => actorFrom(authz, ctx);
   const common = {

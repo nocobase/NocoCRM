@@ -7,7 +7,8 @@ import {
 } from '@nocobase/app-server/config';
 import { type AuthorizationConfig } from '@nocobase/app-plugin-authorization/server';
 
-// Permission sets, page and database authorization are built in. The CRM's
+// Permission sets, database, pages, settings, composites and workspace
+// placement are built in. The CRM's
 // administrator is the plugin's own root set (`root`, unrestricted, kept to
 // at least one holder), so nothing here overrides the root set; the CRM's
 // two sales roles are its own sets, created by `provisionCrm`. The plugin's

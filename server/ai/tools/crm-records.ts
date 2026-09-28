@@ -1,5 +1,5 @@
 import { defineTools } from '@nocobase/ai-employee';
-import type { AppAuthorizationService } from '@nocobase/app-plugin-authorization/server';
+import type { AppAuthorization } from '@nocobase/app-plugin-authorization/server';
 import type { Row } from '@nocobase/db';
 import { capability, type Actor } from '../../providers/crm/authorization.js';
 import {
@@ -55,7 +55,7 @@ export async function guarded<T>(run: () => Promise<T>): Promise<T> {
 }
 
 export function actorFrom(
-  authz: Pick<AppAuthorizationService, 'for'>,
+  authz: Pick<AppAuthorization, 'for'>,
   ctx: unknown,
 ): Actor {
   const given = (ctx as { actor?: ToolActor } | undefined)?.actor;
@@ -81,7 +81,7 @@ function text(value: unknown): string | undefined {
 }
 
 export function crmActor(
-  authz: Pick<AppAuthorizationService, 'for'>,
+  authz: Pick<AppAuthorization, 'for'>,
   actor: ToolActor,
 ): Actor {
   const id = toText(actor.id);
@@ -152,7 +152,7 @@ function filtersOf(args: Row): ListOptions {
 
 export function crmRecordTools(
   service: CrmService,
-  authz: Pick<AppAuthorizationService, 'for'>,
+  authz: Pick<AppAuthorization, 'for'>,
 ) {
   const actorOf = (ctx: unknown): Actor => actorFrom(authz, ctx);
   return [

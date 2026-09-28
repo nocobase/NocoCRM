@@ -1,5 +1,5 @@
 import type { QueryAdapter, Row } from '@nocobase/db';
-import type { AppAuthorizationService } from '@nocobase/app-plugin-authorization/server';
+import type { AppAuthorization } from '@nocobase/app-plugin-authorization/server';
 import { convertLead } from './conversion.js';
 import { CrmError, definitions, object, stages, toText } from './schema.js';
 import { CrmService } from './service.js';
@@ -118,7 +118,7 @@ function zoneOffsetMinutes(timeZone: string, date: Date): number {
 
 export async function populateDemo(
   service: CrmService,
-  authz: AppAuthorizationService,
+  authz: AppAuthorization,
   actor: Actor,
   accounts: DemoAccountCreator,
 ): Promise<DemoStatus> {

@@ -346,6 +346,7 @@ const wording = {
       assign: ['Assign records to others', '分配记录给他人'],
       approve: ['Decide approvals', '审批'],
       export: ['Export records', '导出记录'],
+      manage: ['Manage', '管理'],
     },
     pages: {
       home: ['Overview', '工作台'],

@@ -18,9 +18,21 @@ import {
 // order: the workspace first, then the two object sections. A group without a path is menu-only; the sidebar renders it
 // as a headed section. Detail pages carry no navigation entry and select the
 // nearest visible ancestor, which keeps an object highlighted on its records.
+//
+// Every page states its check: a page left without one is hidden from all but
+// root. The page id is the route name, which the permission sets' page grants
+// name (crmPages in server/providers/crm/resources.ts); renaming one means
+// migrating those grants.
+const page = (name: string) =>
+  ({
+    resource: { type: 'page', id: name },
+    action: 'access',
+  }) as const;
+
 const appRoutes: AppClientRouteContribution = defineAppRoutes([
   {
     auth: 'required',
+    authz: page('home'),
     componentLoader: () => import('./pages/crm-dashboard.js'),
     name: 'home',
     navigation: { title: 'navigation.home', icon: LayoutDashboard },
@@ -38,6 +50,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
       name: `crm-${String(entity)}`,
       path: `/crm/${String(entity)}`,
       auth: 'required' as const,
+      authz: page(`crm-${String(entity)}`),
       navigation: {
         title: `crm.entities.${String(entity)}`,
         icon: icon as typeof Radar,
@@ -55,6 +68,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
       name: `crm-${String(entity)}`,
       path: `/crm/${String(entity)}`,
       auth: 'required' as const,
+      authz: page(`crm-${String(entity)}`),
       navigation: {
         title: `crm.entities.${String(entity)}`,
         icon: icon as typeof Radar,
@@ -66,6 +80,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     name: 'crm-record',
     path: '/crm/:entity/:id',
     auth: 'required',
+    authz: page('crm-record'),
     componentLoader: () => import('./pages/crm-detail.js'),
     // A tab has an address of its own (/crm/accounts/<id>/contacts), read by
     // useDetailTab; the page draws the tab, see pages/crm-record-tab.tsx.
@@ -81,22 +96,26 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     name: 'crm-notifications',
     path: '/crm/notifications',
     auth: 'required',
+    authz: page('crm-notifications'),
     componentLoader: () => import('./pages/crm-notifications.js'),
   },
   {
     auth: 'guest',
+    authz: 'skip',
     componentLoader: () => import('./pages/auth/login.js'),
     name: 'login',
     path: '/login',
   },
   {
     auth: 'guest',
+    authz: 'skip',
     componentLoader: () => import('./pages/auth/forgot-password.js'),
     name: 'forgot-password',
     path: '/forgot-password',
   },
   {
     auth: 'guest',
+    authz: 'skip',
     componentLoader: () => import('./pages/auth/reset-password.js'),
     name: 'reset-password',
     path: '/reset-password',

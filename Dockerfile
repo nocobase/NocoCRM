@@ -13,8 +13,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,target=/pnpm/store pnpm install --frozen-lockfile
 
 COPY . .
-ARG APP_BASE_PATH=/main
-ENV APP_BASE_PATH=${APP_BASE_PATH}
+# The client is not tied to a mount path (a relocatable build): the container
+# chooses it at run time with -e APP_BASE_PATH=<path>.
 # The existing build installs and verifies dist/node_modules, including native modules.
 RUN --mount=type=cache,target=/pnpm/store pnpm build \
     && node scripts/utils/prepare-container-dist.mjs
@@ -23,7 +23,6 @@ FROM node:${NODE_VERSION}-bookworm-slim AS runtime
 ARG PNPM_VERSION
 RUN npm install --global pnpm@${PNPM_VERSION} && npm cache clean --force
 
-ARG APP_BASE_PATH=/main
 # pnpm 11 otherwise tries to reinstall the already packaged, pruned dependencies on start.
 # Its built-in shell lets the server receive stop signals without an intermediate /bin/sh.
 ENV NODE_ENV=production \
@@ -31,7 +30,7 @@ ENV NODE_ENV=production \
     pnpm_config_shell_emulator=true \
     APP_SERVER_HOST=0.0.0.0 \
     APP_SERVER_PORT=13000 \
-    APP_BASE_PATH=${APP_BASE_PATH}
+    APP_BASE_PATH=/main
 
 # Keep the dist directory name: the runtime uses it to resolve built client paths.
 # Persistent storage (database, uploads, sessions, logs, workflow artifacts) lives

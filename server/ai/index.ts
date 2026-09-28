@@ -1,6 +1,6 @@
 import { AIResourceRegistrar } from '@nocobase/app-plugin-ai-employee/server';
 import type { AIEmployeeManager, ToolsManager } from '@nocobase/ai-employee';
-import type { AppAuthorizationService } from '@nocobase/app-plugin-authorization/server';
+import type { AppAuthorization } from '@nocobase/app-plugin-authorization/server';
 import type { CrmService } from '../providers/crm/service.js';
 import {
   CRM_ASSISTANT,
@@ -18,7 +18,7 @@ import { crmWriteTools } from './tools/crm-writes.js';
 export class CrmAiResources extends AIResourceRegistrar {
   constructor(
     private readonly service: CrmService,
-    private readonly authz: Pick<AppAuthorizationService, 'for'>,
+    private readonly authz: Pick<AppAuthorization, 'for'>,
     private readonly options: CrmAssistantOptions,
   ) {
     super({ source: 'crm' });

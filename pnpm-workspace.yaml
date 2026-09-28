@@ -178,6 +178,14 @@ minimumReleaseAgeExclude:
   - '@nocobase/app-skills@0.1.0-beta.14'
   - '@nocobase/dev-config@0.1.0-beta.12'
   - '@nocobase/app-tools@0.1.0-beta.4'
+  - '@nocobase/app-cli@1.0.0-beta.8'
+  - '@nocobase/app-client@1.0.0-beta.22'
+  - '@nocobase/app-plugin-ai-employee@1.0.0-beta.25'
+  - '@nocobase/app-plugin-file@0.1.0-beta.16'
+  - '@nocobase/app-plugin-i18n@0.1.0-beta.10'
+  - '@nocobase/app-server@1.0.0-beta.29'
+  - '@nocobase/app-skills@0.1.0-beta.18'
+  - '@nocobase/dev-config@0.1.0-beta.14'
 
 # One SQLite binding for the whole tree: the NocoBase packages accept 12 or 13,
 # and loading two builds of the native addon in one process crashes it.
@@ -185,4 +193,4 @@ overrides:
   better-sqlite3: 13.0.3
   # The authorization core still asks for an older database package; one copy
   # keeps its connection types compatible with the rest of the tree.
-  '@nocobase/db': 1.0.0-beta.15
+  '@nocobase/db': 1.0.0-beta.16

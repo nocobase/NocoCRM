@@ -1,9 +1,10 @@
 import { toText } from './schema.js';
-import type {
-  AppAuthorizationService,
-  AuthorizationScope,
-  DatabaseAuthorizationConditions,
-  DatabaseAuthorizationParams,
+import {
+  grantBacked,
+  type AppAuthorization,
+  type AuthorizationContext,
+  type DatabaseAuthorizationConditions,
+  type DatabaseAuthorizationParams,
 } from '@nocobase/app-plugin-authorization/server';
 import type {
   ComparisonOperator,
@@ -28,6 +29,7 @@ import {
   CRM_SALES_RESOURCE,
   crmEntityResources,
   crmPages,
+  capabilityActions,
   crmPermissionSet,
   crmSalesResource,
   entityGrant,
@@ -39,11 +41,11 @@ import {
   type EntityScopes,
   type RecordScope,
 } from './resources.js';
-import type { PermissionGrant } from '@nocobase/authorization/permissions';
+import type { PermissionGrant } from '@nocobase/authorization/core';
 
 export interface Actor {
   id: string;
-  scope: AuthorizationScope;
+  scope: AuthorizationContext;
   locale: string;
   decisions?: Record<string, DatabaseAuthorizationConditions | null>;
   capabilities?: Record<string, boolean>;
@@ -54,52 +56,59 @@ export interface Actor {
   after?: (callback: () => Promise<void>) => void;
 }
 export { roles, roleKey, roleOf, ROOT_SET } from './roles.js';
-export function registerCrmResources(authz: AppAuthorizationService): void {
+export function registerCrmResources(authz: AppAuthorization): void {
   // Field, primary-key and ownership metadata come from the database; the
   // record-access strategies read `ownerId` and `createdById` by default.
   for (const entity of entities)
-    authz.db.collections.add({
+    authz.database.collections.add({
       name: definitions[entity].table,
       title: { key: `crm.entities.${entity}`, ns: 'crm' },
       actions: ['read', 'create', 'update', 'delete'],
     });
-  // The business operations the Permission Sets page shows and edits
-  // (resources.ts): one resource per object, one for the capabilities, in
-  // the CRM's own group; and the application's pages, so a set can grant
-  // entry page by page.
-  authz.resourceGroups.add({
+  // The CRM's own capability resource type (`crm/sales`, and `crm/settings`
+  // for the administrator's `manage`): a record type whose grants permit
+  // outright; an undeclared action is denied even to root. Registered before
+  // the composites that compose it.
+  authz.resourceTypes.add({
+    type: 'crm',
+    actions: [...capabilityActions, 'manage'],
+    authorize: grantBacked(),
+  });
+  // The CRM settings page (client/routes.ts) checks `settings/crm manage`;
+  // settings are a catalog, so an item nobody registered is denied to all.
+  authz.settings.add({
+    id: 'crm',
+    title: { key: 'crm.settings', ns: 'crm' },
+    actions: [
+      { name: 'manage', title: { key: 'crm.authz.actions.manage', ns: 'crm' } },
+    ],
+  });
+  // The composites the permission workspace shows and edits (resources.ts):
+  // one per object, listed in the CRM's own subsection under Business, and
+  // the capabilities in one under Administration. Pages need no server
+  // registration: the workspace lists them from the client route tree.
+  authz.ui.sections.add({
     name: CRM_GROUP,
     title: { key: 'crm.authz.group', ns: 'crm' },
-    category: 'business',
+    parent: 'business',
   });
-  authz.resourceGroups.add({
+  authz.ui.sections.add({
     name: CRM_CAPABILITIES_GROUP,
     title: { key: 'crm.authz.capabilities', ns: 'crm' },
-    category: 'administration',
+    parent: 'administration',
   });
   for (const entity of entities)
-    crmEntityResources[entity].register(authz.resources);
-  crmSalesResource.register(authz.resources);
-  for (const page of crmPages)
-    authz.pages.add({
-      name: page.name,
-      title: page.title,
-      actions: ['access'],
-    });
-  // The CRM's capability resource (`crm/sales`, `crm/settings`): a plain
-  // resource type resolved from grants, registered on the handler registry.
-  authz.resourceTypes.add({
-    resourceType: 'crm',
-    async authorize(request, context) {
-      const grants = await context.grants.resolve({
-        principal: request.principal,
-        subjects: request.subjects,
-        resource: request.resource,
-        action: request.action,
-      });
-      return { effect: grants.length ? 'permit' : 'deny', reasons: [] };
-    },
+    authz.ui.place(
+      authz.compositeResources.define(crmEntityResources[entity]),
+      { section: CRM_GROUP },
+    );
+  authz.ui.place(authz.compositeResources.define(crmSalesResource), {
+    section: CRM_CAPABILITIES_GROUP,
   });
+  authz.ui.place(
+    { type: 'settings', id: 'crm' },
+    { section: CRM_CAPABILITIES_GROUP },
+  );
 }
 
 // The accounts that can hold a CRM role: every user that has not been deleted.
@@ -124,7 +133,7 @@ export async function listUsers(
 }
 
 export async function provisionCrm(
-  authz: AppAuthorizationService,
+  authz: AppAuthorization,
   database: DatabaseManager,
 ): Promise<void> {
   const salesRoles = roles.filter((role) => role !== 'system-administrator');
@@ -191,6 +200,20 @@ export async function provisionCrm(
     }
     await mark('authz-resources-v1');
   }
+  // Authorization 0.1.0-beta.10 (plugin 0.2.0-beta.21) stores business
+  // operations as the reserved type `composite` with their data scopes under
+  // `scopes`, and no longer reads the former type `resource`, whose grants
+  // would silently permit nothing. Rewrite every set's such grants once, in
+  // the same resource ids, actions and scope selections. This runs in boot,
+  // before the plugin scans the stored grants at start.
+  if (!(await marker('authz-composite-v1'))) {
+    for (const set of await authz.permissionSets.list()) {
+      const grants = compositeGrants(set.grants);
+      if (grants)
+        await authz.permissionSets.update(set.key, { ...set, grants });
+    }
+    await mark('authz-composite-v1');
+  }
   // The "manage" capability became "export" (all it ever gated); a set
   // translated while it was still called manage would hold a grant on an
   // action the resource no longer declares, which the plugin rejects.
@@ -200,7 +223,7 @@ export async function provisionCrm(
       if (!set) continue;
       let changed = false;
       const grants = set.grants.map((grant) =>
-        grant.resource.type === 'resource' &&
+        grant.resource.type === 'composite' &&
         grant.resource.id === CRM_SALES_RESOURCE &&
         grant.actions.some((a) => a.action === 'manage')
           ? ((changed = true),
@@ -216,42 +239,6 @@ export async function provisionCrm(
         await authz.permissionSets.update(set.key, { ...set, grants });
     }
     await mark('authz-export-v1');
-  }
-  const approvalPolicy = await database
-    .query()
-    .selectFrom('crmSettings')
-    .select('id')
-    .where('id', '=', 'approval-delete-v1')
-    .executeTakeFirst();
-  if (!approvalPolicy) {
-    const representative = await authz.permissionSets.get(
-      roleKey('sales-representative'),
-    );
-    if (representative) {
-      const grant = authz.db.grant('crmApprovals', {
-        delete: { recordAccess: ['recordsIOwn'] },
-      });
-      const grants = representative.grants.map((existing) =>
-        existing.resource.type === grant.resource.type &&
-        existing.resource.id === grant.resource.id &&
-        !existing.actions.some((action) => action.action === 'delete')
-          ? { ...existing, actions: [...existing.actions, ...grant.actions] }
-          : existing,
-      );
-      await authz.permissionSets.update(representative.key, {
-        ...representative,
-        grants,
-      });
-    }
-    await database
-      .query()
-      .insertInto('crmSettings')
-      .values({
-        id: 'approval-delete-v1',
-        value: '{"version":1}',
-        updatedAt: new Date(),
-      })
-      .execute();
   }
   const initialized = await database
     .query()
@@ -284,6 +271,30 @@ export async function provisionCrm(
         })
         .execute();
   }
+}
+
+// Rewrites grants of the former type `resource` into `composite` grants:
+// `{ type: 'resource', records: 'allRecords' }` becomes
+// `{ type: 'composite', scopes: { records: 'allRecords' } }`, and a policy
+// carrying no scope is dropped. Returns undefined when nothing needed it.
+export function compositeGrants(
+  grants: readonly PermissionGrant[],
+): PermissionGrant[] | undefined {
+  let changed = false;
+  const result = grants.map((grant) => {
+    if (grant.resource.type !== 'resource') return grant;
+    changed = true;
+    return {
+      resource: { type: 'composite', id: grant.resource.id },
+      actions: grant.actions.map(({ action, policy }) => {
+        const { type: _type, ...scopes } = policy ?? {};
+        return Object.keys(scopes).length
+          ? { action, policy: { type: 'composite', scopes } }
+          : { action };
+      }),
+    };
+  });
+  return changed ? result : undefined;
 }
 
 // Rewrites a set's grants from the raw form provisioning used to write

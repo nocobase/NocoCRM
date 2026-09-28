@@ -22,7 +22,7 @@ import { CRM_ASSISTANT } from '../../ai/employees/crm-assistant.js';
 import { isCountry, isSubdivision, subdivisionCode } from './geography.js';
 import { randomUUID } from 'node:crypto';
 import type { DatabaseManager, QueryAdapter, Row } from '@nocobase/db';
-import type { AppAuthorizationService } from '@nocobase/app-plugin-authorization/server';
+import type { AppAuthorization } from '@nocobase/app-plugin-authorization/server';
 import {
   assertFields,
   capability,
@@ -124,7 +124,7 @@ const sellerRoles = ['sales-representative', 'sales-manager'];
 export class CrmService {
   constructor(
     public readonly database: DatabaseManager,
-    public readonly authz: AppAuthorizationService,
+    public readonly authz: AppAuthorization,
     // The workflow service, looked up when needed because it is registered
     // after this one; absent in tests and in an application without the
     // workflow plugin, which then does the follow-through directly.

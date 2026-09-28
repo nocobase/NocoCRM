@@ -30,3 +30,6 @@ coverage/
 
 # Generated mirror of .agents/skills for Claude Code (skills:sync).
 /.claude/skills/
+
+# Written by `pnpm nocobase db apply` and `pnpm dev` after migrating; derived, never read back.
+database/*/collections/

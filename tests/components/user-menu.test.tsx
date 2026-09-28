@@ -20,7 +20,7 @@ vi.mock('@nocobase/i18n/client', () => ({
       options.defaultValue,
   }),
 }));
-vi.mock('sonner', () => ({ toast: { error: state.error } }));
+vi.mock('@/components/ui/toast', () => ({ toast: { add: state.error } }));
 vi.mock('../../client/layouts/components/language-switcher.js', () => ({
   LanguageSwitcher: () => null,
 }));
@@ -38,9 +38,11 @@ it('reports an API sign-out failure without refreshing the session', async () =>
     await screen.findByRole('menuitem', { name: 'Sign out' }),
   );
   await waitFor(() =>
-    expect(state.error).toHaveBeenCalledWith(
-      'Unable to sign out. Please try again.',
-    ),
+    expect(state.error).toHaveBeenCalledWith({
+      type: 'error',
+      priority: 'high',
+      title: 'Unable to sign out. Please try again.',
+    }),
   );
   expect(state.refresh).not.toHaveBeenCalled();
 });

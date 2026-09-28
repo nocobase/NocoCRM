@@ -7,6 +7,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from 'react';
+import { useApiClient } from '@nocobase/app-client';
 import { Maximize2, PanelRight, Sparkles, X } from 'lucide-react';
 import {
   AIChatFloatingTrigger,
@@ -15,7 +16,7 @@ import {
   AIPageContextScope,
   ChatSurface,
   NocoBaseAIRootProvider,
-  nocobaseAIService,
+  NocoBaseAIService,
   useAI,
   useAIChat,
   useAIChatController,
@@ -108,17 +109,20 @@ export function CrmAssistantProvider({
   const position = toText(text('assistantEmployeeRole'));
   const bio = toText(text('assistantEmployeeBio'));
   const greeting = toText(text('assistantEmployeeGreeting'));
-  // A new service identity makes the root provider list employees again,
-  // so this changes with the language and nothing else.
+  // The plugin's service over the application's API client, as the root
+  // provider builds it when given none. A new service identity makes the
+  // root provider list employees again, so this changes with the language
+  // (and the client) and nothing else.
+  const api = useApiClient();
   const service = useMemo(
     () =>
-      localizedService(nocobaseAIService, {
+      localizedService(new NocoBaseAIService(api), {
         nickname,
         position,
         bio,
         greeting,
       }),
-    [nickname, position, bio, greeting],
+    [api, nickname, position, bio, greeting],
   );
   return (
     // The registry's root provider discovers employees and models once for

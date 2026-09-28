@@ -1,45 +1,50 @@
 import {
-  defineAuthorizationResource,
-  type AuthorizationContribution,
-  type ResourceTitle,
+  defineCompositeResource,
+  type AuthorizationTitle,
+  type CompositeResourceContribution,
+  type PermissionGrant,
 } from '@nocobase/authorization/core';
-import { permissionSet } from '@nocobase/authorization/permissions';
-import type { PermissionGrant } from '@nocobase/authorization/permissions';
-import { defineDatabasePermission } from '@nocobase/app-plugin-authorization/server';
+import { definePermissionSet } from '@nocobase/authorization/permission-sets';
+import {
+  defineDatabasePermission,
+  recordAccess,
+} from '@nocobase/app-plugin-authorization/server';
 import { definitions, entities, type Entity } from './schema.js';
 import { roleKey } from './roles.js';
 
-// The CRM's permission model as the authorization plugin's business
-// operations: what each object supports (view, create, edit, delete, each
+// The CRM's permission model as the authorization plugin's composite
+// resources (its business operations): what each object supports (view, create, edit, delete, each
 // with the record scopes it can be limited to) and the three capabilities
 // beyond one's own records (assign, approve, manage). Declaring them this
 // way is what makes the permission sets readable and editable on the
-// Permission Sets page; the grants a set stores reference these operations
+// Permission Sets page; the grants a set stores reference these composites
 // and the plugin expands them into the collection grants the service layer
 // authorizes against, so `conditions()` and `capability()` are unchanged.
 // Portable: no registration, no database, no assignment happens here.
 
 // The application's locale namespace is its package name, `crm`, and the
 // CRM's own keys sit under `crm.` inside it (client/locales/crm).
-const crm = (key: string): ResourceTitle => ({ key: `crm.${key}`, ns: 'crm' });
+const crm = (key: string): AuthorizationTitle => ({
+  key: `crm.${key}`,
+  ns: 'crm',
+});
 
+// The permission workspace's subsections the CRM's composites are listed in:
+// the objects under Business, the capabilities (which grant the CRM's own
+// resource type rather than collections) under Administration.
 export const CRM_GROUP = 'crm';
-// A business group may only grant collections; the capabilities grant the
-// CRM's own resource type, so they sit in an administration group and the
-// page lists them under Administration.
 export const CRM_CAPABILITIES_GROUP = 'crm-capabilities';
 export const CRM_SALES_RESOURCE = 'crm.sales';
 // One scope key for every object operation: the set stores
 // `{ view: { records: 'allRecords' } }` and the page shows one selector.
 export const RECORDS_SCOPE = 'records';
 
-// The plugin's built-in record scopes, referenced by key; they apply to
-// every registered collection and read `ownerId` / `createdById`.
-const collection = { type: 'database.collection', id: '*' } as const;
+// The plugin's built-in record access, referenced by key; it applies to
+// every registered collection and reads `ownerId` / `createdById`.
 export const recordScopes = {
-  allRecords: { key: 'allRecords', resources: [collection] },
-  recordsIOwn: { key: 'recordsIOwn', resources: [collection] },
-  recordsICreated: { key: 'recordsICreated', resources: [collection] },
+  allRecords: recordAccess.allRecords,
+  recordsIOwn: recordAccess.recordsIOwn,
+  recordsICreated: recordAccess.recordsICreated,
 } as const;
 export type RecordScope = keyof typeof recordScopes;
 
@@ -71,10 +76,9 @@ function entityResource(entity: Entity) {
     defineDatabasePermission((p) =>
       configure(p.collection(table).title(crm(`entities.${entity}`))),
     );
-  return defineAuthorizationResource(entityResourceName(entity), (r) =>
+  return defineCompositeResource(entityResourceName(entity), (r) =>
     r
       .title(crm(`entities.${entity}`))
-      .group(CRM_GROUP)
       .action('view', (a) =>
         a.title(crm('authz.actions.view')).grant(
           RECORDS_SCOPE,
@@ -128,11 +132,11 @@ export const crmEntityResources = Object.fromEntries(
 
 // A capability is a plain grant on the CRM's own resource type (`crm/sales`),
 // which `capability()` asks for; wrapped as a contribution so it can be an
-// action of a business operation. Assign: give a record to someone else;
+// action of a composite. Assign: give a record to someone else;
 // approve: decide approval requests; export: take records out as a file.
 // Whether a user may act on records they do not own is not a capability
 // but the edit scope of each object.
-function capability(action: string): AuthorizationContribution {
+function capability(action: string): CompositeResourceContribution {
   return {
     build: () => ({
       grants: [
@@ -145,12 +149,11 @@ function capability(action: string): AuthorizationContribution {
 export const capabilityActions = ['assign', 'approve', 'export'] as const;
 export type CapabilityAction = (typeof capabilityActions)[number];
 
-export const crmSalesResource = defineAuthorizationResource(
+export const crmSalesResource = defineCompositeResource(
   CRM_SALES_RESOURCE,
   (r) =>
     r
       .title(crm('authz.sales'))
-      .group(CRM_CAPABILITIES_GROUP)
       .action('assign', (a) =>
         a.title(crm('authz.actions.assign')).grant(capability('assign')),
       )
@@ -162,19 +165,21 @@ export const crmSalesResource = defineAuthorizationResource(
       ),
 );
 
-// The application's pages, by route name (client/routes.ts): the plugin
-// checks `page/<route name> access` before rendering a route, and the
-// Pages tab of a permission set lists them.
-export const crmPages: readonly { name: string; title: ResourceTitle }[] = [
-  { name: 'home', title: crm('authz.pages.home') },
-  { name: 'crm-actions', title: crm('actions') },
-  ...entities.map((entity) => ({
-    name: `crm-${entity}`,
-    title: crm(`entities.${entity}`),
-  })),
-  { name: 'crm-record', title: crm('authz.pages.record') },
-  { name: 'crm-notifications', title: crm('authz.pages.notifications') },
-];
+// The application's pages, by the page id each route declares as its `authz`
+// (client/routes.ts, the route name): the client checks `page/<id> access`
+// before rendering a route, and the permission workspace lists the pages
+// from the client route tree.
+export const crmPages: readonly { name: string; title: AuthorizationTitle }[] =
+  [
+    { name: 'home', title: crm('authz.pages.home') },
+    { name: 'crm-actions', title: crm('actions') },
+    ...entities.map((entity) => ({
+      name: `crm-${entity}`,
+      title: crm(`entities.${entity}`),
+    })),
+    { name: 'crm-record', title: crm('authz.pages.record') },
+    { name: 'crm-notifications', title: crm('authz.pages.notifications') },
+  ];
 
 export function pageGrant(name: string): PermissionGrant {
   return {
@@ -213,7 +218,7 @@ export function crmPermissionSet(role: string) {
   if (role === 'system-administrator')
     throw new Error('The administrator is the root set, not a CRM set.');
   const manager = role === 'sales-manager';
-  let set = permissionSet(roleKey(role)).title(
+  let set = definePermissionSet(roleKey(role)).title(
     manager ? 'Sales manager / 销售经理' : 'Salesperson / 销售人员',
   );
   for (const page of crmPages) set = set.grant(pageGrant(page.name));

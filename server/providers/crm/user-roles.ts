@@ -1,5 +1,5 @@
 import type { DatabaseConnection } from '@nocobase/db';
-import type { AppAuthorizationService } from '@nocobase/app-plugin-authorization/server';
+import type { AppAuthorization } from '@nocobase/app-plugin-authorization/server';
 import {
   UserManagementError,
   UserRoleScopeError,
@@ -18,7 +18,7 @@ const ADMINISTRATOR = 'system-administrator';
 const USERS_I18N_NAMESPACE = '@nocobase/app-plugin-users';
 
 export function createCrmUserRoleScope(
-  authorization: Pick<AppAuthorizationService, 'permissionSets'>,
+  authorization: Pick<AppAuthorization, 'permissionSets'>,
 ): UserRoleScope {
   const managed = roles.map(roleKey);
   const sets = (connection?: DatabaseConnection) =>

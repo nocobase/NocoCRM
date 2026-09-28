@@ -27,7 +27,7 @@ import {
 import {
   createAppAuthorization,
   authorizationToken,
-  type AppAuthorizationService,
+  type AppAuthorization,
 } from '@nocobase/app-plugin-authorization/server';
 import { authenticationToken } from '@nocobase/app-plugin-authentication';
 import { createAppPaths } from '@nocobase/app-server/config';
@@ -73,7 +73,22 @@ import {
 import type { Application } from '@nocobase/app-server/application';
 
 let database: DatabaseManager;
-let authorization: AppAuthorizationService;
+let authorization: AppAuthorization;
+// A plain collection grant as a permission set may store it, with the record
+// access and fields each action keeps.
+const collectionGrant = (
+  table: string,
+  actions: Record<
+    string,
+    { fields?: '*' | readonly string[]; recordAccess?: readonly string[] }
+  >,
+) => ({
+  resource: { type: 'database.collection', id: table },
+  actions: Object.entries(actions).map(([action, policy]) => ({
+    action,
+    policy: { type: 'database', ...policy },
+  })),
+});
 let service: CrmService;
 // Users whose password the demo import set back through the users plugin.
 const passwordResets: string[] = [];
@@ -888,12 +903,17 @@ describe('CRM API security and domain rules', () => {
     expect(shared.attachments).toEqual(['private-file']);
   });
   it('declares the CRM permissions as business operations the permission sets reference', async () => {
-    // Every object is a resource with the four operations, in the CRM's
-    // business group; the capabilities are a resource of their own.
-    const defined = authorization.resources.definitionsList();
+    // Every object is a composite with the four operations, listed in the
+    // CRM's subsection; the capabilities are a composite of their own.
+    const defined = authorization.compositeResources.list();
     for (const entity of entities) {
       const resource = defined.find((d) => d.name === `crm.${entity}`);
-      expect(resource?.group).toBe('crm');
+      expect(
+        authorization.ui.placementOf({
+          type: 'composite',
+          id: `crm.${entity}`,
+        })?.section,
+      ).toBe('crm');
       expect(resource?.actions.map((a) => a.name)).toEqual([
         'view',
         'create',
@@ -901,10 +921,10 @@ describe('CRM API security and domain rules', () => {
         'delete',
       ]);
       // View, edit and delete offer record scopes; create has none.
-      expect(Object.keys(resource!.actions[0]!.scopes ?? {})).toEqual([
+      expect(resource!.actions[0]!.dataScopes?.map((d) => d.key)).toEqual([
         'records',
       ]);
-      expect(resource!.actions[1]!.scopes ?? {}).toEqual({});
+      expect(resource!.actions[1]!.dataScopes ?? []).toEqual([]);
     }
     expect(
       defined.find((d) => d.name === 'crm.sales')?.actions.map((a) => a.name),
@@ -914,7 +934,7 @@ describe('CRM API security and domain rules', () => {
       roleKey('sales-representative'),
     );
     const types = new Set(rep!.grants.map((g) => g.resource.type));
-    expect([...types].sort()).toEqual(['page', 'resource']);
+    expect([...types].sort()).toEqual(['composite', 'page']);
     expect(
       rep!.grants
         .filter((g) => g.resource.type === 'page')
@@ -929,11 +949,10 @@ describe('CRM API security and domain rules', () => {
     ]);
     expect(
       (
-        leads?.actions.find((a) => a.action === 'edit')?.policy as Record<
-          string,
-          unknown
-        >
-      )?.records,
+        leads?.actions.find((a) => a.action === 'edit')?.policy as {
+          scopes?: Record<string, unknown>;
+        }
+      )?.scopes?.records,
     ).toBe('recordsIOwn');
     const manager = await authorization.permissionSets.get(
       roleKey('sales-manager'),
@@ -948,7 +967,7 @@ describe('CRM API security and domain rules', () => {
     expect((await authorization.permissionSets.get('root'))?.grants).toEqual(
       [],
     );
-    expect(await authorization.permissionSets.isUnrestricted('root')).toBe(
+    expect(authorization.permissionSets.protection('root')?.unrestricted).toBe(
       true,
     );
     expect(
@@ -1013,12 +1032,12 @@ describe('CRM API security and domain rules', () => {
     // A set provisioned before the operations existed is translated into
     // them once, keeping its scopes; grants the CRM does not own stay.
     const legacy = translateLegacyGrants([
-      authorization.db.grant('crmLeads', {
+      collectionGrant('crmLeads', {
         read: { fields: '*', recordAccess: ['allRecords'] },
         create: { fields: '*' },
         update: { fields: '*', recordAccess: ['recordsIOwn'] },
       }),
-      authorization.db.grant('crmApprovals', {
+      collectionGrant('crmApprovals', {
         read: { fields: '*', recordAccess: ['allRecords'] },
         delete: { recordAccess: ['recordsICreated'] },
       }),
@@ -1055,6 +1074,45 @@ describe('CRM API security and domain rules', () => {
     ]);
     // Already translated grants are left alone.
     expect(translateLegacyGrants(legacy!)).toBeUndefined();
+    // A set stored while business operations were the type `resource` is
+    // rewritten once into `composite` grants with the same ids, actions and
+    // record scopes, which the new core reads again.
+    const current = (await authorization.permissionSets.get(
+      roleKey('sales-representative'),
+    ))!;
+    await authorization.permissionSets.update(current.key, {
+      ...current,
+      grants: current.grants.map((g) =>
+        g.resource.type === 'composite'
+          ? {
+              resource: { type: 'resource', id: g.resource.id },
+              actions: g.actions.map(({ action, policy }) => ({
+                action,
+                policy: {
+                  type: 'resource',
+                  ...(policy as { scopes?: Record<string, unknown> })?.scopes,
+                },
+              })),
+            }
+          : g,
+      ),
+    });
+    await database
+      .query()
+      .deleteFrom('crmSettings')
+      .where('id', '=', 'authz-composite-v1')
+      .execute();
+    await provisionCrm(authorization, database);
+    expect(
+      (await authorization.permissionSets.get(roleKey('sales-representative')))!
+        .grants,
+    ).toEqual(current.grants);
+    expect(
+      await actor('rep').scope.can({
+        resource: { type: 'composite', id: 'crm.leads' },
+        action: 'create',
+      }),
+    ).toBe(true);
   });
   it('enforces field permissions in records, history, export, search and updates', async () => {
     const readable = fieldsFor('leads').filter(
@@ -1063,7 +1121,7 @@ describe('CRM API security and domain rules', () => {
     await authorization.permissionSets.create({
       key: 'limited',
       grants: [
-        authorization.db.grant('crmLeads', {
+        collectionGrant('crmLeads', {
           read: { fields: readable, recordAccess: ['allRecords'] },
           update: { fields: ['name'], recordAccess: ['allRecords'] },
         }),
@@ -2570,10 +2628,10 @@ it('reverses the CRM migration on a real SQLite database', async () => {
       directory: resolve('database/main/migrations'),
       packageName: 'crm',
     });
-    expect((await migrator.latest()).executed).toHaveLength(27);
+    expect((await migrator.latest()).executed).toHaveLength(28);
     expect(await isolated.builder().hasCollection('crmLeads')).toBe(true);
     expect((await migrator.latest()).executed).toEqual([]);
-    expect((await migrator.rollback()).rolledBack).toHaveLength(27);
+    expect((await migrator.rollback()).rolledBack).toHaveLength(28);
     expect(await isolated.builder().hasCollection('crmLeads')).toBe(false);
     expect(await isolated.builder().hasCollection('crmAccounts')).toBe(false);
   } finally {
