@@ -4,6 +4,7 @@ import {
   type AppClientRouteContribution,
 } from '@nocobase/app-client/plugins';
 import {
+  BookOpenText,
   Building2,
   CalendarDays,
   ContactRound,
@@ -75,6 +76,23 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
       },
       componentLoader: () => import('./pages/crm-list.js'),
     })),
+  },
+  // How the AI works: its skills, read by everyone and edited by whoever
+  // holds manageSkills. Later AI pages (suggestions, what the AI is doing)
+  // join this section.
+  {
+    name: 'crm-ai',
+    navigation: { title: 'crm.navigation.ai' },
+    children: [
+      {
+        name: 'crm-skills',
+        path: '/crm/skills',
+        auth: 'required',
+        authz: page('crm-skills'),
+        navigation: { title: 'crm.skillsPage.title', icon: BookOpenText },
+        componentLoader: () => import('./pages/crm-skills.js'),
+      },
+    ],
   },
   {
     name: 'crm-record',

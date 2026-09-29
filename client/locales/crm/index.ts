@@ -346,15 +346,50 @@ const wording = {
       assign: ['Assign records to others', '分配记录给他人'],
       approve: ['Decide approvals', '审批'],
       export: ['Export records', '导出记录'],
+      manageSkills: ['Edit sales skills', '编辑销售技能'],
       manage: ['Manage', '管理'],
     },
     pages: {
       home: ['Overview', '工作台'],
       record: ['Record pages', '记录详情页'],
       notifications: ['Notifications', '通知中心'],
+      skills: ['Sales skills', '销售技能'],
     },
   },
   settings: ['System settings', '系统设置'],
+  skillsPage: {
+    title: ['Sales skills', '销售技能'],
+    description: [
+      'How the AI works on leads. The built-in method ships with NocoCRM and changes with it; add your company’s own practice below and the AI follows both.',
+      'AI 处理线索时遵循的做法。内置做法随 NocoCRM 升级；在下面补充本公司的做法，AI 会一并遵守。',
+    ],
+    builtIn: ['Built in', '内置'],
+    showMethod: ['Show the built-in method', '查看内置做法'],
+    hideMethod: ['Hide the built-in method', '收起内置做法'],
+    notes: ['Our additions', '本公司的补充说明'],
+    notesHint: [
+      'Additions only add to the built-in method; where they conflict with its boundaries, the built-in method applies.',
+      '补充说明只能补充内置做法；和内置做法的边界冲突时，以内置做法为准。',
+    ],
+    noNotes: ['No additions yet.', '还没有补充说明。'],
+    addNotes: ['Add', '添加补充说明'],
+    placeholder: [
+      'For example: rate every government or state-owned lead A and assign it to Li Ming.',
+      '例如：政府和国企客户一律评为 A 级，交给李明负责。',
+    ],
+    saved: [
+      'Saved. The AI uses it from its next task.',
+      '已保存，AI 从下一次处理开始使用。',
+    ],
+    updated: [
+      'Last changed by {{name}} on {{date}}',
+      '{{name}} 最后修改于 {{date}}',
+    ],
+    empty: [
+      'No skills are loaded. Check that the AI Employee plugin is enabled.',
+      '没有加载到技能，请检查 AI 员工插件是否已启用。',
+    ],
+  },
   settingsDescription: [
     'Business defaults, reminders, and the demo dataset.',
     '配置业务选项、提醒和演示数据',
@@ -661,6 +696,7 @@ const wording = {
   navigation: {
     action: ['Action', '行动'],
     relations: ['Relationships', '关系'],
+    ai: ['AI', 'AI'],
   },
   entities: {
     leads: ['Leads', '线索'],

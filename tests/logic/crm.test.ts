@@ -48,6 +48,11 @@ import {
   salesGrant,
 } from '../../server/providers/crm/resources.js';
 import { CrmService } from '../../server/providers/crm/service.js';
+import {
+  CrmSkillNotes,
+  composeSkill,
+} from '../../server/providers/crm/skills.js';
+import type { SkillsEntity, SkillsManager } from '@nocobase/ai-employee';
 import { run as notify } from '../../server/workflows/approval-notification/server/notify.js';
 import { run as notifyRecord } from '../../server/workflows/record-notification/server/notify.js';
 import { run as remind } from '../../server/workflows/activity-reminder/server/remind.js';
@@ -928,7 +933,7 @@ describe('CRM API security and domain rules', () => {
     }
     expect(
       defined.find((d) => d.name === 'crm.sales')?.actions.map((a) => a.name),
-    ).toEqual(['assign', 'approve', 'export']);
+    ).toEqual(['assign', 'approve', 'export', 'manageSkills']);
     // The provisioned sets grant the operations and the pages, nothing raw.
     const rep = await authorization.permissionSets.get(
       roleKey('sales-representative'),
@@ -961,7 +966,7 @@ describe('CRM API security and domain rules', () => {
       manager!.grants
         .find((g) => g.resource.id === 'crm.sales')
         ?.actions.map((a) => a.action),
-    ).toEqual(['assign', 'approve', 'export']);
+    ).toEqual(['assign', 'approve', 'export', 'manageSkills']);
     // The administrator is the plugin's root set: unrestricted by
     // declaration, so it carries no CRM grants and is offered as the role.
     expect((await authorization.permissionSets.get('root'))?.grants).toEqual(
@@ -1028,7 +1033,7 @@ describe('CRM API security and domain rules', () => {
       (await authorization.permissionSets.get(roleKey('sales-manager')))!.grants
         .find((g) => g.resource.id === 'crm.sales')
         ?.actions.map((a) => a.action),
-    ).toEqual(['assign', 'approve', 'export']);
+    ).toEqual(['assign', 'approve', 'export', 'manageSkills']);
     // A set provisioned before the operations existed is translated into
     // them once, keeping its scopes; grants the CRM does not own stay.
     const legacy = translateLegacyGrants([
@@ -2192,6 +2197,128 @@ describe('CRM API security and domain rules', () => {
     await expect(
       scope.assertCanDisable?.('rep', connection),
     ).resolves.toBeUndefined();
+  });
+});
+
+describe('CRM skills', () => {
+  it('appends the company notes to the skill the AI loads, and only there', async () => {
+    const shipped: SkillsEntity = {
+      name: 'lead-evaluation',
+      scope: 'SPECIFIED',
+      description: 'Evaluate a lead.',
+      content: '# 线索评估\n\n内置做法。',
+      introduction: { title: '线索评估' },
+    };
+    const registered = new Map<string, SkillsEntity>([[shipped.name, shipped]]);
+    const skills = {
+      getSkills: async (name: string) => registered.get(name),
+      registerSkills: async (skill: SkillsEntity) => {
+        registered.set(skill.name, skill);
+      },
+      listSkills: async () => [...registered.values()],
+      deleteSkills: async () => undefined,
+    } as unknown as SkillsManager;
+    const notes = new CrmSkillNotes(database, skills);
+    await notes.start();
+    // Without notes the AI loads the file as it is.
+    expect(registered.get('lead-evaluation')?.content).toBe(shipped.content);
+    // Everyone in the CRM reads the skills; a salesperson may not edit
+    // the notes, a sales manager and an administrator may.
+    expect(await notes.list(actor('rep'))).toMatchObject({
+      canEdit: false,
+      skills: [{ name: 'lead-evaluation', title: '线索评估' }],
+    });
+    expect((await notes.list(actor('manager'))).canEdit).toBe(true);
+    await expect(notes.list(actor('outsider'))).rejects.toMatchObject({
+      code: 'forbidden',
+    });
+    await expect(
+      notes.save(actor('rep'), 'lead-evaluation', { notes: 'x' }),
+    ).rejects.toMatchObject({ code: 'forbidden' });
+    expect(
+      (
+        await notes.save(actor('manager'), 'lead-evaluation', {
+          notes: '经理补充',
+        })
+      ).updatedById,
+    ).toBe('manager');
+    const saved = await notes.save(actor('admin'), 'lead-evaluation', {
+      notes: '政府和国企客户一律评为 A 级。',
+    });
+    // The page shows the shipped method apart from the notes …
+    expect(saved).toMatchObject({
+      content: shipped.content,
+      notes: '政府和国企客户一律评为 A 级。',
+      updatedById: 'admin',
+    });
+    // … and the AI loads both, the notes after the method.
+    const composed = registered.get('lead-evaluation')!.content;
+    expect(composed.startsWith(shipped.content)).toBe(true);
+    expect(composed).toContain('## 本公司的补充说明');
+    expect(composed).toContain('政府和国企客户一律评为 A 级。');
+    expect(composed).toBe(
+      composeSkill(shipped.content, '政府和国企客户一律评为 A 级。'),
+    );
+    // A restart loads the file again and puts the stored notes back.
+    registered.set(shipped.name, shipped);
+    await new CrmSkillNotes(database, skills).start();
+    expect(registered.get('lead-evaluation')!.content).toBe(composed);
+    // Only the CRM's own skills take notes.
+    await expect(
+      notes.save(actor('admin'), 'data-query', { notes: 'x' }),
+    ).rejects.toMatchObject({ code: 'notFound' });
+    // Clearing the notes gives the AI the file alone again.
+    await notes.save(actor('admin'), 'lead-evaluation', { notes: '  ' });
+    expect(registered.get('lead-evaluation')!.content).toBe(shipped.content);
+    expect((await notes.list(actor('admin'))).skills[0]).toMatchObject({
+      name: 'lead-evaluation',
+      notes: '',
+    });
+  });
+
+  it('gives existing sales roles the skills page, and managers its editing, once', async () => {
+    const strip = async (role: string): Promise<void> => {
+      const set = (await authorization.permissionSets.get(roleKey(role)))!;
+      await authorization.permissionSets.update(set.key, {
+        ...set,
+        grants: set.grants
+          .filter(
+            (g) =>
+              !(g.resource.type === 'page' && g.resource.id === 'crm-skills'),
+          )
+          .map((g) =>
+            g.resource.id === 'crm.sales'
+              ? {
+                  ...g,
+                  actions: g.actions.filter((a) => a.action !== 'manageSkills'),
+                }
+              : g,
+          ),
+      });
+    };
+    await strip('sales-representative');
+    await strip('sales-manager');
+    await database
+      .query()
+      .deleteFrom('crmSettings')
+      .where('id', '=', 'crm-skills-v1')
+      .execute();
+    await provisionCrm(authorization, database);
+    for (const role of ['sales-representative', 'sales-manager']) {
+      const set = (await authorization.permissionSets.get(roleKey(role)))!;
+      expect(
+        set.grants.some(
+          (g) => g.resource.type === 'page' && g.resource.id === 'crm-skills',
+        ),
+      ).toBe(true);
+      expect(
+        set.grants
+          .find((g) => g.resource.id === 'crm.sales')
+          ?.actions.some((a) => a.action === 'manageSkills') ?? false,
+      ).toBe(role === 'sales-manager');
+    }
+    expect(await capability(actor('manager'), 'manageSkills')).toBe(true);
+    expect(await capability(actor('rep'), 'manageSkills')).toBe(false);
   });
 });
 

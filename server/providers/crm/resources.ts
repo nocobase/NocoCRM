@@ -146,7 +146,12 @@ function capability(action: string): CompositeResourceContribution {
   };
 }
 
-export const capabilityActions = ['assign', 'approve', 'export'] as const;
+export const capabilityActions = [
+  'assign',
+  'approve',
+  'export',
+  'manageSkills',
+] as const;
 export type CapabilityAction = (typeof capabilityActions)[number];
 
 export const crmSalesResource = defineCompositeResource(
@@ -162,6 +167,12 @@ export const crmSalesResource = defineCompositeResource(
       )
       .action('export', (a) =>
         a.title(crm('authz.actions.export')).grant(capability('export')),
+      )
+      // Edit the company's notes on the CRM's AI skills (skills.ts).
+      .action('manageSkills', (a) =>
+        a
+          .title(crm('authz.actions.manageSkills'))
+          .grant(capability('manageSkills')),
       ),
 );
 
@@ -179,6 +190,7 @@ export const crmPages: readonly { name: string; title: AuthorizationTitle }[] =
     })),
     { name: 'crm-record', title: crm('authz.pages.record') },
     { name: 'crm-notifications', title: crm('authz.pages.notifications') },
+    { name: 'crm-skills', title: crm('authz.pages.skills') },
   ];
 
 export function pageGrant(name: string): PermissionGrant {
@@ -236,6 +248,7 @@ export function crmPermissionSet(role: string) {
           : {}),
       }),
     );
-  if (manager) set = set.grant(salesGrant('assign', 'approve', 'export'));
+  if (manager)
+    set = set.grant(salesGrant('assign', 'approve', 'export', 'manageSkills'));
   return set.build();
 }

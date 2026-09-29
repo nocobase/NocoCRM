@@ -240,6 +240,39 @@ export async function provisionCrm(
     }
     await mark('authz-export-v1');
   }
+  // The sales skills page and the capability to edit its notes arrived
+  // after the sets were provisioned: both sales roles get the page once and
+  // the manager the capability, as a new installation provisions them;
+  // anything an administrator changed stays.
+  if (!(await marker('crm-skills-v1'))) {
+    for (const role of salesRoles) {
+      const set = await authz.permissionSets.get(roleKey(role));
+      if (!set) continue;
+      let grants = [...set.grants];
+      if (
+        !grants.some(
+          (g) => g.resource.type === 'page' && g.resource.id === 'crm-skills',
+        )
+      )
+        grants.push(pageGrant('crm-skills'));
+      if (role === 'sales-manager') {
+        const sales = grants.find(
+          (g) =>
+            g.resource.type === 'composite' &&
+            g.resource.id === CRM_SALES_RESOURCE,
+        );
+        if (!sales) grants.push(salesGrant('manageSkills'));
+        else if (!sales.actions.some((a) => a.action === 'manageSkills'))
+          grants = grants.map((g) =>
+            g === sales
+              ? { ...g, actions: [...g.actions, { action: 'manageSkills' }] }
+              : g,
+          );
+      }
+      await authz.permissionSets.update(set.key, { ...set, grants });
+    }
+    await mark('crm-skills-v1');
+  }
   const initialized = await database
     .query()
     .selectFrom('crmSettings')

@@ -213,7 +213,7 @@ export class CrmService {
           prepared.decisions![`${toText(entity)}.${toText(action)}`] = null;
         }
       }
-    for (const action of ['assign', 'approve', 'export'])
+    for (const action of ['assign', 'approve', 'export', 'manageSkills'])
       prepared.capabilities![`sales.${toText(action)}`] = await capability(
         actor,
         action,

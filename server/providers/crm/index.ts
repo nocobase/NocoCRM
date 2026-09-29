@@ -21,6 +21,7 @@ import {
 } from './authorization.js';
 import { CrmService, array } from './service.js';
 import { CrmError } from './schema.js';
+import { CrmSkillNotes, crmSkillNotesToken } from './skills.js';
 import { createCrmUserRoleScope } from './user-roles.js';
 import { CrmAiResources } from '../../ai/index.js';
 import { LOGO_AVATAR_PATH } from '../../ai/employees/crm-assistant.js';
@@ -62,6 +63,17 @@ export default class CrmProvider extends ServiceProvider<Application> {
               : undefined,
         ),
     );
+    // The CRM's AI skills with the company's notes (skills.ts).
+    this.app.container.singleton(
+      crmSkillNotesToken,
+      () =>
+        new CrmSkillNotes(
+          this.app.container.resolve(databaseManagerToken),
+          this.app.container.has(aiManagerToken)
+            ? this.app.container.resolve(aiManagerToken).skillsManager
+            : undefined,
+        ),
+    );
     registerCrmResources(this.app.container.resolve(authorizationToken));
   }
   public override async boot(): Promise<void> {
@@ -98,6 +110,8 @@ export default class CrmProvider extends ServiceProvider<Application> {
         );
   }
   public override async start(): Promise<void> {
+    // Every provider has booted, so the AI plugin has loaded the skill files.
+    await this.app.container.resolve(crmSkillNotesToken).start();
     this.cron = createCronJobManager();
     this.cron.addJob({ cronTime: '*/30 * * * * *', onTick: () => this.scan() });
     this.cron.start();
