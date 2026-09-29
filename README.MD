@@ -37,7 +37,7 @@ Disabling a user ends their sign-in, and they stop being offered as an owner or 
 
 ### Demo data
 
-**Settings → System settings → Demo data** imports a Chinese dataset for a fictional consulting firm (云策数字咨询): related leads, accounts, contacts, opportunities across six months, activities including some due today, and approvals raised by their applicants. Dates are relative to the day of the import, in the business time zone. The import creates the demo accounts when they do not exist and gives each its role; the password is the username followed by `123`, such as `liming123`. The administrator who runs the import owns nothing:
+**Settings → System settings → Demo data** imports a Chinese dataset of NocoBase selling its own licences and services (editions and prices as published on nocobase.com/cn/commercial) to fictional customers: related leads, accounts, contacts, opportunities across six months, activities including some due today, and approvals raised by their applicants. Dates are relative to the day of the import, in the business time zone. The import creates the demo accounts when they do not exist and gives each its role; the password is the username followed by `123`, such as `liming123`. The administrator who runs the import owns nothing:
 
 | Username                                     | Name                   | Role          |
 | -------------------------------------------- | ---------------------- | ------------- |

@@ -367,8 +367,8 @@ const wording = {
   clearChoice: ['Clear', '清除选择'],
   demoData: ['Demo data', '演示数据'],
   demoDescription: [
-    'A Chinese dataset for a fictional consulting firm, 云策数字咨询: leads, accounts, contacts, opportunities, activities and approvals, dated relative to the day it is imported. Importing creates the demo accounts below when they do not exist; the password is the username followed by 123, such as liming123.',
-    '一套以虚构的「云策数字咨询」为背景的中文演示数据，包含线索、客户、联系人、商机、活动和审批，日期以导入当天为基准。导入时会自动创建下列演示账号（已存在的直接使用），密码为用户名加 123，例如 liming123。',
+    'A Chinese dataset of NocoBase selling its own licences and services to fictional customers: leads, accounts, contacts, opportunities, activities and approvals, dated relative to the day it is imported. Importing creates the demo accounts below when they do not exist; the password is the username followed by 123, such as liming123.',
+    '一套以 NocoBase 自己的销售（商业授权与服务，客户均为虚构）为背景的中文演示数据，包含线索、客户、联系人、商机、活动和审批，日期以导入当天为基准。导入时会自动创建下列演示账号（已存在的直接使用），密码为用户名加 123，例如 liming123。',
   ],
   demoAbsent: ['No demo data has been imported.', '尚未导入演示数据。'],
   demoPresent: [

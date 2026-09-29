@@ -1556,7 +1556,7 @@ describe('CRM API security and domain rules', () => {
     );
     // The deployment's business guidance is part of the role itself.
     expect(crmAssistant({ avatar: 'x' }).systemPrompt).toContain(
-      '云策数字咨询',
+      '公司名称：NocoBase',
     );
     for (const tool of tools) {
       expect(tool.defaultPermission).toBe('ALLOW');
