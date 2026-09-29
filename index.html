@@ -4,6 +4,14 @@
     <meta charset="utf-8" />
     <link rel="icon" type="image/x-icon" href="/assets/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Application change: images load only from this origin and inline
+         data/blob URLs, so text a model writes cannot make the browser send
+         CRM data to another host in an image URL. Report previews in an
+         iframe inherit it; see client/components/safe-image.tsx. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="img-src 'self' data: blob:"
+    />
     <meta name="theme-color" content="#171717" />
     <meta name="description" content="NocoCRM" />
     <meta data-rh="true" property="og:image" content="/assets/logo-mark.png" />

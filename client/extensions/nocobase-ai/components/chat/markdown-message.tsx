@@ -2,6 +2,8 @@ import ReactMarkdown from 'react-markdown';
 import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+import { SafeImage } from '@/components/safe-image';
+
 import { cn } from '../../shared/utils.js';
 
 type MarkdownMessageProps = {
@@ -159,6 +161,9 @@ function createMarkdownComponents(
         )}
       />
     ),
+    // Application change: an image from another origin is shown as a link,
+    // never fetched, so a reply cannot carry data out in an image URL.
+    img: ({ node: _node, ...props }) => <SafeImage {...props} />,
   };
 }
 

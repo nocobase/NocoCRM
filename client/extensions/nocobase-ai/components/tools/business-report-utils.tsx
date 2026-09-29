@@ -1,6 +1,8 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+import { SafeImage } from '@/components/safe-image';
+
 export type BusinessReportChart = {
   title?: string;
   summary?: string;
@@ -199,8 +201,17 @@ export async function renderBusinessReportMarkdownToHtml(markdown: string) {
   // Rendering through a temporary client root can lose a section when the
   // root is unmounted immediately after a synchronous render.
   const { prerender } = await import('react-dom/static.browser');
+  // Application change: the exported report is opened later as a file, where
+  // no page policy applies, so an image from another origin becomes a link.
   const { prelude } = await prerender(
-    <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>,
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        img: ({ node: _node, ...props }) => <SafeImage {...props} />,
+      }}
+    >
+      {markdown}
+    </ReactMarkdown>,
   );
   return new Response(prelude).text();
 }
