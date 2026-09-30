@@ -267,22 +267,6 @@ export default function DashboardPage(): ReactElement {
         }
         actions={
           <>
-            {meta?.assistant && meta.permissions.leads.create && (
-              <Button
-                variant='ghost'
-                className='text-ai hover:text-ai'
-                onClick={() =>
-                  window.dispatchEvent(
-                    new CustomEvent('crm-assistant', {
-                      detail: { prompt: text('prompts.captureLead') },
-                    }),
-                  )
-                }
-              >
-                <Sparkles />
-                {text('captureLead')}
-              </Button>
-            )}
             {meta?.assistant && (
               <>
                 <Button

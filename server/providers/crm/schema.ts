@@ -174,7 +174,7 @@ const account: Field = field(
 );
 // Country and subdivision carry ISO 3166 codes; the client renders localized
 // labels. City stays free text because no bounded, authoritative city list exists.
-const employeeRanges = [
+export const employeeRanges = [
   '1-10',
   '11-50',
   '51-200',
@@ -222,9 +222,12 @@ export const definitions: Record<Entity, EntityDefinition> = {
         'other',
       ]),
       field('employees', 'select', false, employeeRanges),
-      ...geography,
-      field('address'),
+      // The website beside the industry: both say what the company is, and
+      // the form lays fields out in this order.
+      geography[0],
       field('website', 'url'),
+      ...geography.slice(1),
+      field('address'),
       // A lead carries the enquiry as it arrived, which is not the same thing
       // as the description an account or opportunity is given later.
       field('message', 'textarea'),

@@ -7,8 +7,16 @@ import { RecordMultiPicker, RecordPicker } from './record-picker.js';
 import { FileDropZone, FileLinks } from './attachments.js';
 import { editsAll, fieldLabelKey, toText } from './api.js';
 import { CountryChoice, SubdivisionChoice } from './geography.js';
-import { useRef, useState, type ReactElement } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import {
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
+import { Badge } from '../ui/badge.js';
+import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button.js';
 import { Input } from '../ui/input.js';
 import { Textarea } from '../ui/textarea.js';
@@ -202,6 +210,20 @@ export function Choice({
     </Select>
   );
 }
+// A new lead's fields that wait behind "More": the company's particulars
+// and attachments, usually filled later or by research.
+const LEAD_MORE_FIELDS = [
+  'employees',
+  'industry',
+  'website',
+  'country',
+  'state',
+  'city',
+  'address',
+  'companyDescription',
+  'attachments',
+];
+
 export function RecordForm({
   entity,
   initial = {},
@@ -212,6 +234,11 @@ export function RecordForm({
   onSubmit,
   andThen,
   titles,
+  review,
+  notice,
+  tabs,
+  changed,
+  embedded,
 }: {
   entity: Entity;
   initial?: Data;
@@ -227,6 +254,17 @@ export function RecordForm({
   andThen?: { label: string; run: (record: CrmRecord) => Promise<void> };
   // Names the opening page already resolved, so preset relations show at once.
   titles?: Record<string, string>;
+  // Fields the AI filled but was unsure of (lead capture): marked for a check.
+  review?: readonly string[];
+  // Shown above the fields: what filled the form and what it may repeat.
+  // Given as a function, it is told which required fields are still empty.
+  notice?: ReactNode | ((unfilled: readonly string[]) => ReactNode);
+  // Under the title: the switch back to entering the lead with the AI.
+  tabs?: ReactNode;
+  // Fields the AI's last adjustment changed (lead capture): marked so.
+  changed?: readonly string[];
+  // Rendered inside another dialog: fields only, each change reported.
+  embedded?: { onChange: (input: Data) => void };
 }): ReactElement {
   const { data: meta } = useMetadata();
   const api = useCrmApi();
@@ -303,6 +341,12 @@ export function RecordForm({
           }
         : {}),
     }));
+  // The embedding page keeps the values: every change is reported to it,
+  // through whichever callback the page passed last.
+  const report = useEffectEvent((next: Data) => embedded?.onChange(next));
+  useEffect(() => {
+    report(input);
+  }, [input]);
   const definitions = meta?.definitions[entity];
   const writable = meta?.permissions[entity][id ? 'update' : 'create'];
   const fields =
@@ -311,6 +355,9 @@ export function RecordForm({
         !f.readOnly &&
         // An approval's applicant is whoever raises it; the server sets it.
         !(entity === 'approvals' && f.key === 'ownerId') &&
+        // A new lead is always new: its status moves with the work (its first
+        // activity makes it working), so creating one does not ask for it.
+        !(entity === 'leads' && !id && f.key === 'status') &&
         !(
           entity === 'activities' &&
           !id &&
@@ -341,6 +388,52 @@ export function RecordForm({
         writable &&
         (writable.fields === '*' || writable.fields.includes(f.key)),
     ) ?? [];
+  // A form the AI filled (review given) highlights the required fields it
+  // could not fill, until they are filled.
+  // A new lead opens with the fields a salesperson fills first; the rest
+  // wait behind "More" unless they already hold a value (the AI filled
+  // them, or the user did), or the AI marked or changed them.
+  const [showMore, setShowMore] = useState(false);
+  const [filledAtOpen] = useState(
+    () =>
+      new Set(
+        Object.keys(initial).filter(
+          (key) =>
+            initial[key] !== undefined &&
+            initial[key] !== null &&
+            initial[key] !== '' &&
+            !(Array.isArray(initial[key]) && !initial[key].length),
+        ),
+      ),
+  );
+  const tucked = (f: Field): boolean =>
+    entity === 'leads' &&
+    !id &&
+    !showMore &&
+    LEAD_MORE_FIELDS.includes(f.key) &&
+    !f.required &&
+    !filledAtOpen.has(f.key) &&
+    !review?.includes(f.key) &&
+    !changed?.includes(f.key) &&
+    (input[f.key] === undefined ||
+      input[f.key] === null ||
+      input[f.key] === '' ||
+      (Array.isArray(input[f.key]) && !(input[f.key] as unknown[]).length));
+  const tuckable =
+    entity === 'leads' &&
+    !id &&
+    fields.some((f) => LEAD_MORE_FIELDS.includes(f.key) && !f.required);
+  const unfilled = review
+    ? fields
+        .filter(
+          (f) =>
+            f.required &&
+            (input[f.key] === undefined ||
+              input[f.key] === null ||
+              input[f.key] === ''),
+        )
+        .map((f) => f.key)
+    : [];
   const names = titles ?? {};
   const choices = (field: Field): { value: string; label: string }[] => {
     if (field.relation === 'users')
@@ -595,15 +688,19 @@ export function RecordForm({
               set(field.key, [...arrayValues(value).map(toText), ...ids])
             }
           />
-          <FileLinks
-            files={arrayValues(value)}
-            onRemove={(id) =>
-              set(
-                field.key,
-                arrayValues(value).filter((v) => toText(v) !== id),
-              )
-            }
-          />
+          {/* The drop zone above already says there is nothing yet; the
+              list appears with the first file. */}
+          {arrayValues(value).length > 0 && (
+            <FileLinks
+              files={arrayValues(value)}
+              onRemove={(id) =>
+                set(
+                  field.key,
+                  arrayValues(value).filter((v) => toText(v) !== id),
+                )
+              }
+            />
+          )}
         </div>
       );
     const date = ['date', 'datetime'].includes(field.type);
@@ -657,6 +754,164 @@ export function RecordForm({
       </div>
     );
   };
+  const grid = (
+    <>
+      {/* Three fields a row, two or one where the form is narrow: sized by
+          the form's own width, which beside the lead capture's panels is
+          less than the dialog's. Long text, lists and files take the whole
+          row. */}
+      <div className='@container'>
+        <div className='grid gap-x-4 gap-y-3 @xl:grid-cols-2 @2xl:grid-cols-3'>
+          {fields.map((field) => {
+            if (tucked(field)) return null;
+            // An activity's type and name share the first row, the type
+            // in a narrow column: "call" then what the call is about.
+            const pairedName =
+              entity === 'activities' && field.key === 'type'
+                ? fields.find((f) => f.key === 'name')
+                : undefined;
+            // An opportunity's amount and currency are one thing: the
+            // number, then a narrow currency picker beside it.
+            const pairedCurrency =
+              entity === 'opportunities' && field.key === 'amount'
+                ? fields.find((f) => f.key === 'currency')
+                : undefined;
+            if (
+              entity === 'opportunities' &&
+              field.key === 'currency' &&
+              fields.some((f) => f.key === 'amount')
+            )
+              return null;
+            if (
+              entity === 'activities' &&
+              field.key === 'name' &&
+              fields.some((f) => f.key === 'type')
+            )
+              return null;
+            const block = (f: Field): ReactElement =>
+              f.type === 'boolean' ? (
+                // A yes / no reads as "[x] Employed": the box leads and
+                // the text is the label, dropped to the input line so it
+                // sits level with the neighbouring controls.
+                <div className='flex min-h-8 items-center'>
+                  <label
+                    htmlFor={`crm-field-${toText(f.key)}`}
+                    className='flex cursor-pointer items-center gap-2 text-sm font-medium'
+                  >
+                    {fieldInput(f)}
+                    {text(fieldLabelKey(entity, toText(f.key)))}
+                  </label>
+                </div>
+              ) : (
+                <div
+                  className={
+                    unfilled.includes(f.key)
+                      ? '-m-1.5 space-y-1.5 rounded-lg bg-warning/10 p-1.5 ring-1 ring-warning/40 dark:bg-warning/20'
+                      : 'space-y-1.5'
+                  }
+                >
+                  {/* A row of its own, so the block's spacing holds under a
+                    tag as it does under plain text. */}
+                  <label
+                    htmlFor={`crm-field-${toText(f.key)}`}
+                    className='flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium'
+                  >
+                    <span>
+                      {text(fieldLabelKey(entity, toText(f.key)))}
+                      {f.required && (
+                        <span className='ml-1 text-destructive'>*</span>
+                      )}
+                    </span>
+                    {review?.includes(f.key) && (
+                      <Badge variant='warning'>
+                        {text('leadCapture.check')}
+                      </Badge>
+                    )}
+                    {changed?.includes(f.key) && (
+                      <Badge variant='ai'>
+                        {text('leadCapture.aiChanged')}
+                      </Badge>
+                    )}
+                  </label>
+                  {fieldInput(f)}
+                  {f.type === 'relation' &&
+                    Boolean(input[f.key]) &&
+                    names[toText(input[f.key])] && (
+                      <span className='sr-only'>
+                        {names[toText(input[f.key])]}
+                      </span>
+                    )}
+                </div>
+              );
+            if (pairedCurrency)
+              return (
+                <div
+                  key={field.key}
+                  className='grid gap-x-4 gap-y-3 sm:grid-cols-[7rem_minmax(0,1fr)]'
+                >
+                  {block(pairedCurrency)}
+                  {block(field)}
+                </div>
+              );
+            if (pairedName)
+              return (
+                <div
+                  key={field.key}
+                  className='grid gap-x-4 gap-y-3 @xl:col-span-2 sm:grid-cols-[9rem_minmax(0,1fr)]'
+                >
+                  {block(field)}
+                  {block(pairedName)}
+                </div>
+              );
+            return (
+              <div
+                key={field.key}
+                className={
+                  ['textarea', 'contacts', 'files', 'multi'].includes(
+                    field.type,
+                  )
+                    ? 'col-span-full'
+                    : ''
+                }
+              >
+                {block(field)}
+              </div>
+            );
+          })}
+          {tuckable && (showMore || fields.some(tucked)) && (
+            <div className='col-span-full'>
+              <Button
+                type='button'
+                variant='ghost'
+                size='sm'
+                className='-ml-2.5 text-muted-foreground'
+                onClick={() => setShowMore((shown) => !shown)}
+              >
+                {showMore ? <ChevronUp /> : <ChevronDown />}
+                {showMore
+                  ? text('fewerFields')
+                  : text('moreFields', {
+                      fields: fields
+                        .filter(tucked)
+                        .map((f) => text(fieldLabelKey(entity, toText(f.key))))
+                        .join(language.startsWith('zh') ? '、' : ', '),
+                    })}
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+  // Inside the lead capture review: the fields alone, their values reported
+  // as they change, no dialog, no buttons.
+  if (embedded)
+    return (
+      <div className='space-y-4'>
+        {typeof notice === 'function' ? notice(unfilled) : notice}
+        {grid}
+      </div>
+    );
   return (
     <Dialog
       open
@@ -666,21 +921,26 @@ export function RecordForm({
     >
       <DialogContent
         showCloseButton={false}
-        className='max-h-[90svh] overflow-y-auto sm:max-w-3xl'
+        className='max-h-[90svh] overflow-y-auto sm:max-w-4xl'
       >
         <DialogHeader>
-          <DialogTitle>
-            {text(id ? 'editRecord' : 'newRecord', {
-              entity: text(`entity.${toText(entity)}`),
-            })}
-          </DialogTitle>
-          <DialogDescription>
-            {text('requiredHint')}{' '}
-            {entity === 'activities' &&
-              text('localTimeHint', {
+          <div className='flex flex-wrap items-center gap-x-4 gap-y-2'>
+            <DialogTitle>
+              {text(id ? 'editRecord' : 'newRecord', {
+                entity: text(`entity.${toText(entity)}`),
+              })}
+            </DialogTitle>
+            {tabs}
+          </div>
+          {/* The required fields carry their asterisk; only an activity's
+              times need a word on how they are read. */}
+          {entity === 'activities' && (
+            <DialogDescription>
+              {text('localTimeHint', {
                 zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
               })}
-          </DialogDescription>
+            </DialogDescription>
+          )}
         </DialogHeader>
         {!meta ? (
           <Loading />
@@ -738,106 +998,11 @@ export function RecordForm({
                 }
               })();
             }}
-            className='space-y-5'
+            className='space-y-4'
           >
             <ErrorNotice error={error} />
-            <div className='grid gap-4 sm:grid-cols-2'>
-              {fields.map((field) => {
-                // An activity's type and name share the first row, the type
-                // in a narrow column: "call" then what the call is about.
-                const pairedName =
-                  entity === 'activities' && field.key === 'type'
-                    ? fields.find((f) => f.key === 'name')
-                    : undefined;
-                // An opportunity's amount and currency are one thing: the
-                // number, then a narrow currency picker beside it.
-                const pairedCurrency =
-                  entity === 'opportunities' && field.key === 'amount'
-                    ? fields.find((f) => f.key === 'currency')
-                    : undefined;
-                if (
-                  entity === 'opportunities' &&
-                  field.key === 'currency' &&
-                  fields.some((f) => f.key === 'amount')
-                )
-                  return null;
-                if (
-                  entity === 'activities' &&
-                  field.key === 'name' &&
-                  fields.some((f) => f.key === 'type')
-                )
-                  return null;
-                const block = (f: Field): ReactElement =>
-                  f.type === 'boolean' ? (
-                    // A yes / no reads as "[x] Employed": the box leads and
-                    // the text is the label, dropped to the input line so it
-                    // sits level with the neighbouring controls.
-                    <div className='flex min-h-8 items-center'>
-                      <label
-                        htmlFor={`crm-field-${toText(f.key)}`}
-                        className='flex cursor-pointer items-center gap-2 text-sm font-medium'
-                      >
-                        {fieldInput(f)}
-                        {text(fieldLabelKey(entity, toText(f.key)))}
-                      </label>
-                    </div>
-                  ) : (
-                    <div className='space-y-2'>
-                      <label
-                        htmlFor={`crm-field-${toText(f.key)}`}
-                        className='text-sm font-medium'
-                      >
-                        {text(fieldLabelKey(entity, toText(f.key)))}
-                        {f.required && (
-                          <span className='ml-1 text-destructive'>*</span>
-                        )}
-                      </label>
-                      {fieldInput(f)}
-                      {f.type === 'relation' &&
-                        Boolean(input[f.key]) &&
-                        names[toText(input[f.key])] && (
-                          <span className='sr-only'>
-                            {names[toText(input[f.key])]}
-                          </span>
-                        )}
-                    </div>
-                  );
-                if (pairedCurrency)
-                  return (
-                    <div
-                      key={field.key}
-                      className='grid gap-4 sm:grid-cols-[7rem_minmax(0,1fr)]'
-                    >
-                      {block(pairedCurrency)}
-                      {block(field)}
-                    </div>
-                  );
-                if (pairedName)
-                  return (
-                    <div
-                      key={field.key}
-                      className='grid gap-4 sm:col-span-2 sm:grid-cols-[9rem_minmax(0,1fr)]'
-                    >
-                      {block(field)}
-                      {block(pairedName)}
-                    </div>
-                  );
-                return (
-                  <div
-                    key={field.key}
-                    className={
-                      ['textarea', 'contacts', 'files', 'multi'].includes(
-                        field.type,
-                      )
-                        ? 'sm:col-span-2'
-                        : ''
-                    }
-                  >
-                    {block(field)}
-                  </div>
-                );
-              })}
-            </div>
+            {typeof notice === 'function' ? notice(unfilled) : notice}
+            {grid}
             <DialogFooter>
               <Button
                 type='button'

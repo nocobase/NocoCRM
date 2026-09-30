@@ -19,6 +19,7 @@ import { bodyLimit } from 'hono/body-limit';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { crmToken } from '../providers/crm/index.js';
 import { crmSkillNotesToken } from '../providers/crm/skills.js';
+import { captureLeads } from '../providers/crm/lead-capture.js';
 import { screenProposal } from '../ai/screen.js';
 import {
   capability,
@@ -482,6 +483,19 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
       );
       return c.json({ data: result }, 201);
     });
+    // New lead with the AI: pasted text in, prefilled lead forms out
+    // (lead-capture.ts). Nothing is saved here; the form is.
+    routes.post('/leads/capture', async (c) =>
+      c.json({
+        data: await captureLeads(
+          service,
+          app.container,
+          c.get('actor'),
+          await c.req.json(),
+          (await service.settings()).timeZone || 'Asia/Shanghai',
+        ),
+      }),
+    );
     routes.get('/leads/:id/conversion', async (c) => {
       const data = await conversionPreview(
         service,

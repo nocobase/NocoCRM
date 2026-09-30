@@ -69,6 +69,12 @@ import {
   crmToken,
 } from '../../server/providers/crm/index.js';
 import { crmRoutes } from '../../server/routes/crm.js';
+import { captureLeads } from '../../server/providers/crm/lead-capture.js';
+import {
+  agentServiceFactoryToken,
+  aiConversationsManagerToken,
+} from '@nocobase/app-plugin-ai-employee/server';
+import { loggingToken } from '@nocobase/app-server/logging';
 import { userManagementServiceToken } from '@nocobase/app-plugin-users/server/tokens';
 import {
   DEMO_MARKER,
@@ -2319,6 +2325,312 @@ describe('CRM skills', () => {
     }
     expect(await capability(actor('manager'), 'manageSkills')).toBe(true);
     expect(await capability(actor('rep'), 'manageSkills')).toBe(false);
+  });
+});
+
+describe('CRM lead capture', () => {
+  // The AI employee plugin's services as captureLeads uses them: a
+  // conversation to run in, and an employee whose run returns `result`.
+  // `result` is the structured response, or `{ asText }` for a run that
+  // wrote its answer as text instead.
+  const capturing = (result: unknown) => {
+    const runs: { username: string; prompt: string; from: unknown }[] = [];
+    const warnings: unknown[] = [];
+    const container = new ServiceContainer();
+    container.instance(aiConversationsManagerToken, {
+      create: async () => ({ sessionId: 'capture-session' }),
+    } as unknown as ReturnType<
+      typeof container.resolve<typeof aiConversationsManagerToken>
+    >);
+    container.instance(agentServiceFactoryToken, {
+      createAIEmployee: async (options: {
+        username: string;
+        from: unknown;
+      }) => ({
+        invoke: async (input: {
+          userMessages: { content: { content: string } }[];
+        }) => {
+          runs.push({
+            username: options.username,
+            from: options.from,
+            prompt: input.userMessages[0].content.content,
+          });
+          return result && typeof result === 'object' && 'asText' in result
+            ? {
+                structuredResponse: undefined,
+                message: { content: { type: 'text', content: result.asText } },
+              }
+            : { structuredResponse: result };
+        },
+      }),
+    } as unknown as ReturnType<
+      typeof container.resolve<typeof agentServiceFactoryToken>
+    >);
+    container.instance(loggingToken, {
+      getLogger: () => ({ warn: (entry: unknown) => warnings.push(entry) }),
+    } as unknown as ReturnType<typeof container.resolve<typeof loggingToken>>);
+    return { container, runs, warnings };
+  };
+  const blank = {
+    ref: null,
+    name: null,
+    company: null,
+    jobTitle: null,
+    phone: null,
+    email: null,
+    website: null,
+    country: null,
+    state: null,
+    city: null,
+    address: null,
+    message: null,
+    companyDescription: null,
+    industry: null,
+    employees: null,
+    source: null,
+    uncertain: [],
+  };
+  const pasted = '展会上加了华锐精工的周立和陈芳，周立想私有化部署。';
+
+  it('turns pasted text into prefilled leads, marking doubts and possible duplicates', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      await service.save(actor('rep'), 'accounts', { name: '华锐精工' });
+      const { container, runs } = capturing({
+        leads: [
+          {
+            ...blank,
+            name: ' 周立 ',
+            company: '华锐精工',
+            jobTitle: 'IT 经理',
+            // A province named the way people do is taken for its code.
+            country: 'cn',
+            state: '浙江省',
+            city: '杭州',
+            message: '想私有化部署',
+            // A field the text did not give is not reported as a doubt,
+            // nor is one the lead has no such field for.
+            uncertain: ['jobTitle', 'jobTitle', 'email', 'nonsense'],
+          },
+          // A region that does not resolve is left out.
+          {
+            ...blank,
+            name: '陈芳',
+            company: '华锐精工',
+            source: 'website',
+            country: 'Atlantis',
+            state: '浙江省',
+          },
+          // Nothing the form could use: dropped.
+          { ...blank, uncertain: ['name'] },
+        ],
+        reply: null,
+      });
+      const { leads } = await captureLeads(
+        service,
+        container,
+        actor('rep'),
+        { text: pasted },
+        'Asia/Shanghai',
+      );
+      expect(runs).toHaveLength(1);
+      expect(runs[0]).toMatchObject({
+        username: 'crm-assistant',
+        from: 'sub-agent',
+      });
+      expect(runs[0].prompt).toContain(pasted);
+      expect(leads).toHaveLength(2);
+      expect(leads[0].input).toEqual({
+        name: '周立',
+        company: '华锐精工',
+        jobTitle: 'IT 经理',
+        country: 'CN',
+        state: 'CN-33',
+        city: '杭州',
+        message: '想私有化部署',
+      });
+      expect(leads[0].uncertain).toEqual(['jobTitle']);
+      expect(leads[0].duplicates).toContainEqual(
+        expect.objectContaining({ entity: 'accounts', name: '华锐精工' }),
+      );
+      // A source is filled only when the text states one; otherwise the
+      // form or the batch review asks for it.
+      expect(leads[1].input.source).toBe('website');
+      expect(leads[1].input).not.toHaveProperty('country');
+      expect(leads[1].input).not.toHaveProperty('state');
+      // The pasted text is not kept with the lead; what the review shows is
+      // what the form saves.
+      const lead = await service.save(actor('rep'), 'leads', leads[0].input);
+      expect(lead).not.toHaveProperty('rawContent');
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+
+  it('reads the leads from the reply when the model writes them as text', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const lead = { ...blank, name: '王磊', company: '丰禾物流' };
+      const { container } = capturing({
+        asText: `整理如下：\n\n\`\`\`json\n${JSON.stringify({ leads: [lead], reply: null })}\n\`\`\`\n\n说明：来源看不出。`,
+      });
+      const { leads } = await captureLeads(
+        service,
+        container,
+        actor('rep'),
+        { text: pasted },
+        'UTC',
+      );
+      expect(leads.map((l) => l.input.name)).toEqual(['王磊']);
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+
+  it('revises the leads as told, keeping each under its key', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const { container, runs } = capturing({
+        leads: [
+          { ...blank, ref: 'r1', name: '周立', jobTitle: 'IT 总监' },
+          // A key the client never sent is a new lead, not a revision.
+          { ...blank, ref: 'unknown', name: '刘洋' },
+          // The salesperson may not assign: an owner is not kept.
+          { ...blank, ref: null, name: '陈芳', ownerId: 'other' },
+        ],
+        reply: '已把周立的职位改为 IT 总监，并加上了刘洋和陈芳。',
+      });
+      const result = await captureLeads(
+        service,
+        container,
+        actor('rep'),
+        {
+          text: pasted,
+          instruction: '周立的职位是 IT 总监',
+          leads: [{ ref: 'r1', name: '周立', jobTitle: 'IT 经理' }],
+        },
+        'UTC',
+      );
+      expect(runs[0].prompt).toContain('周立的职位是 IT 总监');
+      expect(runs[0].prompt).toContain('"ref": "r1"');
+      expect(runs[0].prompt).not.toContain('ownerId 是线索的负责人');
+      expect(result.reply).toContain('IT 总监');
+      const [revised, added, third] = result.leads;
+      // A revision carries every field the AI writes, null where empty, so
+      // the client can tell a cleared value from an untouched one.
+      expect(revised).toMatchObject({
+        ref: 'r1',
+        input: { name: '周立', jobTitle: 'IT 总监', phone: null },
+      });
+      expect(added).not.toHaveProperty('ref');
+      expect(added.input.name).toBe('刘洋');
+      expect(third.input).not.toHaveProperty('ownerId');
+
+      // A manager may assign: the AI is offered the salespeople, and an
+      // owner outside them is dropped.
+      const assigning = capturing({
+        leads: [
+          { ...blank, name: '王磊', ownerId: 'rep' },
+          { ...blank, name: '张总', ownerId: 'outsider' },
+        ],
+        reply: null,
+      });
+      const assigned = await captureLeads(
+        service,
+        assigning.container,
+        actor('manager'),
+        { text: pasted },
+        'UTC',
+      );
+      expect(assigning.runs[0].prompt).toContain('ownerId 是线索的负责人');
+      expect(assigned.leads[0].input.ownerId).toBe('rep');
+      expect(assigned.leads[1].input).not.toHaveProperty('ownerId');
+
+      // An instruction needs the leads it is about, each under a key.
+      await expect(
+        captureLeads(
+          service,
+          container,
+          actor('rep'),
+          { text: pasted, instruction: '去掉陈芳' },
+          'UTC',
+        ),
+      ).rejects.toMatchObject({ code: 'required', field: 'leads' });
+      await expect(
+        captureLeads(
+          service,
+          container,
+          actor('rep'),
+          { text: pasted, instruction: '去掉陈芳', leads: [{ name: '陈芳' }] },
+          'UTC',
+        ),
+      ).rejects.toMatchObject({ code: 'invalidInput', field: 'leads' });
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+
+  it('refuses without permission, text or an available assistant', async () => {
+    const { container, runs, warnings } = capturing({ leads: 'not a list' });
+    await expect(
+      captureLeads(
+        service,
+        container,
+        actor('outsider'),
+        { text: pasted },
+        'UTC',
+      ),
+    ).rejects.toMatchObject({ code: 'forbidden' });
+    await expect(
+      captureLeads(service, container, actor('rep'), { text: '  ' }, 'UTC'),
+    ).rejects.toMatchObject({ code: 'required', status: 400 });
+    // The employee is switched off (no aiEmployees row in these tests).
+    await expect(
+      captureLeads(service, container, actor('rep'), { text: pasted }, 'UTC'),
+    ).rejects.toMatchObject({ code: 'assistantUnavailable', status: 409 });
+    // No AI employee plugin at all.
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      await expect(
+        captureLeads(
+          service,
+          new ServiceContainer(),
+          actor('rep'),
+          { text: pasted },
+          'UTC',
+        ),
+      ).rejects.toMatchObject({ code: 'assistantUnavailable' });
+      expect(runs).toHaveLength(0);
+      // A reply that is not the requested shape is a failure, logged.
+      await expect(
+        captureLeads(service, container, actor('rep'), { text: pasted }, 'UTC'),
+      ).rejects.toMatchObject({ code: 'captureFailed', status: 502 });
+      expect(warnings).toHaveLength(1);
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+
+  it('is an endpoint only signed-in users who may create leads reach', async () => {
+    expect(
+      (await request('/leads/capture', undefined, 'POST', {})).status,
+    ).toBe(401);
+    expect(
+      (await request('/leads/capture', 'outsider', 'POST', { text: pasted }))
+        .status,
+    ).toBe(403);
+    // The routes' container has no AI employee plugin.
+    expect(
+      (await request('/leads/capture', 'rep', 'POST', { text: pasted })).status,
+    ).toBe(409);
   });
 });
 

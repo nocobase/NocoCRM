@@ -70,6 +70,10 @@ import { Choice, RecordForm } from '../components/crm/form.js';
 import { ReasonDialog } from '../components/crm/reasons.js';
 import { reasonFor } from '../components/crm/reason-rules.js';
 import { ImportDialog } from '../components/crm/import-export.js';
+import {
+  CaptureTabs,
+  LeadCaptureDialog,
+} from '../components/crm/lead-capture.js';
 import { downloadCsv } from '../components/crm/csv.js';
 import { SortableHead } from '../components/crm/sortable-table.js';
 
@@ -195,6 +199,11 @@ function EntityList({
     day: '2-digit',
   }).format(now);
   const [form, setForm] = useState<{ id?: string; input: Data }>();
+  // New lead with the AI first, when the assistant is on (lead-capture.tsx).
+  const [capturing, setCapturing] = useState(false);
+  // The pasted text survives a switch to the form and back; closing either
+  // dialog drops it.
+  const [draft, setDraft] = useState('');
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<unknown>();
   const refresh = useRefresh();
@@ -494,33 +503,23 @@ function EntityList({
   const newButton = (
     <>
       {writable && (
-        <Button onClick={() => setForm({ input: {} })}>
+        <Button
+          onClick={() =>
+            entity === 'leads' && meta?.assistant
+              ? setCapturing(true)
+              : setForm({ input: {} })
+          }
+        >
           <Plus />
           {text('newRecord', { entity: text(`entity.${toText(entity)}`) })}
         </Button>
       )}
-      {/* The list page's assistant entries are about the funnel as a whole:
-          capture a lead in prose instead of a form, or turn the attention
-          metrics above into follow-up activities. */}
+      {/* The list page's assistant entry is about the funnel as a whole:
+          turn the attention metrics above into follow-up activities. A lead
+          is captured in prose through "New lead" itself. */}
       {meta?.assistant &&
         ['leads', 'accounts', 'opportunities'].includes(entity) && (
           <div className='flex flex-wrap items-center'>
-            {entity === 'leads' && writable && (
-              <Button
-                variant='ghost'
-                className='text-ai hover:text-ai'
-                onClick={() =>
-                  window.dispatchEvent(
-                    new CustomEvent('crm-assistant', {
-                      detail: { prompt: text('prompts.captureLead') },
-                    }),
-                  )
-                }
-              >
-                <Sparkles />
-                {text('captureLead')}
-              </Button>
-            )}
             <Button
               variant='ghost'
               className='text-ai hover:text-ai'
@@ -1368,13 +1367,41 @@ function EntityList({
           </div>
         </section>
       )}
+      {capturing && (
+        <LeadCaptureDialog
+          draft={draft}
+          onDraft={setDraft}
+          onClose={() => {
+            setCapturing(false);
+            setDraft('');
+          }}
+          onForm={() => {
+            setCapturing(false);
+            setForm({ input: {} });
+          }}
+        />
+      )}
       {form && (
         <RecordForm
           entity={entity}
           initial={form.input}
           id={form.id}
           titles={lookup}
-          onClose={() => setForm(undefined)}
+          tabs={
+            entity === 'leads' && !form.id && meta?.assistant ? (
+              <CaptureTabs
+                current='form'
+                onSwitch={() => {
+                  setForm(undefined);
+                  setCapturing(true);
+                }}
+              />
+            ) : undefined
+          }
+          onClose={() => {
+            setForm(undefined);
+            setDraft('');
+          }}
           andThen={
             entity === 'approvals'
               ? {

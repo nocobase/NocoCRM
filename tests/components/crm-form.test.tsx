@@ -108,11 +108,15 @@ describe('CRM forms and file interchange', () => {
         expect.objectContaining({
           name: 'Ada',
           ownerId: 'rep',
-          status: 'new',
           source: 'website',
         }),
       ),
     );
+    // A new lead is new; the server sets that, the form does not ask.
+    expect(state.api.mock.calls[0][2]).not.toHaveProperty('status');
+    expect(
+      screen.queryByRole('combobox', { name: 'Status' }),
+    ).not.toBeInTheDocument();
     expect(state.refresh).toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
     expect(onSaved).toHaveBeenCalledWith({ id: 'saved', name: 'Ada' });
@@ -147,6 +151,66 @@ describe('CRM forms and file interchange', () => {
     );
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.getByLabelText('名称')).toHaveValue('新线索');
+  });
+  it('opens a lead the AI captured prefilled, marking its doubts', async () => {
+    state.api.mockResolvedValue({ data: { id: 'captured' } });
+    render(
+      <RecordForm
+        entity='leads'
+        initial={{ name: 'Zhou Li', source: 'exhibition' }}
+        review={['name']}
+        notice={<p>Filled in by the AI</p>}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('Filled in by the AI')).toBeInTheDocument();
+    expect(screen.getByLabelText('Name')).toHaveValue('Zhou Li');
+    // The doubt sits beside its field.
+    expect(screen.getAllByText('Check')).toHaveLength(1);
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Save', exact: true }),
+    );
+    await waitFor(() =>
+      expect(state.api).toHaveBeenCalledWith(
+        'leads',
+        'POST',
+        expect.objectContaining({ name: 'Zhou Li', source: 'exhibition' }),
+      ),
+    );
+  });
+  it('tells an AI-filled form which required fields are still empty', async () => {
+    render(
+      <RecordForm
+        entity='leads'
+        initial={{ name: 'Wang Lei' }}
+        review={[]}
+        notice={(unfilled) => <p>Still needed: {unfilled.join(', ')}</p>}
+        onClose={vi.fn()}
+      />,
+    );
+    // The owner defaults to the reader; the source is the one left empty.
+    expect(screen.getByText('Still needed: source')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('combobox', { name: 'Source' }));
+    await userEvent.click(
+      await screen.findByRole('option', { name: 'Website' }),
+    );
+    expect(screen.getByText('Still needed:')).toBeInTheDocument();
+  });
+  it('opens a new lead with the main fields, the rest behind More', async () => {
+    render(
+      <RecordForm
+        entity='leads'
+        initial={{ city: 'Hangzhou' }}
+        onClose={vi.fn()}
+      />,
+    );
+    // A field with a value stays out; an empty one waits behind More.
+    expect(screen.getByLabelText('City')).toHaveValue('Hangzhou');
+    expect(screen.queryByLabelText('Website')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /^More:/ }));
+    expect(screen.getByLabelText('Website')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Fewer fields' }));
+    expect(screen.queryByLabelText('Website')).not.toBeInTheDocument();
   });
   it('preserves CSV text and neutralizes spreadsheet formulas', () => {
     const values = [

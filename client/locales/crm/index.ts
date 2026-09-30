@@ -113,7 +113,6 @@ const wording = {
     'Delete {{entity}} "{{name}}"?',
     '删除{{entity}}「{{name}}」？',
   ],
-  requiredHint: ['Fields marked * are required.', '标记 * 的字段为必填项。'],
   localTimeHint: [
     'Enter times in your laptop timezone: {{zone}}.',
     '请按电脑时区 {{zone}} 输入时间。',
@@ -357,6 +356,57 @@ const wording = {
     },
   },
   settings: ['System settings', '系统设置'],
+  leadCapture: {
+    aiTab: ['Organise with AI', 'AI 整理'],
+    formTab: ['Fill in a form', '表单录入'],
+    placeholder: [
+      'Paste anything: an email, a chat, notes from a fair or a call. The AI turns each person into a lead, and you check it before it is saved.',
+      '粘贴任何内容：邮件、聊天记录、展会或电话记录。AI 会把每个人整理成一条线索，你核对后再保存。',
+    ],
+    input: ['Text to organise', '要整理的内容'],
+    organise: ['Organise', '整理'],
+    organising: ['The AI is organising…', 'AI 正在整理…'],
+    check: ['Check', '请核对'],
+    filledNotice: [
+      'The AI filled this from your text. Fields marked Check are its guesses; empty fields were not in the text.',
+      'AI 根据原文填写。标记"请核对"的是推测，空的是原文里没有的。',
+    ],
+    fillRequired: ['Still required: {{fields}}', '需补充必填项：{{fields}}'],
+    duplicates: ['Possibly already in the CRM:', 'CRM 里可能已有：'],
+    found: [
+      'The AI found {{count}} leads. Check them, then create the ones you want.',
+      'AI 整理出 {{count}} 条线索，核对后创建需要的。',
+    ],
+    forAll: ['Set for all', '统一设置'],
+    unassigned: ['No owner', '未指派'],
+    missing: ['{{count}} required missing', '缺 {{count}} 项必填'],
+    checkCount: ['{{count}} to check', '核对 {{count}} 处'],
+    duplicate: ['Possible duplicate', '可能重复'],
+    aiChanged: ['AI changed', 'AI 刚改'],
+    createOne: ['Create lead', '创建线索'],
+    createCount: ['Create {{count}}', '创建 {{count}} 条'],
+    pendingCount: ['{{count}} incomplete', '{{count}} 条待补'],
+    created: ['Created', '已创建'],
+    createFailed: ['Not created', '创建失败'],
+    openRecord: ['Open the lead', '打开线索'],
+    adjust: ['Adjust', '调整'],
+    adjusting: ['Adjusting…', '正在调整…'],
+    adjustPlaceholder: [
+      'Tell the AI what to change: "drop Chen Fang", "Zhou Li is the IT director", "all from the fair"',
+      '告诉 AI 怎么改，比如“去掉陈芳”“周立的职位是 IT 总监”“都是展会来的”',
+    ],
+    original: ['Your text', '原文'],
+    adjustTitle: ['Adjust with the AI', '让 AI 调整'],
+    noneLeft: [
+      'No leads are left. Organise the text again, or cancel.',
+      '没有剩下的线索了。可以重新整理原文，或者取消。',
+    ],
+    reorganise: ['Organise again', '重新整理'],
+    reorganiseHint: [
+      'Replaces the leads not yet created.',
+      '会替换还没创建的线索',
+    ],
+  },
   skillsPage: {
     title: ['Sales skills', '销售技能'],
     description: [
@@ -446,7 +496,6 @@ const wording = {
   newActivity: ['Schedule activity', '安排活动'],
   followUpLead: ['Follow up', '跟进线索'],
   newApproval: ['Request approval', '申请审批'],
-  captureLead: ['Capture lead', '录入线索'],
   planFollowUps: ['Plan follow-ups', '安排跟进'],
   linkExisting: ['Link existing', '关联已有'],
   conversionImpactShort: [
@@ -598,6 +647,8 @@ const wording = {
   reportActivity: ['Report back', '我要反馈'],
   more: ['View all', '查看全部'],
   showMore: ['Show more', '展开'],
+  moreFields: ['More: {{fields}}', '更多：{{fields}}'],
+  fewerFields: ['Fewer fields', '收起'],
   showLess: ['Show less', '收起'],
   prompts: {
     planToday: [
@@ -616,7 +667,6 @@ const wording = {
       'Assess whether this lead is ready to convert. First look for accounts with the same or a similar company name and contacts sharing its email domain or phone, and say whether to link an existing record or create new ones. Check the conversion criteria in the business instructions against what is recorded. Conclude with: convert now (propose the convert action), or what is still missing.',
       '评估这条线索是否可以转化。先查客户里有没有同名或相似名称的公司、联系人里有没有相同邮箱域名或电话的人，说明应关联已有记录还是新建。对照业务指导里的转化条件检查已记录的信息。结论二选一：可以转化（提出转化动作），或列出还缺什么。',
     ],
-    captureLead: ['New lead: ', '新线索：'],
     planFollowUps: {
       leads: [
         'Review the leads awaiting first follow-up and the stalled ones. Rank them by urgency, say who to contact today and why, and create one follow-up activity for each of the three most urgent.',
@@ -760,7 +810,7 @@ const wording = {
     lostReason: ['Lost reason', '输单原因'],
     churnReason: ['Churn reason', '流失原因'],
     type: ['Type', '类型'],
-    employees: ['Employees', '员工规模'],
+    employees: ['Employees', '员工数'],
     address: ['Address', '地址'],
     notes: ['Notes', '备注'],
     accountId: ['Account', '所属客户'],
@@ -957,6 +1007,18 @@ const wording = {
       '操作失败，请重试。',
     ],
     invalidInput: ['Check the values and try again.', '请检查填写内容后重试。'],
+    assistantUnavailable: [
+      'The AI assistant is off or has no model configured. Enter the lead in the form instead.',
+      'AI 助手未启用或没有配置模型，请改用表单录入。',
+    ],
+    captureNothing: [
+      'The AI found no lead in this text.',
+      'AI 没有从这段内容里找到线索。',
+    ],
+    captureFailed: [
+      'The AI could not organise this text. Try again, or enter the lead in the form.',
+      'AI 没能整理这段内容，请重试或改用表单录入。',
+    ],
     requiredField: ['This field is required', '此字段必填'],
     required: ['A required field is missing.', '请填写必填字段。'],
     forbidden: [
