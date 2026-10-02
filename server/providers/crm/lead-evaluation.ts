@@ -791,6 +791,24 @@ ${JSON.stringify(facts, null, 2)}
 \`\`\``;
 }
 
+// A verdict as the model wrote it, with the values that must be strings
+// made so: a model asked for "value": "50000" sometimes writes the number,
+// and the whole verdict would be refused for it (Qwen, 2026-10-02).
+export function stringValues(reply: unknown): unknown {
+  if (!reply || typeof reply !== 'object') return reply;
+  const out: Row = { ...(reply as Row) };
+  for (const key of ['updates', 'enrich'])
+    if (Array.isArray(out[key]))
+      out[key] = (out[key] as unknown[]).map((item) =>
+        item &&
+        typeof item === 'object' &&
+        typeof (item as Row).value === 'number'
+          ? { ...(item as Row), value: String((item as Row).value) }
+          : item,
+      );
+  return out;
+}
+
 // A reply's text, as the plugin returns it.
 function textOf(content: unknown): string {
   return typeof content === 'string'
@@ -1174,7 +1192,9 @@ export class LeadEvaluator {
         });
       const read = (result: Awaited<ReturnType<typeof ask>>) =>
         verdictShape.safeParse(
-          result.structuredResponse ?? jsonIn(result.message?.content),
+          stringValues(
+            result.structuredResponse ?? jsonIn(result.message?.content),
+          ),
         );
       const activities = await activitiesOf(
         this.service,
@@ -1663,11 +1683,12 @@ export async function planTask(
   return toText(activity.id);
 }
 
-// What the web told the AI about the company, as values the lead can take:
-// options from their lists, a country by its code, a province resolved in
-// it; a value the lead already holds is dropped, one that differs keeps the
-// lead's (`current`) beside it, so the person can see the conflict.
-function cleanEnrich(
+// What the web told the AI about the company, as values the lead (or a
+// deal's account, opportunity-evaluation.ts) can take: options from their
+// lists, a country by its code, a province resolved in it; a value the
+// record already holds is dropped, one that differs keeps the record's
+// (`current`) beside it, so the person can see the conflict.
+export function cleanEnrich(
   found: readonly { field: string; value: string; source: string | null }[],
   lead: CrmRecord,
 ): Enrichment[] {
@@ -1712,7 +1733,9 @@ function cleanEnrich(
     else
       value = raw.slice(
         0,
-        item.field === 'companyDescription' ? LONG_TEXT_LIMIT : TEXT_LIMIT,
+        item.field === 'companyDescription' || item.field === 'description'
+          ? LONG_TEXT_LIMIT
+          : TEXT_LIMIT,
       );
     if (!value) continue;
     const current = toText(lead[item.field] ?? '');

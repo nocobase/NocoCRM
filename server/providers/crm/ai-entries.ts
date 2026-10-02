@@ -79,6 +79,9 @@ export interface OpportunityVerdict {
   // Lost: when to look in on the customer again, if worth it.
   revisitInDays: number | null;
   changes: string[];
+  // What the web says about the deal's account, for its fields, when the
+  // follow-up looked the company up (opportunity-evaluation.ts).
+  enrich?: Enrichment[];
 }
 
 export interface OpportunityUpdate {

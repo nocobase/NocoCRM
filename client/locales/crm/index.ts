@@ -204,6 +204,15 @@ const wording = {
     findingsDone: ['written by {{name}}, {{time}}', '{{name}} {{time}} 已写入'],
     source: ['Source', '来源'],
     writePicked: ['Write {{count}} into the lead', '写入所选 {{count}} 项'],
+    // A deal's: about its account, written into the account.
+    findingsAccount: [
+      'Found on the web about the account',
+      '联网查到的客户信息',
+    ],
+    writePickedAccount: [
+      'Write {{count}} into the account',
+      '写入客户 {{count}} 项',
+    ],
     written: ['Written', '已写入'],
     nextStep: ['Next step', '下一步'],
     today: ['today', '今天'],

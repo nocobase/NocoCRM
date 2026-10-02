@@ -114,6 +114,8 @@ export interface DealVerdict {
   lostReason: string | null;
   revisitInDays: number | null;
   changes: string[];
+  // What the web says about the deal's account, for its fields.
+  enrich?: Verdict['enrich'];
 }
 export type AnyVerdict = Verdict | DealVerdict;
 const isDeal = (verdict: AnyVerdict): verdict is DealVerdict =>
@@ -376,20 +378,26 @@ export function VerdictPanel({
   // What the person wants changed on the card, for the AI to redo it.
   const [instruction, setInstruction] = useState('');
   // The web findings ticked, all to start with: written on their own with
-  // "Write picked", or with the accept. A deal's proposed updates likewise,
-  // written with the accept.
+  // "Write picked", or with the accept (a lead's into the lead, a deal's
+  // into its account). A deal's proposed updates likewise, written with the
+  // accept.
   const [picked, setPicked] = useState<ReadonlySet<string>>(
     () =>
       new Set(
-        (entry.ai.result
-          ? isDeal(entry.ai.result)
+        [
+          ...(entry.ai.result && isDeal(entry.ai.result)
             ? entry.ai.result.updates
-            : (entry.ai.result.enrich ?? [])
-          : []
-        ).map((f) => f.field),
+            : []),
+          ...(entry.ai.result?.enrich ?? []),
+        ].map((f) => f.field),
       ),
   );
-  const unwritten = entry.ai.enrichedAt ? [] : [...picked];
+  // What the accept still writes: the findings unless already written on
+  // their own, and a deal's updates in any case.
+  const found = new Set((entry.ai.result?.enrich ?? []).map((f) => f.field));
+  const unwritten = [...picked].filter(
+    (field) => !(entry.ai.enrichedAt && found.has(field)),
+  );
   const base = `${entity}/${recordId}/evaluation`;
   // The activity accepting creates, as the person changes it here: only
   // what they changed, over what the verdict proposes.
@@ -681,11 +689,13 @@ export function VerdictPanel({
           overdue={overdue}
         />
       )}
-      {/* What the web says about the company, to fill the lead with. */}
-      {verdict && !isDeal(verdict) && (verdict.enrich?.length ?? 0) > 0 && (
+      {/* What the web says about the company, to fill the lead (or the
+          deal's account) with. */}
+      {verdict && (verdict.enrich?.length ?? 0) > 0 && (
         <Findings
           entry={entry}
-          leadId={recordId}
+          entity={entity}
+          recordId={recordId}
           editable={editable && entry.status === 'pending'}
           onChanged={onChanged}
           picked={picked}
@@ -1373,14 +1383,17 @@ export function EvaluationFeedEntry({
 // overwrites what a person entered). Written once, then shown as done.
 function Findings({
   entry,
-  leadId,
+  entity,
+  recordId,
   editable,
   onChanged,
   picked,
   onPick,
 }: {
   entry: EvaluationEntry;
-  leadId: string;
+  // A lead's findings fill the lead; a deal's fill its account.
+  entity: FollowedEntity;
+  recordId: string;
   editable: boolean;
   onChanged: () => Promise<unknown>;
   // Kept by the card, whose accept writes them too.
@@ -1391,11 +1404,17 @@ function Findings({
   const { text, language } = useCrmText();
   const api = useCrmApi();
   const result = entry.ai.result;
-  const findings = result && !isDeal(result) ? (result.enrich ?? []) : [];
+  const findings = result?.enrich ?? [];
+  // The object the findings are written into.
+  const target = entity === 'leads' ? 'leads' : 'accounts';
+  // The ticked findings (a deal's card ticks its updates in the same set).
+  const chosen = findings
+    .filter((f) => picked.has(f.field))
+    .map((f) => f.field);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
   if (!meta) return null;
-  const fields = meta.definitions.leads.fields;
+  const fields = meta.definitions[target].fields;
   const country = findings.find((f) => f.field === 'country')?.value;
   const done = entry.ai.enrichedAt;
   // A long text as running text, not its folding block, so a finding
@@ -1405,7 +1424,7 @@ function Findings({
     const definition = fields.find((f) => f.key === field) ?? { key: field };
     return (
       <Value
-        record={{ id: leadId, country, [field]: value } as never}
+        record={{ id: recordId, country, [field]: value } as never}
         field={
           'type' in definition && definition.type === 'textarea'
             ? { ...definition, type: 'text' }
@@ -1418,7 +1437,11 @@ function Findings({
     <div className='grid gap-1.5 rounded-lg border bg-background/60 p-3'>
       <div className='flex items-center gap-1.5 font-medium'>
         <Globe className='size-4 text-muted-foreground' />
-        {text('evaluation.findings')}
+        {text(
+          entity === 'leads'
+            ? 'evaluation.findings'
+            : 'evaluation.findingsAccount',
+        )}
         {done && (
           <span className='text-xs font-normal text-muted-foreground'>
             {text('evaluation.findingsDone', {
@@ -1436,20 +1459,29 @@ function Findings({
             size='xs'
             variant='outline'
             className='-my-1 ml-auto font-normal text-ai hover:text-ai'
-            disabled={busy || picked.size === 0}
+            disabled={busy || chosen.length === 0}
             onClick={() => {
               setBusy(true);
               setError(undefined);
-              api(`leads/${leadId}/evaluation/${entry.id}/enrich`, 'POST', {
-                fields: [...picked],
-              })
+              api(
+                `${entity}/${recordId}/evaluation/${entry.id}/enrich`,
+                'POST',
+                {
+                  fields: chosen,
+                },
+              )
                 .then(() => onChanged())
                 .catch(setError)
                 .finally(() => setBusy(false));
             }}
           >
             {busy ? <Spinner /> : <Sparkles />}
-            {text('evaluation.writePicked', { count: picked.size })}
+            {text(
+              entity === 'leads'
+                ? 'evaluation.writePicked'
+                : 'evaluation.writePickedAccount',
+              { count: chosen.length },
+            )}
           </Button>
         )}
       </div>
@@ -1461,7 +1493,7 @@ function Findings({
           >
             <Checkbox
               className='mt-0.5'
-              aria-label={text(fieldLabelKey('leads', finding.field))}
+              aria-label={text(fieldLabelKey(target, finding.field))}
               // Written: what was written. Still to decide: what is ticked.
               // Decided without writing: nothing.
               checked={
@@ -1478,7 +1510,7 @@ function Findings({
               }}
             />
             <span className='text-muted-foreground'>
-              {text(fieldLabelKey('leads', finding.field))}
+              {text(fieldLabelKey(target, finding.field))}
             </span>
             {/* Inline, not a row of boxes: a long value wraps as text, the
                 arrow and the source staying beside the words they follow. */}

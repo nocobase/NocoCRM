@@ -98,9 +98,11 @@ import {
   latestEvaluation,
   pendingDecisions,
   researchDue,
+  stringValues,
 } from '../../server/providers/crm/lead-evaluation.js';
 import {
   OpportunityEvaluator,
+  accountResearchDue,
   latestOpportunityEvaluation,
 } from '../../server/providers/crm/opportunity-evaluation.js';
 import {
@@ -4276,10 +4278,14 @@ describe('CRM opportunity follow-up', () => {
       expect(entry).toMatchObject({ status: 'running' });
       await evaluator.idle();
       // The skill, the deal, its people and what came of its activities.
-      expect(prompts[0]).toContain('技能正文');
-      expect(prompts[0]).toContain('跟进报工系统');
-      expect(prompts[0]).toContain('决策');
-      expect(prompts[0]).toContain('客户在社区版上试了两个场景');
+      // The account holds nothing about the company: it is looked up
+      // first, then the follow-up reads that research.
+      expect(prompts[0]).toContain('先联网调查这个商机的客户公司');
+      expect(prompts.at(-1)).toContain('对客户公司的联网调查');
+      expect(prompts.at(-1)).toContain('技能正文');
+      expect(prompts.at(-1)).toContain('跟进报工系统');
+      expect(prompts.at(-1)).toContain('决策');
+      expect(prompts.at(-1)).toContain('客户在社区版上试了两个场景');
       const pending = await latestOpportunityEvaluation(
         service,
         actor('rep'),
@@ -4541,6 +4547,127 @@ describe('CRM opportunity follow-up', () => {
       expect(opened).not.toHaveBeenCalled();
     } finally {
       service.opportunityOpened = undefined;
+    }
+  });
+  it('reads a value the model wrote as a number', () => {
+    expect(
+      stringValues({
+        recommendation: 'continue',
+        updates: [{ field: 'amount', value: 50000, reason: '按专业版' }],
+        enrich: [{ field: 'website', value: 'https://a.test', source: null }],
+      }),
+    ).toMatchObject({
+      updates: [{ field: 'amount', value: '50000' }],
+      enrich: [{ field: 'website', value: 'https://a.test' }],
+    });
+  });
+  it('looks the account up only when it holds nothing, was renamed since, or long ago', async () => {
+    const { account } = await deal('调研时机');
+    // Nothing about the company yet.
+    expect(await accountResearchDue(service, account, 'none')).toBe(true);
+    const filled = await service.save(
+      actor('rep'),
+      'accounts',
+      { industry: 'manufacturing', employees: '51-200' },
+      account.id,
+    );
+    // Filled by hand, its name and website untouched, never looked up: no
+    // search. (A website filled or changed by hand would search.)
+    expect(await accountResearchDue(service, filled, 'none')).toBe(false);
+    // A follow-up that looked it up, then a person renaming the company.
+    const opportunity = await service.save(actor('rep'), 'opportunities', {
+      name: '调研时机二',
+      accountId: account.id,
+      stage: 'qualification',
+    });
+    await service.database
+      .query()
+      .insertInto('crmHistory')
+      .values({
+        id: 'research-entry',
+        entity: 'opportunities',
+        recordId: opportunity.id,
+        actorId: 'rep',
+        action: 'ai',
+        changes: '{}',
+        source: 'ai',
+        aiStatus: 'dismissed',
+        ai: JSON.stringify({
+          kind: 'evaluation',
+          researchedAt: new Date(Date.now() - 86_400_000).toISOString(),
+        }),
+        createdAt: new Date(Date.now() - 86_400_000).toISOString(),
+      })
+      .execute();
+    expect(await accountResearchDue(service, filled, 'none')).toBe(false);
+    const renamed = await service.save(
+      actor('rep'),
+      'accounts',
+      { name: '调研时机 新名称' },
+      account.id,
+    );
+    expect(await accountResearchDue(service, renamed, 'none')).toBe(true);
+    // Looked up more than 90 days before.
+    expect(
+      await accountResearchDue(
+        service,
+        renamed,
+        'none',
+        new Date(Date.now() + 120 * 86_400_000),
+      ),
+    ).toBe(true);
+  });
+
+  it('offers what the web says about the account and writes the picked findings with the accept', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const { account, opportunity } = await deal('联网补全');
+      const { evaluator } = following({
+        ...advance,
+        updates: [],
+        enrich: [
+          {
+            field: 'website',
+            value: 'https://lianwang.test',
+            source: 'https://lianwang.test/about',
+          },
+          { field: 'employees', value: '51-200', source: null },
+          // Not an option: dropped.
+          { field: 'industry', value: '光学', source: null },
+        ],
+      });
+      await evaluator.request(actor('rep'), opportunity.id);
+      await evaluator.idle();
+      const pending = await latestOpportunityEvaluation(
+        service,
+        actor('rep'),
+        opportunity.id,
+      );
+      expect(pending?.ai.researchedAt).toBeTruthy();
+      expect(pending?.ai.result?.enrich).toEqual([
+        {
+          field: 'website',
+          value: 'https://lianwang.test',
+          source: 'https://lianwang.test/about',
+          current: null,
+        },
+        { field: 'employees', value: '51-200', source: null, current: null },
+      ]);
+      const accepted = await evaluator.decide(
+        actor('rep'),
+        opportunity.id,
+        pending!.id,
+        'accept',
+        ['website'],
+      );
+      expect(accepted.ai.enrichedFields).toEqual(['website']);
+      expect(
+        await service.get(actor('rep'), 'accounts', account.id),
+      ).toMatchObject({ website: 'https://lianwang.test', employees: null });
+    } finally {
+      enabled.mockRestore();
     }
   });
 });

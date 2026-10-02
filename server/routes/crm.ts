@@ -605,6 +605,20 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
       if (!entry) throw new CrmError('assistantUnavailable', 409);
       return c.json({ data: entry }, 201);
     });
+    // The web findings on a deal's account the person picked, into the
+    // account.
+    routes.post('/opportunities/:id/evaluation/:entryId/enrich', async (c) => {
+      const run = dealEvaluator();
+      if (!run) throw new CrmError('assistantUnavailable', 409);
+      return c.json({
+        data: await run.enrich(
+          c.get('actor'),
+          c.req.param('id'),
+          c.req.param('entryId'),
+          object(await c.req.json()).fields,
+        ),
+      });
+    });
     routes.post('/opportunities/:id/evaluation/:entryId', async (c) => {
       const run = dealEvaluator();
       if (!run) throw new CrmError('assistantUnavailable', 409);
