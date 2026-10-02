@@ -20,7 +20,10 @@ vi.mock('@nocobase/i18n/client', () => ({
       options.defaultValue,
   }),
 }));
-vi.mock('@/components/ui/toast', () => ({ toast: { add: state.error } }));
+vi.mock('@nocobase/app-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@nocobase/app-client')>()),
+  useToaster: () => ({ show: state.error, close: vi.fn() }),
+}));
 vi.mock('../../client/layouts/components/language-switcher.js', () => ({
   LanguageSwitcher: () => null,
 }));
@@ -40,7 +43,6 @@ it('reports an API sign-out failure without refreshing the session', async () =>
   await waitFor(() =>
     expect(state.error).toHaveBeenCalledWith({
       type: 'error',
-      priority: 'high',
       title: 'Unable to sign out. Please try again.',
     }),
   );

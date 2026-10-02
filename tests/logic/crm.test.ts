@@ -56,9 +56,9 @@ import {
   composeSkill,
 } from '../../server/providers/crm/skills.js';
 import type { SkillsEntity, SkillsManager } from '@nocobase/ai-employee';
-import { run as notify } from '../../server/workflows/approval-notification/server/notify.js';
-import { run as notifyRecord } from '../../server/workflows/record-notification/server/notify.js';
-import { run as remind } from '../../server/workflows/activity-reminder/server/remind.js';
+import { run as notify } from '../../workflows/approval-notification/server/notify.js';
+import { run as notifyRecord } from '../../workflows/record-notification/server/notify.js';
+import { run as remind } from '../../workflows/activity-reminder/server/remind.js';
 import { createCrmUserRoleScope } from '../../server/providers/crm/user-roles.js';
 import { crmRecordTools } from '../../server/ai/tools/crm-records.js';
 import { crmWriteTools } from '../../server/ai/tools/crm-writes.js';

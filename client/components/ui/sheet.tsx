@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslation } from '@nocobase/i18n/client';
 import * as React from 'react';
 import { Dialog as SheetPrimitive } from '@base-ui/react/dialog';
 import { cn } from 'cn';
@@ -50,6 +51,7 @@ function SheetContent({
   overlayClassName?: string;
   showOverlay?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <SheetPortal>
       {showOverlay ? <SheetOverlay className={overlayClassName} /> : null}
@@ -75,7 +77,7 @@ function SheetContent({
             }
           >
             <XIcon />
-            <span className='sr-only'>Close</span>
+            <span className='sr-only'>{t('actions.close')}</span>
           </SheetPrimitive.Close>
         )}
       </SheetPrimitive.Popup>

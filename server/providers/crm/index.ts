@@ -52,7 +52,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
   private reminding = false;
   private delivering = false;
   public override register(): void {
-    // The workflow run scripts under server/workflows run from the storage
+    // The workflow run scripts under workflows/ run from the storage
     // disk, where they can neither import this application nor share a
     // package instance with it; they reach the database through this
     // process-wide handle (the same symbol is spelled out in each package's

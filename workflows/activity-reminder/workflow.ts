@@ -38,9 +38,7 @@ const workflow: WorkflowSourceAst = defineWorkflow({
       key: 'shouldNotify',
       title: '是否开启提醒',
       description: '由管理员参数决定是否发送活动提醒。',
-      config: {
-        expression: { '===': [{ var: 'parameters.notify' }, true] },
-      },
+      config: { module: './server/notify-enabled' },
     }).branch({
       yes: [],
       no: [

@@ -78,9 +78,7 @@ const workflow: WorkflowSourceAst = defineWorkflow({
       key: 'shouldNotify',
       title: '是否开启通知',
       description: '由管理员参数决定是否发送任何记录变更通知。',
-      config: {
-        expression: { '===': [{ var: 'parameters.notify' }, true] },
-      },
+      config: { module: './server/notify-enabled' },
     }).branch({
       yes: [],
       no: [
@@ -96,9 +94,7 @@ const workflow: WorkflowSourceAst = defineWorkflow({
       key: 'handoff',
       title: '是否为负责人变更',
       description: '负责人变更通知新负责人；其余事件通知活动参与人。',
-      config: {
-        expression: { '===': [{ var: 'input.event' }, 'assigned'] },
-      },
+      config: { module: './server/is-handoff' },
     }).branch({
       yes: [
         notify(

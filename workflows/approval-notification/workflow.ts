@@ -72,9 +72,7 @@ const workflow: WorkflowSourceAst = defineWorkflow({
       key: 'shouldNotify',
       title: '是否开启通知',
       description: '由管理员参数决定是否发送任何审批通知。',
-      config: {
-        expression: { '===': [{ var: 'parameters.notify' }, true] },
-      },
+      config: { module: './server/notify-enabled' },
     }).branch({
       yes: [],
       no: [
@@ -90,18 +88,14 @@ const workflow: WorkflowSourceAst = defineWorkflow({
       key: 'decided',
       title: '是否为审批结果',
       description: '通过和驳回是结果，通知申请人；提交和撤回通知审批人。',
-      config: {
-        expression: { in: [{ var: 'input.event' }, ['approved', 'rejected']] },
-      },
+      config: { module: './server/is-decision' },
     }).branch({
       yes: [
         ConditionInstruction.create({
           key: 'approved',
           title: '是否通过',
           description: '按审批人的决定分支。',
-          config: {
-            expression: { '===': [{ var: 'input.event' }, 'approved'] },
-          },
+          config: { module: './server/is-approved' },
         }).branch({
           yes: [
             notify(
@@ -126,9 +120,7 @@ const workflow: WorkflowSourceAst = defineWorkflow({
           key: 'submitted',
           title: '是否为提交',
           description: '提交通知审批人有新申请，撤回通知审批人不必再处理。',
-          config: {
-            expression: { '===': [{ var: 'input.event' }, 'pending'] },
-          },
+          config: { module: './server/is-submitted' },
         }).branch({
           yes: [
             notify(

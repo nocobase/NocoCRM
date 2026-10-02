@@ -1,13 +1,20 @@
-import { ClientApplication } from '@nocobase/app-client';
+import { ClientApplication, toasterToken } from '@nocobase/app-client';
 import type { ClientServiceProviderConstructor } from '@nocobase/app-client/plugins';
 import { ServiceProvider } from '@nocobase/service-provider';
+
 import { queryClient } from './components/crm/query-client.js';
+import { createToaster } from './lib/toaster.js';
 
 // Navigation is declared on the routes (client/routes.ts); this provider only
 // sets what the application shares with Refine: its title and query cache.
 export class DefaultClientServiceProvider extends ServiceProvider<ClientApplication> {
   public readonly name: string = 'crm/client';
   private previousDocumentTitle: string | undefined;
+
+  public override register(): void {
+    // What plugins and pages report through useToaster() reaches the Toaster in client/react-providers.ts from here.
+    this.app.container.instance(toasterToken, createToaster());
+  }
 
   public override boot(): Promise<void> {
     const configuredTitle = this.app.config.get<unknown>('app.title');

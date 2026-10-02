@@ -4,6 +4,7 @@
 allowBuilds:
   better-sqlite3: true
   esbuild: true
+  msgpackr-extract: false
   oracledb: true
   tesseract.js: false
 

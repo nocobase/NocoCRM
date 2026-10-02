@@ -9,10 +9,6 @@ export default createReactVitestConfig({
     alias: [
       // Resolve published dependencies in this standalone application, not a missing monorepo sibling.
       {
-        find: '@/jobs',
-        replacement: fileURLToPath(new URL('./server/jobs', import.meta.url)),
-      },
-      {
         find: '@',
         replacement: fileURLToPath(new URL('./client', import.meta.url)),
       },
