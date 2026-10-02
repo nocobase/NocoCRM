@@ -25,21 +25,43 @@ export async function conversionPreview(
       .toLowerCase();
   const company = normalized(lead.company);
   const domain = toText(lead.email ?? '').split('@')[1];
+  const matchedAccounts = accounts.filter(
+    (a) =>
+      (company &&
+        (normalized(a.name).includes(company) ||
+          company.includes(normalized(a.name)))) ||
+      (domain && toText(a.website ?? '').includes(domain)),
+  );
+  const accountIds = new Set(matchedAccounts.map((a) => toText(a.id)));
+  const name = normalized(lead.name);
+  const email = toText(lead.email ?? '').toLowerCase();
+  const phone = normalized(lead.phone);
+  // The opportunities still open at those accounts: converting with a new
+  // one beside them may duplicate a deal already being worked.
+  const opportunities = accountIds.size
+    ? (
+        await service.list(actor, 'opportunities', { pageSize: 1000 })
+      ).data.filter(
+        (o) =>
+          accountIds.has(toText(o.accountId ?? '')) &&
+          !['won', 'lost'].includes(toText(o.stage)),
+      )
+    : [];
   return {
     lead,
-    accounts: accounts.filter(
-      (a) =>
-        (company &&
-          (normalized(a.name).includes(company) ||
-            company.includes(normalized(a.name)))) ||
-        (domain && toText(a.website ?? '').includes(domain)),
-    ),
+    accounts: matchedAccounts,
+    // The same person: the same e-mail or phone, or the same name at one of
+    // the matching accounts, which finds a contact the lead gave no e-mail
+    // or phone for.
     contacts: contacts.filter(
       (c) =>
-        normalized(c.name) === normalized(lead.name) &&
-        ((lead.phone && c.phone === lead.phone) ||
-          (lead.email && c.email === lead.email)),
+        (email && toText(c.email ?? '').toLowerCase() === email) ||
+        (phone && normalized(c.phone) === phone) ||
+        (name &&
+          normalized(c.name) === name &&
+          accountIds.has(toText(c.accountId ?? ''))),
     ),
+    opportunities,
   };
 }
 export async function convertLead(

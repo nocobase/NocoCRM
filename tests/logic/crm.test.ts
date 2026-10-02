@@ -7,8 +7,11 @@ import { statistics } from '../../server/providers/crm/statistics.js';
 import { dashboard } from '../../server/providers/crm/dashboard.js';
 import {
   fieldsFor,
+  lostReasons,
+  object,
   toText,
   entities,
+  type CrmRecord,
 } from '../../server/providers/crm/schema.js';
 import geographyMigration from '../../database/main/migrations/202609100001_crm_geography_codes.js';
 import legacyTimestampsMigration from '../../database/main/migrations/202609200001_legacy_epoch_timestamps.js';
@@ -63,7 +66,10 @@ import { screenProposal } from '../../server/ai/screen.js';
 import crmEmployee, {
   crmAssistant,
 } from '../../server/ai/employees/crm-assistant.js';
-import { convertLead } from '../../server/providers/crm/conversion.js';
+import {
+  conversionPreview,
+  convertLead,
+} from '../../server/providers/crm/conversion.js';
 import {
   CRM_INBOX_CHANNEL,
   crmToken,
@@ -71,9 +77,22 @@ import {
 import { crmRoutes } from '../../server/routes/crm.js';
 import { captureLeads } from '../../server/providers/crm/lead-capture.js';
 import {
+  organiseFeedback,
+  recordOutcome,
+} from '../../server/providers/crm/feedback.js';
+import {
   agentServiceFactoryToken,
   aiConversationsManagerToken,
+  aiManagerToken,
 } from '@nocobase/app-plugin-ai-employee/server';
+import {
+  LeadEvaluator,
+  contactTime,
+  aiStates,
+  latestEvaluation,
+  pendingDecisions,
+  researchDue,
+} from '../../server/providers/crm/lead-evaluation.js';
 import { loggingToken } from '@nocobase/app-server/logging';
 import { userManagementServiceToken } from '@nocobase/app-plugin-users/server/tokens';
 import {
@@ -383,6 +402,32 @@ describe('CRM API security and domain rules', () => {
       data: { settings: Record<string, unknown> };
     };
     expect(after.data.settings).not.toHaveProperty('aiEnabled');
+    // The AI's language is one of three, Chinese by default, and a save
+    // tells the provider (which registers the assistant's prompt again).
+    expect(after.data.settings.aiLanguage).toBe('zh-CN');
+    expect(
+      (
+        await request('/settings', 'admin', 'PUT', {
+          ...current.data.settings,
+          aiLanguage: 'fr-FR',
+        })
+      ).status,
+    ).toBe(400);
+    const announced: string[] = [];
+    service.settingsSaved = (settings) => announced.push(settings.aiLanguage);
+    try {
+      await request('/settings', 'admin', 'PUT', {
+        ...current.data.settings,
+        aiLanguage: 'en-US',
+      });
+      expect(announced).toEqual(['en-US']);
+    } finally {
+      service.settingsSaved = undefined;
+      await request('/settings', 'admin', 'PUT', {
+        ...current.data.settings,
+        aiLanguage: 'zh-CN',
+      });
+    }
   });
   it('allows shared reads, own updates, creator-only manager deletes and admin deletes', async () => {
     const lead = await service.save(actor('rep'), 'leads', {
@@ -611,6 +656,58 @@ describe('CRM API security and domain rules', () => {
     await expect(
       service.remove(actor('admin'), 'leads', lead.id),
     ).rejects.toMatchObject({ code: 'convertedReadOnly' });
+  });
+  it('finds the account, the contact and the open deals a conversion may duplicate', async () => {
+    const account = await service.save(actor('rep'), 'accounts', {
+      name: 'Duplicate Optics',
+    });
+    // The lead gave no phone or e-mail: its person is found by name at the
+    // matching account, not by name alone elsewhere.
+    const same = await service.save(actor('rep'), 'contacts', {
+      name: 'Wei Zhang',
+      accountId: account.id,
+    });
+    const elsewhere = await service.save(actor('rep'), 'accounts', {
+      name: 'Unrelated Works',
+    });
+    await service.save(actor('rep'), 'contacts', {
+      name: 'Wei Zhang',
+      accountId: elsewhere.id,
+    });
+    const open = await service.save(actor('rep'), 'opportunities', {
+      name: 'Optics rollout',
+      accountId: account.id,
+      amount: 100,
+    });
+    await service.save(actor('rep'), 'opportunities', {
+      name: 'Optics pilot',
+      accountId: account.id,
+      amount: 100,
+      stage: 'lost',
+      lostReason: lostReasons[0],
+    });
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Wei Zhang',
+      company: 'Duplicate Optics',
+    });
+    const preview = await conversionPreview(service, actor('rep'), lead.id);
+    expect((preview.accounts as CrmRecord[]).map((r) => r.id)).toEqual([
+      account.id,
+    ]);
+    expect((preview.contacts as CrmRecord[]).map((r) => r.id)).toEqual([
+      same.id,
+    ]);
+    expect((preview.opportunities as CrmRecord[]).map((r) => r.id)).toEqual([
+      open.id,
+    ]);
+    // A company the CRM does not know: nothing to link, no deals.
+    const fresh = await service.save(actor('rep'), 'leads', {
+      name: 'Wei Zhang',
+      company: 'Brand New Glass',
+    });
+    expect(
+      await conversionPreview(service, actor('rep'), fresh.id),
+    ).toMatchObject({ accounts: [], contacts: [], opportunities: [] });
   });
   it('validates opportunity contacts and preserves customer status after reopening', async () => {
     const account = await service.save(actor('rep'), 'accounts', {
@@ -1547,6 +1644,7 @@ describe('CRM API security and domain rules', () => {
       'summarize_records',
     ]);
     expect(crmEmployee.tools?.map((tool) => tool.name).sort()).toEqual([
+      'add_note',
       'approval_action',
       'convert_lead',
       'create_record',
@@ -1560,7 +1658,11 @@ describe('CRM API security and domain rules', () => {
     ]);
     // Reports come from the plugin's report skill, whose tool the model
     // activates by loading it; skills have to be on for that.
-    expect(crmEmployee.skills).toEqual(['business-analysis-report']);
+    // It also loads the lead follow-up skill when asked what to do next.
+    expect(crmEmployee.skills).toEqual([
+      'business-analysis-report',
+      'lead-follow-up',
+    ]);
     expect(crmEmployee.chatSettings?.enableSkills).toBe(true);
     expect(crmAssistant({ avatar: 'https://crm.example/x.png' }).avatar).toBe(
       'https://crm.example/x.png',
@@ -1569,6 +1671,29 @@ describe('CRM API security and domain rules', () => {
     expect(crmAssistant({ avatar: 'x' }).systemPrompt).toContain(
       '公司名称：NocoBase',
     );
+    // The language follows the setting: a fixed one unless the user asks
+    // for another, or the user's own.
+    expect(
+      crmAssistant({ avatar: 'x', language: 'zh-CN' }).systemPrompt,
+    ).toContain('Write everything in Chinese (简体中文)');
+    expect(
+      crmAssistant({ avatar: 'x', language: 'en-US' }).systemPrompt,
+    ).toContain('unless the user asks you to use another language');
+    expect(
+      crmAssistant({ avatar: 'x', language: 'user' }).systemPrompt,
+    ).toContain('in the language the user writes in');
+    // A wandering conversation is carried into the CRM only through
+    // proposals: offered after an answer, listed at its close and proposed
+    // once picked; a lead's message, the enquiry as it arrived, is left be.
+    const followThrough = crmAssistant({ avatar: 'x' }).systemPrompt;
+    expect(followThrough).toContain('Shall I add');
+    expect(followThrough).toContain(
+      'a numbered list of the changes you propose',
+    );
+    expect(followThrough).toContain('Showing a list is not agreement');
+    expect(followThrough).toContain("Never change a lead's message");
+    // An exchange that took place is an activity; a note is for the rest.
+    expect(followThrough).toContain('is logged as a completed activity');
     for (const tool of tools) {
       expect(tool.defaultPermission).toBe('ALLOW');
       expect(tool.execution).toBe('backend');
@@ -1967,6 +2092,7 @@ describe('CRM API security and domain rules', () => {
       tools.map((tool) => [tool.definition.name, tool]),
     );
     expect(Object.keys(byName).sort()).toEqual([
+      'add_note',
       'approval_action',
       'convert_lead',
       'create_record',
@@ -2209,11 +2335,11 @@ describe('CRM API security and domain rules', () => {
 describe('CRM skills', () => {
   it('appends the company notes to the skill the AI loads, and only there', async () => {
     const shipped: SkillsEntity = {
-      name: 'lead-evaluation',
+      name: 'lead-follow-up',
       scope: 'SPECIFIED',
-      description: 'Evaluate a lead.',
-      content: '# 线索评估\n\n内置做法。',
-      introduction: { title: '线索评估' },
+      description: 'Follow a lead up.',
+      content: '# 跟进线索\n\n内置做法。',
+      introduction: { title: '跟进线索' },
     };
     const registered = new Map<string, SkillsEntity>([[shipped.name, shipped]]);
     const skills = {
@@ -2227,28 +2353,28 @@ describe('CRM skills', () => {
     const notes = new CrmSkillNotes(database, skills);
     await notes.start();
     // Without notes the AI loads the file as it is.
-    expect(registered.get('lead-evaluation')?.content).toBe(shipped.content);
+    expect(registered.get('lead-follow-up')?.content).toBe(shipped.content);
     // Everyone in the CRM reads the skills; a salesperson may not edit
     // the notes, a sales manager and an administrator may.
     expect(await notes.list(actor('rep'))).toMatchObject({
       canEdit: false,
-      skills: [{ name: 'lead-evaluation', title: '线索评估' }],
+      skills: [{ name: 'lead-follow-up', title: '跟进线索' }],
     });
     expect((await notes.list(actor('manager'))).canEdit).toBe(true);
     await expect(notes.list(actor('outsider'))).rejects.toMatchObject({
       code: 'forbidden',
     });
     await expect(
-      notes.save(actor('rep'), 'lead-evaluation', { notes: 'x' }),
+      notes.save(actor('rep'), 'lead-follow-up', { notes: 'x' }),
     ).rejects.toMatchObject({ code: 'forbidden' });
     expect(
       (
-        await notes.save(actor('manager'), 'lead-evaluation', {
+        await notes.save(actor('manager'), 'lead-follow-up', {
           notes: '经理补充',
         })
       ).updatedById,
     ).toBe('manager');
-    const saved = await notes.save(actor('admin'), 'lead-evaluation', {
+    const saved = await notes.save(actor('admin'), 'lead-follow-up', {
       notes: '政府和国企客户一律评为 A 级。',
     });
     // The page shows the shipped method apart from the notes …
@@ -2258,7 +2384,7 @@ describe('CRM skills', () => {
       updatedById: 'admin',
     });
     // … and the AI loads both, the notes after the method.
-    const composed = registered.get('lead-evaluation')!.content;
+    const composed = registered.get('lead-follow-up')!.content;
     expect(composed.startsWith(shipped.content)).toBe(true);
     expect(composed).toContain('## 本公司的补充说明');
     expect(composed).toContain('政府和国企客户一律评为 A 级。');
@@ -2268,18 +2394,71 @@ describe('CRM skills', () => {
     // A restart loads the file again and puts the stored notes back.
     registered.set(shipped.name, shipped);
     await new CrmSkillNotes(database, skills).start();
-    expect(registered.get('lead-evaluation')!.content).toBe(composed);
+    expect(registered.get('lead-follow-up')!.content).toBe(composed);
     // Only the CRM's own skills take notes.
     await expect(
       notes.save(actor('admin'), 'data-query', { notes: 'x' }),
     ).rejects.toMatchObject({ code: 'notFound' });
     // Clearing the notes gives the AI the file alone again.
-    await notes.save(actor('admin'), 'lead-evaluation', { notes: '  ' });
-    expect(registered.get('lead-evaluation')!.content).toBe(shipped.content);
+    await notes.save(actor('admin'), 'lead-follow-up', { notes: '  ' });
+    expect(registered.get('lead-follow-up')!.content).toBe(shipped.content);
     expect((await notes.list(actor('admin'))).skills[0]).toMatchObject({
-      name: 'lead-evaluation',
+      name: 'lead-follow-up',
       notes: '',
     });
+    // Notes kept for the former lead evaluation skill join those of the
+    // follow-up skill it was merged into, after them.
+    await notes.save(actor('admin'), 'lead-follow-up', { notes: '跟进说明' });
+    const row = await database
+      .query()
+      .selectFrom('crmSettings')
+      .select('value')
+      .where('id', '=', 'skill-notes')
+      .executeTakeFirstOrThrow();
+    const stored = (
+      typeof row.value === 'string' ? JSON.parse(row.value) : row.value
+    ) as Record<string, unknown>;
+    await database
+      .query()
+      .updateTable('crmSettings')
+      .set({
+        value: JSON.stringify({
+          ...stored,
+          'lead-evaluation': { notes: '评估说明', updatedById: 'manager' },
+        }),
+      })
+      .where('id', '=', 'skill-notes')
+      .execute();
+    expect((await notes.list(actor('admin'))).skills[0]).toMatchObject({
+      name: 'lead-follow-up',
+      notes: '跟进说明\n\n评估说明',
+    });
+  });
+
+  it('gives existing sales roles the waiting-on-me page once', async () => {
+    for (const role of ['sales-representative', 'sales-manager']) {
+      const set = (await authorization.permissionSets.get(roleKey(role)))!;
+      await authorization.permissionSets.update(set.key, {
+        ...set,
+        grants: set.grants.filter(
+          (g) =>
+            !(g.resource.type === 'page' && g.resource.id === 'crm-decisions'),
+        ),
+      });
+    }
+    await database
+      .query()
+      .deleteFrom('crmSettings')
+      .where('id', '=', 'crm-decisions-v1')
+      .execute();
+    await provisionCrm(authorization, database);
+    for (const role of ['sales-representative', 'sales-manager'])
+      expect(
+        (await authorization.permissionSets.get(roleKey(role)))!.grants.some(
+          (g) =>
+            g.resource.type === 'page' && g.resource.id === 'crm-decisions',
+        ),
+      ).toBe(true);
   });
 
   it('gives existing sales roles the skills page, and managers its editing, once', async () => {
@@ -2325,6 +2504,91 @@ describe('CRM skills', () => {
     }
     expect(await capability(actor('manager'), 'manageSkills')).toBe(true);
     expect(await capability(actor('rep'), 'manageSkills')).toBe(false);
+  });
+});
+
+describe("an activity's outcome, written up by the AI", () => {
+  it('turns the notes into feedback as the person who may record it', async () => {
+    const prompts: string[] = [];
+    const container = new ServiceContainer();
+    container.instance(aiConversationsManagerToken, {
+      create: async () => ({ sessionId: 'feedback-session' }),
+    } as unknown as ReturnType<
+      typeof container.resolve<typeof aiConversationsManagerToken>
+    >);
+    container.instance(agentServiceFactoryToken, {
+      createAIEmployee: async () => ({
+        invoke: async (input: {
+          userMessages: { content: { content: string } }[];
+        }) => {
+          prompts.push(input.userMessages[0].content.content);
+          return {
+            message: {
+              content: {
+                type: 'text',
+                content: '**对方反馈**\n- 下周看演示\n',
+              },
+            },
+          };
+        },
+      }),
+    } as unknown as ReturnType<
+      typeof container.resolve<typeof agentServiceFactoryToken>
+    >);
+    container.instance(loggingToken, {
+      getLogger: () => ({ warn: () => undefined }),
+    } as unknown as ReturnType<typeof container.resolve<typeof loggingToken>>);
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const lead = await service.save(actor('rep'), 'leads', {
+        name: '反馈线索',
+        company: '反馈科技',
+        source: 'website',
+      });
+      const call = await service.save(actor('rep'), 'activities', {
+        type: 'call',
+        name: '需求电话',
+        status: 'planned',
+        startAt: '2026-10-05T02:00:00.000Z',
+        leadId: lead.id,
+      });
+      const { text } = await organiseFeedback(
+        service,
+        container,
+        actor('rep'),
+        toText(call.id),
+        { text: '张总说下周看演示，预算30万' },
+      );
+      // The reply, trimmed, for the card; nothing saved.
+      expect(text).toBe('**对方反馈**\n- 下周看演示');
+      expect(prompts[0]).toContain('张总说下周看演示，预算30万');
+      expect(prompts[0]).toContain('需求电话');
+      expect(prompts[0]).toContain('反馈线索 / 反馈科技');
+      expect(
+        (await service.get(actor('rep'), 'activities', toText(call.id)))
+          .feedback,
+      ).toBeFalsy();
+      // Notes are needed, and someone who may not edit the activity gets
+      // nothing.
+      await expect(
+        organiseFeedback(service, container, actor('rep'), toText(call.id), {
+          text: '  ',
+        }),
+      ).rejects.toMatchObject({ code: 'required' });
+      await expect(
+        organiseFeedback(
+          service,
+          container,
+          actor('outsider'),
+          toText(call.id),
+          { text: '随便' },
+        ),
+      ).rejects.toBeInstanceOf(Error);
+    } finally {
+      enabled.mockRestore();
+    }
   });
 });
 
@@ -2409,6 +2673,8 @@ describe('CRM lead capture', () => {
             country: 'cn',
             state: '浙江省',
             city: '杭州',
+            // The region is in its own fields; the address keeps the rest.
+            address: '中国浙江省杭州市西湖区文三路 90 号',
             message: '想私有化部署',
             // A field the text did not give is not reported as a doubt,
             // nor is one the lead has no such field for.
@@ -2449,6 +2715,7 @@ describe('CRM lead capture', () => {
         country: 'CN',
         state: 'CN-33',
         city: '杭州',
+        address: '西湖区文三路 90 号',
         message: '想私有化部署',
       });
       expect(leads[0].uncertain).toEqual(['jobTitle']);
@@ -2634,6 +2901,974 @@ describe('CRM lead capture', () => {
   });
 });
 
+describe('CRM lead evaluation', () => {
+  // The AI Employee plugin as the evaluator uses it: a conversation, the
+  // lead-evaluation skill, and an employee whose run returns `verdict`.
+  const evaluating = (verdict: unknown) => {
+    const prompts: string[] = [];
+    const container = new ServiceContainer();
+    container.instance(aiConversationsManagerToken, {
+      create: async () => ({ sessionId: 'evaluation-session' }),
+    } as unknown as ReturnType<
+      typeof container.resolve<typeof aiConversationsManagerToken>
+    >);
+    container.instance(aiManagerToken, {
+      skillsManager: {
+        // Only by its name: the run must load the follow-up skill.
+        getSkills: async (name: string) =>
+          name === 'lead-follow-up'
+            ? { content: '# 跟进线索\n\n技能正文。' }
+            : undefined,
+      },
+    } as unknown as ReturnType<
+      typeof container.resolve<typeof aiManagerToken>
+    >);
+    container.instance(agentServiceFactoryToken, {
+      createAIEmployee: async () => ({
+        invoke: async (input: {
+          userMessages: { content: { content: string } }[];
+        }) => {
+          prompts.push(input.userMessages[0].content.content);
+          return { structuredResponse: verdict };
+        },
+      }),
+    } as unknown as ReturnType<
+      typeof container.resolve<typeof agentServiceFactoryToken>
+    >);
+    container.instance(loggingToken, {
+      getLogger: () => ({ warn: () => undefined }),
+    } as unknown as ReturnType<typeof container.resolve<typeof loggingToken>>);
+    return { evaluator: new LeadEvaluator(service, container), prompts };
+  };
+  const follow = {
+    recommendation: 'follow',
+    grade: 'A',
+    summary: '三个厂区要私有化部署，问了企业版集群。',
+    reasons: ['线索原文：三个厂区用 Excel 做设备点检'],
+    edition: '企业版',
+    invalidReason: null,
+    nextStep: { type: 'call', subject: '电话了解部署规模', inDays: 0 },
+    questions: ['有几个厂区要上线？'],
+    enrich: [],
+  };
+
+  it('evaluates a new lead as its owner and records the verdict for a decision', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const lead = await service.save(actor('rep'), 'leads', {
+        name: '周立',
+        company: '评估精工',
+        source: 'exhibition',
+        message: '三个厂区用 Excel 做设备点检，想看私有化部署',
+      });
+      const { evaluator, prompts } = evaluating(follow);
+      const entry = await evaluator.request(actor('rep'), lead.id);
+      expect(entry).toMatchObject({ status: 'running' });
+      await evaluator.idle();
+      // The skill and the lead are in what the AI was given.
+      // First the web research on the company, then the verdict from the
+      // skill, the lead and what was found.
+      expect(prompts[0]).toContain('先联网调查这条线索里的公司');
+      expect(prompts[0]).toContain('评估精工');
+      expect(prompts[1]).toContain('技能正文');
+      expect(prompts[1]).toContain('评估精工');
+      const pending = await latestEvaluation(service, actor('rep'), lead.id);
+      expect(pending).toMatchObject({
+        status: 'pending',
+        ai: { result: { recommendation: 'follow', grade: 'A' } },
+      });
+      // The feed shows it among the AI's entries, not the people's.
+      const ai = await service.historyOf(actor('rep'), 'leads', lead.id, {
+        source: 'ai',
+      });
+      expect(ai.data.map((e) => e.action)).toEqual(['ai']);
+      const people = await service.historyOf(actor('rep'), 'leads', lead.id, {
+        source: 'user',
+      });
+      expect(people.data.map((e) => e.action)).toEqual(['created']);
+      // Waiting on the owner; a manager sees it in the team's, and someone
+      // who may not edit the lead does not see it at all.
+      const mine = await pendingDecisions(service, actor('rep'));
+      expect(mine.data).toContainEqual(
+        expect.objectContaining({
+          id: pending!.id,
+          lead: expect.objectContaining({ id: lead.id, name: '周立' }),
+        }),
+      );
+      expect(
+        (await pendingDecisions(service, actor('manager'))).data.map(
+          (e) => e.id,
+        ),
+      ).not.toContain(pending!.id);
+      expect(
+        (
+          await pendingDecisions(service, actor('manager'), { scope: 'team' })
+        ).data.map((e) => e.id),
+      ).toContain(pending!.id);
+      expect(
+        (
+          await pendingDecisions(service, actor('other'), { scope: 'team' })
+        ).data.map((e) => e.id),
+      ).not.toContain(pending!.id);
+
+      // Someone who may not edit the lead may not decide.
+      await expect(
+        evaluator.decide(actor('outsider'), lead.id, pending!.id, 'accept'),
+      ).rejects.toMatchObject({ code: 'forbidden' });
+      // Accepting plans the first contact, which makes the lead working,
+      // and both are recorded as the AI's proposal the rep confirmed.
+      const accepted = await evaluator.decide(
+        actor('rep'),
+        lead.id,
+        pending!.id,
+        'accept',
+      );
+      expect(accepted).toMatchObject({
+        status: 'accepted',
+        ai: { decidedById: 'rep' },
+      });
+      const activity = await service.get(
+        actor('rep'),
+        'activities',
+        accepted.ai.activityId!,
+      );
+      expect(activity).toMatchObject({
+        name: '电话了解部署规模',
+        leadId: lead.id,
+        status: 'planned',
+      });
+      expect((await service.get(actor('rep'), 'leads', lead.id)).status).toBe(
+        'working',
+      );
+      // Decided, it stays on the page among the handled ones, and no longer
+      // counts as waiting.
+      const listed = await pendingDecisions(service, actor('rep'), {
+        state: 'all',
+      });
+      expect(listed.data).toContainEqual(
+        expect.objectContaining({ id: pending!.id, status: 'accepted' }),
+      );
+      expect(
+        (await pendingDecisions(service, actor('rep'))).data.map((e) => e.id),
+      ).not.toContain(pending!.id);
+      expect(listed.pending).toBe(
+        listed.data.filter((e) => e.status === 'pending').length,
+      );
+      // Following the lead up again keeps the decided one there, beside
+      // the new one waiting.
+      const again = evaluating(follow).evaluator;
+      await again.request(actor('rep'), lead.id);
+      await again.idle();
+      const both = (
+        await pendingDecisions(service, actor('rep'), { state: 'all' })
+      ).data.filter((e) => e.recordId === lead.id);
+      expect(both.map((e) => e.status)).toEqual(['pending', 'accepted']);
+      const rows = await database
+        .query()
+        .selectFrom('crmHistory')
+        .select(['action', 'source'])
+        .where('recordId', 'in', [lead.id, toText(activity.id)])
+        .execute();
+      expect(rows).toContainEqual({ action: 'created', source: 'assistant' });
+      expect(rows).toContainEqual({ action: 'status', source: 'assistant' });
+      // A verdict is decided once.
+      await expect(
+        evaluator.decide(actor('rep'), lead.id, pending!.id, 'dismiss'),
+      ).rejects.toMatchObject({ code: 'evaluationDecided', status: 409 });
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+
+  it('nurtures, invalidates or sets aside a lead as decided', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const verdicts = {
+        nurture: {
+          ...follow,
+          recommendation: 'nurture',
+          grade: 'C',
+          nextStep: null,
+        },
+        invalid: {
+          ...follow,
+          recommendation: 'invalid',
+          grade: null,
+          invalidReason: 'student',
+          nextStep: null,
+        },
+      };
+      for (const [kind, verdict] of Object.entries(verdicts)) {
+        const lead = await service.save(actor('rep'), 'leads', {
+          name: kind,
+          source: 'website',
+        });
+        const { evaluator } = evaluating(verdict);
+        await evaluator.request(actor('rep'), lead.id);
+        await evaluator.idle();
+        const entry = await latestEvaluation(service, actor('rep'), lead.id);
+        await evaluator.decide(actor('rep'), lead.id, entry!.id, 'accept');
+        expect(await service.get(actor('rep'), 'leads', lead.id)).toMatchObject(
+          kind === 'nurture'
+            ? { status: 'nurturing' }
+            : { status: 'invalid', invalidReason: 'student' },
+        );
+      }
+      // Evaluating again replaces a verdict still waiting.
+      const twice = await service.save(actor('rep'), 'leads', {
+        name: 'twice',
+        source: 'website',
+      });
+      const repeat = evaluating(verdicts.nurture).evaluator;
+      await repeat.request(actor('rep'), twice.id);
+      await repeat.idle();
+      const first = await latestEvaluation(service, actor('rep'), twice.id);
+      await repeat.request(actor('rep'), twice.id);
+      await repeat.idle();
+      const statuses = await database
+        .query()
+        .selectFrom('crmHistory')
+        .select(['id', 'aiStatus'])
+        .where('recordId', '=', twice.id)
+        .where('action', '=', 'ai')
+        .execute();
+      expect(statuses).toContainEqual({
+        id: first!.id,
+        aiStatus: 'superseded',
+      });
+      expect(statuses.filter((e) => e.aiStatus === 'pending')).toHaveLength(1);
+      // Dismissing changes nothing but the verdict's standing.
+      const lead = await service.save(actor('rep'), 'leads', {
+        name: 'dismissed',
+        source: 'website',
+      });
+      const { evaluator } = evaluating(verdicts.nurture);
+      await evaluator.request(actor('rep'), lead.id);
+      await evaluator.idle();
+      const entry = await latestEvaluation(service, actor('rep'), lead.id);
+      expect(
+        await evaluator.decide(actor('rep'), lead.id, entry!.id, 'dismiss'),
+      ).toMatchObject({ status: 'dismissed' });
+      expect((await service.get(actor('rep'), 'leads', lead.id)).status).toBe(
+        'new',
+      );
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+
+  it('looks the company up again only when due, and converts or reviews as accepted', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const lead = await service.save(actor('rep'), 'leads', {
+        name: '钱多',
+        company: '复查科技',
+        source: 'website',
+        website: 'https://fucha.example',
+      });
+      const first = evaluating(follow);
+      await first.evaluator.request(actor('rep'), lead.id);
+      await first.evaluator.idle();
+      // The first follow-up searches the web, then gives its verdict.
+      expect(first.prompts).toHaveLength(2);
+      expect(
+        (await latestEvaluation(service, actor('rep'), lead.id))?.ai
+          .researchedAt,
+      ).toBeTruthy();
+      const lead2 = await service.get(actor('rep'), 'leads', lead.id);
+      const recent = await researchDue(
+        service,
+        lead2,
+        'none',
+        new Date(Date.now() + 89 * 86_400_000),
+      );
+      expect(recent).toBe(false);
+      expect(
+        await researchDue(
+          service,
+          lead2,
+          'none',
+          new Date(Date.now() + 91 * 86_400_000),
+        ),
+      ).toBe(true);
+      // The next one, with the company known and recently looked up, does
+      // not search, and is told the previous recommendation.
+      const again = evaluating({ ...follow, changes: ['没有变化'] });
+      await again.evaluator.request(actor('rep'), lead.id);
+      await again.evaluator.idle();
+      expect(again.prompts).toHaveLength(1);
+      expect(again.prompts[0]).toContain('上一次跟进建议');
+      expect(again.prompts[0]).toContain(follow.summary);
+      // Accepting a conversion waits for the person's own conversion.
+      const convert = evaluating({
+        ...follow,
+        recommendation: 'convert',
+        nextStep: null,
+        opportunity: { name: '设备点检系统（企业版）', amount: null },
+      });
+      await convert.evaluator.request(actor('rep'), lead.id);
+      await convert.evaluator.idle();
+      const proposal = await latestEvaluation(service, actor('rep'), lead.id);
+      expect(proposal?.ai.result).toMatchObject({
+        recommendation: 'convert',
+        opportunity: { name: '设备点检系统（企业版）' },
+      });
+      await expect(
+        convert.evaluator.decide(actor('rep'), lead.id, proposal!.id, 'accept'),
+      ).rejects.toMatchObject({ code: 'convertFirst', status: 409 });
+      // Nurturing plans a review task the given days ahead.
+      const nurtured = await service.save(actor('rep'), 'leads', {
+        name: '培育',
+        source: 'website',
+      });
+      const nurture = evaluating({
+        ...follow,
+        recommendation: 'nurture',
+        grade: 'C',
+        nextStep: null,
+        reviewInDays: 30,
+      });
+      await nurture.evaluator.request(actor('rep'), nurtured.id);
+      await nurture.evaluator.idle();
+      const waiting = await latestEvaluation(
+        service,
+        actor('rep'),
+        nurtured.id,
+      );
+      const decided = await nurture.evaluator.decide(
+        actor('rep'),
+        nurtured.id,
+        waiting!.id,
+        'accept',
+      );
+      const review = await service.get(
+        actor('rep'),
+        'activities',
+        toText(decided.ai.activityId),
+      );
+      expect(review).toMatchObject({
+        type: 'task',
+        status: 'planned',
+        leadId: nurtured.id,
+      });
+      const days =
+        (Date.parse(toText(review.startAt)) - Date.now()) / 86_400_000;
+      expect(days).toBeGreaterThan(28);
+      expect(days).toBeLessThan(33);
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+
+  it('redoes a waiting card as the person asks, by email this time', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const lead = await service.save(actor('rep'), 'leads', {
+        name: '改邮件',
+        company: '改邮件科技',
+        source: 'website',
+      });
+      const first = evaluating({
+        ...follow,
+        enrich: [
+          {
+            field: 'website',
+            value: 'https://gaiyoujian.example',
+            source: null,
+          },
+        ],
+      });
+      await first.evaluator.request(actor('rep'), lead.id);
+      await first.evaluator.idle();
+      const card = await latestEvaluation(service, actor('rep'), lead.id);
+      expect(card?.ai.result?.enrich).toHaveLength(1);
+      // Only a waiting card, and only with words.
+      await expect(
+        first.evaluator.request(actor('rep'), lead.id, {
+          entryId: card!.id,
+          instruction: '  ',
+        }),
+      ).rejects.toMatchObject({ code: 'invalidInput' });
+      const byEmail = {
+        ...follow,
+        nextStep: { type: 'email', subject: '发送方案资料', inDays: 0 },
+        changes: ['按意见改为邮件联系'],
+        email: { subject: '改邮件科技 供应链方案', body: '您好，感谢关注。' },
+      };
+      const second = evaluating(byEmail);
+      const redone = await second.evaluator.request(actor('rep'), lead.id, {
+        entryId: card!.id,
+        instruction: '要不马上发个邮件吧',
+      });
+      expect(redone?.ai).toMatchObject({
+        revises: card!.id,
+        instruction: '要不马上发个邮件吧',
+        instructedById: 'rep',
+      });
+      await second.evaluator.idle();
+      // One turn, no web search; the card and the words in the prompt.
+      expect(second.prompts).toHaveLength(1);
+      expect(second.prompts[0]).toContain('要修改的建议');
+      expect(second.prompts[0]).toContain('要不马上发个邮件吧');
+      const feed = (await service.historyOf(actor('rep'), 'leads', lead.id))
+        .data;
+      // The person's words in the feed, the old card replaced.
+      expect(feed).toContainEqual(
+        expect.objectContaining({
+          action: 'aiRevise',
+          actorId: 'rep',
+          changes: { text: '要不马上发个邮件吧', entryId: card!.id },
+        }),
+      );
+      expect(feed.find((entry) => entry.id === card!.id)?.aiStatus).toBe(
+        'superseded',
+      );
+      const now = await latestEvaluation(service, actor('rep'), lead.id);
+      expect(now).toMatchObject({
+        status: 'pending',
+        ai: {
+          instruction: '要不马上发个邮件吧',
+          result: {
+            nextStep: { type: 'email' },
+            email: { subject: '改邮件科技 供应链方案' },
+          },
+        },
+      });
+      // The web findings not yet written carry over.
+      expect(now?.ai.result?.enrich).toEqual(card!.ai.result!.enrich);
+      // A decided card is not redone.
+      // Accepting writes the findings still ticked with it, and plans the
+      // activity as the person set it on the card.
+      const accepted = await second.evaluator.decide(
+        actor('rep'),
+        lead.id,
+        now!.id,
+        'accept',
+        ['website'],
+        {
+          name: '发送方案和报价',
+          startAt: '2026-10-09T02:00:00.000Z',
+          description: '先发方案，再约电话。',
+        },
+      );
+      expect(accepted.ai).toMatchObject({
+        enrichedFields: ['website'],
+        enrichedById: 'rep',
+      });
+      expect((await service.get(actor('rep'), 'leads', lead.id)).website).toBe(
+        'https://gaiyoujian.example',
+      );
+      const activity = await service.get(
+        actor('rep'),
+        'activities',
+        toText(accepted.ai.activityId),
+      );
+      expect(activity).toMatchObject({
+        type: 'email',
+        name: '发送方案和报价',
+        startAt: '2026-10-09T02:00:00.000Z',
+        ownerId: 'rep',
+      });
+      // The description as the person wrote it on the card.
+      expect(activity.description).toBe('先发方案，再约电话。');
+      await expect(
+        second.evaluator.request(actor('rep'), lead.id, {
+          entryId: now!.id,
+          instruction: '再改一下',
+        }),
+      ).rejects.toMatchObject({ code: 'evaluationDecided' });
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+
+  it('carries on a planned activity rather than planning another', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const lead = await service.save(actor('rep'), 'leads', {
+        name: '已有活动',
+        company: '已有活动科技',
+        source: 'website',
+      });
+      const soon = new Date(Date.now() + 2 * 86_400_000);
+      const planned = await service.save(actor('rep'), 'activities', {
+        type: 'call',
+        name: '首次电话',
+        status: 'planned',
+        startAt: soon.toISOString(),
+        endAt: new Date(+soon + 30 * 60000).toISOString(),
+        leadId: lead.id,
+        description: '已经准备的内容',
+      });
+      const reuse = {
+        ...follow,
+        nextStep: {
+          type: 'call',
+          subject: '首次电话',
+          inDays: 2,
+          activity: 'A1',
+        },
+        prep: ['带上制造业案例'],
+        questions: ['谁来拍板？'],
+      };
+      const run = evaluating(reuse);
+      await run.evaluator.request(actor('rep'), lead.id);
+      await run.evaluator.idle();
+      // The model reads the activity by its reference and the rules.
+      const asked = run.prompts.at(-1)!;
+      expect(asked).toContain('"ref": "A1"');
+      expect(asked).toContain('"overdue": false');
+      expect(asked).toContain('怎么对待线索的活动');
+      const card = await latestEvaluation(service, actor('rep'), lead.id);
+      expect(card?.ai.result?.nextStep).toMatchObject({
+        activityId: planned.id,
+      });
+      // Accepting updates it: what to prepare is added, its time stays,
+      // and no other activity is planned.
+      await run.evaluator.decide(actor('rep'), lead.id, card!.id, 'accept');
+      const after = await service.get(
+        actor('rep'),
+        'activities',
+        toText(planned.id),
+      );
+      expect(after.startAt).toBe(planned.startAt);
+      expect(toText(after.description)).toContain('已经准备的内容');
+      expect(toText(after.description)).toContain('带上制造业案例');
+      expect(
+        (await service.list(actor('rep'), 'activities', { leadId: lead.id }))
+          .total,
+      ).toBe(1);
+      // Overdue: done, with what came of it ...
+      const past = new Date(Date.now() - 86_400_000);
+      const missed = await service.save(actor('rep'), 'activities', {
+        type: 'call',
+        name: '逾期电话',
+        status: 'planned',
+        startAt: past.toISOString(),
+        endAt: new Date(+past + 30 * 60000).toISOString(),
+        leadId: lead.id,
+      });
+      const ask = async (): Promise<string> => {
+        const again = evaluating({
+          ...reuse,
+          nextStep: { ...reuse.nextStep, inDays: 1, activity: 'A2' },
+        });
+        await again.evaluator.request(actor('rep'), lead.id);
+        await again.evaluator.idle();
+        expect(again.prompts.at(-1)).toContain('"overdue": true');
+        return (await latestEvaluation(service, actor('rep'), lead.id))!.id;
+      };
+      // (A2: the activities come latest first, the upcoming one being A1.)
+      let id = await ask();
+      await expect(
+        run.evaluator.decide(actor('rep'), lead.id, id, 'accept', [], {
+          mode: 'report',
+        }),
+      ).rejects.toMatchObject({ code: 'invalidInput' });
+      await run.evaluator.decide(actor('rep'), lead.id, id, 'accept', [], {
+        mode: 'report',
+        outcome: '对方确认下周看演示',
+      });
+      expect(
+        await service.get(actor('rep'), 'activities', toText(missed.id)),
+      ).toMatchObject({ status: 'completed', feedback: '对方确认下周看演示' });
+      // A card already decided is not decided again.
+      await expect(
+        run.evaluator.decide(actor('rep'), lead.id, card!.id, 'accept'),
+      ).rejects.toMatchObject({ code: 'evaluationDecided' });
+      // Overdue and not done: moved to the day proposed.
+      const late = await service.save(actor('rep'), 'activities', {
+        type: 'meeting',
+        name: '逾期会议',
+        status: 'planned',
+        startAt: new Date(+past - 3600_000).toISOString(),
+        endAt: past.toISOString(),
+        leadId: lead.id,
+      });
+      const moveRun = evaluating({
+        ...reuse,
+        nextStep: { ...reuse.nextStep, inDays: 1, activity: 'A3' },
+      });
+      await moveRun.evaluator.request(actor('rep'), lead.id);
+      await moveRun.evaluator.idle();
+      id = (await latestEvaluation(service, actor('rep'), lead.id))!.id;
+      expect(
+        (await latestEvaluation(service, actor('rep'), lead.id))?.ai.result
+          ?.nextStep?.activityId,
+      ).toBe(late.id);
+      await moveRun.evaluator.decide(actor('rep'), lead.id, id, 'accept', [], {
+        mode: 'reschedule',
+      });
+      const moved = await service.get(
+        actor('rep'),
+        'activities',
+        toText(late.id),
+      );
+      expect(new Date(toText(moved.startAt)).getTime()).toBeGreaterThan(
+        Date.now(),
+      );
+      expect(moved.status).toBe('planned');
+      // An activity done meanwhile: the card about it asks to follow up
+      // again rather than plan on it.
+      const stale = evaluating(reuse);
+      await stale.evaluator.request(actor('rep'), lead.id);
+      await stale.evaluator.idle();
+      const waiting = await latestEvaluation(service, actor('rep'), lead.id);
+      await service.save(
+        actor('rep'),
+        'activities',
+        { status: 'completed', feedback: '已经打过' },
+        toText(planned.id),
+      );
+      await expect(
+        stale.evaluator.decide(actor('rep'), lead.id, waiting!.id, 'accept'),
+      ).rejects.toMatchObject({ code: 'activityChanged' });
+      // One not yet due may be told as done too.
+      const early = await service.save(actor('rep'), 'leads', {
+        name: '提前完成',
+        source: 'website',
+      });
+      const ahead = new Date(Date.now() + 86_400_000);
+      const upcoming = await service.save(actor('rep'), 'activities', {
+        type: 'call',
+        name: '明天的电话',
+        status: 'planned',
+        startAt: ahead.toISOString(),
+        leadId: early.id,
+      });
+      const doneRun = evaluating(reuse);
+      await doneRun.evaluator.request(actor('rep'), early.id);
+      await doneRun.evaluator.idle();
+      const doneCard = await latestEvaluation(service, actor('rep'), early.id);
+      await doneRun.evaluator.decide(
+        actor('rep'),
+        early.id,
+        doneCard!.id,
+        'accept',
+        [],
+        { mode: 'report', outcome: '提前打了，对方要报价' },
+      );
+      expect(
+        await service.get(actor('rep'), 'activities', toText(upcoming.id)),
+      ).toMatchObject({
+        status: 'completed',
+        feedback: '提前打了，对方要报价',
+      });
+      // Its outcome recorded, the lead is followed up anew, reading it.
+      await doneRun.evaluator.idle();
+      const next = await latestEvaluation(service, actor('rep'), early.id);
+      expect(next?.id).not.toBe(doneCard!.id);
+      expect(next?.status).toBe('pending');
+      expect(doneRun.prompts.at(-1)).toContain('提前打了，对方要报价');
+      // From the activity's own page too; unticked, nothing more runs.
+      const second = await service.save(actor('rep'), 'activities', {
+        type: 'meeting',
+        name: '演示会',
+        status: 'planned',
+        startAt: ahead.toISOString(),
+        leadId: early.id,
+      });
+      expect(
+        await recordOutcome(
+          service,
+          doneRun.evaluator,
+          actor('rep'),
+          toText(second.id),
+          { outcome: '演示顺利', followUp: false },
+        ),
+      ).toEqual({ followUp: false });
+      expect(
+        (await latestEvaluation(service, actor('rep'), early.id))?.id,
+      ).toBe(next?.id);
+      const third = await service.save(actor('rep'), 'activities', {
+        type: 'call',
+        name: '回访',
+        status: 'planned',
+        startAt: ahead.toISOString(),
+        leadId: early.id,
+      });
+      expect(
+        await recordOutcome(
+          service,
+          doneRun.evaluator,
+          actor('rep'),
+          toText(third.id),
+          { outcome: '确认下周签约' },
+        ),
+      ).toEqual({ followUp: true });
+      await doneRun.evaluator.idle();
+      expect(
+        await service.get(actor('rep'), 'activities', toText(third.id)),
+      ).toMatchObject({ status: 'completed', feedback: '确认下周签约' });
+      expect(
+        (await latestEvaluation(service, actor('rep'), early.id))?.id,
+      ).not.toBe(next?.id);
+      // Only a planned one: done already, it is refused.
+      await expect(
+        recordOutcome(
+          service,
+          doneRun.evaluator,
+          actor('rep'),
+          toText(third.id),
+          { outcome: '再记一次' },
+        ),
+      ).rejects.toMatchObject({ code: 'activityChanged' });
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+
+  it('records an unreadable reply as failed, and runs nothing without the AI', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'unreadable',
+      source: 'website',
+    });
+    // The employee switched off: nothing is queued.
+    expect(
+      await evaluating(follow).evaluator.request(actor('rep'), lead.id),
+    ).toBe(null);
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const { evaluator, prompts } = evaluating({ recommendation: 'maybe' });
+      await evaluator.request(actor('rep'), lead.id);
+      await evaluator.idle();
+      // Asked once more for the structure before giving up.
+      expect(prompts).toHaveLength(3);
+      expect(prompts[2]).toContain('只返回要求的那个 JSON 对象');
+      expect(
+        await latestEvaluation(service, actor('rep'), lead.id),
+      ).toMatchObject({ status: 'failed', ai: { error: 'unreadable' } });
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+
+  it('writes the verdict in the AI language, shows it on the board and counts what waits', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const lead = await service.save(actor('rep'), 'leads', {
+        name: 'language',
+        source: 'website',
+      });
+      // The rep works in English; the CRM's AI language is Chinese.
+      const { evaluator, prompts } = evaluating(follow);
+      const running = await evaluator.request(
+        { ...actor('rep'), locale: 'en-US' },
+        lead.id,
+      );
+      expect(await aiStates(service, [lead.id])).toEqual({
+        [lead.id]: 'running',
+      });
+      await evaluator.idle();
+      expect(prompts[0]).toContain('用中文写');
+      expect(prompts[1]).toContain('用中文写 summary');
+      expect(await aiStates(service, [lead.id])).toEqual({
+        [lead.id]: 'pending',
+      });
+      const count = await (await request('/decisions/count', 'rep')).json();
+      expect(count.data.count).toBeGreaterThan(0);
+      // The list says so for the board's cards.
+      const list = await (await request(`/leads?ids=${lead.id}`, 'rep')).json();
+      expect(list.ai).toEqual({ [lead.id]: 'pending' });
+      expect(running).not.toBeNull();
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+
+  it('offers what the web says about the company and writes the picked findings', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const lead = await service.save(actor('rep'), 'leads', {
+        name: '网查',
+        company: '沃格光电',
+        city: '新余',
+        source: 'website',
+      });
+      const { evaluator, prompts } = evaluating({
+        ...follow,
+        enrich: [
+          {
+            field: 'website',
+            value: 'https://www.wgtech.example',
+            source: 'https://www.wgtech.example/about',
+          },
+          { field: 'industry', value: 'manufacturing', source: null },
+          // Not an option: dropped.
+          { field: 'employees', value: 'about 2000', source: null },
+          { field: 'country', value: 'cn', source: 'javascript:alert(1)' },
+          { field: 'state', value: '江西省', source: null },
+          // What the lead already holds: dropped; a different city stays,
+          // with the lead's own beside it.
+          { field: 'city', value: '南昌', source: null },
+          {
+            field: 'address',
+            value: '江西省南昌市红谷滩区丰和大道 1 号',
+            source: null,
+          },
+        ],
+      });
+      // What the team learned since, from a call and in the feed, goes
+      // with it.
+      await service.addNote(
+        actor('rep'),
+        'leads',
+        toText(lead.id),
+        '已在用 SAP，只做对接',
+      );
+      await service.save(actor('rep'), 'activities', {
+        type: 'call',
+        name: '首次电话',
+        status: 'completed',
+        startAt: '2026-09-30T02:00:00.000Z',
+        endAt: '2026-09-30T02:30:00.000Z',
+        leadId: lead.id,
+        feedback: '30 万预算只含软件，实施另算',
+      });
+      await evaluator.request(actor('rep'), lead.id);
+      await evaluator.idle();
+      // The search is allowed; the CRM tools are not needed.
+      expect(prompts[0]).toContain('用 subAgentWebSearch 查');
+      expect(prompts[1]).toContain('# 联网调查的结果');
+      expect(prompts[1]).toContain('# 团队的备注');
+      expect(prompts[1]).toContain('已在用 SAP，只做对接');
+      expect(prompts[1]).toContain('# 线索的活动');
+      expect(prompts[1]).toContain('30 万预算只含软件，实施另算');
+      const entry = await latestEvaluation(service, actor('rep'), lead.id);
+      expect(entry!.ai.result!.enrich).toEqual([
+        {
+          field: 'website',
+          value: 'https://www.wgtech.example',
+          source: 'https://www.wgtech.example/about',
+          current: null,
+        },
+        {
+          field: 'industry',
+          value: 'manufacturing',
+          source: null,
+          current: null,
+        },
+        // A source that is not a web address is not kept.
+        { field: 'country', value: 'CN', source: null, current: null },
+        { field: 'state', value: 'CN-36', source: null, current: null },
+        { field: 'city', value: '南昌', source: null, current: '新余' },
+        {
+          field: 'address',
+          value: '红谷滩区丰和大道 1 号',
+          source: null,
+          current: null,
+        },
+      ]);
+      // Another rep, who reads the lead but may not edit it, may not fill
+      // it: outside their edit scope the lead is not found.
+      await expect(
+        evaluator.enrich(actor('other'), lead.id, entry!.id, ['website']),
+      ).rejects.toMatchObject({ code: 'notFound' });
+      await expect(
+        evaluator.enrich(actor('rep'), lead.id, entry!.id, ['employees']),
+      ).rejects.toMatchObject({ code: 'invalidInput' });
+      // The rep keeps their city: only what they picked is written, the
+      // province with its country.
+      const written = await evaluator.enrich(actor('rep'), lead.id, entry!.id, [
+        'website',
+        'industry',
+        'state',
+      ]);
+      expect(written.ai.enrichedFields?.sort()).toEqual([
+        'country',
+        'industry',
+        'state',
+        'website',
+      ]);
+      expect(await service.get(actor('rep'), 'leads', lead.id)).toMatchObject({
+        website: 'https://www.wgtech.example',
+        industry: 'manufacturing',
+        country: 'CN',
+        state: 'CN-36',
+        city: '新余',
+      });
+      const [update] = (
+        await service.historyOf(actor('rep'), 'leads', lead.id, {
+          source: 'ai',
+        })
+      ).data.filter((e) => e.action === 'updated');
+      expect(update).toMatchObject({ source: 'assistant' });
+      await expect(
+        evaluator.enrich(actor('rep'), lead.id, entry!.id, ['city']),
+      ).rejects.toMatchObject({ code: 'evaluationDecided' });
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+
+  it('plans the first contact on the business day asked, at ten', () => {
+    const now = new Date('2026-09-30T08:20:00Z');
+    // Today: the next full hour.
+    expect(contactTime(0, 'Asia/Shanghai', now).toISOString()).toBe(
+      '2026-09-30T09:00:00.000Z',
+    );
+    // In two days: ten in the morning, Shanghai time.
+    expect(contactTime(2, 'Asia/Shanghai', now).toISOString()).toBe(
+      '2026-10-02T02:00:00.000Z',
+    );
+  });
+
+  it('asks for an evaluation and a decision through the routes, as someone who may edit the lead', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'route',
+      source: 'website',
+    });
+    expect((await request(`/leads/${lead.id}/evaluation`)).status).toBe(401);
+    expect(
+      (await request(`/leads/${lead.id}/evaluation`, 'outsider')).status,
+    ).toBe(403);
+    expect(
+      await (await request(`/leads/${lead.id}/evaluation`, 'rep')).json(),
+    ).toEqual({ data: null });
+    // The routes' container has no AI employee plugin.
+    expect(
+      (await request(`/leads/${lead.id}/evaluation`, 'rep', 'POST', {})).status,
+    ).toBe(409);
+    expect((await request('/decisions')).status).toBe(401);
+    expect((await request('/decisions', 'rep')).status).toBe(200);
+    // A lead created from the AI's organising is recorded as such, and
+    // counts among the AI's entries.
+    const proposed = await (
+      await request('/leads?via=capture', 'rep', 'POST', {
+        name: 'organised',
+        source: 'website',
+      })
+    ).json();
+    const [created] = (
+      await service.historyOf(actor('rep'), 'leads', proposed.data.id)
+    ).data;
+    expect(created).toMatchObject({ action: 'created', source: 'capture' });
+    expect(
+      (
+        await service.historyOf(actor('rep'), 'leads', proposed.data.id, {
+          source: 'ai',
+        })
+      ).data.map((entry) => entry.action),
+    ).toContain('created');
+  });
+});
+
 describe('demo dataset', () => {
   const count = async (entity: string): Promise<number> =>
     (await service.list(actor('admin'), entity as never, { pageSize: 1 }))
@@ -2762,6 +3997,149 @@ describe('demo dataset', () => {
       200,
     );
   }, 120000);
+});
+
+describe("a record's timeline and its activities", () => {
+  it('tells when an activity is planned, done or moved, to who may see it', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: '动态里的活动',
+      source: 'website',
+    });
+    const start = '2026-10-05T02:00:00.000Z';
+    const call = await service.save(actor('rep'), 'activities', {
+      type: 'call',
+      name: '需求摸底电话',
+      status: 'planned',
+      startAt: start,
+      endAt: '2026-10-05T02:30:00.000Z',
+      leadId: lead.id,
+    });
+    // Moved, described and renamed (which the lead does not hear of), then
+    // done.
+    await service.save(
+      actor('rep'),
+      'activities',
+      {
+        startAt: '2026-10-06T02:00:00.000Z',
+        endAt: '2026-10-06T02:30:00.000Z',
+      },
+      toText(call.id),
+    );
+    await service.save(
+      actor('rep'),
+      'activities',
+      { description: '准备案例' },
+      toText(call.id),
+    );
+    await service.save(
+      actor('rep'),
+      'activities',
+      { name: '需求摸底电话（二）', description: '准备两个案例' },
+      toText(call.id),
+    );
+    await service.save(
+      actor('rep'),
+      'activities',
+      { status: 'completed', feedback: '下周给方案' },
+      toText(call.id),
+    );
+    const feed = (await service.historyOf(actor('rep'), 'leads', lead.id)).data;
+    const told = feed
+      .filter((entry) => entry.entity === 'activities')
+      .map((entry) => [entry.action, entry.toValue ?? null]);
+    expect(told).toEqual([
+      ['status', 'completed'],
+      ['updated', null],
+      ['created', null],
+    ]);
+    const moved = feed.find(
+      (entry) =>
+        entry.entity === 'activities' &&
+        entry.action === 'updated' &&
+        'startAt' in (entry.changes as object),
+    );
+    expect(moved).toMatchObject({
+      changes: { startAt: '2026-10-06T02:00:00.000Z' },
+      previous: { startAt: start },
+      activity: {
+        name: '需求摸底电话（二）',
+        type: 'call',
+        status: 'completed',
+        feedback: '下周给方案',
+      },
+    });
+    // The lead's own entries stay, and the count covers both.
+    expect(feed.some((entry) => entry.entity === 'leads')).toBe(true);
+    // Someone who may read the lead but not the activity hears nothing of
+    // it.
+    const hidden = await service.save(actor('manager'), 'activities', {
+      type: 'meeting',
+      name: '经理自己的会议',
+      status: 'planned',
+      ownerId: 'manager',
+      startAt: start,
+      endAt: '2026-10-05T03:00:00.000Z',
+      leadId: lead.id,
+    });
+    const reps = (await service.historyOf(actor('rep'), 'leads', lead.id)).data;
+    const managers = (
+      await service.historyOf(actor('manager'), 'leads', lead.id)
+    ).data;
+    expect(managers.some((e) => e.recordId === hidden.id)).toBe(true);
+    const repSees = (
+      await service.list(actor('rep'), 'activities', { leadId: lead.id })
+    ).data.some((a) => a.id === hidden.id);
+    expect(reps.some((e) => e.recordId === hidden.id)).toBe(repSees);
+    // The activity's own history is its own entries, as before.
+    const own = (
+      await service.historyOf(actor('rep'), 'activities', toText(call.id))
+    ).data;
+    expect(own.map((entry) => entry.action)).toEqual([
+      'status',
+      'updated',
+      'updated',
+      'updated',
+      'created',
+    ]);
+    expect(own.every((entry) => !('activity' in entry))).toBe(true);
+    // Handed to another owner, it is told with the owner alone.
+    await service.save(
+      actor('admin'),
+      'activities',
+      { ownerId: 'manager', description: '经理接手' },
+      toText(call.id),
+    );
+    expect(
+      (await service.historyOf(actor('admin'), 'leads', lead.id)).data[0],
+    ).toMatchObject({
+      entity: 'activities',
+      action: 'updated',
+      changes: { ownerId: 'manager' },
+      previous: { ownerId: 'rep' },
+    });
+    // Deleted, it is told on the lead by name.
+    await service.remove(actor('admin'), 'activities', toText(call.id));
+    expect(
+      (await service.historyOf(actor('rep'), 'leads', lead.id)).data[0],
+    ).toMatchObject({
+      entity: 'leads',
+      action: 'activityDeleted',
+      actorId: 'admin',
+      changes: {
+        activityId: call.id,
+        name: '需求摸底电话（二）',
+        type: 'call',
+      },
+    });
+    // The notes tab stays the notes alone.
+    expect(
+      (
+        await service.historyOf(actor('rep'), 'leads', lead.id, {
+          action: 'note',
+        })
+      ).data,
+    ).toEqual([]);
+  });
 });
 
 describe('resolved titles and paged filters', () => {
@@ -3067,10 +4445,81 @@ it('reverses the CRM migration on a real SQLite database', async () => {
       directory: resolve('database/main/migrations'),
       packageName: 'crm',
     });
-    expect((await migrator.latest()).executed).toHaveLength(28);
+    expect(
+      (await migrator.upTo('202609300002_crm_history_note_edits')).executed,
+    ).toHaveLength(30);
+    // An activity saved as a no-show before that status went.
+    const at = new Date().toISOString();
+    await isolated
+      .query()
+      .insertInto('crmActivities')
+      .values({
+        id: 'no-show',
+        type: 'call',
+        name: 'Missed call',
+        status: 'noShow',
+        ownerId: 'rep',
+        startAt: at,
+        endAt: at,
+        createdById: 'rep',
+        createdAt: at,
+        updatedAt: at,
+      })
+      .execute();
+    expect((await migrator.latest()).executed).toEqual([
+      '202610020001_crm_activities_no_show_cancelled',
+      '202610020002_crm_activities_end_optional',
+    ]);
+    // An activity may now have no end.
+    await isolated
+      .query()
+      .insertInto('crmActivities')
+      .values({
+        id: 'no-end',
+        type: 'email',
+        name: 'Quick email',
+        status: 'planned',
+        ownerId: 'rep',
+        startAt: at,
+        endAt: null,
+        createdById: 'rep',
+        createdAt: at,
+        updatedAt: at,
+      })
+      .execute();
+    // ... is cancelled now.
+    expect(
+      await isolated
+        .query()
+        .selectFrom('crmActivities')
+        .select('status')
+        .where('id', '=', 'no-show')
+        .executeTakeFirst(),
+    ).toEqual({ status: 'cancelled' });
     expect(await isolated.builder().hasCollection('crmLeads')).toBe(true);
+    // A note's edit time, from 202609300002_crm_history_note_edits.
+    expect(
+      await isolated
+        .query()
+        .selectFrom('crmHistory')
+        .select('editedAt')
+        .execute(),
+    ).toEqual([]);
     expect((await migrator.latest()).executed).toEqual([]);
-    expect((await migrator.rollback()).rolledBack).toHaveLength(28);
+    // Each run is a batch: the last one first, then the thirty before it.
+    // Rolled back, an activity without an end takes its start.
+    expect((await migrator.rollback()).rolledBack).toEqual([
+      '202610020002_crm_activities_end_optional',
+      '202610020001_crm_activities_no_show_cancelled',
+    ]);
+    const filled = await isolated
+      .query()
+      .selectFrom('crmActivities')
+      .select(['startAt', 'endAt'])
+      .where('id', '=', 'no-end')
+      .executeTakeFirstOrThrow();
+    expect(filled.endAt).toEqual(filled.startAt);
+    expect((await migrator.rollback()).rolledBack).toHaveLength(30);
     expect(await isolated.builder().hasCollection('crmLeads')).toBe(false);
     expect(await isolated.builder().hasCollection('crmAccounts')).toBe(false);
   } finally {
@@ -3393,5 +4842,159 @@ describe('record-notification workflow', () => {
       }),
     ).rejects.toBeDefined();
     expect(inline.triggers).toEqual([]);
+  });
+});
+
+describe('notes in the activity feed', () => {
+  it('lets anyone who may read a record add a note, and only its author change or remove it', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Noted',
+      source: 'website',
+    });
+    const id = toText(lead.id);
+    // Unauthenticated, empty, or for someone who may not read the lead.
+    expect(
+      (await request(`/leads/${id}/notes`, undefined, 'POST', { text: 'x' }))
+        .status,
+    ).toBe(401);
+    expect(
+      (await request(`/leads/${id}/notes`, 'rep', 'POST', { text: '  ' }))
+        .status,
+    ).toBe(400);
+    expect(
+      (await request(`/leads/${id}/notes`, 'outsider', 'POST', { text: 'x' }))
+        .status,
+    ).toBe(403);
+    // The owner, and another rep who may read but not edit the lead.
+    const own = await (
+      await request(`/leads/${id}/notes`, 'rep', 'POST', {
+        text: 'Already runs SAP; wants an integration only.',
+      })
+    ).json();
+    expect(
+      (await request(`/leads/${id}/notes`, 'other', 'POST', { text: 'Seen' }))
+        .status,
+    ).toBe(200);
+    const feed = await service.historyOf(actor('rep'), 'leads', id);
+    const notes = feed.data.filter((entry) => entry.action === 'note');
+    expect(notes.map((note) => object(note.changes).text).sort()).toEqual([
+      'Already runs SAP; wants an integration only.',
+      'Seen',
+    ]);
+    // The notes tab reads them alone, and the record says how many.
+    expect(
+      (
+        await service.historyOf(actor('rep'), 'leads', id, { action: 'note' })
+      ).data.every((entry) => entry.action === 'note'),
+    ).toBe(true);
+    expect((await service.detail(actor('rep'), 'leads', id)).notesTotal).toBe(
+      2,
+    );
+    // A person's note counts among the people's entries.
+    expect(
+      (
+        await service.historyOf(actor('rep'), 'leads', id, { source: 'user' })
+      ).data.filter((entry) => entry.action === 'note'),
+    ).toHaveLength(2);
+    // Only the author changes or removes it.
+    const noteId = toText(own.data.id);
+    expect(
+      (
+        await request(`/notes/${noteId}`, 'other', 'PATCH', {
+          text: 'Not mine',
+        })
+      ).status,
+    ).toBe(403);
+    expect((await request(`/notes/${noteId}`, 'other', 'DELETE')).status).toBe(
+      403,
+    );
+    const edited = await (
+      await request(`/notes/${noteId}`, 'rep', 'PATCH', {
+        text: 'Runs SAP ECC; integration only.',
+      })
+    ).json();
+    expect(object(edited.data.changes).text).toBe(
+      'Runs SAP ECC; integration only.',
+    );
+    const [after] = (
+      await service.historyOf(actor('rep'), 'leads', id)
+    ).data.filter((entry) => entry.id === noteId);
+    expect(after?.editedAt).toBeTruthy();
+    expect(object(after?.previous).text).toBe(
+      'Already runs SAP; wants an integration only.',
+    );
+    // The feed says, at the time of the edit, who changed which note (the
+    // timeline leads there) and to what; the notes tab lists the note alone.
+    expect(
+      (await service.historyOf(actor('rep'), 'leads', id)).data,
+    ).toContainEqual(
+      expect.objectContaining({
+        action: 'noteEdited',
+        actorId: 'rep',
+        changes: { text: 'Runs SAP ECC; integration only.', noteId },
+      }),
+    );
+    expect(
+      (
+        await service.historyOf(actor('rep'), 'leads', id, { action: 'note' })
+      ).data.some((entry) => entry.action === 'noteEdited'),
+    ).toBe(false);
+    // Other entries are not notes and stay as they are.
+    const created = feed.data.find((entry) => entry.action === 'created');
+    expect(
+      (
+        await request(`/notes/${toText(created?.id)}`, 'rep', 'PATCH', {
+          text: 'x',
+        })
+      ).status,
+    ).toBe(404);
+    expect((await request(`/notes/${noteId}`, 'rep', 'DELETE')).status).toBe(
+      200,
+    );
+    const after2 = (await service.historyOf(actor('rep'), 'leads', id)).data;
+    expect(after2.some((entry) => entry.id === noteId)).toBe(false);
+    // The feed says a note was removed, and by whom, without its text.
+    expect(after2).toContainEqual(
+      expect.objectContaining({
+        action: 'noteDeleted',
+        actorId: 'rep',
+        changes: {},
+      }),
+    );
+  });
+  it('lets the AI propose a note, screened like the others and recorded as its proposal', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'AI noted',
+      source: 'website',
+    });
+    const id = toText(lead.id);
+    const input = { entity: 'leads', id, title: 'Note', text: 'Runs SAP' };
+    // Anyone who may read the lead may note on it; nobody else, and not
+    // with an empty note.
+    expect(
+      await screenProposal(service, actor('other'), 'add_note', input),
+    ).toEqual({ ok: true });
+    expect(
+      (await screenProposal(service, actor('outsider'), 'add_note', input)).ok,
+    ).toBe(false);
+    expect(
+      await screenProposal(service, actor('rep'), 'add_note', {
+        ...input,
+        text: ' ',
+      }),
+    ).toMatchObject({ ok: false, code: 'invalidInput', field: 'text' });
+    const tool = crmWriteTools(service, authorization).find(
+      (candidate) => candidate.definition.name === 'add_note',
+    );
+    const result = (await tool!.invoke(
+      { actor: { id: 'other', roles: [], isRoot: false } },
+      input,
+      { toolCallId: 'call', writer: () => undefined },
+    )) as Record<string, unknown>;
+    expect(object(result.values).text).toBe('Runs SAP');
+    const [note] = (
+      await service.historyOf(actor('rep'), 'leads', id)
+    ).data.filter((entry) => entry.action === 'note');
+    expect(note).toMatchObject({ actorId: 'other', source: 'assistant' });
   });
 });

@@ -112,6 +112,8 @@ export function resolveTab(
   slug: string | undefined,
   names: readonly string[],
 ): string | undefined {
+  // No tab in the address is none: the page opens on its first.
+  if (!slug) return undefined;
   return names.find((name) => name === slug || tabSlugs[name] === slug);
 }
 export function useDetailTab(): [string | undefined, (tab: string) => void] {

@@ -20,6 +20,13 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { crmToken } from '../providers/crm/index.js';
 import { crmSkillNotesToken } from '../providers/crm/skills.js';
 import { captureLeads } from '../providers/crm/lead-capture.js';
+import { organiseFeedback, recordOutcome } from '../providers/crm/feedback.js';
+import {
+  latestEvaluation,
+  aiStates,
+  leadEvaluatorToken,
+  pendingDecisions,
+} from '../providers/crm/lead-evaluation.js';
 import { screenProposal } from '../ai/screen.js';
 import {
   capability,
@@ -483,6 +490,92 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
       );
       return c.json({ data: result }, 201);
     });
+    // The AI's evaluation of a lead (lead-evaluation.ts): the newest one,
+    // asking for another (as someone who may edit the lead), and the
+    // owner's decision on a waiting one.
+    const evaluator = () =>
+      app.container.has(leadEvaluatorToken)
+        ? app.container.resolve(leadEvaluatorToken)
+        : undefined;
+    // How many suggestions wait on the reader, for the menu's badge and the
+    // browser tab.
+    // And how many are still being worked on, so the badge can look again
+    // soon rather than in half a minute.
+    routes.get('/decisions/count', async (c) => {
+      const decisions = await pendingDecisions(service, c.get('actor'), {
+        pageSize: 1000,
+      });
+      return c.json({
+        data: {
+          count: decisions.pending,
+          running: decisions.data.filter((entry) => entry.status === 'running')
+            .length,
+        },
+      });
+    });
+    routes.get('/decisions', async (c) =>
+      c.json(
+        await pendingDecisions(service, c.get('actor'), {
+          scope: c.req.query('scope'),
+          state: c.req.query('state'),
+          page: Number(c.req.query('page') ?? 1) || 1,
+          pageSize: Number(c.req.query('pageSize') ?? 20) || 20,
+        }),
+      ),
+    );
+    routes.get('/leads/:id/evaluation', async (c) =>
+      c.json({
+        data: await latestEvaluation(
+          service,
+          c.get('actor'),
+          c.req.param('id'),
+        ),
+      }),
+    );
+    routes.post('/leads/:id/evaluation', async (c) => {
+      const actor = c.get('actor');
+      await service.get(actor, 'leads', c.req.param('id'), undefined, 'update');
+      // A body naming a waiting card (`revise`) and an `instruction` redoes
+      // that card as the person asks.
+      const body = object(await c.req.json().catch(() => ({})));
+      const entry = await evaluator()?.request(
+        actor,
+        c.req.param('id'),
+        body.revise
+          ? { entryId: body.revise, instruction: body.instruction }
+          : undefined,
+      );
+      if (!entry) throw new CrmError('assistantUnavailable', 409);
+      return c.json({ data: entry }, 201);
+    });
+    // The web findings of an evaluation the person picked, into the lead.
+    routes.post('/leads/:id/evaluation/:entryId/enrich', async (c) => {
+      const run = evaluator();
+      if (!run) throw new CrmError('assistantUnavailable', 409);
+      return c.json({
+        data: await run.enrich(
+          c.get('actor'),
+          c.req.param('id'),
+          c.req.param('entryId'),
+          object(await c.req.json()).fields,
+        ),
+      });
+    });
+    routes.post('/leads/:id/evaluation/:entryId', async (c) => {
+      const run = evaluator();
+      if (!run) throw new CrmError('assistantUnavailable', 409);
+      const body = object(await c.req.json());
+      return c.json({
+        data: await run.decide(
+          c.get('actor'),
+          c.req.param('id'),
+          c.req.param('entryId'),
+          toText(body.decision) as 'accept',
+          body.fields,
+          body.activity,
+        ),
+      });
+    });
     // New lead with the AI: pasted text in, prefilled lead forms out
     // (lead-capture.ts). Nothing is saved here; the form is.
     routes.post('/leads/capture', async (c) =>
@@ -493,6 +586,32 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           c.get('actor'),
           await c.req.json(),
           (await service.settings()).timeZone || 'Asia/Shanghai',
+        ),
+      }),
+    );
+    // What came of an activity, jotted down, written up by the AI as its
+    // feedback for the person to read and record (feedback.ts).
+    routes.post('/activities/:id/feedback/organise', async (c) =>
+      c.json({
+        data: await organiseFeedback(
+          service,
+          app.container,
+          c.get('actor'),
+          c.req.param('id'),
+          await c.req.json(),
+        ),
+      }),
+    );
+    // A planned activity's outcome, recorded, and, as asked, its lead
+    // followed up anew (feedback.ts).
+    routes.post('/activities/:id/outcome', async (c) =>
+      c.json({
+        data: await recordOutcome(
+          service,
+          evaluator(),
+          c.get('actor'),
+          c.req.param('id'),
+          await c.req.json(),
         ),
       }),
     );
@@ -509,6 +628,7 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
             leads: [data.lead as Row],
             accounts: data.accounts as Row[],
             contacts: data.contacts as Row[],
+            opportunities: data.opportunities as Row[],
           })),
         },
       });
@@ -544,7 +664,12 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         c.get('actor'),
         entity,
         c.req.param('id'),
-        { page, pageSize },
+        {
+          page,
+          pageSize,
+          source: c.req.query('source'),
+          action: c.req.query('action'),
+        },
       );
       return c.json({
         ...result,
@@ -552,6 +677,32 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           [entity]: result.data.map((event) => object(event.changes ?? {})),
         })),
       });
+    });
+    // Notes in a record's activity feed: added by anyone who may read the
+    // record, changed or removed by their author (CrmService.addNote).
+    // Registered before the record routes, which would take /notes/:id.
+    routes.post('/:entity/:id/notes', async (c) =>
+      c.json({
+        data: await service.addNote(
+          c.get('actor'),
+          asEntity(c.req.param('entity')),
+          c.req.param('id'),
+          object(await c.req.json()).text,
+        ),
+      }),
+    );
+    routes.patch('/notes/:noteId', async (c) =>
+      c.json({
+        data: await service.editNote(
+          c.get('actor'),
+          c.req.param('noteId'),
+          object(await c.req.json()).text,
+        ),
+      }),
+    );
+    routes.delete('/notes/:noteId', async (c) => {
+      await service.removeNote(c.get('actor'), c.req.param('noteId'));
+      return c.json({ data: { deleted: true } });
     });
     routes.get('/:entity/:id', async (c) => {
       const entity = asEntity(c.req.param('entity'));
@@ -598,20 +749,36 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         ...(await resolveTitles(service, c.get('actor'), {
           [entity]: result.data,
         })),
+        // Leads the AI is evaluating or has a verdict waiting on.
+        ...(entity === 'leads'
+          ? {
+              ai: await aiStates(
+                service,
+                result.data.map((record) => toText(record.id)),
+              ),
+            }
+          : {}),
       });
     });
-    routes.post('/:entity', async (c) =>
-      c.json(
-        {
-          data: await service.save(
-            c.get('actor'),
-            asEntity(c.req.param('entity')),
-            await c.req.json(),
-          ),
-        },
-        201,
-      ),
-    );
+    routes.post('/:entity', async (c) => {
+      const entity = asEntity(c.req.param('entity'));
+      // A lead the AI organised from pasted text and the user checked
+      // (lead-capture.tsx) is recorded as organised by the AI. The mark
+      // only labels the history entry; the write is the user's.
+      const actor =
+        entity === 'leads' && c.req.query('via') === 'capture'
+          ? { ...c.get('actor'), via: 'capture' as const }
+          : c.get('actor');
+      const record = await service.save(actor, entity, await c.req.json());
+      // A new lead is followed up by the AI in the background, unless the
+      // person creating it unticked that (`followUp=0`); the lead is created
+      // whether or not that can start.
+      if (entity === 'leads' && c.req.query('followUp') !== '0')
+        await evaluator()
+          ?.request(actor, toText(record.id))
+          .catch(() => undefined);
+      return c.json({ data: record }, 201);
+    });
     routes.patch('/:entity/:id', async (c) =>
       c.json({
         data: await service.save(

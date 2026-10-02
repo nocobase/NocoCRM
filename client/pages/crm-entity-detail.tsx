@@ -110,12 +110,14 @@ import { ApprovalActions } from '../components/crm/approval-actions.js';
 import {
   ActivityItem,
   ConfirmDialog,
-  HistoryChanges,
+  HistoryFeed,
+  NotesPanel,
   LeadRow,
   RecordAttachments,
   WebsiteField,
 } from './crm-detail.js';
 import { UploadZone } from '../components/crm/attachments.js';
+import { RecordOutcomeDialog } from '../components/crm/outcome.js';
 
 // Which shortcuts a detail page offers the assistant, per the specification.
 // Each is a complete instruction sent as soon as it is clicked.
@@ -275,6 +277,8 @@ export default function EntityDetail({
   // The tab the address names (…/contacts), resolved once the page knows
   // which tabs it shows; an address naming another opens the first.
   const [tabSlug, setTab] = useDetailTab();
+  // The note the timeline opened in the Notes tab.
+  const [noteFocus, setNoteFocus] = useState<string>();
   // The related lists and the history arrive one page each with the
   // record; these grow them from the list and history endpoints.
   const linkParam =
@@ -303,18 +307,11 @@ export default function EntityDetail({
     `approvals?opportunityId=${toText(id)}`,
     firstPage('approvals'),
   );
-  const moreHistory = useMore<Data>(
-    `${toText(entity)}/${toText(id)}/history`,
-    detail
-      ? {
-          data: detail.history,
-          total: detail.historyTotal ?? detail.history.length,
-        }
-      : undefined,
-  );
   const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState<{ entity: Entity; initial: Data }>();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // A planned activity's outcome being recorded.
+  const [recording, setRecording] = useState(false);
   const [error, setError] = useState<unknown>();
   // A deal's account change waiting for the user to confirm it takes the
   // deal's contacts off (see changeAccount below).
@@ -325,25 +322,6 @@ export default function EntityDetail({
   }>();
   const [moving, setMoving] = useState(false);
   const [busy, setBusy] = useState(false);
-  // History entries name attachments by id; this resolves the ones on this
-  // record (and its activities) to filenames for display.
-  const historyFileIds = [
-    ...new Set(
-      moreHistory.records.flatMap((event) => {
-        const changes = event.changes as Data | undefined;
-        return Array.isArray(changes?.attachments)
-          ? changes.attachments.map(toText)
-          : [];
-      }),
-    ),
-  ];
-  const historyFiles = useCrmQuery<{ id: string; filename: string }[]>(
-    `files?ids=${historyFileIds.join(',')}`,
-    historyFileIds.length > 0,
-  );
-  const fileNames = Object.fromEntries(
-    (historyFiles.data ?? []).map((f) => [f.id, f.filename]),
-  );
   // The assistant panel attaches the record on screen to the conversation;
   // its title follows once the record has loaded.
   const contextName = detail
@@ -376,7 +354,6 @@ export default function EntityDetail({
     ...detail.titles,
     ...moreActivities.titles,
     ...moreApprovals.titles,
-    ...moreHistory.titles,
   };
   const bareNames = detail.names;
   const title = recordTitle(entity, record, names);
@@ -493,7 +470,10 @@ export default function EntityDetail({
           ? (['approvals'] as const)
           : ([] as const)
   ).filter((name) => detail.related[name] !== undefined);
+  // The timeline first, where the record opens: what happened to it,
+  // people's changes and the AI's work alike.
   const tabs: [string, string, number][] = [
+    ['historyTab', 'historyTab', detail.historyTotal ?? detail.history.length],
     ...(entity !== 'activities' && entity !== 'approvals'
       ? [
           ['activities', 'entities.activities', moreActivities.total] as [
@@ -532,7 +512,8 @@ export default function EntityDetail({
           ],
         ]
       : []),
-    ['historyTab', 'historyTab', moreHistory.total],
+    // The notes, last, which also show in the timeline among its entries.
+    ['notes', 'notes.tab', detail.notesTotal ?? 0],
   ];
   const activeTab =
     resolveTab(
@@ -640,6 +621,16 @@ export default function EntityDetail({
       }
       actions={
         <>
+          {/* A planned activity: what came of it, recorded (and its lead
+              followed up anew), in one step. */}
+          {entity === 'activities' &&
+            currentStatus === 'planned' &&
+            editable && (
+              <Button onClick={() => setRecording(true)}>
+                <CalendarCheck />
+                {text('evaluation.recordOutcome')}
+              </Button>
+            )}
           {detail.permissions.delete && (
             <Button variant='outline' onClick={() => setConfirmDelete(true)}>
               <Trash2 />
@@ -1060,68 +1051,24 @@ export default function EntityDetail({
                     ) : undefined
                   }
                 />
+              ) : activeTab === 'notes' ? (
+                <NotesPanel entity={entity} id={id} focusId={noteFocus} />
               ) : activeTab === 'historyTab' ? (
-                <>
-                  <ol>
-                    {moreHistory.records.map((event) => (
-                      <li
-                        className='flex items-baseline gap-3 border-b border-border/60 py-1.5 text-sm last:border-0'
-                        key={toText(event.id)}
-                      >
-                        <span className='flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5'>
-                          <span
-                            className={
-                              event.fromValue
-                                ? 'font-medium'
-                                : 'text-muted-foreground'
-                            }
-                          >
-                            {text(`events.${toText(event.action)}`)}
-                            {event.fromValue
-                              ? ` · ${toText(text(`options.${toText(event.fromValue)}`, { defaultValue: toText(event.fromValue) }))} → ${toText(text(`options.${toText(event.toValue)}`, { defaultValue: toText(event.toValue) }))}`
-                              : ''}
-                          </span>
-                          {/* A creation says only that it happened: the values it
-                              started with are the record's own first state. */}
-                          {event.action !== 'created' && (
-                            <HistoryChanges
-                              entity={entity}
-                              record={record}
-                              changes={event.changes}
-                              previous={event.previous}
-                              movedField={
-                                event.fromValue ? statusKey : undefined
-                              }
-                              names={names}
-                              fileNames={fileNames}
-                            />
-                          )}
-                        </span>
-                        <span className='shrink-0 text-right text-xs text-muted-foreground tabular-nums'>
-                          {meta.users.find((u) => u.id === event.actorId)?.name}{' '}
-                          ·{' '}
-                          {localDate(
-                            event.createdAt,
-                            language,
-                            meta.settings.timeZone,
-                          )}
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
-                  {moreHistory.hasMore && (
-                    <Button
-                      className='mt-3'
-                      variant='ghost'
-                      size='sm'
-                      disabled={moreHistory.loading}
-                      onClick={() => void moreHistory.loadMore()}
-                    >
-                      {text('loadMore')} ·{' '}
-                      {moreHistory.total - moreHistory.records.length}
-                    </Button>
-                  )}
-                </>
+                <HistoryFeed
+                  entity={entity}
+                  id={id}
+                  record={record}
+                  initial={{
+                    data: detail.history,
+                    total: detail.historyTotal ?? detail.history.length,
+                  }}
+                  names={names}
+                  statusKey={statusKey}
+                  onOpenNote={(noteId) => {
+                    setNoteFocus(noteId);
+                    setTab('notes');
+                  }}
+                />
               ) : (
                 // A related list: name, status, owner, updated — with a create
                 // button where this object can start one of them.
@@ -1195,6 +1142,12 @@ export default function EntityDetail({
             setAccountMove(undefined);
           }}
           onConfirm={() => void confirmAccountMove()}
+        />
+      )}
+      {recording && (
+        <RecordOutcomeDialog
+          activity={record}
+          onClose={() => setRecording(false)}
         />
       )}
       {confirmDelete && (

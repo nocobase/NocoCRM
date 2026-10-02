@@ -22,9 +22,13 @@ import {
 import { CrmService, array } from './service.js';
 import { CrmError } from './schema.js';
 import { CrmSkillNotes, crmSkillNotesToken } from './skills.js';
+import { LeadEvaluator, leadEvaluatorToken } from './lead-evaluation.js';
 import { createCrmUserRoleScope } from './user-roles.js';
 import { CrmAiResources } from '../../ai/index.js';
-import { LOGO_AVATAR_PATH } from '../../ai/employees/crm-assistant.js';
+import {
+  LOGO_AVATAR_PATH,
+  registerCrmAssistant,
+} from '../../ai/employees/crm-assistant.js';
 import { userRoleScopeRegistryToken } from '@nocobase/app-plugin-users/server/tokens';
 
 // The Channel the CRM's notifications go through: the in-app inbox, named
@@ -74,6 +78,15 @@ export default class CrmProvider extends ServiceProvider<Application> {
             : undefined,
         ),
     );
+    // New leads evaluated by the AI (lead-evaluation.ts).
+    this.app.container.singleton(
+      leadEvaluatorToken,
+      () =>
+        new LeadEvaluator(
+          this.app.container.resolve(crmToken),
+          this.app.container,
+        ),
+    );
     registerCrmResources(this.app.container.resolve(authorizationToken));
   }
   public override async boot(): Promise<void> {
@@ -93,11 +106,20 @@ export default class CrmProvider extends ServiceProvider<Application> {
       const avatar = origin
         ? `${origin}${this.app.publicBasePath.replace(/\/+$/, '')}${LOGO_AVATAR_PATH}`
         : LOGO_AVATAR_PATH;
+      const service = this.app.container.resolve(crmToken);
+      const ai = this.app.container.resolve(aiManagerToken);
       await new CrmAiResources(
-        this.app.container.resolve(crmToken),
+        service,
         this.app.container.resolve(authorizationToken),
-        { avatar },
-      ).registerAIResources(this.app.container.resolve(aiManagerToken));
+        { avatar, language: (await service.settings()).aiLanguage },
+      ).registerAIResources(ai);
+      // The prompt follows the AI language setting: registered again, the
+      // plugin upserting by username, whenever the settings are saved.
+      service.settingsSaved = (settings) =>
+        void registerCrmAssistant(ai, {
+          avatar,
+          language: settings.aiLanguage,
+        }).catch(() => undefined);
     }
     // The Users page shows and assigns the CRM's roles through this scope.
     if (this.app.container.has(userRoleScopeRegistryToken))
@@ -112,6 +134,9 @@ export default class CrmProvider extends ServiceProvider<Application> {
   public override async start(): Promise<void> {
     // Every provider has booted, so the AI plugin has loaded the skill files.
     await this.app.container.resolve(crmSkillNotesToken).start();
+    const evaluator = this.app.container.resolve(leadEvaluatorToken);
+    this.app.container.resolve(crmToken).leadCreated = (by, leadId) =>
+      void evaluator.request(by, leadId).catch(() => undefined);
     this.cron = createCronJobManager();
     this.cron.addJob({ cronTime: '*/30 * * * * *', onTick: () => this.scan() });
     this.cron.start();

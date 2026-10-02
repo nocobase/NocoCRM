@@ -12,6 +12,7 @@ const state = vi.hoisted(() => ({
   api: vi.fn(),
   refresh: vi.fn(),
   locale: 'en',
+  assistant: false,
 }));
 vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
   const actual =
@@ -50,6 +51,7 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
       data: {
         userId: 'rep',
         assign: false,
+        assistant: state.assistant,
         settings: defaultSettings,
         definitions,
         users: [
@@ -80,8 +82,42 @@ beforeEach(() => {
   state.api.mockReset();
   state.refresh.mockReset();
   state.locale = 'en';
+  state.assistant = false;
 });
 describe('CRM forms and file interchange', () => {
+  it('lets the AI follow a new lead up at once, unless unticked', async () => {
+    state.assistant = true;
+    state.api.mockResolvedValue({ data: { id: 'saved', name: 'Ada' } });
+    render(<RecordForm entity='leads' onClose={vi.fn()} />);
+    const option = screen.getByRole('checkbox', {
+      name: 'AI follows up at once',
+    });
+    expect(option).toBeChecked();
+    await userEvent.click(option);
+    await userEvent.type(screen.getByLabelText('Name'), 'Ada');
+    await userEvent.click(screen.getByRole('combobox', { name: 'Source' }));
+    await userEvent.click(
+      await screen.findByRole('option', { name: 'Website' }),
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Save', exact: true }),
+    );
+    await waitFor(() =>
+      expect(state.api).toHaveBeenCalledWith(
+        'leads?followUp=0',
+        'POST',
+        expect.objectContaining({ name: 'Ada' }),
+      ),
+    );
+  });
+
+  it('offers no follow-up while the AI is off', () => {
+    render(<RecordForm entity='leads' onClose={vi.fn()} />);
+    expect(
+      screen.queryByRole('checkbox', { name: 'AI follows up at once' }),
+    ).toBeNull();
+  });
+
   it('saves a lead, refreshes lists and closes', async () => {
     const onClose = vi.fn();
     const onSaved = vi.fn();

@@ -335,7 +335,7 @@ export const definitions: Record<Entity, EntityDefinition> = {
   activities: {
     table: 'crmActivities',
     statusField: 'status',
-    statuses: ['planned', 'completed', 'cancelled', 'noShow'],
+    statuses: ['planned', 'completed', 'cancelled'],
     columns: ['name', 'type', 'startAt', 'status', 'accountId', 'ownerId'],
     fields: [
       // Type leads: "a call about X" is how an activity is thought of.
@@ -351,14 +351,10 @@ export const definitions: Record<Entity, EntityDefinition> = {
       ]),
       field('name', 'text', true),
       owner,
-      field('status', 'select', true, [
-        'planned',
-        'completed',
-        'cancelled',
-        'noShow',
-      ]),
+      field('status', 'select', true, ['planned', 'completed', 'cancelled']),
       field('startAt', 'datetime', true),
-      field('endAt', 'datetime', true),
+      // Optional: a call or an email often has no end worth noting.
+      field('endAt', 'datetime', false),
       field('leadId', 'relation', false, undefined, 'leads'),
       { ...account, required: false },
       field('opportunityId', 'relation', false, undefined, 'opportunities'),
@@ -434,8 +430,13 @@ export interface CrmSettings {
   closeReminderDays: number;
   leadStaleDays: number;
   staleDays: number;
+  // The language the AI writes in when it works on its own (a lead's
+  // evaluation) and, in the chat, unless the user asks for another:
+  // `zh-CN`, `en-US`, or `user` for each user's own language.
+  aiLanguage: string;
   options: Record<string, string[]>;
 }
+export const aiLanguages = ['zh-CN', 'en-US', 'user'];
 export const defaultSettings: CrmSettings = {
   currency: 'USD',
   timeZone: 'Asia/Shanghai',
@@ -443,6 +444,7 @@ export const defaultSettings: CrmSettings = {
   closeReminderDays: 7,
   leadStaleDays: 7,
   staleDays: 14,
+  aiLanguage: 'zh-CN',
   options: {
     source: sources,
     industry: industries,

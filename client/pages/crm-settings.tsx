@@ -107,6 +107,18 @@ function SettingsForm({
                 .map((v) => ({ value: v, label: v }))}
               onChange={(v) => set(key, v)}
             />
+          ) : key === 'aiLanguage' ? (
+            // What the AI writes in when it works on its own, and in the
+            // chat unless the user asks for another language.
+            <Choice
+              label={text('fields.aiLanguage')}
+              value={toText(settings.aiLanguage)}
+              choices={['zh-CN', 'en-US', 'user'].map((v) => ({
+                value: v,
+                label: text(`aiLanguages.${v}`),
+              }))}
+              onChange={(v) => set(key, v)}
+            />
           ) : key === 'currency' ? (
             // The default for new opportunities, from the currency list
             // defined in code (server/providers/crm/schema.ts).
@@ -267,7 +279,7 @@ function SettingsForm({
               )}
             </>
           ) : section === 'business' ? (
-            fields(['currency', 'timeZone'])
+            fields(['currency', 'timeZone', 'aiLanguage'])
           ) : section === 'reminders' ? (
             fields([
               'activityReminderMinutes',

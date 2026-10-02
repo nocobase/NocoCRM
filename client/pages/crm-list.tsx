@@ -35,6 +35,7 @@ import {
 import { Button } from '../components/ui/button.js';
 import { KindTag } from '../components/crm/kind-tag.js';
 import { Badge } from '../components/ui/badge.js';
+import { Spinner } from '../components/ui/spinner.js';
 import { Input } from '../components/ui/input.js';
 import { Card, CardContent } from '../components/ui/card.js';
 import {
@@ -969,7 +970,7 @@ function EntityList({
                   setInvalidating({ record: dragged, stage });
                 else void move(dragged, { [definition.statusField!]: stage });
               }}
-              renderCard={(record, titles) => (
+              renderCard={(record, titles, ai) => (
                 <Card
                   key={record.id}
                   className={`gap-0 py-4 shadow-none transition-[opacity,box-shadow,background-color] duration-700 ${toText(
@@ -1018,6 +1019,22 @@ function EntityList({
                       }}
                       lines={2}
                     />
+                    {/* The AI at work on the lead, or its verdict waiting
+                        on a decision (on the lead's page and Waiting on me). */}
+                    {ai && (
+                      <Badge variant='ai' className='gap-1'>
+                        {ai === 'running' ? (
+                          <Spinner className='size-3' />
+                        ) : (
+                          <Sparkles className='size-3' />
+                        )}
+                        {text(
+                          ai === 'running'
+                            ? 'evaluation.onCard.running'
+                            : 'evaluation.onCard.pending',
+                        )}
+                      </Badge>
+                    )}
                     <div className='space-y-0.5 text-xs text-muted-foreground'>
                       {/* Same icons as the detail pages' field labels, so
                           the card reads without headings. */}
@@ -1457,6 +1474,7 @@ function BoardColumn({
   renderCard: (
     record: CrmRecord,
     titles: Record<string, string>,
+    ai: 'running' | 'pending' | undefined,
   ) => ReactElement;
 }): ReactElement {
   const { text } = useCrmText();
@@ -1478,8 +1496,18 @@ function BoardColumn({
     initialPageParam: 1,
     getNextPageParam: (last) =>
       last.page * last.pageSize < last.total ? last.page + 1 : undefined,
+    // While the AI works on a card here, look again every few seconds.
+    refetchInterval: (q) =>
+      q.state.data?.pages.some((p) =>
+        Object.values(p.ai ?? {}).includes('running'),
+      )
+        ? 5000
+        : false,
   });
   const items = query.data?.pages.flatMap((p) => p.data) ?? [];
+  const ai = (query.data?.pages ?? []).reduce<
+    Record<string, 'running' | 'pending'>
+  >((all, p) => ({ ...all, ...p.ai }), {});
   const total = query.data?.pages[0]?.total ?? 0;
   const titles = (query.data?.pages ?? []).reduce<Record<string, string>>(
     (all, p) => ({ ...all, ...p.titles }),
@@ -1533,7 +1561,9 @@ function BoardColumn({
       {/* The cards scroll inside the column; the padding keeps a landed
           card's ring from being clipped at the edges. */}
       <div className='-m-1 min-h-0 flex-1 space-y-3 overflow-y-auto p-1'>
-        {items.map((record) => renderCard(record, titles))}
+        {items.map((record) =>
+          renderCard(record, titles, ai[toText(record.id)]),
+        )}
         {query.hasNextPage && (
           <Button
             variant='ghost'

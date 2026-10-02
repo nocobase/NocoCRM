@@ -4,23 +4,12 @@ import type { Actor } from './authorization.js';
 import { probabilities, stages, type CrmRecord } from './schema.js';
 import { array, type CrmService, type ListResult } from './service.js';
 import { allRecords, statistics } from './statistics.js';
+import { zoneOffsetMinutes } from './zone-time.js';
 
 export { allRecords };
 
-// The offset of a zone at an instant, so the business day's end can be
-// expressed as an instant without a calendar library.
-function zoneOffsetMinutes(timeZone: string, date: Date): number {
-  const part = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    timeZoneName: 'longOffset',
-  })
-    .formatToParts(date)
-    .find((p) => p.type === 'timeZoneName')?.value;
-  const match = /GMT([+-])(\d{2}):?(\d{2})?/.exec(part ?? '');
-  if (!match) return 0;
-  const minutes = Number(match[2]) * 60 + Number(match[3] ?? 0);
-  return match[1] === '-' ? -minutes : minutes;
-}
+// Shared with the browser bundle, which takes it from there.
+export { zoneOffsetMinutes } from './zone-time.js';
 
 // A workspace card shows this many before asking for the next page.
 export const AGENDA_PAGE = 5;

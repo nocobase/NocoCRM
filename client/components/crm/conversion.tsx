@@ -3,6 +3,7 @@ import { RecordPicker } from './record-picker.js';
 import { toText } from './api.js';
 import { useState, type ReactElement, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Check, TriangleAlert } from 'lucide-react';
 import { Button } from '../ui/button.js';
 import { Input } from '../ui/input.js';
 import { Checkbox } from '../ui/checkbox.js';
@@ -82,14 +83,32 @@ export function FieldPreview({
   );
 }
 
+// What the duplicate check found when it found nothing, so that an empty
+// list of matches reads as checked rather than as not looked at.
+function Checked({ children }: { children: ReactNode }): ReactElement {
+  return (
+    <p className='flex items-center gap-1.5 text-xs text-muted-foreground'>
+      <Check className='size-3.5 shrink-0' />
+      {children}
+    </p>
+  );
+}
+
 export function ConvertDialog({
   lead,
   onClose,
+  initial,
+  onConverted,
 }: {
   lead: CrmRecord;
   onClose: () => void;
+  // The opportunity the AI's follow-up proposed, to start from.
+  initial?: { opportunityName: string; amount: number | null };
+  // Runs once the lead is converted, before the dialog closes: accepting
+  // the AI's conversion proposal records the decision here.
+  onConverted?: () => Promise<unknown>;
 }): ReactElement {
-  const { text } = useCrmText();
+  const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
   const api = useCrmApi();
   const refresh = useRefresh();
@@ -97,6 +116,7 @@ export function ConvertDialog({
   const preview = useCrmQuery<{
     accounts: CrmRecord[];
     contacts: CrmRecord[];
+    opportunities: CrmRecord[];
     titles: Record<string, string>;
   }>(`leads/${toText(lead.id)}/conversion`);
   // The list endpoint puts total beside data, not inside it, so this reads
@@ -108,10 +128,12 @@ export function ConvertDialog({
   });
   const [input, setInput] = useState<Data>(() => ({
     accountName: lead.company ?? '',
-    createOpportunity: false,
+    createOpportunity: Boolean(initial),
     // "Company + opportunity", per the specification's default.
-    opportunityName: `${toText(lead.company ?? lead.name)}${text('opportunitySuffix')}`,
-    amount: 0,
+    opportunityName:
+      initial?.opportunityName ||
+      `${toText(lead.company ?? lead.name)}${text('opportunitySuffix')}`,
+    amount: initial?.amount ?? 0,
   }));
   const [error, setError] = useState<unknown>();
   const [busy, setBusy] = useState(false);
@@ -184,6 +206,17 @@ export function ConvertDialog({
   };
   // What is actually submitted: the derived choices, not the raw state.
   const resolved: Data = { ...input, accountId, contactId };
+  // The deals still open at the chosen account: a new opportunity beside
+  // them may duplicate one already being worked.
+  const accountDeals = useCrmQuery<CrmRecord[]>(
+    `opportunities?accountId=${toText(accountId ?? '')}&pageSize=50`,
+    Boolean(accountId),
+  );
+  const openDeals = accountId
+    ? (accountDeals.data ?? []).filter(
+        (o) => !['won', 'lost'].includes(toText(o.stage)),
+      )
+    : [];
   const linkedActivities = activities.data?.total ?? 0;
 
   // Conflicts: fields where the lead and the chosen record both have a value
@@ -340,6 +373,7 @@ export function ConvertDialog({
               setError(undefined);
               try {
                 await api(`leads/${toText(lead.id)}/convert`, 'POST', resolved);
+                await onConverted?.();
                 await refresh();
                 onClose();
               } catch (e) {
@@ -366,6 +400,9 @@ export function ConvertDialog({
               )}
             </div>
             {chips(suggestedAccounts, 'accounts')}
+            {preview.data && !suggestedAccounts.length && (
+              <Checked>{text('noDuplicateAccounts')}</Checked>
+            )}
             {accountId ? (
               overwriteList('accounts', account)
             ) : (
@@ -411,6 +448,9 @@ export function ConvertDialog({
               )}
             </div>
             {chips(suggestedContacts, 'contacts')}
+            {preview.data && !suggestedContacts.length && (
+              <Checked>{text('noDuplicateContacts')}</Checked>
+            )}
             {contactId ? (
               overwriteList('contacts', contact)
             ) : (
@@ -431,6 +471,17 @@ export function ConvertDialog({
               />
               {text('createOpportunity')}
             </label>
+            {openDeals.length > 0 && (
+              <p className='flex items-start gap-1.5 text-xs text-warning'>
+                <TriangleAlert className='mt-px size-3.5 shrink-0' />
+                <span>
+                  {text('openOpportunities')}
+                  {openDeals
+                    .map((o) => toText(o.name))
+                    .join(language.startsWith('zh') ? '、' : ', ')}
+                </span>
+              </p>
+            )}
             {input.createOpportunity === true && (
               <div className='grid gap-3 sm:grid-cols-[1fr_auto]'>
                 <label className='grid gap-1.5 text-sm'>

@@ -123,6 +123,38 @@
   }
 }
 
+/* A timeline entry the page was opened at (?focus=, from "Waiting on me"):
+   it flashes as it comes into view, then stays softly marked. */
+@keyframes crm-arrive {
+  0%,
+  40% {
+    background-color: color-mix(in oklab, var(--ai) 16%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--ai) 55%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 2px transparent;
+  }
+}
+.crm-arrive {
+  animation: crm-arrive 2.4s ease-out;
+}
+
+/* A scroller whose bar shows only while it scrolls (revealScrollbar in
+   client/components/crm/common.tsx marks it so): a thin bar, transparent
+   while still, so showing it moves nothing. */
+@utility scroll-quiet {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  &[data-scrolling] {
+    scrollbar-color: color-mix(
+        in oklab,
+        var(--muted-foreground) 45%,
+        transparent
+      )
+      transparent;
+  }
+}
+
 /* Named shadows normally compile to literal values. Arbitrary-value utilities
    preserve the runtime token and Tailwind's ring/shadow composition. */
 @utility shadow-2xs {

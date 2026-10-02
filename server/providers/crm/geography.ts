@@ -94,3 +94,62 @@ export function subdivisionCode(
   }
   return undefined;
 }
+
+// An address without the region the record already names in its own
+// fields: "江西省新余市高新区西城大道" with the province and city filled
+// becomes "高新区西城大道", and "1 Main St, Springfield, IL, United States"
+// with city, state and country becomes "1 Main St". Only what leads (or,
+// comma-separated, trails) the address is taken off, the region's names as
+// the record holds them or written the usual ways; an address that is
+// nothing but the region comes back empty.
+export function streetAddress(
+  address: string,
+  region: { country?: string; state?: string; city?: string },
+): string {
+  const names = new Set<string>();
+  const add = (name: string | undefined): void => {
+    const value = name?.trim();
+    if (value) names.add(value);
+  };
+  const country = region.country?.trim().toUpperCase();
+  if (country) {
+    add(iso.data[country]?.name);
+    add(country);
+    if (country === 'CN')
+      ['中国', '中华人民共和国', 'China', 'PRC'].forEach(add);
+    const state = subdivisions(country).find(
+      (item) =>
+        item.code === region.state ||
+        item.name === region.state ||
+        item.chineseName === region.state,
+    );
+    for (const name of [state?.name, state?.chineseName]) {
+      add(name);
+      add(name?.replace(/(省|市|自治区|特别行政区|壮族|回族|维吾尔)/g, ''));
+    }
+  }
+  add(region.city);
+  add(region.city?.replace(/(市|区|县)$/u, ''));
+  if (region.city && !/(市|区|县)$/u.test(region.city)) add(`${region.city}市`);
+  const ordered = [...names].sort((a, b) => b.length - a.length);
+  const separators = /^[\s,，、]+|[\s,，、]+$/gu;
+  let rest = address.trim();
+  for (let changed = true; changed;) {
+    changed = false;
+    rest = rest.replace(separators, '');
+    for (const name of ordered)
+      if (rest.toLowerCase().startsWith(name.toLowerCase())) {
+        rest = rest.slice(name.length);
+        changed = true;
+        break;
+      }
+  }
+  // Western order: the region trails, comma-separated.
+  const parts = rest.split(/\s*[,，]\s*/u);
+  while (
+    parts.length > 1 &&
+    ordered.some((name) => name.toLowerCase() === parts.at(-1)!.toLowerCase())
+  )
+    parts.pop();
+  return parts.join(', ').replace(separators, '');
+}

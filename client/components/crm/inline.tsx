@@ -55,6 +55,8 @@ export function InlineField({
   bare = false,
   plain = false,
   relationFilter,
+  startOpen = false,
+  onClose,
 }: {
   entity: Entity;
   record: CrmRecord;
@@ -69,18 +71,25 @@ export function InlineField({
   // rejected — a lead going invalid must carry its reason in the same write.
   onSave?: (value: unknown) => Promise<void>;
   // "title" dresses the value as the page heading: same gestures, larger type.
-  size?: 'field' | 'title';
+  // A record's heading: `title` over a page, `heading` in a column.
+  size?: 'field' | 'title' | 'heading';
   // Passed to Value: an amount shown without its currency sign.
   bare?: boolean;
   // Passed to Value: a status or stage as text rather than a badge.
   plain?: boolean;
+  // Opens straight into its editor (a text-like field another control
+  // switched to: the website's pencil), and reports when editing ends.
+  startOpen?: boolean;
+  onClose?: () => void;
 }): ReactElement {
   const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
   const api = useCrmApi();
   const refresh = useRefresh();
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState('');
+  const [editing, setEditing] = useState(startOpen);
+  const [draft, setDraft] = useState(() =>
+    startOpen ? toText(record[field.key]) : '',
+  );
   // A multi field edits a list of ids; the chips toggle it, blur saves it.
   const [listDraft, setListDraft] = useState<string[]>([]);
   const [error, setError] = useState('');
@@ -90,6 +99,12 @@ export function InlineField({
   // cannot tell "moved into the list" from "left the field".
   const popupOpenRef = useRef(false);
 
+  // Editing over, the control that opened it takes the field back.
+  const wasEditingRef = useRef(editing);
+  useEffect(() => {
+    if (wasEditingRef.current && !editing) onClose?.();
+    wasEditingRef.current = editing;
+  }, [editing, onClose]);
   useEffect(() => {
     if (editing)
       boxRef.current
@@ -158,10 +173,12 @@ export function InlineField({
     }
   };
 
-  const titled = size === 'title';
-  const readText = titled
-    ? 'font-heading text-3xl font-semibold tracking-tight'
-    : 'text-sm';
+  const titled = size !== 'field';
+  const titleType =
+    size === 'heading'
+      ? 'font-heading text-xl font-semibold tracking-tight md:text-xl'
+      : 'font-heading text-3xl font-semibold tracking-tight md:text-3xl';
+  const readText = titled ? titleType : 'text-sm';
   if (!editable)
     return (
       <div className={`px-2 py-1.5 ${readText}`}>
@@ -385,7 +402,7 @@ export function InlineField({
           // The title's own box: its padding (in the theme's spacing) less
           // the 1px border, and its line height, so opening the editor
           // moves no text.
-          className='min-h-0 w-auto max-w-full min-w-24 resize-none overflow-hidden rounded-md px-[calc(--spacing(2)-1px)] py-[calc(--spacing(1.5)-1px)] font-heading text-3xl font-semibold tracking-tight md:text-3xl'
+          className={`min-h-0 w-auto max-w-full min-w-24 resize-none overflow-hidden rounded-md px-[calc(--spacing(2)-1px)] py-[calc(--spacing(1.5)-1px)] ${titleType}`}
           value={draft}
           disabled={saving}
           ref={fitHeight}

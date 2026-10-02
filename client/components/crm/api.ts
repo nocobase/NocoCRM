@@ -60,6 +60,8 @@ export interface ListData extends Titled {
   total: number;
   page: number;
   pageSize: number;
+  // Leads only: those the AI is evaluating, or has a verdict waiting on.
+  ai?: Record<string, 'running' | 'pending'>;
 }
 export interface Detail extends Titled {
   record: CrmRecord;
@@ -67,6 +69,7 @@ export interface Detail extends Titled {
   // how much more the history and list endpoints hold.
   history: Data[];
   historyTotal?: number;
+  notesTotal?: number;
   related: Partial<Record<Entity, CrmRecord[]>>;
   relatedTotals?: Partial<Record<Entity, number>>;
   // What a delete would orphan, counted per child object; empty when clear.

@@ -54,6 +54,11 @@ export interface Actor {
   // workflows a change starts); set by CrmService.mutate on the prepared
   // actor, absent when a caller runs its own transaction.
   after?: (callback: () => Promise<void>) => void;
+  // Set when the change was proposed by the AI and confirmed by this user
+  // (the assistant's write tools, an accepted evaluation), or, for a lead,
+  // organised by the AI from pasted text and checked by this user (the
+  // capture review): the history records it as such.
+  via?: 'assistant' | 'capture';
 }
 export { roles, roleKey, roleOf, ROOT_SET } from './roles.js';
 export function registerCrmResources(authz: AppAuthorization): void {
@@ -272,6 +277,25 @@ export async function provisionCrm(
       await authz.permissionSets.update(set.key, { ...set, grants });
     }
     await mark('crm-skills-v1');
+  }
+  // The "Waiting on me" page (the AI's suggestions to decide), added after
+  // the sets were provisioned: both sales roles get it once.
+  if (!(await marker('crm-decisions-v1'))) {
+    for (const role of salesRoles) {
+      const set = await authz.permissionSets.get(roleKey(role));
+      if (
+        set &&
+        !set.grants.some(
+          (g) =>
+            g.resource.type === 'page' && g.resource.id === 'crm-decisions',
+        )
+      )
+        await authz.permissionSets.update(set.key, {
+          ...set,
+          grants: [...set.grants, pageGrant('crm-decisions')],
+        });
+    }
+    await mark('crm-decisions-v1');
   }
   const initialized = await database
     .query()

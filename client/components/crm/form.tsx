@@ -49,14 +49,15 @@ import {
   type Field,
 } from './api.js';
 import { ErrorNotice, Loading } from './common.js';
+import { FollowUpOption } from './follow-up-option.js';
 
-// The next full hour and one hour after it, as ISO strings.
-function activityTimeDefaults(): { startAt: string; endAt: string } {
+// The next full hour, as an ISO string; the end is optional and starts
+// empty.
+function activityTimeDefaults(): { startAt: string } {
   const start = new Date();
   start.setMinutes(0, 0, 0);
   start.setHours(start.getHours() + 1);
-  const end = new Date(start.getTime() + 3600000);
-  return { startAt: start.toISOString(), endAt: end.toISOString() };
+  return { startAt: start.toISOString() };
 }
 
 function shiftedEnd(
@@ -67,6 +68,8 @@ function shiftedEnd(
   const next = new Date(nextStart).getTime();
   const prev = new Date(toText(previousStart)).getTime();
   const end = new Date(toText(previousEnd)).getTime();
+  // No end stays no end.
+  if (!toText(previousEnd)) return '';
   if (Number.isNaN(next)) return toText(previousEnd);
   const length =
     !Number.isNaN(prev) && !Number.isNaN(end) && end > prev
@@ -272,6 +275,8 @@ export function RecordForm({
   const { text, language } = useCrmText();
   const [error, setError] = useState<unknown>();
   const [busy, setBusy] = useState(false);
+  // A new lead's follow-up by the AI, at once unless unticked.
+  const [followUp, setFollowUp] = useState(true);
   // The bare names of records picked in this form, for the deal name a new
   // opportunity takes from its account.
   const pickedNamesRef = useRef<Record<string, string>>({});
@@ -322,7 +327,7 @@ export function RecordForm({
       ...current,
       [key]: value,
       // Moving the start keeps the activity's length; an end that would now
-      // sit before the start is pulled along too.
+      // sit before the start is pulled along too; an empty end stays empty.
       ...(entity === 'activities' && key === 'startAt' && value
         ? { endAt: shiftedEnd(current.startAt, current.endAt, toText(value)) }
         : {}),
@@ -977,7 +982,9 @@ export function RecordForm({
                     const response = await api<{ data: CrmRecord }>(
                       recordId
                         ? `${toText(entity)}/${toText(recordId)}`
-                        : entity,
+                        : entity === 'leads' && !followUp
+                          ? 'leads?followUp=0'
+                          : entity,
                       recordId ? 'PATCH' : 'POST',
                       payload,
                     );
@@ -1004,6 +1011,14 @@ export function RecordForm({
             {typeof notice === 'function' ? notice(unfilled) : notice}
             {grid}
             <DialogFooter>
+              {/* A new lead: whether the AI follows it up at once. */}
+              {entity === 'leads' && !recordId && !onSubmit ? (
+                <FollowUpOption
+                  checked={followUp}
+                  onChange={setFollowUp}
+                  disabled={busy}
+                />
+              ) : null}
               <Button
                 type='button'
                 variant='outline'

@@ -27,7 +27,12 @@ const wording = {
     '客户、商机和下一步行动，尽在掌握',
   ],
   assistant: ['AI assistant', 'AI 助手'],
-  assistantEmployeeName: ['NocoCRM', 'NocoCRM'],
+  assistantEmployeeName: ['Noco', 'Noco'],
+  // The line under the chat's header naming what a conversation began from.
+  assistantStart: ['Started from', '起点'],
+  assistantConversations: ['All conversations', '所有对话'],
+  assistantHideConversations: ['Hide conversations', '收起对话列表'],
+  assistantNewConversation: ['New conversation', '新对话'],
   assistantEmployeeRole: ['Sales assistant', '销售助手'],
   assistantEmployeeBio: [
     'The CRM sales assistant: it reads the records the signed-in user may see, summarizes them and suggests next steps.',
@@ -70,8 +75,31 @@ const wording = {
   choose: ['Select…', '请选择…'],
   selectCountryFirst: ['Select a country first', '请先选择国家 / 地区'],
   basicInfo: ['{{entity}} information', '{{entity}}基本信息'],
+  // The lead timeline's menu of asks to the AI.
+  moreActions: ['More…', '更多…'],
+  expand: ['Show details', '展开详情'],
+  // Notes in a record's activity feed.
+  notes: {
+    label: ['Note', '备注'],
+    tab: ['Notes', '备注'],
+    placeholder: [
+      'Write a note… everyone who can see this record will see it',
+      '写备注…能看到这条记录的人都能看到',
+    ],
+    add: ['Add note', '添加备注'],
+    shortcut: ['⌘/Ctrl + Enter to add', '⌘/Ctrl + Enter 添加'],
+    edited: ['Edited', '已编辑'],
+    confirmDelete: ['Delete it?', '确认删除'],
+    empty: ['No notes yet.', '还没有备注。'],
+  },
+  collapse: ['Hide details', '收起详情'],
+  leadGroups: {
+    general: ['General', '概况'],
+    contact: ['Contact', '联系人'],
+    company: ['Company', '公司'],
+    system: ['System', '系统'],
+  },
   region: ['Region', '地区'],
-  leadIdPrefix: ['Lead ID', '线索 ID'],
   loadMore: ['Load more', '加载更多'],
   requiredField: ['This field is required', '此字段必填'],
   openWebsite: ['Open website in a new tab', '在新窗口打开网站'],
@@ -80,7 +108,174 @@ const wording = {
   dayTotal: ['Total {{count}}', '共 {{count}} 项'],
   todayButton: ['Today', '今天'],
   noAttachments: ['No attachments yet', '暂无附件'],
-  historyTab: ['Change history', '变更记录'],
+  // Beside the button that creates a lead.
+  leadFollowUpNow: ['AI follows up at once', 'AI 立刻跟进'],
+  historyTab: ['Timeline', '动态'],
+  feed: {
+    all: ['All', '全部'],
+    user: ['People', '人工'],
+    // The AI filter, and who did an AI entry on the timeline.
+    ai: ['AI', 'AI'],
+    aiProposed: ['AI proposed', 'AI 提议'],
+    aiCaptured: ['Organised by AI', 'AI 整理'],
+    addedFiles: ['added', '添加了附件'],
+    removedFiles: ['removed', '删除了附件'],
+    evaluated: ['recommended a follow-up', '给出了跟进建议'],
+    evaluating: ['is preparing a follow-up…', '正在准备跟进建议…'],
+    evaluationFailed: ['could not finish a follow-up', '没能给出跟进建议'],
+    fieldCount: ['{{count}} fields', '{{count}} 个字段'],
+    // One of the record's activities, after who did it.
+    activity: {
+      planned: ['planned', '安排了'],
+      completed: ['completed', '完成了'],
+      cancelled: ['cancelled', '取消了'],
+      moved: ['moved', '改期了'],
+      edited: ['edited', '修改了'],
+      noun: ['activity', '活动'],
+      deleted: ['deleted', '删除了'],
+      to: ['to {{time}}', '改到 {{time}}'],
+    },
+    // What a person did, read after their name on the timeline.
+    did: {
+      created: ['created the record', '创建了记录'],
+      updated: ['updated', '更新了'],
+      deleted: ['deleted the record', '删除了记录'],
+      converted: ['converted the lead', '转化了线索'],
+      note: ['added a note', '添加了备注'],
+      noteEdited: ['edited a note', '编辑了备注'],
+      noteDeleted: ['removed a note', '删除了一条备注'],
+      aiRevise: ['asked the AI to revise the suggestion', '让 AI 修改建议'],
+    },
+    empty: ['Nothing here yet.', '还没有记录。'],
+  },
+  evaluation: {
+    title: ['AI follow-up', 'AI 跟进建议'],
+    // The lead timeline's status chip, short beside the verdict.
+    chip: ['AI suggestion', 'AI 建议'],
+    waiting: ['AI follow-up waiting for you', 'AI 跟进建议待处理'],
+    handle: ['Handle it', '去处理'],
+    onCard: {
+      running: ['AI working', 'AI 跟进中'],
+      pending: ['AI suggestion', 'AI 建议待处理'],
+    },
+    evaluate: ['Follow up with AI', '让 AI 跟进'],
+    again: ['Follow up', '跟进'],
+    running: [
+      'The AI is reviewing this lead…',
+      'AI 正在查看这条线索、准备跟进建议…',
+    ],
+    failed: [
+      'The follow-up did not finish. Follow up again to retry.',
+      '这次跟进没有完成，可以重新跟进。',
+    ],
+    follow: ['Keep following up', '继续跟进'],
+    nurture: ['Nurture', '放入培育'],
+    convert: ['Convert', '转化'],
+    invalid: ['Invalid', '无效'],
+    grade: ['Grade {{grade}}', '{{grade}} 级'],
+    edition: ['Edition', '建议版本'],
+    reason: ['Why', '理由'],
+    reasons: ['Reasons', '依据'],
+    findings: ['Found on the web', '联网查到'],
+    findingsDone: ['written by {{name}}, {{time}}', '{{name}} {{time}} 已写入'],
+    source: ['Source', '来源'],
+    writePicked: ['Write {{count}} into the lead', '写入所选 {{count}} 项'],
+    written: ['Written', '已写入'],
+    nextStep: ['Next step', '下一步'],
+    today: ['today', '今天'],
+    inDays: ['in {{count}} days', '{{count}} 天后'],
+    questions: ['To ask', '要问的问题'],
+    prep: ['To prepare', '准备要点'],
+    changes: ['Since last time', '和上次比'],
+    opportunity: ['Opportunity', '商机'],
+    // What accepting a conversion would create, before the dialog confirms
+    // it, and what the duplicate check found.
+    conversion: {
+      account: ['Account', '客户'],
+      contact: ['Contact', '联系人'],
+      create: ['New', '新建'],
+      link: ['Link to', '关联'],
+      duplicates: ['Duplicates', '查重'],
+      noDuplicates: [
+        'No possible duplicate account, contact or opportunity',
+        '没有可能重复的客户、联系人或商机',
+      ],
+      possible: ['Possible duplicates:', '可能重复：'],
+      openDeals: ['Open at this account:', '该客户进行中的商机：'],
+      confirm: [
+        'Accepting opens the conversion, where these can be checked and changed before anything is saved.',
+        '采纳后先打开转化窗口，确认或修改后才保存。',
+      ],
+    },
+    // A value the AI left empty, in its own words of what changed.
+    none: ['none', '无'],
+    review: ['Review', '复查'],
+    acceptFollow: ['Accept and plan the contact', '采纳并安排联系'],
+    acceptNurture: ['Accept and nurture', '采纳并放入培育'],
+    acceptConvert: ['Accept and convert', '采纳并转化'],
+    acceptUpdate: ['Accept and update the activity', '采纳并更新活动'],
+    acceptOnly: ['Accept', '采纳'],
+    acceptReschedule: ['Accept and move it', '采纳并改期'],
+    acceptReport: ['Record the outcome', '记录结果'],
+    acceptInvalid: ['Accept and mark invalid', '采纳并标记无效'],
+    dismiss: ['Dismiss', '忽略'],
+    ask: ['Ask AI', '问 AI'],
+    revise: ['Adjust', '调整'],
+    adjusting: ['Adjusting…', '正在调整…'],
+    revisePlaceholder: ['Tell the AI what to change', '告诉 AI 怎么改'],
+    revising: ['The AI is revising the suggestion…', 'AI 正在修改建议…'],
+    instructionBy: ['{{name}} asked: {{text}}', '{{name}} 的意见：{{text}}'],
+    email: ['Email draft', '邮件草稿'],
+    plannedActivity: ['Activity to create', '将创建的活动'],
+    existingActivity: ['Planned activity to follow up', '跟进的活动（已安排）'],
+    afterAccept: ['On accepting', '采纳后'],
+    noChange: [
+      'The activity is ready as it is: accepting changes nothing on it.',
+      '活动内容已经准备好，无需改动。',
+    ],
+    change: {
+      added: ['added', '新增'],
+      changed: ['updated', '更新'],
+      kept: ['unchanged', '不变'],
+    },
+    overdueActivity: ['Overdue activity', '逾期的活动'],
+    doneOrNot: ['Done or not', '是否已完成'],
+    done: ['Done', '已完成'],
+    notDone: ['Not done, move it', '未完成，改期'],
+    notDoneYet: ['Not done', '未完成'],
+    organiseOutcome: ['AI organise', 'AI 整理'],
+    organising: ['Organising…', '正在整理…'],
+    followUpAfter: [
+      'Let the AI follow the lead up once recorded',
+      '记录后让 AI 继续跟进',
+    ],
+    recordOutcome: ['Record the outcome', '记录结果'],
+    recordOutcomeOf: ['Record the outcome: {{name}}', '记录结果：{{name}}'],
+    recordOutcomeHint: [
+      'Recording it marks the activity done.',
+      '记录后活动标为已完成。',
+    ],
+    outcomePlaceholder: [
+      'What came of it: what they said, what was agreed',
+      '结果如何：对方怎么说、约定了什么',
+    ],
+    // A nurtured lead's review task, after the company's name.
+    reviewName: ['nurture review', '培育复查'],
+    copy: ['Copy', '复制'],
+    copied: ['Copied', '已复制'],
+    statuses: {
+      superseded: ['Replaced', '已被新建议替代'],
+      running: ['Working', '跟进中'],
+      pending: ['Waiting for you', '待决定'],
+      accepted: ['Accepted', '已采纳'],
+      dismissed: ['Dismissed', '已忽略'],
+      failed: ['Not finished', '未完成'],
+    },
+    decidedBy: [
+      '{{status}} by {{name}}, {{time}}',
+      '{{name}} {{time}} {{status}}',
+    ],
+  },
   all: ['All', '全部'],
   mine: ['Mine', '我负责的'],
   participating: ['Participating', '我参与的'],
@@ -214,6 +409,19 @@ const wording = {
     '创建或关联客户与联系人。已有值默认保留，勾选的字段将被覆盖。所有变更将在同一事务中保存。',
   ],
   possibleDuplicates: ['Possible matches', '可能重复的记录'],
+  // The conversion dialog's duplicate check, when it found nothing.
+  noDuplicateAccounts: [
+    'Checked: no possible duplicate account',
+    '已查重：没有可能重复的客户',
+  ],
+  noDuplicateContacts: [
+    'Checked: no possible duplicate contact',
+    '已查重：没有可能重复的联系人',
+  ],
+  openOpportunities: [
+    'This account already has open opportunities:',
+    '该客户已有进行中的商机：',
+  ],
   newAccountName: ['New account name', '新客户名称'],
   createOpportunity: ['Also create an opportunity', '同时创建商机'],
   overwriteFields: ['Overwrite these existing values', '覆盖以下已有值'],
@@ -306,10 +514,6 @@ const wording = {
     '分析客户、准备跟进计划，或复盘商机…',
   ],
   send: ['Send', '发送'],
-  assistantHint: [
-    'Answers and proposals use the records you can access; every change waits for your confirmation.',
-    '回答和建议基于你有权访问的记录；每一项修改都需要你确认。',
-  ],
   assistantExpand: ['Expand the assistant', '放大 AI 助手'],
   assistantCollapse: ['Back to the side panel', '收回到侧边栏'],
   assistantClose: ['Close the assistant', '关闭 AI 助手'],
@@ -319,13 +523,12 @@ const wording = {
     done: ['Done', '已执行'],
     confirmed: ['Confirmed', '已确认'],
     failed: ['Not applied', '未执行'],
-    confirmHint: [
-      'Nothing is written until you confirm.',
-      '确认后才会写入 CRM。',
-    ],
+    confirmHint: ['Nothing is written until you confirm.', '确认后才会写入'],
+    // Declining a proposal, worded as on the evaluation card.
+    dismiss: ['Dismiss', '忽略'],
     blocked: [
-      'You cannot make this change. Deny it and tell the assistant what to do instead.',
-      '你没有权限执行这项修改。请拒绝，并告诉助手换个做法。',
+      'You cannot make this change. Dismiss it and tell the assistant what to do instead.',
+      '你没有权限执行这项修改。请忽略，并告诉助手换个做法。',
     ],
     delete: [
       'Confirming deletes this record right away. This cannot be undone; records that pointed at it lose the link.',
@@ -353,7 +556,25 @@ const wording = {
       record: ['Record pages', '记录详情页'],
       notifications: ['Notifications', '通知中心'],
       skills: ['Sales skills', '销售技能'],
+      decisions: ['Waiting on me', '待我处理'],
     },
+  },
+  aiLanguages: {
+    'zh-CN': ['Chinese', '中文'],
+    'en-US': ['English', 'English'],
+    user: ['Each user’s language', '跟随用户的界面语言'],
+  },
+  decisions: {
+    title: ['Waiting on me', '待我处理'],
+    description: [
+      'What the AI suggests and waits for you to handle: its follow-up recommendations for your leads.',
+      'AI 提出、等你处理的建议：目前是线索的跟进建议。',
+    ],
+    empty: ['Nothing is waiting on you.', '没有等你处理的事。'],
+    openRecord: ['Open the record', '在记录中查看'],
+    evaluatedAt: ['Suggested', '建议时间'],
+    waiting: ['Waiting', '待处理'],
+    handled: ['Handled', '已处理'],
   },
   settings: ['System settings', '系统设置'],
   leadCapture: {
@@ -391,10 +612,7 @@ const wording = {
     openRecord: ['Open the lead', '打开线索'],
     adjust: ['Adjust', '调整'],
     adjusting: ['Adjusting…', '正在调整…'],
-    adjustPlaceholder: [
-      'Tell the AI what to change: "drop Chen Fang", "Zhou Li is the IT director", "all from the fair"',
-      '告诉 AI 怎么改，比如“去掉陈芳”“周立的职位是 IT 总监”“都是展会来的”',
-    ],
+    adjustPlaceholder: ['Tell the AI what to change', '告诉 AI 怎么改'],
     original: ['Your text', '原文'],
     adjustTitle: ['Adjust with the AI', '让 AI 调整'],
     noneLeft: [
@@ -494,7 +712,6 @@ const wording = {
   changed: ['Changed fields', '变更字段'],
   owner: ['Owner', '负责人'],
   newActivity: ['Schedule activity', '安排活动'],
-  followUpLead: ['Follow up', '跟进线索'],
   newApproval: ['Request approval', '申请审批'],
   planFollowUps: ['Plan follow-ups', '安排跟进'],
   linkExisting: ['Link existing', '关联已有'],
@@ -507,7 +724,6 @@ const wording = {
     'On conversion the lead becomes read-only, {{activities}} linked activities move to the account, and the contact and opportunity are attached to it.',
     '转化后线索永久只读；{{activities}} 条关联活动将挂到客户下；联系人和商机归属该客户。',
   ],
-  assessConversion: ['Assess conversion', '评估转化'],
   summarizeAccount: ['Summarize account', '总结客户'],
   researchCompany: ['Research company', '调研公司'],
   findOpportunities: ['Find opportunities', '发现销售机会'],
@@ -659,14 +875,6 @@ const wording = {
       'Analyze the sales situation: the funnel by stage, this month against the pipeline, where deals are stuck, and the three most useful next actions. Look up anything the preview does not show rather than guessing.',
       '分析销售情况：各阶段商机分布、本月进展与在手商机、卡在哪里、最有价值的三项下一步行动。预览里没有的记录要查了再说，不要猜。',
     ],
-    leads: [
-      'Analyze this lead and suggest a follow-up plan. Identify missing facts and keep assumptions explicit.',
-      '分析此线索并建议跟进计划，指出缺失信息，明确标记推测。',
-    ],
-    assessConversion: [
-      'Assess whether this lead is ready to convert. First look for accounts with the same or a similar company name and contacts sharing its email domain or phone, and say whether to link an existing record or create new ones. Check the conversion criteria in the business instructions against what is recorded. Conclude with: convert now (propose the convert action), or what is still missing.',
-      '评估这条线索是否可以转化。先查客户里有没有同名或相似名称的公司、联系人里有没有相同邮箱域名或电话的人，说明应关联已有记录还是新建。对照业务指导里的转化条件检查已记录的信息。结论二选一：可以转化（提出转化动作），或列出还缺什么。',
-    ],
     planFollowUps: {
       leads: [
         'Review the leads awaiting first follow-up and the stalled ones. Rank them by urgency, say who to contact today and why, and create one follow-up activity for each of the three most urgent.',
@@ -792,6 +1000,10 @@ const wording = {
     approvalSubject: ['Subject', '审批主题'],
     contactName: ['Name', '姓名'],
     company: ['Company', '公司'],
+    // Under the lead card's Company heading, where "Company" would repeat
+    // it; "Company name" would not fit the label column in English.
+    companyName: ['Name', '公司名'],
+    companyIntro: ['Introduction', '介绍'],
     phone: ['Phone', '电话'],
     email: ['Email', '邮箱'],
     jobTitle: ['Job title', '职位'],
@@ -805,7 +1017,8 @@ const wording = {
     city: ['City', '城市'],
     website: ['Website', '网站'],
     description: ['Description', '描述'],
-    message: ['Message', '信息'],
+    // The enquiry as it arrived, kept as it is.
+    message: ['Original message', '原始信息'],
     attachments: ['Attachments', '附件'],
     lostReason: ['Lost reason', '输单原因'],
     churnReason: ['Churn reason', '流失原因'],
@@ -861,6 +1074,7 @@ const wording = {
     createdById: ['Created by', '创建人'],
     actorId: ['Operator', '操作人'],
     timeZone: ['Business timezone', '业务时区'],
+    aiLanguage: ['AI language', 'AI 默认语言'],
     decision: ['Decision', '处理'],
     comment: ['Comment', '意见'],
     activityReminderMinutes: [
@@ -1000,6 +1214,7 @@ const wording = {
     stage: ['Stage changed', '阶段变更'],
     status: ['Status changed', '状态变更'],
     converted: ['Lead converted', '线索转化'],
+    ai: ['AI follow-up', 'AI 跟进建议'],
   },
   errors: {
     serverError: [
@@ -1007,6 +1222,18 @@ const wording = {
       '操作失败，请重试。',
     ],
     invalidInput: ['Check the values and try again.', '请检查填写内容后重试。'],
+    evaluationDecided: [
+      'This recommendation has already been decided.',
+      '这条建议已经处理过了。',
+    ],
+    activityChanged: [
+      'The activity has changed since this suggestion. Follow up again.',
+      '这个活动在建议给出后已经有了变化，请重新跟进。',
+    ],
+    convertFirst: [
+      'Convert the lead first; accepting records it.',
+      '请先完成转化，采纳会在转化后记录。',
+    ],
     assistantUnavailable: [
       'The AI assistant is off or has no model configured. Enter the lead in the form instead.',
       'AI 助手未启用或没有配置模型，请改用表单录入。',
@@ -1014,6 +1241,10 @@ const wording = {
     captureNothing: [
       'The AI found no lead in this text.',
       'AI 没有从这段内容里找到线索。',
+    ],
+    feedbackFailed: [
+      'The AI could not organise these notes. Try again, or write the outcome yourself.',
+      'AI 没能整理这段内容，请重试，或者直接填写结果。',
     ],
     captureFailed: [
       'The AI could not organise this text. Try again, or enter the lead in the form.',

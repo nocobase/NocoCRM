@@ -1142,7 +1142,7 @@ export async function populateDemo(
       [13, 2, 15, 'planned', 'demo'],
       [15, 4, 10, 'planned', 'call'],
       [4, -1, 14, 'cancelled', 'meeting'],
-      [14, -2, 11, 'noShow', 'call'],
+      [14, -2, 11, 'cancelled', 'call'],
       [7, -1, 16, 'planned', 'task'],
       [6, 7, 10, 'planned', 'call'],
     ];
@@ -1151,9 +1151,7 @@ export async function populateDemo(
         ? '需求记录'
         : status === 'cancelled'
           ? '改期的初次沟通'
-          : status === 'noShow'
-            ? '未到场的初次沟通'
-            : '下一次跟进';
+          : '下一次跟进';
     for (const [i, day, hour, status, type] of leadActivities)
       await activity(
         `${leadSpecs[i][1]} ${activityLabel(status)}`,
@@ -1228,11 +1226,9 @@ export async function populateDemo(
         const type = cadenceTypes[n % cadenceTypes.length];
         const status =
           day < 0
-            ? n % 9 === 4
-              ? 'noShow'
-              : n % 11 === 6
-                ? 'cancelled'
-                : 'completed'
+            ? n % 9 === 4 || n % 11 === 6
+              ? 'cancelled'
+              : 'completed'
             : 'planned';
         const feedback =
           status === 'completed'

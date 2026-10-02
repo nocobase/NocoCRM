@@ -149,6 +149,15 @@ export async function screenProposal(
               : { ok: true };
         return refuse('invalidInput', 'action');
       }
+      case 'add_note': {
+        // Anyone who may read the record may note on it.
+        const entity = asEntity(toText(input.entity));
+        if (!id) return refuse('invalidInput', 'id');
+        if (!toText(input.text ?? '').trim())
+          return refuse('invalidInput', 'text');
+        await service.get(actor, entity, id);
+        return { ok: true };
+      }
       default:
         return refuse('invalidInput', 'tool');
     }

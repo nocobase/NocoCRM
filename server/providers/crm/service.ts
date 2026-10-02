@@ -1,4 +1,4 @@
-import { LIST_LIMIT, lengthLimit } from './limits.js';
+import { LIST_LIMIT, LONG_TEXT_LIMIT, lengthLimit } from './limits.js';
 import type { WorkflowServiceContract } from '@nocobase/app-plugin-workflow/server';
 import { decodeRow, encodeRow, jsonValue } from './values.js';
 import {
@@ -17,11 +17,19 @@ import {
   type Summary,
   type SummaryRequest,
 } from './summary.js';
-import { toText } from './schema.js';
+import { asEntity, toText } from './schema.js';
 import { CRM_ASSISTANT } from '../../ai/employees/crm-assistant.js';
 import { isCountry, isSubdivision, subdivisionCode } from './geography.js';
 import { randomUUID } from 'node:crypto';
-import type { DatabaseManager, QueryAdapter, Row } from '@nocobase/db';
+import { readEntry } from './ai-entries.js';
+import type {
+  DatabaseManager,
+  Expression,
+  ExpressionBuilder,
+  QueryAdapter,
+  Row,
+  SqlBool,
+} from '@nocobase/db';
 import type { AppAuthorization } from '@nocobase/app-plugin-authorization/server';
 import {
   assertFields,
@@ -38,6 +46,7 @@ import {
 import {
   CrmError,
   defaultSettings,
+  aiLanguages,
   definitions,
   entities,
   fieldsFor,
@@ -120,6 +129,21 @@ export function deletionChecks(entity: Entity): [Entity, string][] {
 
 // The roles that may own records; see save().
 const sellerRoles = ['sales-representative', 'sales-manager'];
+
+// A note's text: something to say, within a long text's length.
+function noteText(value: unknown): string {
+  const text = typeof value === 'string' ? value.trim() : '';
+  if (!text || text.length > LONG_TEXT_LIMIT)
+    throw new CrmError('invalidInput', 400, 'text');
+  return text;
+}
+
+// What of an activity its lead, account, opportunity or contact is told
+// on its timeline: planned, moved (its time), handed to another owner,
+// completed or cancelled (a no-show, as recorded before that status went,
+// reads as cancelled), and deleted. Its other edits stay on the activity.
+const TOLD = ['startAt', 'ownerId'];
+const TOLD_STATUSES = ['completed', 'cancelled', 'noShow'];
 
 export class CrmService {
   constructor(
@@ -271,6 +295,8 @@ export class CrmService {
     } catch {
       throw new CrmError('invalidInput', 400, 'timeZone');
     }
+    if (!aiLanguages.includes(value.aiLanguage))
+      throw new CrmError('invalidInput', 400, 'aiLanguage');
     for (const key of [
       'activityReminderMinutes',
       'closeReminderDays',
@@ -297,6 +323,7 @@ export class CrmService {
           .values(encodeRow({ id: 'business', value, updatedAt: new Date() }))
           .execute();
     });
+    this.settingsSaved?.(value);
     return value;
   }
   async users(actor: Actor): Promise<Row[]> {
@@ -337,6 +364,24 @@ export class CrmService {
         canApprove: userRoles.includes('sales-manager'),
       };
     });
+  }
+  // Set by CrmProvider to the lead evaluation (lead-evaluation.ts), for the
+  // ways a lead is created one at a time outside the create route: the
+  // assistant's create tool. Imports and the demo data are not evaluated.
+  leadCreated?: (by: Actor, leadId: string) => void;
+  // Set by CrmProvider: the settings were saved (the assistant's prompt
+  // follows the AI language setting).
+  settingsSaved?: (settings: CrmSettings) => void;
+  // The language a user last used the CRM in, for work done on their behalf
+  // while they are away (a lead evaluated for its owner).
+  async localeOf(userId: string): Promise<string> {
+    const preference = await this.database
+      .query()
+      .selectFrom('crmUserPreferences')
+      .select('locale')
+      .where('id', '=', userId)
+      .executeTakeFirst();
+    return preference?.locale === 'zh-CN' ? 'zh-CN' : 'en-US';
   }
   async rememberLocale(actor: Actor): Promise<void> {
     const query = this.database.query();
@@ -625,13 +670,22 @@ export class CrmService {
     if (!row) throw new CrmError('notFound', 404);
     return decodeRow(row) as CrmRecord;
   }
-  // A record's change history, newest first, a page at a time, with the
-  // fields the reader may not see left out of each entry.
+  // A record's activity feed, newest first, a page at a time, with the
+  // fields the reader may not see left out of each entry: people's changes,
+  // the AI's proposals they confirmed and the AI's own work (an evaluation),
+  // all of it or only the people's (`source: 'user'`) or the AI's
+  // (`source: 'ai'`).
   async historyOf(
     actor: Actor,
     entity: Entity,
     id: string,
-    options: { page?: number; pageSize?: number } = {},
+    options: {
+      page?: number;
+      pageSize?: number;
+      source?: string;
+      // Only the notes, for the notes beside a record's particulars.
+      action?: string;
+    } = {},
   ): Promise<{ data: Row[]; total: number; page: number; pageSize: number }> {
     await this.get(actor, entity, id);
     const readable = outputFields(
@@ -644,44 +698,186 @@ export class CrmService {
       Math.max(1, options.pageSize ?? RELATED_PAGE),
     );
     const query = this.database.query();
-    const count = await query
-      .selectFrom('crmHistory')
-      .select((eb) => [eb.fn.countAll().as('total')])
-      .where('entity', '=', entity)
-      .where('recordId', '=', id)
-      .executeTakeFirst();
-    const data = (
-      await query
-        .selectFrom('crmHistory')
-        .selectAll()
-        .where('entity', '=', entity)
-        .where('recordId', '=', id)
-        .orderBy('createdAt', 'desc')
-        .orderBy('id', 'asc')
+    // The activities linked to the record that the reader may see: their
+    // planning, edits and outcome are part of the record's story (one
+    // deleted is told on the record itself, as activityDeleted). Not for
+    // the notes alone.
+    const link = (
+      {
+        leads: 'leadId',
+        accounts: 'accountId',
+        opportunities: 'opportunityId',
+        contacts: 'contactId',
+      } as Partial<Record<Entity, keyof ListOptions>>
+    )[entity];
+    const activities = new Map<string, CrmRecord>();
+    if (link && options.action !== 'note')
+      for (const activity of (
+        await this.list(actor, 'activities', { [link]: id, pageSize: 1000 })
+      ).data)
+        activities.set(toText(activity.id), activity);
+    const activityIds = [...activities.keys()];
+    const activityFields = activityIds.length
+      ? outputFields(
+          'activities',
+          await conditions(actor, 'activities', 'read'),
+        )
+      : [];
+    const readableOf = (values: Row): Row =>
+      Object.fromEntries(
+        Object.entries(values).filter(
+          ([key]) => TOLD.includes(key) && activityFields.includes(key),
+        ),
+      );
+    // The record's own entries, and those of its activities that tell.
+    const ofRecord = (eb: ExpressionBuilder): Expression<SqlBool> => {
+      const own = eb.and([eb('entity', '=', entity), eb('recordId', '=', id)]);
+      return activityIds.length
+        ? eb.or([
+            own,
+            eb.and([
+              eb('entity', '=', 'activities'),
+              eb('recordId', 'in', activityIds),
+              eb('action', 'in', ['created', 'status', 'updated']),
+            ]),
+          ])
+        : own;
+    };
+    // People's own changes carry no source; the AI's carry `ai` (its own
+    // work) or `assistant` (its proposal, confirmed).
+    const scoped = <
+      Q extends { where(column: string, op: string, value: unknown): Q },
+    >(
+      select: Q,
+    ): Q => {
+      const sourced =
+        options.source === 'ai'
+          ? select.where('source', 'in', ['ai', 'assistant', 'capture'])
+          : options.source === 'user'
+            ? select.where('source', 'is', null)
+            : select;
+      return options.action === 'note'
+        ? sourced.where('action', '=', 'note')
+        : sourced;
+    };
+    // An activity's edit tells the record only when it changes who has it
+    // or when it is (TOLD), and a change of status only to done or called
+    // off; its other edits stay on the activity. Which
+    // fields an edit changed is read from its JSON, so a record with
+    // activities is filtered and paged here rather than by the database (a
+    // record's history is short).
+    const told = (event: Row): boolean =>
+      event.entity !== 'activities' ||
+      entity === 'activities' ||
+      event.action === 'created' ||
+      (event.action === 'status' &&
+        TOLD_STATUSES.includes(toText(event.toValue))) ||
+      (event.action === 'updated' &&
+        Object.keys(object(jsonValue(event.changes) ?? {})).some((key) =>
+          TOLD.includes(key),
+        ));
+    const ordered = scoped(
+      query.selectFrom('crmHistory').selectAll().where(ofRecord),
+    )
+      .orderBy('createdAt', 'desc')
+      .orderBy('id', 'asc');
+    let rows: Row[];
+    let total: number;
+    if (activityIds.length) {
+      const all = (await ordered.execute()).filter(told);
+      total = all.length;
+      rows = all.slice((page - 1) * pageSize, page * pageSize);
+    } else {
+      const count = await scoped(
+        query
+          .selectFrom('crmHistory')
+          .select((eb) => [eb.fn.countAll().as('total')])
+          .where(ofRecord),
+      ).executeTakeFirst();
+      total = Number(count?.total ?? 0);
+      rows = await ordered
         .limit(pageSize)
         .offset((page - 1) * pageSize)
-        .execute()
-    ).map((event) => ({
-      ...event,
-      changes: Object.fromEntries(
-        Object.entries(object(jsonValue(event.changes) ?? {})).filter(([key]) =>
-          readable.includes(key),
-        ),
-      ),
-      // Null for entries written before earlier values were kept.
-      previous:
-        event.previous == null
-          ? null
-          : Object.fromEntries(
-              Object.entries(object(jsonValue(event.previous) ?? {})).filter(
-                ([key]) => readable.includes(key),
+        .execute();
+    }
+    const data = rows.map((event) =>
+      // An activity's entry: the activity as it now reads (name, type,
+      // status, time, outcome) and, for a new time, the time before.
+      // (Not the activity's own history, whose entries are its own.)
+      event.entity === 'activities' && entity !== 'activities'
+        ? (() => {
+            const activity = activities.get(toText(event.recordId))!;
+            const changes = object(jsonValue(event.changes) ?? {});
+            const previous = object(jsonValue(event.previous) ?? {});
+            return {
+              ...event,
+              // When it was planned for; for an edit, the fields it changed
+              // that the record is told of and the reader may read, before
+              // and after.
+              changes:
+                event.action === 'created'
+                  ? { startAt: changes.startAt ?? null }
+                  : event.action === 'updated'
+                    ? readableOf(changes)
+                    : {},
+              previous:
+                event.action === 'updated' ? readableOf(previous) : null,
+              ai: null,
+              activity: {
+                id: activity.id,
+                name: activity.name,
+                type: activity.type,
+                status: activity.status,
+                startAt: activity.startAt,
+                feedback: activity.feedback ?? null,
+              },
+            };
+          })()
+        : // A note's text is the note, not a field of the record; an edit
+          // entry carries the text as changed, and a person's instruction to
+          // the AI to redo a card (aiRevise) its words.
+          event.action === 'note' ||
+            event.action === 'noteEdited' ||
+            event.action === 'aiRevise' ||
+            event.action === 'activityDeleted'
+          ? {
+              ...event,
+              changes: object(jsonValue(event.changes) ?? {}),
+              previous:
+                event.previous == null
+                  ? null
+                  : object(jsonValue(event.previous) ?? {}),
+              ai: null,
+            }
+          : {
+              ...event,
+              changes: Object.fromEntries(
+                Object.entries(object(jsonValue(event.changes) ?? {})).filter(
+                  ([key]) => readable.includes(key),
+                ),
               ),
-            ),
-      ...(!readable.includes(definitions[entity].statusField ?? '')
-        ? { fromValue: null, toValue: null }
-        : {}),
-    }));
-    return { data, total: Number(count?.total ?? 0), page, pageSize };
+              // Null for entries written before earlier values were kept.
+              previous:
+                event.previous == null
+                  ? null
+                  : Object.fromEntries(
+                      Object.entries(
+                        object(jsonValue(event.previous) ?? {}),
+                      ).filter(([key]) => readable.includes(key)),
+                    ),
+              ...(!readable.includes(definitions[entity].statusField ?? '')
+                ? { fromValue: null, toValue: null }
+                : {}),
+              // The AI's own work: what it concluded and where that stands.
+              ...(event.action === 'ai'
+                ? (() => {
+                    const entry = readEntry(event);
+                    return { aiStatus: entry.status, ai: entry.ai };
+                  })()
+                : { ai: null }),
+            },
+    );
+    return { data, total, page, pageSize };
   }
   // The record with the first page of its history and of each related list;
   // the page asks for further pages through the list and history endpoints.
@@ -690,6 +886,10 @@ export class CrmService {
     const historyPage = await this.historyOf(actor, entity, id);
     const history = historyPage.data;
     const historyTotal = historyPage.total;
+    // The notes tab's count.
+    const notesTotal = (
+      await this.historyOf(actor, entity, id, { action: 'note', pageSize: 1 })
+    ).total;
     const related: Partial<Record<Entity, CrmRecord[]>> = {};
     const relatedTotals: Partial<Record<Entity, number>> = {};
     const firstPage = async (
@@ -812,6 +1012,7 @@ export class CrmService {
       record,
       history,
       historyTotal,
+      notesTotal,
       related,
       relatedTotals,
       blockers,
@@ -1117,7 +1318,11 @@ export class CrmService {
     if (entity === 'activities') {
       if (!input.leadId && !input.accountId && !input.opportunityId)
         throw new CrmError('activityRelation');
-      if (new Date(toText(input.endAt)) < new Date(toText(input.startAt)))
+      // An end, when there is one, comes after the start.
+      if (
+        input.endAt &&
+        new Date(toText(input.endAt)) < new Date(toText(input.startAt))
+      )
         throw new CrmError('endBeforeStart');
       if (input.opportunityId) {
         const opp = await this.get(
@@ -1437,6 +1642,30 @@ export class CrmService {
         }
       }
     }
+    // An activity gone is told on each record it belonged to, by name: the
+    // activity's own history can no longer be read through it.
+    if (entity === 'activities')
+      for (const [field, owner] of [
+        ['leadId', 'leads'],
+        ['accountId', 'accounts'],
+        ['opportunityId', 'opportunities'],
+      ] as const)
+        if (record[field])
+          await this.history(
+            tx,
+            actor,
+            owner,
+            toText(record[field]),
+            'activityDeleted',
+            undefined,
+            undefined,
+            {
+              activityId: id,
+              name: record.name,
+              type: record.type,
+              startAt: record.startAt,
+            },
+          );
     await tx
       .deleteFrom(definitions[entity].table)
       .where('id', '=', id)
@@ -1468,9 +1697,114 @@ export class CrmService {
         toValue: toValue == null ? null : toText(toValue),
         changes: JSON.stringify(changes ?? {}),
         previous: previousValues ? JSON.stringify(previousValues) : null,
+        source: actor.via ?? null,
         createdAt: new Date().toISOString(),
       })
       .execute();
+  }
+  // Notes: what a person (or the AI, confirmed) writes into a record's
+  // activity feed, stored with its history as action 'note' and the text in
+  // `changes`. Anyone who may read the record may add one; only the author
+  // may change or remove it, and only while they may still read the record.
+  async addNote(
+    actor: Actor,
+    entity: Entity,
+    id: string,
+    text: unknown,
+  ): Promise<Row> {
+    const body = noteText(text);
+    await this.get(actor, entity, id);
+    const note = {
+      id: randomUUID(),
+      entity,
+      recordId: id,
+      actorId: actor.id,
+      action: 'note',
+      fromValue: null,
+      toValue: null,
+      changes: JSON.stringify({ text: body }),
+      previous: null,
+      source: actor.via ?? null,
+      createdAt: new Date().toISOString(),
+    };
+    await this.database.query().insertInto('crmHistory').values(note).execute();
+    return { ...note, changes: { text: body }, editedAt: null };
+  }
+  async editNote(actor: Actor, noteId: string, text: unknown): Promise<Row> {
+    const body = noteText(text);
+    const note = await this.ownNote(actor, noteId);
+    const editedAt = new Date().toISOString();
+    const previous = object(jsonValue(note.changes) ?? {});
+    // The note changes in place; the feed also says, at the time of the
+    // edit, who changed a note and to what.
+    await this.database.transaction(async ({ query }) => {
+      await query
+        .updateTable('crmHistory')
+        .set({
+          changes: JSON.stringify({ text: body }),
+          previous: JSON.stringify({ text: toText(previous.text ?? '') }),
+          editedAt,
+        })
+        .where('id', '=', noteId)
+        .execute();
+      await query
+        .insertInto('crmHistory')
+        .values({
+          id: randomUUID(),
+          entity: note.entity,
+          recordId: note.recordId,
+          actorId: actor.id,
+          action: 'noteEdited',
+          fromValue: null,
+          toValue: null,
+          // Which note: the timeline's "edited a note" leads to it.
+          changes: JSON.stringify({ text: body, noteId }),
+          previous: null,
+          source: actor.via ?? null,
+          createdAt: editedAt,
+        })
+        .execute();
+    });
+    return { ...note, changes: { text: body }, editedAt };
+  }
+  // Removing a note leaves its place in the feed to say one was removed,
+  // by whom and when, without the text its author took back.
+  async removeNote(actor: Actor, noteId: string): Promise<void> {
+    const note = await this.ownNote(actor, noteId);
+    await this.database.transaction(async ({ query }) => {
+      await query.deleteFrom('crmHistory').where('id', '=', noteId).execute();
+      await query
+        .insertInto('crmHistory')
+        .values({
+          id: randomUUID(),
+          entity: note.entity,
+          recordId: note.recordId,
+          actorId: actor.id,
+          action: 'noteDeleted',
+          fromValue: null,
+          toValue: null,
+          changes: JSON.stringify({}),
+          previous: null,
+          source: actor.via ?? null,
+          createdAt: new Date().toISOString(),
+        })
+        .execute();
+    });
+  }
+  // A note the actor wrote on a record they may still read; any other
+  // entry, or someone else's note, is refused.
+  private async ownNote(actor: Actor, noteId: string): Promise<Row> {
+    const note = await this.database
+      .query()
+      .selectFrom('crmHistory')
+      .selectAll()
+      .where('id', '=', noteId)
+      .where('action', '=', 'note')
+      .executeTakeFirst();
+    if (!note) throw new CrmError('notFound', 404);
+    await this.get(actor, asEntity(toText(note.entity)), toText(note.recordId));
+    if (note.actorId !== actor.id) throw new CrmError('forbidden', 403);
+    return note;
   }
   async checkApprover(actor: Actor, id: string): Promise<void> {
     if (id === actor.id) throw new CrmError('selfApproval');

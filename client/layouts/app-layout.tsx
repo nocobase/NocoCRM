@@ -1,3 +1,5 @@
+import { NavigationBadgesContext } from './components/navigation-badges.js';
+import { useWaitingCount } from '../components/crm/waiting-count.js';
 import { useSidebarPreference } from './use-sidebar-preference.js';
 import { useSyncServerLocale } from '@nocobase/app-plugin-i18n/client';
 import { useState, type ReactElement } from 'react';
@@ -47,6 +49,9 @@ export function AppLayout({
   const settingsNavigation = useRouteNavigation(
     useClientApplication().runtime.settingsRouteTree,
   );
+  // Application change: the count beside "Waiting on me" in the menu and in
+  // the tab's title (navigation-badges.ts, waiting-count.ts).
+  const waiting = useWaitingCount();
 
   return (
     // The shell owns the business route tree used by its pages and navigation.
@@ -87,16 +92,18 @@ export function AppLayout({
             })}
             className={`flex-1 min-h-0 space-y-1 overflow-x-hidden overflow-y-auto py-3 ${desktopSidebarCollapsed ? 'px-3 md:px-2' : 'px-3'}`}
           >
-            {menuItems.map((item) => (
-              <NavigationTree
-                collapsed={desktopSidebarCollapsed}
-                item={item}
-                key={routeKey(item.route)}
-                onNavigate={() => setMobileSidebarOpen(false)}
-                sections
-                selectedKey={selectedKey}
-              />
-            ))}
+            <NavigationBadgesContext value={{ 'crm-decisions': waiting }}>
+              {menuItems.map((item) => (
+                <NavigationTree
+                  collapsed={desktopSidebarCollapsed}
+                  item={item}
+                  key={routeKey(item.route)}
+                  onNavigate={() => setMobileSidebarOpen(false)}
+                  sections
+                  selectedKey={selectedKey}
+                />
+              ))}
+            </NavigationBadgesContext>
           </nav>
           <SidebarFooter collapsed={desktopSidebarCollapsed} />
         </LayoutSidebar>

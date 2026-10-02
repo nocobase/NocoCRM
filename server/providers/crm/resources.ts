@@ -191,6 +191,7 @@ export const crmPages: readonly { name: string; title: AuthorizationTitle }[] =
     { name: 'crm-record', title: crm('authz.pages.record') },
     { name: 'crm-notifications', title: crm('authz.pages.notifications') },
     { name: 'crm-skills', title: crm('authz.pages.skills') },
+    { name: 'crm-decisions', title: crm('authz.pages.decisions') },
   ];
 
 export function pageGrant(name: string): PermissionGrant {

@@ -1,15 +1,12 @@
 import { useState, type ReactElement, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Check,
-  CircleAlert,
-  LoaderCircle,
-  Pencil,
-  Sparkles,
-} from 'lucide-react';
+import { Check, CircleAlert, LoaderCircle, Sparkles } from 'lucide-react';
 import type { AIToolRendererProps } from '@/extensions/nocobase-ai';
 import { useAITranslate } from '@/extensions/nocobase-ai/locales/use-ai-translate.js';
 import { Button } from '../ui/button.js';
+import { Textarea } from '../ui/textarea.js';
+import { DISMISS_REASON } from './ai-decisions.js';
+import { LONG_TEXT_LIMIT } from '../../../server/providers/crm/limits.js';
 import { ErrorNotice } from './common.js';
 import { InlineField } from './inline.js';
 import { RecordForm } from './form.js';
@@ -42,7 +39,8 @@ type WriteTool =
   | 'update_record'
   | 'delete_record'
   | 'convert_lead'
-  | 'approval_action';
+  | 'approval_action'
+  | 'add_note';
 
 const object = (value: unknown): Data =>
   value && typeof value === 'object' && !Array.isArray(value)
@@ -222,6 +220,19 @@ function Proposal({
     return (
       <p className='text-sm text-muted-foreground'>{text('toolCard.delete')}</p>
     );
+  // A note is its text, corrected in place before it is confirmed.
+  if (tool === 'add_note')
+    return editable ? (
+      <Textarea
+        aria-label={text('notes.label')}
+        value={toText(input.text)}
+        maxLength={LONG_TEXT_LIMIT}
+        className='min-h-20 text-sm'
+        onChange={(event) => onChange(['text'], event.target.value)}
+      />
+    ) : (
+      <p className='text-sm whitespace-pre-wrap'>{toText(input.text)}</p>
+    );
   if (tool === 'convert_lead') {
     const {
       id: _id,
@@ -301,6 +312,8 @@ function operationLabel(tool: WriteTool, input: Data): string {
       return 'delete';
     case 'convert_lead':
       return 'convert';
+    case 'add_note':
+      return 'notes.add';
     default:
       return toText(input.action) || 'approve';
   }
@@ -557,23 +570,18 @@ export function CrmWriteCard({
                 disabled={disabled || action !== undefined}
                 onClick={() => setEditing(true)}
               >
-                <Pencil />
                 {text('edit')}
               </Button>
             ) : null}
             <Button
-              variant='ghost'
+              variant='outline'
               size='sm'
               disabled={disabled || action !== undefined}
               onClick={() =>
-                void decide('reject', () =>
-                  onReject(
-                    'The user denied this change. Do not call this tool again with the same values; ask what to change instead.',
-                  ),
-                )
+                void decide('reject', () => onReject(DISMISS_REASON))
               }
             >
-              {action === 'reject' ? '…' : t('actions.deny', 'Deny')}
+              {action === 'reject' ? '…' : text('toolCard.dismiss')}
             </Button>
             <Button
               size='sm'

@@ -6,6 +6,7 @@ import { convertLead } from '../../providers/crm/conversion.js';
 import {
   asEntity,
   entities,
+  object,
   toText,
   type Entity,
 } from '../../providers/crm/schema.js';
@@ -56,7 +57,11 @@ export function crmWriteTools(
   service: CrmService,
   authz: Pick<AppAuthorization, 'for'>,
 ) {
-  const actorOf = (ctx: unknown): Actor => actorFrom(authz, ctx);
+  // Every write here is the AI's proposal the user confirmed on its card.
+  const actorOf = (ctx: unknown): Actor => ({
+    ...actorFrom(authz, ctx),
+    via: 'assistant',
+  });
   const common = {
     scope: 'SPECIFIED' as const,
     execution: 'backend' as const,
@@ -101,6 +106,9 @@ export function crmWriteTools(
           const args = (raw ?? {}) as Row;
           const entity = asEntity(toText(args.entity));
           const record = await service.save(actor, entity, args.input ?? {});
+          // A lead the assistant created is evaluated like any other.
+          if (entity === 'leads')
+            service.leadCreated?.(actor, toText(record.id));
           return summary(entity, record, args.input ?? {});
         });
       },
@@ -284,6 +292,48 @@ export function crmWriteTools(
             action: args.action,
             ...(args.comment ? { comment: args.comment } : {}),
           });
+        });
+      },
+    }),
+    defineTools({
+      ...common,
+      introduction: {
+        title: 'Add a note to a record',
+        about:
+          "Adds a note to a record's activity feed once the user confirms the text.",
+      },
+      definition: {
+        name: 'add_note',
+        description:
+          'Add a note to one record\'s activity feed, where everyone who may read the record sees it: a fact the record has no field for (the customer already runs SAP, the budget covers software only) or a conclusion the user wants the team to see. Write it short and self-contained, in the user\'s language. Anyone who may read the record may add one. Include a one-line "title".',
+        schema: {
+          type: 'object',
+          properties: {
+            entity: entityProperty,
+            id: { type: 'string', description: 'The record id.' },
+            title: { type: 'string', description: 'What this notes.' },
+            text: { type: 'string', description: 'The note.' },
+          },
+          required: ['entity', 'id', 'title', 'text'],
+        },
+      },
+      invoke: async (ctx, raw) => {
+        const actor = actorOf(ctx);
+        return guarded(async () => {
+          const args = (raw ?? {}) as Row;
+          const entity = asEntity(toText(args.entity));
+          const note = await service.addNote(
+            actor,
+            entity,
+            toText(args.id),
+            args.text,
+          );
+          return {
+            entity,
+            id: args.id,
+            noteId: note.id,
+            values: { text: toText(object(note.changes).text) },
+          };
         });
       },
     }),

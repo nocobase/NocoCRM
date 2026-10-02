@@ -5,11 +5,16 @@ import type { CrmService } from '../providers/crm/service.js';
 import {
   CRM_ASSISTANT,
   crmAssistant,
+  CRM_CHAT_SKILLS,
   REPORT_SKILLS,
   type CrmAssistantOptions,
 } from './employees/crm-assistant.js';
 import { crmRecordTools } from './tools/crm-records.js';
 import { crmWriteTools } from './tools/crm-writes.js';
+import { encodeRow } from '../providers/crm/values.js';
+
+// Marks that the lead follow-up skill joined a saved skill selection.
+const CHAT_SKILLS_MARKER = 'ai-skills-lead-follow-up-v1';
 
 // The application's AI resources, registered with the AI Employee plugin
 // from CrmProvider: the CRM assistant employee, its read tools and its
@@ -38,9 +43,42 @@ export class CrmAiResources extends AIResourceRegistrar {
         ...employee,
         skillSettings: {
           ...employee.skillSettings,
-          enabledSkills: [...REPORT_SKILLS],
+          enabledSkills: [...REPORT_SKILLS, ...CRM_CHAT_SKILLS],
         },
       });
+    // A selection saved before the lead follow-up skill came gets it once
+    // (marker in crmSettings); removed afterwards, it stays removed.
+    else if (employee && !(await this.marked(CHAT_SKILLS_MARKER))) {
+      const enabled = employee.skillSettings?.enabledSkills ?? [];
+      await aiEmployeeManager.upsertEmployee({
+        ...employee,
+        skillSettings: {
+          ...employee.skillSettings,
+          enabledSkills: [
+            ...enabled,
+            ...CRM_CHAT_SKILLS.filter((name) => !enabled.includes(name)),
+          ],
+        },
+      });
+      await this.mark(CHAT_SKILLS_MARKER);
+    }
+  }
+  private async marked(id: string): Promise<boolean> {
+    return Boolean(
+      await this.service.database
+        .query()
+        .selectFrom('crmSettings')
+        .select('id')
+        .where('id', '=', id)
+        .executeTakeFirst(),
+    );
+  }
+  private async mark(id: string): Promise<void> {
+    await this.service.database
+      .query()
+      .insertInto('crmSettings')
+      .values(encodeRow({ id, value: { version: 1 }, updatedAt: new Date() }))
+      .execute();
   }
   protected override async registerTools(
     toolsManager: ToolsManager,

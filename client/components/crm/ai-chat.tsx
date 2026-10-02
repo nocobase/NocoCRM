@@ -8,7 +8,15 @@ import {
   type ReactNode,
 } from 'react';
 import { useApiClient } from '@nocobase/app-client';
-import { Maximize2, PanelRight, Sparkles, X } from 'lucide-react';
+import {
+  Flag,
+  Maximize2,
+  Menu,
+  PanelLeftClose,
+  PanelRight,
+  PlusCircle,
+  X,
+} from 'lucide-react';
 import {
   AIChatFloatingTrigger,
   AIChatProvider,
@@ -18,7 +26,10 @@ import {
   NocoBaseAIRootProvider,
   NocoBaseAIService,
   useAI,
+  getAIEmployeeAvatar,
   useAIChat,
+  useAIChatBase,
+  useAIChatMessages,
   useAIChatController,
   useAIChatControllerState,
   type AIChatController,
@@ -27,8 +38,9 @@ import {
   type AIWorkContextItem,
 } from '@/extensions/nocobase-ai';
 import { AI_DRAFT_CONVERSATION_ID } from '@/extensions/nocobase-ai/providers/types.js';
+import { UserPromptEditor } from '@/extensions/nocobase-ai/components/chat/user-prompt-editor.js';
 import { Button } from '../ui/button.js';
-import { toText, useCrmText, useMetadata, type Data } from './api.js';
+import { sentence, toText, useCrmText, useMetadata, type Data } from './api.js';
 import { crmToolRenderers } from './ai-tool-renderers.js';
 
 // The CRM assistant: the AI Employee plugin's chat, mounted in the side
@@ -65,6 +77,23 @@ function recordItem(context: RecordContext): AIWorkContextItem {
       recordId: context.recordId,
     },
   };
+}
+
+// A work context item a shortcut brings along, as given: the plugin passes
+// its content to the model as page context.
+function extraContextOf(value: unknown): AIWorkContextItem | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const item = value as Data;
+  const type = toText(item.type ?? '');
+  const id = toText(item.id ?? '');
+  return type && id && item.content
+    ? {
+        type,
+        id,
+        title: toText(item.title ?? type),
+        content: item.content,
+      }
+    : undefined;
 }
 
 function recordContextOf(data: Data): RecordContext | undefined {
@@ -198,7 +227,17 @@ function CrmAssistantPanel(): ReactElement | null {
       const data = (event as CustomEvent<Data>).detail ?? {};
       const prompt = toText(data.prompt ?? '');
       const target = recordContextOf(data);
-      if (!prompt) {
+      // What the shortcut adds beyond the record: the lead's AI evaluation
+      // for "Ask about it", passed to the model whole.
+      const extra = extraContextOf(data.context);
+      const workContext = [
+        ...(target ? [recordItem(target)] : []),
+        ...(extra ? [extra] : []),
+      ];
+      // No prompt and nothing to attach: just open the panel. A shortcut
+      // bringing context of its own ("Ask about it") starts its
+      // conversation with that context and an empty composer.
+      if (!prompt && !extra) {
         controller.open();
         return;
       }
@@ -214,7 +253,7 @@ function CrmAssistantPanel(): ReactElement | null {
         task: {
           message: {
             user: prompt,
-            ...(target ? { workContext: [recordItem(target)] } : {}),
+            ...(workContext.length ? { workContext } : {}),
           },
           autoSend: data.send === true,
           ...(data.webSearch === true ? { webSearch: true } : {}),
@@ -222,8 +261,10 @@ function CrmAssistantPanel(): ReactElement | null {
         auto: true,
         open: true,
         // Continue the conversation already open rather than starting one
-        // per shortcut; a new conversation is one click away.
-        reuseConversation: true,
+        // per shortcut; a new conversation is one click away. A shortcut
+        // about one thing of its own (an evaluation) asks for a fresh one,
+        // so it does not land in an unrelated thread.
+        reuseConversation: data.newConversation !== true,
       });
     };
     const change = (event: Event): void =>
@@ -280,16 +321,9 @@ function CrmAssistantPanel(): ReactElement | null {
         width='28rem'
         closeOnEscape={expanded}
       >
+        {/* No title of the panel's own: the chat's header says who the
+            user talks to (NocoHeader). */}
         <div className='flex h-full min-h-0 flex-col'>
-          <header className='space-y-1 border-b p-4'>
-            <h2 className='flex items-center gap-2 font-heading text-base font-medium'>
-              <Sparkles className='size-5' />
-              {text('assistant')}
-            </h2>
-            <p className='text-sm text-muted-foreground'>
-              {text('assistantHint')}
-            </p>
-          </header>
           <div className='flex min-h-0 flex-1 flex-col'>
             <ConfiguredChat
               controller={controller}
@@ -361,7 +395,7 @@ function ConfiguredChat({
           showEmployeeSelector={false}
           disclaimer={false}
           placeholder={toText(text('askHint'))}
-          headerActions={actions}
+          header={<NocoHeader actions={actions} />}
           // Files picked, dropped or pasted go to the plugin's storage and
           // reach the model with the message: documents (PDF, Word, Excel,
           // PowerPoint, text, CSV, JSON) as extracted text; images only for
@@ -373,31 +407,173 @@ function ConfiguredChat({
   );
 }
 
+// The chat's header, drawn by the CRM in place of the plugin's: whom the
+// user talks to (the employee's avatar, name and role, in the interface
+// language), with the conversation list's toggle before it and a new
+// conversation, the user's own instructions, expand and close after it.
+// Below, once a conversation is under way, what it started from: the
+// context its first message carried (the lead and its evaluation
+// for "Ask about it", the record a question was typed on), fixed for the
+// conversation whatever the page shows later; the composer's chip is the
+// page's record for the next message.
+function NocoHeader({ actions }: { actions: ReactNode }): ReactElement {
+  const { text, language } = useCrmText();
+  const {
+    currentEmployee,
+    conversations,
+    conversationListOpen,
+    setConversationListOpen,
+    startNewConversation,
+  } = useAIChatBase();
+  const { messages } = useAIChatMessages();
+  const unread = conversations.filter(
+    (conversation) => conversation.unread,
+  ).length;
+  const first = messages.find((message) => message.role === 'user');
+  // Each item as its title, a record's led by its type ("线索 张伟一").
+  const startItems = (first?.metadata?.workContext ?? []).map((item) => {
+    const entity =
+      item.type === 'crm-record'
+        ? toText((item.content as Data | undefined)?.entity ?? '')
+        : '';
+    return {
+      key: item.id,
+      kind: entity ? sentence(text(`entity.${entity}`)) : '',
+      title: toText(item.title),
+    };
+  });
+  const start = startItems
+    .map((item) => [item.kind, item.title].filter(Boolean).join(' '))
+    .join(' · ');
+  const avatar = getAIEmployeeAvatar(currentEmployee?.avatar);
+  const listLabel = toText(
+    text(
+      conversationListOpen
+        ? 'assistantHideConversations'
+        : 'assistantConversations',
+    ),
+  );
+  const newLabel = toText(text('assistantNewConversation'));
+  return (
+    <div className='shrink-0 border-b bg-card'>
+      <header className='flex h-14 items-center gap-2 px-2.5'>
+        <Button
+          variant='ghost'
+          size='icon-sm'
+          aria-label={listLabel}
+          title={listLabel}
+          onClick={() => setConversationListOpen(!conversationListOpen)}
+        >
+          <span className='relative'>
+            {conversationListOpen ? <PanelLeftClose /> : <Menu />}
+            {!conversationListOpen && unread > 0 ? (
+              <span className='absolute -top-1 -right-1 size-2 rounded-full bg-destructive ring-2 ring-card' />
+            ) : null}
+          </span>
+        </Button>
+        {avatar ? (
+          <img
+            src={avatar}
+            alt=''
+            className='size-8 shrink-0 rounded-full border bg-background'
+          />
+        ) : null}
+        <div className='min-w-0 flex-1 leading-tight'>
+          <p className='truncate text-sm font-medium'>
+            {currentEmployee?.nickname}
+          </p>
+          <p className='truncate text-xs text-muted-foreground'>
+            {currentEmployee?.position}
+          </p>
+        </div>
+        <div className='flex shrink-0 items-center gap-0.5'>
+          <UserPromptEditor />
+          <Button
+            variant='ghost'
+            size='icon-sm'
+            aria-label={newLabel}
+            title={newLabel}
+            onClick={startNewConversation}
+          >
+            <PlusCircle />
+          </Button>
+          {actions}
+        </div>
+      </header>
+      {/* What the conversation started from, once it is under way; its
+          title is the conversation list's. */}
+      {startItems.length ? (
+        <p
+          className='flex items-center gap-1.5 border-t bg-muted px-4 py-1.5 text-xs text-muted-foreground'
+          title={start}
+        >
+          <Flag aria-hidden className='size-3.5 shrink-0' />
+          <span className='min-w-0 truncate'>
+            {text('assistantStart')}
+            {language.startsWith('zh') ? '：' : ': '}
+            {startItems.map((item, index) => (
+              <span key={item.key}>
+                {index > 0 ? ' · ' : ''}
+                {item.kind ? `${item.kind} ` : ''}
+                <span className='text-foreground'>{item.title}</span>
+              </span>
+            ))}
+          </span>
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 // Keeps the record on screen attached to the current draft, so a question
 // typed on a detail page is about that record without a shortcut; the chip
-// in the composer shows it and lets the user drop it.
+// in the composer shows it and lets the user drop it. Not the record the
+// conversation started from, which it already carries.
 function RecordContext({
   record,
 }: {
   record: RecordContext | undefined;
 }): null {
   const { workContext, addWorkContext, removeWorkContext } = useAIChat();
+  const { messages } = useAIChatMessages();
+  // The records the conversation started from, which the model already has
+  // with its first message: the page's record is not attached again when it
+  // is one of them, so the composer shows only what adds to the start.
+  const startIds = (
+    messages.find((message) => message.role === 'user')?.metadata
+      ?.workContext ?? []
+  )
+    .map((item) => item.id)
+    .join('\n');
+  // The item this keeps in step with the page, and only that one: a record a
+  // shortcut attached stays when the page shows none (the lead of an
+  // evaluation asked about from "Waiting on me").
+  const addedRef = useRef<AIWorkContextItem | undefined>(undefined);
   // Each change to the list runs this again, and the second pass finds
   // nothing to do; the loop settles in one round trip.
   useEffect(() => {
-    const current = record ? recordItem(record) : undefined;
-    const stale = workContext.find(
-      (item) =>
-        item.type === 'crm-record' &&
-        (!current || item.id !== current.id || item.title !== current.title),
-    );
-    if (stale) {
-      removeWorkContext(stale);
-      return;
+    const onScreen = record ? recordItem(record) : undefined;
+    const current =
+      onScreen && !startIds.split('\n').includes(onScreen.id ?? '')
+        ? onScreen
+        : undefined;
+    const mine = addedRef.current;
+    if (
+      mine &&
+      (!current || mine.id !== current.id || mine.title !== current.title)
+    ) {
+      addedRef.current = undefined;
+      const stale = workContext.find((item) => item.id === mine.id);
+      if (stale) {
+        removeWorkContext(stale);
+        return;
+      }
     }
-    if (current && !workContext.some((item) => item.id === current.id))
+    if (current && !workContext.some((item) => item.id === current.id)) {
+      addedRef.current = current;
       addWorkContext(current);
-  }, [record, workContext, addWorkContext, removeWorkContext]);
+    }
+  }, [record, startIds, workContext, addWorkContext, removeWorkContext]);
   return null;
 }
 

@@ -24,6 +24,7 @@ export function AIChatWindow({
   attachmentActionIndex = 0,
   placeholder,
   disclaimer,
+  header,
   onToolCallDecision,
 }: AIChatWindowProps) {
   const t = useAITranslate();
@@ -89,12 +90,16 @@ export function AIChatWindow({
         </aside>
       ) : null}
       <div className='flex min-w-0 flex-1 flex-col'>
-        <ChatHeader
-          actions={headerActions}
-          showConversationToggle={showConversationToggle}
-          showNewConversation={showNewConversation}
-          showUserPrompt={showUserPrompt}
-        />
+        {/* Application change (NocoCRM): the CRM draws its own header (who
+            the user talks to, the conversation and what it started from). */}
+        {header ?? (
+          <ChatHeader
+            actions={headerActions}
+            showConversationToggle={showConversationToggle}
+            showNewConversation={showNewConversation}
+            showUserPrompt={showUserPrompt}
+          />
+        )}
         <ChatMessages onToolCallDecision={onToolCallDecision} />
         <ChatComposer
           actions={composerActions}
@@ -125,5 +130,7 @@ export type AIChatWindowProps = {
   attachmentActionIndex?: number;
   placeholder?: string;
   disclaimer?: ReactNode | false;
+  // Application change (NocoCRM): replaces the built-in header.
+  header?: ReactNode;
   onToolCallDecision?: (decision: AIToolCallDecision) => void | Promise<void>;
 };

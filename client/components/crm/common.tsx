@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { Link } from 'react-router';
 import { useRecordDrawer, useRecordLink } from './record-drawer.js';
+import { Markdown } from './markdown.js';
 import {
   ArrowUpRight,
   Inbox,
@@ -43,7 +44,9 @@ export function CrmFrame({
   fill = false,
   children,
 }: {
-  title: ReactNode;
+  // Without one the frame has no header: the page draws its heading and
+  // actions itself (a lead's, in its columns).
+  title?: ReactNode;
   description?: ReactNode;
   // A control that sits beside the title on a phone, where the actions wrap
   // onto rows of their own below it, and leads the actions on wider screens.
@@ -71,66 +74,74 @@ export function CrmFrame({
       className={
         inDrawer
           ? 'space-y-6 p-4 md:p-6'
-          : `mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-8 ${toText(
+          : // A record's page sits tighter at the top than a list's, so its
+            // particulars and timeline start higher; one without a header
+            // starts at the top, where its own columns begin.
+            `mx-auto w-full max-w-[1600px] p-4 md:p-8 ${title === undefined ? 'space-y-4 pt-0 md:pt-0' : editableTitle ? 'space-y-4 md:pt-6' : 'space-y-6'} ${toText(
               fill ? 'flex h-full flex-col pb-0 md:pb-0' : 'pb-24 md:pb-24',
             )}`
       }
     >
-      <header className='flex flex-wrap items-start justify-between gap-4'>
-        {/* Grows into the space the actions leave, so an editable title's
+      {title !== undefined && (
+        <header className='flex flex-wrap items-start justify-between gap-4'>
+          {/* Grows into the space the actions leave, so an editable title's
             editor can take the whole line. */}
-        <div className={`min-w-0 grow ${titleAside ? 'w-full md:w-auto' : ''}`}>
-          <div className='flex items-center justify-between gap-3'>
-            {typeof title === 'string' ? (
-              <h1 className='font-heading text-3xl font-semibold tracking-tight'>
-                {title}
-              </h1>
-            ) : (
-              // An editable title brings its own block elements, which a <h1>
-              // may not contain; the role keeps it a heading for readers.
-              <div
-                role='heading'
-                aria-level={1}
-                className='flex min-w-0 flex-1 flex-wrap items-center font-heading text-3xl font-semibold tracking-tight'
-              >
-                {title}
-              </div>
+          <div
+            className={`min-w-0 grow ${titleAside ? 'w-full md:w-auto' : ''}`}
+          >
+            <div className='flex items-center justify-between gap-3'>
+              {typeof title === 'string' ? (
+                <h1 className='font-heading text-3xl font-semibold tracking-tight'>
+                  {title}
+                </h1>
+              ) : (
+                // An editable title brings its own block elements, which a <h1>
+                // may not contain; the role keeps it a heading for readers.
+                <div
+                  role='heading'
+                  aria-level={1}
+                  className='flex min-w-0 flex-1 flex-wrap items-center font-heading text-3xl font-semibold tracking-tight'
+                >
+                  {title}
+                </div>
+              )}
+              {titleAside && <div className='md:hidden'>{titleAside}</div>}
+            </div>
+            {description && (
+              <p className='mt-2 max-w-2xl text-sm text-muted-foreground'>
+                {description}
+              </p>
             )}
-            {titleAside && <div className='md:hidden'>{titleAside}</div>}
           </div>
-          {description && (
-            <p className='mt-2 max-w-2xl text-sm text-muted-foreground'>
-              {description}
-            </p>
-          )}
-        </div>
-        {/* Beside the title, the actions are centred on its first line: a
+          {/* Beside the title, the actions are centred on its first line: a
             line of the title's type size (1lh at text-3xl), plus the padding
             an editable title carries. */}
-        <div
-          className={`flex flex-wrap items-center gap-2 md:font-heading md:text-3xl ${editableTitle ? 'md:min-h-[calc(1lh+--spacing(3))]' : 'md:min-h-lh'}`}
-        >
-          {titleAside && <div className='hidden md:block'>{titleAside}</div>}
-          {actions}
-          {assistant && assistantAvailable && (
-            <Button
-              variant='outline'
-              onClick={() =>
-                window.dispatchEvent(
-                  new CustomEvent('crm-assistant', { detail: {} }),
-                )
-              }
-            >
-              <Sparkles />
-              {text('assistant')}
-            </Button>
-          )}
-        </div>
-      </header>
+          <div
+            className={`flex flex-wrap items-center gap-2 md:font-heading md:text-3xl ${editableTitle ? 'md:min-h-[calc(1lh+--spacing(3))]' : 'md:min-h-lh'}`}
+          >
+            {titleAside && <div className='hidden md:block'>{titleAside}</div>}
+            {actions}
+            {assistant && assistantAvailable && (
+              <Button
+                variant='outline'
+                onClick={() =>
+                  window.dispatchEvent(
+                    new CustomEvent('crm-assistant', { detail: {} }),
+                  )
+                }
+              >
+                <Sparkles />
+                {text('assistant')}
+              </Button>
+            )}
+          </div>
+        </header>
+      )}
       {children}
     </Frame>
   );
 }
+
 export function Loading(): ReactElement {
   const { text } = useCrmText();
   return (
@@ -211,7 +222,8 @@ const statusTones: Record<
   nurturing: 'warning',
   paused: 'warning',
   inactive: 'warning',
-  noShow: 'warning',
+  // A no-show, before the status was folded into cancelled, in history.
+  noShow: 'destructive',
   invalid: 'destructive',
   churned: 'destructive',
   lost: 'destructive',
@@ -473,9 +485,12 @@ export function Value({
   if (field.type === 'url') {
     const href = linkOf(value);
     return href ? (
+      // One line, cut with an ellipsis where the space ends, whole on
+      // hover: an address has nowhere to break and would push the layout.
       <a
-        className='text-primary hover:underline'
+        className='inline-block max-w-full truncate align-bottom text-primary hover:underline'
         href={href}
+        title={toText(value)}
         target='_blank'
         rel='noopener noreferrer'
         // Inside an inline-editable field a double-click starts editing;
@@ -519,13 +534,18 @@ export function Value({
   );
 }
 
-// A long text (a description, a message, notes) shows its first four lines
-// and offers the rest; the toggle appears only when there is more to show.
-// Its clicks and keys stay its own: the field around it opens its editor on
-// a double-click or Enter.
-function LongText({ value }: { value: string }): ReactElement {
+// A long text (a description, a message, a note) is Markdown, rendered as
+// the chat's replies are (single line breaks kept, HTML escaped, images
+// only from this origin), and shows its first four lines and offers the
+// rest; the toggle, only when there is more to show,
+// sits at the end of the last line shown, folded or open: floated right
+// in the text and pushed down by a float one line short of the text's
+// height (the box around it being flex, so that height resolves). Its
+// clicks and keys stay its own: the field around it opens its editor on a
+// double-click or Enter.
+export function LongText({ value }: { value: string }): ReactElement {
   const { text } = useCrmText();
-  const ref = useRef<HTMLSpanElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [overflows, setOverflows] = useState(false);
   useEffect(() => {
@@ -541,33 +561,42 @@ function LongText({ value }: { value: string }): ReactElement {
       observer.disconnect();
     };
   }, [value]);
+  const toggle = overflows || open;
   return (
-    <span className='block'>
-      <span
+    <div className='flex'>
+      <div
         ref={ref}
-        // line-clamp brings its own display, which block would override.
-        className={`whitespace-pre-wrap break-words ${open ? 'block' : 'line-clamp-4'}`}
+        className={`min-w-0 flex-1 break-words ${open ? 'block' : 'line-clamp-4'} ${
+          toggle
+            ? "before:float-right before:h-[calc(100%-1lh)] before:content-['']"
+            : ''
+        }`}
       >
-        {value}
-      </span>
-      {(overflows || open) && (
-        <button
-          type='button'
-          className='mt-1 text-xs font-medium text-ai hover:underline'
-          onClick={(event) => {
-            event.stopPropagation();
-            setOpen((current) => !current);
-          }}
-          onDoubleClick={(event) => {
-            event.stopPropagation();
-          }}
-          onKeyDown={(event) => {
-            event.stopPropagation();
-          }}
-        >
-          {text(open ? 'showLess' : 'showMore')}
-        </button>
-      )}
-    </span>
+        {toggle ? (
+          // The label is the text's own size, so it sits on the last
+          // line's baseline (at 12px, its shorter line rode up).
+          <button
+            type='button'
+            className='group/toggle float-right clear-both ml-2'
+            aria-expanded={open}
+            onClick={(event) => {
+              event.stopPropagation();
+              setOpen((current) => !current);
+            }}
+            onDoubleClick={(event) => {
+              event.stopPropagation();
+            }}
+            onKeyDown={(event) => {
+              event.stopPropagation();
+            }}
+          >
+            <span className='font-medium text-ai group-hover/toggle:underline'>
+              {text(open ? 'showLess' : 'showMore')}
+            </span>
+          </button>
+        ) : null}
+        <Markdown compact>{value}</Markdown>
+      </div>
+    </div>
   );
 }

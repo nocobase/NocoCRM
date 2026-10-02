@@ -9,6 +9,7 @@ import { FileText, Sparkles } from 'lucide-react';
 import { Badge } from '../ui/badge.js';
 import { Button } from '../ui/button.js';
 import { Checkbox } from '../ui/checkbox.js';
+import { FollowUpOption } from './follow-up-option.js';
 import {
   Dialog,
   DialogContent,
@@ -392,6 +393,8 @@ function CaptureReview({
   const api = useCrmApi();
   const refresh = useRefresh();
   const { data: meta } = useMetadata();
+  // Whether the AI follows the created leads up at once.
+  const [followUp, setFollowUp] = useState(true);
   const [current, setCurrent] = useState(rows[0]?.key);
   const [working, setWorking] = useState<'adjust' | 'create'>();
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -485,8 +488,9 @@ function CaptureReview({
     let next = rows;
     for (const row of ready) {
       try {
+        // Created as the AI's proposal the user checked (the feed marks it).
         const { data } = await api<{ data: { id: string } }>(
-          'leads',
+          `leads?via=capture${followUp ? '' : '&followUp=0'}`,
           'POST',
           Object.fromEntries(
             Object.entries(row.input).filter(
@@ -803,6 +807,11 @@ function CaptureReview({
         </aside>
       </div>
       <DialogFooter>
+        <FollowUpOption
+          checked={followUp}
+          onChange={setFollowUp}
+          disabled={busy}
+        />
         <Button variant='outline' disabled={busy} onClick={onDone}>
           {text('cancel')}
         </Button>

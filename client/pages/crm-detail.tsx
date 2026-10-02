@@ -1,11 +1,13 @@
-import {
-  fieldLabelKey,
-  linkOf,
-  sentence,
-  toText,
-} from '../components/crm/api.js';
+import { fieldLabelKey, linkOf, toText } from '../components/crm/api.js';
+import { markdownLine } from '../components/crm/line-breaks.js';
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
-import { Link, Outlet, useNavigate, useParams } from 'react-router';
+import {
+  Link,
+  Outlet,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router';
 import { Sheet, SheetContent, SheetTitle } from '../components/ui/sheet.js';
 import {
   RecordDrawerContext,
@@ -19,37 +21,29 @@ import {
 import {
   ArrowRightLeft,
   ArrowUpRight,
-  Briefcase,
-  Building2,
-  CalendarPlus,
-  CircleDot,
+  CalendarDays,
+  CirclePlus,
+  ChevronDown,
   Clock,
-  Factory,
-  FileText,
-  Globe,
+  Ellipsis,
   History,
-  Mail,
-  MapPin,
-  MapPinned,
-  Megaphone,
+  Paperclip,
+  MessageCircle,
+  PencilLine,
+  StickyNote,
   Maximize2,
   X,
-  Phone,
   Plus,
   Sparkles,
   Trash2,
   type LucideIcon,
-  User,
-  Users,
 } from 'lucide-react';
-import { Button } from '../components/ui/button.js';
+import { Button, buttonVariants } from '../components/ui/button.js';
+import { Spinner } from '../components/ui/spinner.js';
+import { Textarea } from '../components/ui/textarea.js';
+import { LONG_TEXT_LIMIT } from '../../server/providers/crm/limits.js';
 import { KindTag } from '../components/crm/kind-tag.js';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '../components/ui/card.js';
+import { Badge } from '../components/ui/badge.js';
 import {
   Dialog,
   DialogContent,
@@ -61,6 +55,8 @@ import {
 import {
   useCrmApi,
   useCrmQuery,
+  useCrmScopeKey,
+  PAGE_SIZE,
   useMore,
   useCrmText,
   useMetadata,
@@ -77,13 +73,23 @@ import {
 } from '../components/crm/api.js';
 import {
   CrmFrame,
+  LongText,
   Loading,
   ErrorNotice,
   RecordLink,
   Status,
   Value,
 } from '../components/crm/common.js';
+import { revealScrollbar } from '../components/crm/scrollbar.js';
 import { RecordForm } from '../components/crm/form.js';
+import { useQuery } from '@tanstack/react-query';
+import {
+  EvaluateButton,
+  EvaluationStatus,
+  EvaluationFeedEntry,
+  VerdictPanel,
+  type EvaluationEntry,
+} from '../components/crm/lead-evaluation.js';
 import { FileLinks, UploadZone } from '../components/crm/attachments.js';
 import EntityDetail from './crm-entity-detail.js';
 import {
@@ -190,36 +196,36 @@ export function RecordDrawer({
     </Sheet>
   );
 }
-const leadFieldIcons: Record<string, LucideIcon> = {
-  name: User,
-  phone: Phone,
-  email: Mail,
-  jobTitle: Briefcase,
-  company: Building2,
-  website: Globe,
-  industry: Factory,
-  region: MapPin,
-  message: FileText,
-  source: Megaphone,
-  companyDescription: Building2,
-  employees: Users,
-  address: MapPinned,
-};
 
-// Name and company are the page heading, edited there, so not listed here.
-const leadFields = [
-  'phone',
-  'email',
-  'jobTitle',
-  'website',
-  'industry',
-  'employees',
-  'region',
-  'address',
-  'message',
-  'source',
-  'companyDescription',
+// The lead's particulars in groups, each under its heading: how the lead
+// stands (after owner and status), the person, their company. Name and
+// company head the page as well and lead their groups here too, so the
+// column reads whole on its own. When it came and last changed close the
+// column as a group of their own.
+const leadGroups = [
+  ['general', ['source', 'message']],
+  ['contact', ['name', 'jobTitle', 'phone', 'email']],
+  [
+    'company',
+    [
+      'company',
+      'website',
+      'industry',
+      'employees',
+      'region',
+      'address',
+      'companyDescription',
+    ],
+  ],
 ] as const;
+type LeadField = (typeof leadGroups)[number][1][number];
+// Under the Company heading its fields drop the word: "Name", not "Company
+// name". The region's three parts share one row.
+const groupLabels: Partial<Record<LeadField, string>> = {
+  region: 'region',
+  company: 'fields.companyName',
+  companyDescription: 'fields.companyIntro',
+};
 
 function LeadDetail({ id }: { id: string }): ReactElement {
   const {
@@ -235,8 +241,8 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   const { text, language } = useCrmText();
   const [tabSlug, setTab] = useDetailTab();
   const tab =
-    resolveTab(tabSlug, ['activities', 'attachments', 'historyTab']) ??
-    'activities';
+    resolveTab(tabSlug, ['historyTab', 'activities', 'attachments', 'notes']) ??
+    'historyTab';
   // The activities and the history arrive one page each with the lead;
   // these grow them from the list and history endpoints.
   const moreActivities = useMore(
@@ -250,40 +256,13 @@ function LeadDetail({ id }: { id: string }): ReactElement {
         }
       : undefined,
   );
-  const moreHistory = useMore<Data>(
-    `leads/${toText(id)}/history`,
-    detail
-      ? {
-          data: detail.history,
-          total: detail.historyTotal ?? detail.history.length,
-        }
-      : undefined,
-  );
   const [uploading, setUploading] = useState(false);
-  // History records attachments as ids; one lookup for everything on screen
-  // turns "Attachments 3" into the actual filenames. Declared with the other
-  // hooks so it runs before this component's early returns.
-  const historyFileIds = [
-    ...new Set(
-      moreHistory.records
-        .flatMap((event) =>
-          arrayValues((event.changes as Data | undefined)?.attachments).map(
-            toText,
-          ),
-        )
-        .filter(Boolean),
-    ),
-  ];
-  const { data: historyFiles } = useCrmQuery<
-    { id: string; filename: string }[]
-  >(
-    `files?ids=${encodeURIComponent(historyFileIds.join(','))}`,
-    historyFileIds.length > 0,
-  );
-  const fileNames = Object.fromEntries(
-    (historyFiles ?? []).map((file) => [file.id, file.filename]),
-  );
   const [form, setForm] = useState<{ entity: Entity; initial: Data }>();
+  // The timeline entry the page was asked to show (a waiting evaluation).
+  // `at` tells a repeated click from the last one, so it scrolls again.
+  const [focus, setFocus] = useState<{ id: string; at: number }>();
+  // The note the timeline opened in the Notes tab.
+  const [noteFocus, setNoteFocus] = useState<string>();
   const [convert, setConvert] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<unknown>();
@@ -318,7 +297,6 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   const names = {
     ...detail.titles,
     ...moreActivities.titles,
-    ...moreHistory.titles,
   };
   const field = (key: string): Field =>
     definition.fields.find((f) => f.key === key) ?? { key, type: 'text' };
@@ -358,129 +336,170 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       label={text(fieldLabelKey('leads', key))}
     />
   );
+  const fieldRow = (key: LeadField): ReactElement => (
+    <InfoRow
+      key={key}
+      label={text(groupLabels[key] ?? fieldLabelKey('leads', key))}
+    >
+      {key === 'region' ? (
+        <div className='flex flex-wrap items-center'>
+          {['country', 'state', 'city'].map((part, index) => (
+            <div className='flex min-w-0 items-center' key={part}>
+              {index > 0 && (
+                <span aria-hidden className='text-muted-foreground/60'>
+                  /
+                </span>
+              )}
+              {inline(part)}
+            </div>
+          ))}
+        </div>
+      ) : key === 'website' ? (
+        <WebsiteField
+          record={record}
+          editable={editable}
+          label={text('fields.website')}
+        />
+      ) : (
+        inline(key)
+      )}
+    </InfoRow>
+  );
+  // The tabs, marked by a line on the rule under them: side by side in the
+  // band across both columns, stacked above their content.
+  const tabBar = (
+    <div role='tablist' className='flex gap-6'>
+      {(
+        [
+          // The timeline first, where the lead opens, without a count: its
+          // entries only grow and the number says nothing. The activities'
+          // icon is their menu entry's.
+          ['historyTab', 'historyTab', History, null],
+          [
+            'activities',
+            'entities.activities',
+            CalendarDays,
+            moreActivities.total,
+          ],
+          ['attachments', 'fields.attachments', Paperclip, attachmentCount],
+          // The notes, which also show in the timeline among its entries.
+          ['notes', 'notes.tab', StickyNote, detail.notesTotal ?? 0],
+        ] as const
+      ).map(([name, label, Icon, count]) => (
+        <button
+          key={name}
+          type='button'
+          role='tab'
+          aria-selected={name === tab}
+          onClick={() => setTab(name)}
+          className={`-mb-px flex items-center gap-1.5 rounded-t-sm border-b-2 py-2.5 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
+            name === tab
+              ? 'border-foreground text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Icon className='size-4' />
+          {text(label)}
+          {count !== null && (
+            <span className='text-xs text-muted-foreground tabular-nums'>
+              {count}
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+  // "name / company", both edited in place: the page's heading, atop the
+  // particulars (a <div> with the heading role, since the editors bring block
+  // elements an <h1> may not hold).
+  const heading = (
+    <div
+      role='heading'
+      aria-level={1}
+      className='-mx-2 flex flex-wrap items-center'
+    >
+      <InlineField
+        entity='leads'
+        record={record}
+        field={field('name')}
+        editable={editable}
+        label={text(fieldLabelKey('leads', 'name'))}
+        size='heading'
+      />
+      <span className='text-xl text-muted-foreground/60'>/</span>
+      <InlineField
+        entity='leads'
+        record={record}
+        field={field('company')}
+        editable={editable}
+        label={text(fieldLabelKey('leads', 'company'))}
+        size='heading'
+      />
+    </div>
+  );
+  // Converting the lead, under its heading, and the rarer deleting in a
+  // "More" menu beside it.
+  const leadActions =
+    editable || detail.permissions.delete ? (
+      <div className='flex flex-wrap items-center gap-2'>
+        {editable && (
+          <Button size='sm' onClick={() => setConvert(true)}>
+            <ArrowRightLeft />
+            {text('convert')}
+          </Button>
+        )}
+        {detail.permissions.delete && (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label={text('moreActions')}
+              className={buttonVariants({
+                size: 'icon-sm',
+                variant: 'outline',
+              })}
+            >
+              <Ellipsis />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='start'>
+              <DropdownMenuItem
+                variant='destructive'
+                onClick={() => setConfirmDelete(true)}
+              >
+                <Trash2 />
+                {text('deleteRecord', { entity: text('entity.leads') })}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+    ) : null;
+  // The AI's part, in the timeline where its work is recorded: where its
+  // latest follow-up recommendation stands, which opens it there, and the
+  // one way to ask for another (the skill covers researching the company
+  // and judging a conversion, which were shortcuts of their own).
+  const aiTools = meta?.assistant ? (
+    <div className='flex flex-wrap items-center gap-1'>
+      <EvaluationStatus
+        leadId={id}
+        onOpen={(entryId) => {
+          setFocus({ id: entryId, at: Date.now() });
+          setTab('historyTab');
+        }}
+      />
+      {!converted && editable && (
+        <EvaluateButton leadId={id} onError={setError} />
+      )}
+    </div>
+  ) : null;
   return (
     <CrmFrame
-      editableTitle
-      // "name / company", both edited in place; the card below omits them.
-      title={
-        <span className='-mx-2 flex flex-wrap items-center'>
-          <InlineField
-            entity='leads'
-            record={record}
-            field={field('name')}
-            editable={editable}
-            label={text(fieldLabelKey('leads', 'name'))}
-            size='title'
-          />
-          <span className='text-muted-foreground/60'>/</span>
-          <InlineField
-            entity='leads'
-            record={record}
-            field={field('company')}
-            editable={editable}
-            label={text(fieldLabelKey('leads', 'company'))}
-            size='title'
-          />
-        </span>
-      }
-      description={`${toText(text('leadIdPrefix'))}: ${toText(record.id)}`}
-      // The page-level assistant entry is the lead-specific one: it opens the
-      // same panel with a follow-up prompt already typed.
+      // The page is the window's height and its two columns scroll each on
+      // their own, the rule between them running to the bottom. It has no
+      // header: the heading and the actions sit in the columns.
+      fill
       assistant={false}
-      actions={
-        <>
-          {detail.permissions.delete && (
-            <Button variant='outline' onClick={() => setConfirmDelete(true)}>
-              <Trash2 />
-              {text('deleteRecord', { entity: text('entity.leads') })}
-            </Button>
-          )}
-          {editable && (
-            <Button onClick={() => setConvert(true)}>
-              <ArrowRightLeft />
-              {text('convert')}
-            </Button>
-          )}
-          {!converted && meta?.assistant && (
-            // The two assistant entries read as one group, tighter than the
-            // gap between the primary actions.
-            <div className='flex flex-wrap items-center'>
-              {(['leads', 'researchCompany', 'assessConversion'] as const).map(
-                (key) => (
-                  <Button
-                    key={key}
-                    variant='ghost'
-                    className='text-ai hover:text-ai'
-                    onClick={() =>
-                      window.dispatchEvent(
-                        new CustomEvent('crm-assistant', {
-                          detail: {
-                            prompt: text(`prompts.${key}`),
-                            entity: 'leads',
-                            recordId: id,
-                            name: contextName,
-                            send: true,
-                            // Background research alone looks outside the CRM.
-                            webSearch: key === 'researchCompany',
-                          },
-                        }),
-                      )
-                    }
-                  >
-                    <Sparkles />
-                    {text(key === 'leads' ? 'followUpLead' : key)}
-                  </Button>
-                ),
-              )}
-            </div>
-          )}
-        </>
-      }
     >
       <ErrorNotice error={error ?? loadError} />
-      <div className='flex flex-wrap items-center gap-x-8 gap-y-2 rounded-xl border bg-card p-4'>
-        <LeadRow label={text('fields.ownerId')} icon={User}>
-          {inline('ownerId')}
-        </LeadRow>
-        <LeadRow label={text('fields.status')} icon={CircleDot}>
-          <LeadStatusField
-            record={record}
-            editable={editable}
-            statuses={(field('status').options ?? []).map((value) => ({
-              value,
-              label: text(`options.${toText(value)}`, { defaultValue: value }),
-            }))}
-            reasons={(
-              meta.settings.options.invalidReason ??
-              field('invalidReason').options ??
-              []
-            ).map((value) => ({
-              value,
-              label: text(`options.${toText(value)}`, { defaultValue: value }),
-            }))}
-            onSave={patch}
-          />
-        </LeadRow>
-        <LeadRow label={text('fields.createdAt')} icon={CalendarPlus}>
-          <div className='px-2 py-1.5 text-sm'>
-            {localDate(record.createdAt, language, meta.settings.timeZone)}
-          </div>
-        </LeadRow>
-        {/* A converted lead is frozen, so its last update is the conversion:
-            showing both would be the same moment twice. */}
-        <LeadRow
-          label={text(converted ? 'fields.convertedAt' : 'fields.updatedAt')}
-          icon={converted ? ArrowRightLeft : History}
-        >
-          <div className='px-2 py-1.5 text-sm'>
-            {localDate(
-              converted ? record.convertedAt : record.updatedAt,
-              language,
-              meta.settings.timeZone,
-            )}
-          </div>
-        </LeadRow>
-      </div>
+      {/* The AI's verdict on the lead, and the owner's decision on it. */}
       {converted && (
         <div className='flex gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4'>
           <ArrowRightLeft className='mt-0.5 size-4 shrink-0 text-primary' />
@@ -525,242 +544,220 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       {/* Container query, not a viewport one: opening the AI panel narrows this
           area without changing the viewport, and a viewport breakpoint would
           keep both columns in a box too small for them. */}
-      <div className='@container'>
-        <div className='grid items-start gap-6 @3xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]'>
-          <Card className='shadow-none'>
-            <CardHeader>
-              <CardTitle>
-                {sentence(text('basicInfo', { entity: text('entity.leads') }))}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <dl>
-                {leadFields.map((key) => (
-                  <div
-                    key={key}
-                    className='grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-2 py-0.5'
-                  >
-                    <dt className='flex items-center gap-1.5 px-2 py-1.5 text-sm text-muted-foreground'>
-                      {(() => {
-                        const Icon = leadFieldIcons[key];
-                        return Icon ? (
-                          <Icon className='size-3.5 shrink-0' />
-                        ) : null;
-                      })()}
-                      <span className='min-w-0 leading-snug'>
-                        {text(
-                          key === 'region'
-                            ? 'region'
-                            : fieldLabelKey('leads', key),
-                        )}
-                      </span>
-                    </dt>
-                    <dd className='min-w-0 text-sm'>
-                      {key === 'region' ? (
-                        <div className='flex flex-wrap items-center'>
-                          {['country', 'state', 'city'].map((part, index) => (
-                            <div
-                              className='flex min-w-0 items-center'
-                              key={part}
-                            >
-                              {index > 0 && (
-                                <span
-                                  aria-hidden
-                                  className='text-muted-foreground/60'
-                                >
-                                  /
-                                </span>
-                              )}
-                              {inline(part)}
-                            </div>
-                          ))}
-                        </div>
-                      ) : key === 'website' ? (
-                        <WebsiteField
-                          record={record}
-                          editable={editable}
-                          label={text('fields.website')}
-                        />
-                      ) : (
-                        inline(key)
+      <div className='@container min-h-0 flex-1'>
+        {/* The lead's particulars in a narrow column on the left, the
+            timeline and the other tabs taking the rest, the way record pages
+            commonly lay them out. Stacked, the particulars come first (a
+            phone number before the history). */}
+        {/* Side by side each column scrolls by itself below the band, the
+            rule between them running to the bottom; stacked, they scroll
+            together. Their bars show only while they scroll. */}
+        <div className='flex h-full flex-col @3xl:-mx-4 md:@3xl:-mx-8'>
+          {/* Side by side, both columns are white (the card colour) out to
+            the page's edges: the block reaches past the frame's padding (the
+            -mx), which the columns' own padding gives back, the left track
+            widened by the same amount. A column's own negative margin would
+            be clipped by the scrolling grid. The rule between them is their
+            only divide. */}
+          {/* Side by side, a band across both columns carries the heading
+            over the particulars and the tabs over the rest, one rule under
+            both; the rule between the columns runs through it. */}
+          {/* The rule is each cell's own, under the heading and under the
+              tabs. */}
+          <div className='hidden @3xl:grid @3xl:grid-cols-[22rem_minmax(0,1fr)] md:@3xl:grid-cols-[23rem_minmax(0,1fr)]'>
+            <div className='flex items-center border-b bg-card pr-6 pl-4 md:pl-6'>
+              {heading}
+            </div>
+            <div className='border-b border-l bg-card pt-2 pr-4 pl-6 md:pr-8'>
+              {tabBar}
+            </div>
+          </div>
+          <div
+            className='grid min-h-0 flex-1 items-start gap-6 overflow-y-auto pb-24 @3xl:grid-cols-[22rem_minmax(0,1fr)] @3xl:grid-rows-[minmax(0,1fr)] md:@3xl:grid-cols-[23rem_minmax(0,1fr)] @3xl:items-stretch @3xl:gap-0 @3xl:overflow-hidden @3xl:pb-0 scroll-quiet'
+            onScroll={revealScrollbar}
+          >
+            {/* Neither column is a card: the particulars stand on the page as
+              grouped fields, and the tabs take the rest beyond a rule, as
+              record pages commonly lay them out. */}
+            <section
+              className='min-w-0 pt-5 @3xl:overflow-y-auto @3xl:bg-card @3xl:pt-4 @3xl:pr-6 @3xl:pb-8 @3xl:pl-4 scroll-quiet'
+              onScroll={revealScrollbar}
+            >
+              {/* Stacked, the heading leads the page from here. */}
+              <div className='mb-3 @3xl:hidden'>{heading}</div>
+              {leadActions && <div className='mb-4'>{leadActions}</div>}
+              <div>
+                {/* Who has the lead and where it stands head the first group. */}
+                <InfoGroup title={text('leadGroups.general')}>
+                  <InfoRow label={text('fields.ownerId')}>
+                    {inline('ownerId')}
+                  </InfoRow>
+                  <InfoRow label={text('fields.status')}>
+                    <LeadStatusField
+                      record={record}
+                      editable={editable}
+                      statuses={(field('status').options ?? []).map(
+                        (value) => ({
+                          value,
+                          label: text(`options.${toText(value)}`, {
+                            defaultValue: value,
+                          }),
+                        }),
                       )}
-                    </dd>
-                  </div>
+                      reasons={(
+                        meta.settings.options.invalidReason ??
+                        field('invalidReason').options ??
+                        []
+                      ).map((value) => ({
+                        value,
+                        label: text(`options.${toText(value)}`, {
+                          defaultValue: value,
+                        }),
+                      }))}
+                      onSave={patch}
+                    />
+                  </InfoRow>
+                  {leadGroups[0][1].map(fieldRow)}
+                </InfoGroup>
+                {leadGroups.slice(1).map(([group, keys]) => (
+                  <InfoGroup key={group} title={text(`leadGroups.${group}`)}>
+                    {keys.map(fieldRow)}
+                  </InfoGroup>
                 ))}
-              </dl>
-            </CardContent>
-          </Card>
-          <Card className='shadow-none'>
-            <CardHeader className='gap-3'>
-              <div className='flex flex-wrap items-center justify-between gap-2'>
-                {/* Ghost buttons carry px-2.5 for their hover target, which
-                    pushes the label off the content edge below. Pulling the row
-                    left by that padding lines the label up with the list. */}
-                <div className='-ml-2.5 flex gap-1'>
-                  {(
-                    [
-                      [
-                        'activities',
-                        'entities.activities',
-                        moreActivities.total,
-                      ],
-                      ['attachments', 'fields.attachments', attachmentCount],
-                      ['historyTab', 'historyTab', moreHistory.total],
-                    ] as const
-                  ).map(([name, label, count]) => (
-                    <Button
-                      key={name}
-                      size='sm'
-                      variant={name === tab ? 'secondary' : 'ghost'}
-                      onClick={() => setTab(name)}
-                    >
-                      {text(label)}
-                      <span className='text-muted-foreground'>{count}</span>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {tab === 'activities' ? (
-                <div className='space-y-3'>
-                  {/* Scheduling lives inside its tab, the way upload lives in
-                    attachments. A converted lead rejects it server-side. */}
-                  {!converted &&
-                    Boolean(meta.permissions.activities.create) && (
-                      <Button
-                        size='sm'
-                        variant='outline'
-                        onClick={() =>
-                          setForm({
-                            entity: 'activities',
-                            initial: { leadId: id },
-                          })
-                        }
-                      >
-                        <Plus />
-                        {text('newActivity')}
-                      </Button>
+                <InfoGroup title={text('leadGroups.system')}>
+                  <InfoRow label={text('fields.createdAt')}>
+                    <div className='px-2 py-1.5'>
+                      {localDate(
+                        record.createdAt,
+                        language,
+                        meta.settings.timeZone,
+                      )}
+                    </div>
+                  </InfoRow>
+                  {/* A converted lead is frozen, so its last update is the
+                    conversion: showing both would be the same moment twice. */}
+                  <InfoRow
+                    label={text(
+                      converted ? 'fields.convertedAt' : 'fields.updatedAt',
                     )}
-                  {!activities.length ? (
-                    <p className='text-sm text-muted-foreground'>
-                      {text('noActivities')}
-                    </p>
-                  ) : (
-                    <>
-                      {/* One continuous rule down the list; each item hangs a node on it. */}
-                      <ol className='relative ml-1.5 border-l border-border'>
-                        {activities.map((activity) => (
-                          <ActivityItem
-                            key={toText(activity.id)}
-                            activity={activity}
-                          />
-                        ))}
-                      </ol>
-                      {moreActivities.hasMore && (
+                  >
+                    <div className='px-2 py-1.5'>
+                      {localDate(
+                        converted ? record.convertedAt : record.updatedAt,
+                        language,
+                        meta.settings.timeZone,
+                      )}
+                    </div>
+                  </InfoRow>
+                </InfoGroup>
+              </div>
+            </section>
+            <section
+              className='min-w-0 border-t pt-6 @3xl:overflow-y-auto @3xl:border-t-0 @3xl:border-l @3xl:bg-card @3xl:pt-4 @3xl:pr-4 @3xl:pb-24 @3xl:pl-6 md:@3xl:pr-8 scroll-quiet'
+              onScroll={revealScrollbar}
+            >
+              {/* Stacked, the tabs lead their content, staying in place as
+                it scrolls; side by side they are in the band above. */}
+              <div className='sticky top-0 z-10 mb-4 border-b bg-background @3xl:hidden'>
+                {tabBar}
+              </div>
+              <div>
+                {tab === 'activities' ? (
+                  <div className='space-y-3'>
+                    {/* Scheduling lives inside its tab, the way upload lives in
+                    attachments. A converted lead rejects it server-side. */}
+                    {!converted &&
+                      Boolean(meta.permissions.activities.create) && (
                         <Button
-                          className='mt-3'
-                          variant='ghost'
                           size='sm'
-                          disabled={moreActivities.loading}
-                          onClick={() => void moreActivities.loadMore()}
+                          variant='outline'
+                          onClick={() =>
+                            setForm({
+                              entity: 'activities',
+                              initial: { leadId: id },
+                            })
+                          }
                         >
-                          {text('loadMore')} ·{' '}
-                          {moreActivities.total - activities.length}
+                          <Plus />
+                          {text('newActivity')}
                         </Button>
                       )}
-                    </>
-                  )}
-                </div>
-              ) : tab === 'attachments' ? (
-                <RecordAttachments
-                  entity='leads'
-                  record={record}
-                  activities={activities}
-                  editable={editable}
-                  onError={setError}
-                  uploader={
-                    editable ? (
-                      <UploadZone
-                        entity='leads'
-                        record={record}
-                        busy={uploading}
-                        setBusy={setUploading}
-                        onError={setError}
-                      />
-                    ) : undefined
-                  }
-                />
-              ) : (
-                <>
-                  <ol>
-                    {moreHistory.records.map((event) => (
-                      // Read as a log: fixed time and actor columns frame a
-                      // flexible middle, so the eye can scan one column at a
-                      // time instead of re-parsing each row.
-                      <li
-                        className='flex items-baseline gap-3 border-b border-border/60 py-1.5 text-sm last:border-0'
-                        key={toText(event.id)}
-                      >
-                        <span className='flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5'>
-                          <span
-                            className={
-                              event.fromValue
-                                ? 'font-medium'
-                                : 'text-muted-foreground'
-                            }
-                          >
-                            {text(`events.${toText(event.action)}`)}
-                            {event.fromValue
-                              ? ` · ${toText(text(`options.${toText(event.fromValue)}`, { defaultValue: toText(event.fromValue) }))} → ${toText(text(`options.${toText(event.toValue)}`, { defaultValue: toText(event.toValue) }))}`
-                              : ''}
-                          </span>
-                          {/* A creation says only that it happened: the values it
-                              started with are the record's own first state. */}
-                          {event.action !== 'created' && (
-                            <HistoryChanges
-                              record={record}
-                              changes={event.changes}
-                              previous={event.previous}
-                              movedField={
-                                event.fromValue ? 'status' : undefined
-                              }
-                              names={names}
-                              fileNames={fileNames}
+                    {!activities.length ? (
+                      <p className='text-sm text-muted-foreground'>
+                        {text('noActivities')}
+                      </p>
+                    ) : (
+                      <>
+                        {/* One continuous rule down the list; each item hangs a node on it. */}
+                        <ol className='relative ml-1.5 border-l border-border'>
+                          {activities.map((activity) => (
+                            <ActivityItem
+                              key={toText(activity.id)}
+                              activity={activity}
                             />
-                          )}
-                        </span>
-                        {/* Who and when are the same kind of context, so they
-                            sit together on the right and leave the left edge to
-                            what actually changed. */}
-                        <span className='shrink-0 text-right text-xs text-muted-foreground tabular-nums'>
-                          {meta.users.find((u) => u.id === event.actorId)?.name}{' '}
-                          ·{' '}
-                          {localDate(
-                            event.createdAt,
-                            language,
-                            meta.settings.timeZone,
-                          )}
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
-                  {moreHistory.hasMore && (
-                    <Button
-                      className='mt-3'
-                      variant='ghost'
-                      size='sm'
-                      disabled={moreHistory.loading}
-                      onClick={() => void moreHistory.loadMore()}
-                    >
-                      {text('loadMore')} ·{' '}
-                      {moreHistory.total - moreHistory.records.length}
-                    </Button>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
+                          ))}
+                        </ol>
+                        {moreActivities.hasMore && (
+                          <Button
+                            className='mt-3'
+                            variant='ghost'
+                            size='sm'
+                            disabled={moreActivities.loading}
+                            onClick={() => void moreActivities.loadMore()}
+                          >
+                            {text('loadMore')} ·{' '}
+                            {moreActivities.total - activities.length}
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ) : tab === 'notes' ? (
+                  <NotesPanel entity='leads' id={id} focusId={noteFocus} />
+                ) : tab === 'attachments' ? (
+                  <RecordAttachments
+                    entity='leads'
+                    record={record}
+                    activities={activities}
+                    editable={editable}
+                    onError={setError}
+                    uploader={
+                      editable ? (
+                        <UploadZone
+                          entity='leads'
+                          record={record}
+                          busy={uploading}
+                          setBusy={setUploading}
+                          onError={setError}
+                        />
+                      ) : undefined
+                    }
+                  />
+                ) : (
+                  <HistoryFeed
+                    entity='leads'
+                    id={id}
+                    record={record}
+                    initial={{
+                      data: detail.history,
+                      total: detail.historyTotal ?? detail.history.length,
+                    }}
+                    names={names}
+                    statusKey='status'
+                    editable={editable && record.status !== 'converted'}
+                    recordName={contextName}
+                    focusId={focus?.id}
+                    focusAt={focus?.at}
+                    toolbar={aiTools}
+                    onOpenNote={(noteId) => {
+                      setNoteFocus(noteId);
+                      setTab('notes');
+                    }}
+                  />
+                )}
+              </div>
+            </section>
+          </div>
         </div>
       </div>
       {form && <RecordForm {...form} onClose={() => setForm(undefined)} />}
@@ -976,6 +973,8 @@ export function WebsiteField({
         field={{ key: 'website', type: 'url' }}
         editable={editable}
         label={label}
+        startOpen={editing}
+        onClose={() => setEditing(false)}
       />
     );
   return (
@@ -983,7 +982,7 @@ export function WebsiteField({
       role={editable ? 'button' : undefined}
       tabIndex={editable ? 0 : undefined}
       aria-label={editable ? label : undefined}
-      className={`rounded-md px-2 py-1.5 ${toText(
+      className={`group/site relative flex items-center rounded-md px-2 py-1.5 ${toText(
         editable
           ? 'cursor-text transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
           : '',
@@ -998,8 +997,10 @@ export function WebsiteField({
     >
       {/* The link is inline, so the rest of the row stays a plain surface a
           double-click can land on without opening the site. */}
+      {/* One line, cut with an ellipsis, whole on hover: an address has
+          nowhere to break and would otherwise run out of the column. */}
       <a
-        className='text-sm text-primary hover:underline'
+        className='min-w-0 truncate text-sm text-primary hover:underline'
         href={href}
         target='_blank'
         rel='noopener noreferrer'
@@ -1009,6 +1010,21 @@ export function WebsiteField({
       >
         {url}
       </a>
+      {/* A long address leaves no row to double-click beside it: the pencil,
+          shown on hover over the end of the row (taking no room from the
+          address, which fields need), opens the editor in one click. */}
+      {editable && (
+        <Button
+          size='icon-xs'
+          variant='ghost'
+          className='absolute top-1/2 right-1 -translate-y-1/2 bg-muted opacity-0 group-focus-within/site:opacity-100 group-hover/site:opacity-100 hover:bg-background focus-visible:opacity-100'
+          aria-label={`${toText(text('edit'))} ${toText(label)}`}
+          onClick={() => setEditing(true)}
+          onDoubleClick={(e) => e.stopPropagation()}
+        >
+          <PencilLine />
+        </Button>
+      )}
     </div>
   );
 }
@@ -1025,7 +1041,7 @@ export function ActivityItem({ activity }: { activity: Data }): ReactElement {
         className={`absolute top-4 left-0 size-2.5 -translate-x-1/2 rounded-full border-2 border-card ${toText(
           status === 'completed'
             ? 'bg-primary'
-            : status === 'cancelled' || status === 'noShow'
+            : status === 'cancelled'
               ? 'bg-muted-foreground/40'
               : 'bg-background ring-2 ring-primary/40',
         )}`}
@@ -1422,6 +1438,9 @@ export function HistoryChanges({
   movedField,
   names,
   fileNames,
+  part = 'line',
+  open = false,
+  onToggle,
 }: {
   entity?: Entity;
   record: CrmRecord;
@@ -1432,8 +1451,15 @@ export function HistoryChanges({
   movedField?: string;
   names: Record<string, string>;
   fileNames: Record<string, string>;
+  // A save of several fields is drawn in two places: on the entry's line
+  // its count and the toggle (`line`), and, unfolded, its fields in a box
+  // under the whole entry, the time's column included (`rows`). The
+  // timeline keeps which entries are open, as it does for the AI's.
+  part?: 'line' | 'rows';
+  open?: boolean;
+  onToggle?: () => void;
 }): ReactElement | null {
-  const { text } = useCrmText();
+  const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
   const changed =
     changes && typeof changes === 'object' ? (changes as Data) : {};
@@ -1449,6 +1475,9 @@ export function HistoryChanges({
     return true;
   });
   if (!shown.length) return null;
+  // A save of several fields reads "updated 5 fields" on the line, and
+  // unfolds into one row per field below it; a single field stays inline.
+  const folds = shown.length > 1;
   const show = (values: Data, key: string): ReactNode =>
     key === 'attachments' ? (
       // A count says nothing about which documents changed.
@@ -1460,59 +1489,1151 @@ export function HistoryChanges({
         <span className='text-muted-foreground'>{text('noAttachments')}</span>
       )
     ) : (
-      <Value
-        // Merged so fields the formatter leans on — a currency for an
-        // amount — resolve even when this save did not include them.
-        record={{ ...record, ...values }}
-        field={asLine(
-          fields.find((f) => f.key === key) ?? { key, type: 'text' },
+      (() => {
+        const field = fields.find((f) => f.key === key) ?? {
+          key,
+          type: 'text',
+        };
+        // A value is cut by its box, where the room ends, not at a fixed
+        // length: one field has the rest of the entry's line, several each
+        // their own row.
+        return (
+          <Value
+            // Merged so fields the formatter leans on — a currency for an
+            // amount — resolve even when this save did not include them.
+            // A long text, Markdown, as one line of its plain text.
+            record={{
+              ...record,
+              ...values,
+              ...(field.type === 'textarea' && typeof values[key] === 'string'
+                ? { [key]: markdownLine(values[key]) }
+                : {}),
+            }}
+            field={asLine(field)}
+            lookup={names}
+          />
+        );
+      })()
+    );
+  // Read like a status move on the timeline: each field's name (muted, as
+  // the verb before it), then old → new in the line's own type. Several
+  // fields in one save follow one another on the line.
+  const separator = (index: number): ReactNode =>
+    !folds && index < shown.length - 1 ? (
+      <span aria-hidden className='-ml-1.5 text-muted-foreground'>
+        {language.startsWith('zh') ? '，' : ','}
+      </span>
+    ) : null;
+  // Files by name: which were added, which removed, rather than the whole
+  // list before and after.
+  const fileList = (ids: string[]): string =>
+    ids.map((id) => fileNames[id] ?? id.slice(0, 8)).join('、');
+  const titleOf = (key: string): string =>
+    before && key in before
+      ? `${toText(before[key] ?? '')} → ${toText(changed[key] ?? '')}`
+      : toText(changed[key]);
+  // Old → new, clamped so one long value cannot turn an entry into a
+  // paragraph; the full text stays available on hover. The old value has
+  // up to 45% of the line, the new one the rest. The descendant rule beats
+  // the value renderer's own pre-wrap.
+  const valuesOf = (key: string): ReactNode => (
+    <>
+      {before && key in before && (
+        <>
+          <span className='max-w-[45%] min-w-0 shrink-0 truncate [&_*]:whitespace-nowrap'>
+            {show(before, key)}
+          </span>
+          <span aria-hidden className='shrink-0'>
+            →
+          </span>
+        </>
+      )}
+      <span className='min-w-0 shrink truncate [&_*]:whitespace-nowrap'>
+        {show(changed, key)}
+      </span>
+    </>
+  );
+  const rows = shown.map((key, index) => {
+    if (key === 'attachments' && before && key in before) {
+      const was = arrayValues(before.attachments).map(toText);
+      const now = arrayValues(changed.attachments).map(toText);
+      const added = now.filter((file) => !was.includes(file));
+      const removed = was.filter((file) => !now.includes(file));
+      return (
+        <span
+          key={key}
+          className='inline-flex max-w-full min-w-0 flex-wrap items-baseline gap-x-1.5'
+        >
+          {added.length ? (
+            <>
+              <span className='text-muted-foreground'>
+                {text('feed.addedFiles')}
+              </span>
+              <span className='min-w-0 truncate'>{fileList(added)}</span>
+            </>
+          ) : null}
+          {removed.length ? (
+            <>
+              <span className='text-muted-foreground'>
+                {text('feed.removedFiles')}
+              </span>
+              <span className='min-w-0 truncate'>{fileList(removed)}</span>
+            </>
+          ) : null}
+          {separator(index)}
+        </span>
+      );
+    }
+    const label = (
+      <span className='shrink-0 text-muted-foreground'>
+        {/* A lead's introduction by the short name its particulars show
+            (the company is implied); every other field by its own. */}
+        {text(
+          entity === 'leads' && key === 'companyDescription'
+            ? 'fields.companyIntro'
+            : fieldLabelKey(entity, key),
+          { defaultValue: key },
         )}
-        lookup={names}
+      </span>
+    );
+    return (
+      <span
+        key={key}
+        // A lone field takes the rest of the entry's line (basis 0, so it
+        // never wraps below the verb), its values cut where it ends.
+        className={`flex min-w-0 items-baseline gap-1.5 ${folds ? '' : 'flex-1 basis-0'}`}
+        title={titleOf(key)}
+      >
+        {label}
+        {valuesOf(key)}
+        {/* A comma between fields, kept on the field's line. */}
+        {separator(index)}
+      </span>
+    );
+  });
+  if (part === 'rows')
+    return folds && open ? (
+      <div className='mt-1 grid gap-1 rounded-lg border bg-muted/40 px-3 py-2 text-sm'>
+        {rows}
+      </div>
+    ) : null;
+  if (!folds) return <>{rows}</>;
+  return (
+    <>
+      <span className='text-muted-foreground'>
+        {text('feed.fieldCount', { count: shown.length })}
+      </span>
+      {/* The same round toggle an AI entry opens with. */}
+      <Button
+        size='icon-xs'
+        variant='outline'
+        className='rounded-full'
+        aria-expanded={open}
+        aria-label={text(open ? 'collapse' : 'expand')}
+        onClick={onToggle}
+      >
+        <ChevronDown
+          className={`transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </Button>
+    </>
+  );
+}
+
+// What an activity's entry says became of it: planned, moved (only its
+// time changed), edited, its status changed, or deleted.
+const activityState = (event: Data): string => {
+  if (event.action === 'created') return 'planned';
+  if (event.action === 'activityDeleted') return 'deleted';
+  if (event.action === 'updated') {
+    const keys = Object.keys(event.changes ?? {});
+    return keys.includes('startAt') &&
+      keys.every((key) => key === 'startAt' || key === 'endAt')
+      ? 'moved'
+      : 'edited';
+  }
+  // Done or called off; a no-show, recorded before that status went,
+  // reads as cancelled.
+  return toText(event.toValue) === 'noShow'
+    ? 'cancelled'
+    : toText(event.toValue);
+};
+
+// One of the record's activities on its timeline, after who did it: what
+// became of it ("planned", "completed", "cancelled", "moved", "edited",
+// "deleted"), its type and name (opening it, unless it is gone), and when
+// it is, what changed, or, done, what came of it.
+function ActivityEvent({
+  event,
+  open,
+  onToggle,
+  names,
+  fileNames,
+}: {
+  event: Data;
+  open: boolean;
+  onToggle: () => void;
+  names: Record<string, string>;
+  fileNames: Record<string, string>;
+}): ReactElement {
+  const { text, language } = useCrmText();
+  const { data: meta } = useMetadata();
+  const changes = (event.changes ?? {}) as Data;
+  // A deleted one is known by what its record kept of it.
+  const activity = (
+    event.action === 'activityDeleted'
+      ? { ...changes, id: changes.activityId }
+      : (event.activity ?? {})
+  ) as Data;
+  const zone = meta?.settings.timeZone ?? 'Asia/Shanghai';
+  const verb = activityState(event);
+  // Short (no year), beside the entry's own time on the right.
+  const when = (at: unknown): string => {
+    const date = new Date(toText(at));
+    return Number.isFinite(+date)
+      ? new Intl.DateTimeFormat(language, {
+          timeZone: zone,
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        }).format(date)
+      : '';
+  };
+  return (
+    <>
+      <span className='shrink-0 text-muted-foreground'>
+        {text(`feed.activity.${verb}`, { defaultValue: verb })}
+      </span>
+      {/* "Activity", whatever its type: the name says what it is. */}
+      <span className='shrink-0 text-muted-foreground'>
+        {text('feed.activity.noun')}
+      </span>
+      {/* A long name is cut short, whole on hover; one deleted is no
+          longer a link. On an edit the change comes first, the name taking
+          at most two fifths of the line. */}
+      <span
+        className={`min-w-0 shrink ${verb === 'edited' ? 'max-w-[40%]' : ''}`}
+      >
+        {verb === 'deleted' ? (
+          <span
+            className='block truncate font-medium'
+            title={toText(activity.name)}
+          >
+            {toText(activity.name)}
+          </span>
+        ) : (
+          <RecordLink
+            entity='activities'
+            record={{ id: toText(activity.id), name: toText(activity.name) }}
+          />
+        )}
+      </span>
+      {/* What an edit changed, as a record's own edits read. */}
+      {verb === 'edited' ? (
+        <HistoryChanges
+          entity='activities'
+          record={activity as CrmRecord}
+          changes={event.changes}
+          previous={event.previous}
+          names={names}
+          fileNames={fileNames}
+          open={open}
+          onToggle={onToggle}
+        />
+      ) : null}
+      {/* When it is, as planned or moved; for one done, its outcome. */}
+      {event.action === 'created' || verb === 'moved' ? (
+        changes.startAt ? (
+          // Always whole, the tags right after it; the name gives way.
+          <span className='shrink-0 text-muted-foreground tabular-nums'>
+            {verb === 'moved'
+              ? text('feed.activity.to', { time: when(changes.startAt) })
+              : `· ${when(changes.startAt)}`}
+          </span>
+        ) : null
+      ) : toText(event.toValue) === 'completed' && activity.feedback ? (
+        <span className='min-w-0 truncate text-muted-foreground'>
+          · {markdownLine(toText(activity.feedback))}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+// A note's text, as its entry keeps it.
+const noteText = (event: { changes?: unknown }): string =>
+  toText((event.changes as Data | undefined)?.text ?? '');
+
+// Each kind of entry's icon on the timeline's rail.
+const eventIcons: Record<string, LucideIcon> = {
+  created: CirclePlus,
+  updated: PencilLine,
+  converted: ArrowRightLeft,
+  deleted: Trash2,
+  ai: Sparkles,
+  // A note's entries by what they concern, as files' are: added, edited or
+  // removed, all under the note.
+  note: StickyNote,
+  noteEdited: StickyNote,
+  noteDeleted: StickyNote,
+  // A person asking the AI to redo its card, in their words.
+  aiRevise: MessageCircle,
+};
+
+// An update that changed the files alone, which the timeline reads as
+// files added or removed rather than as an update.
+const filesOnly = (event: Data): boolean => {
+  const keys = Object.keys((event.changes as Data | undefined) ?? {}).filter(
+    (key) => key !== 'id',
+  );
+  return (
+    event.action === 'updated' &&
+    keys.length === 1 &&
+    keys[0] === 'attachments' &&
+    Boolean((event.previous as Data | undefined)?.attachments !== undefined)
+  );
+};
+
+// Status and stage moves, which the timeline draws as field updates.
+const moves = new Set(['status', 'stage']);
+
+// The timeline's entries by month, newest first as they come, each month
+// named in the reader's language and the business time zone.
+function months(
+  events: Data[],
+  language: string,
+  timeZone: string,
+): [string, Data[]][] {
+  const format = new Intl.DateTimeFormat(language, {
+    year: 'numeric',
+    month: 'long',
+    timeZone,
+  });
+  const groups = new Map<string, Data[]>();
+  for (const event of events) {
+    const month = format.format(new Date(toText(event.createdAt)));
+    groups.set(month, [...(groups.get(month) ?? []), event]);
+  }
+  return [...groups];
+}
+
+// A record's activity feed, the tab once called its change history: what
+// people changed, what the AI proposed and someone confirmed (marked so), and
+// the AI's own work such as a lead's evaluation, newest first, all of it or
+// only the people's or the AI's. The first page of everything comes with the
+// record; a filter asks the history endpoint for its own.
+export function HistoryFeed({
+  entity,
+  id,
+  record,
+  initial,
+  names,
+  statusKey,
+  editable = false,
+  recordName,
+  focusId,
+  focusAt,
+  toolbar,
+  onOpenNote,
+}: {
+  entity: Entity;
+  id: string;
+  record: CrmRecord;
+  initial: { data: Data[]; total: number } | undefined;
+  names: Record<string, string>;
+  statusKey?: string;
+  // Whether the reader may act on a waiting AI verdict here (a lead's).
+  editable?: boolean;
+  recordName?: string;
+  // The entry to scroll to and mark: one the page opened the timeline at,
+  // or one the address names (?focus=, from "Waiting on me"). A new
+  // `focusAt` asks for it again (the same entry, clicked once more).
+  focusId?: string;
+  focusAt?: number;
+  // What the page adds beside the filter (a lead's AI status and shortcuts).
+  toolbar?: ReactNode;
+  // Opens a note in the Notes tab, where it is read whole and changed: the
+  // timeline only points to it.
+  onOpenNote?: (noteId: string) => void;
+}): ReactElement {
+  const { text, language } = useCrmText();
+  const refresh = useRefresh();
+  const [searchParams] = useSearchParams();
+  const focus = focusId ?? searchParams.get('focus') ?? undefined;
+  const { data: meta } = useMetadata();
+  const api = useCrmApi();
+  const scopeKey = useCrmScopeKey();
+  // The filter chosen, and when: an entry asked for after that shows the
+  // whole timeline again, so the entry is there to be shown.
+  const [chosen, setChosen] = useState<{
+    value: 'all' | 'user' | 'ai';
+    at: number;
+  }>({ value: 'all', at: 0 });
+  const filter =
+    focusAt !== undefined && focusAt > chosen.at ? 'all' : chosen.value;
+  // The evaluations opened into their records.
+  const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set());
+  // Opens or closes an entry: an AI entry's card, a save's fields.
+  const toggle = (key: string): void =>
+    setOpened((previous) => {
+      const next = new Set(previous);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  const timeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
+  const optionText = (value: unknown): string =>
+    text(`options.${toText(value)}`, { defaultValue: toText(value) });
+  const base = `${toText(entity)}/${toText(id)}/history`;
+  const filtered = useQuery({
+    queryKey: [...scopeKey, base, filter],
+    queryFn: () =>
+      api<{
+        data: Data[];
+        total: number;
+        titles?: Record<string, string>;
+      }>(`${base}?source=${filter}&pageSize=${toText(PAGE_SIZE)}`),
+    enabled: filter !== 'all',
+  });
+  const more = useMore<Data>(
+    filter === 'all' ? base : `${base}?source=${filter}`,
+    filter === 'all'
+      ? initial
+      : filtered.data
+        ? { data: filtered.data.data, total: filtered.data.total }
+        : undefined,
+  );
+  // The newest AI evaluation shown (the feed comes newest first).
+  const latestEvaluation = toText(
+    more.records.find((event) => event.action === 'ai')?.id ?? '',
+  );
+  // Entries name attachments by id; one lookup turns them into filenames.
+  const fileIds = [
+    ...new Set(
+      more.records
+        .flatMap((event) =>
+          arrayValues((event.changes as Data | undefined)?.attachments).map(
+            toText,
+          ),
+        )
+        .filter(Boolean),
+    ),
+  ];
+  const { data: files } = useCrmQuery<{ id: string; filename: string }[]>(
+    `files?ids=${encodeURIComponent(fileIds.join(','))}`,
+    fileIds.length > 0,
+  );
+  const fileNames = Object.fromEntries(
+    (files ?? []).map((file) => [file.id, file.filename]),
+  );
+  // Bring the entry asked for into view once it has loaded: shown whatever
+  // the filter, the pages before it loaded first, and again on each ask.
+  const loaded = more.records.some((event) => toText(event.id) === focus);
+  useEffect(() => {
+    if (focus && loaded)
+      document
+        .getElementById(`feed-${focus}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [focus, loaded, focusAt]);
+  useEffect(() => {
+    if (focus && !loaded && filter === 'all' && more.hasMore && !more.loading)
+      void more.loadMore();
+  }, [focus, loaded, filter, more]);
+  // The note an edit belongs to: named by the entry, or, for edits recorded
+  // before they named it, the note that reads as the edit left it.
+  const noteOf = (event: Data): string | undefined => {
+    const named = toText((event.changes as Data | undefined)?.noteId);
+    if (named) return named;
+    const edited = noteText(event);
+    return edited
+      ? toText(
+          more.records.find(
+            (entry) =>
+              entry.action === 'note' &&
+              toText(entry.recordId) === toText(event.recordId) &&
+              noteText(entry) === edited,
+          )?.id ?? '',
+        ) || undefined
+      : undefined;
+  };
+  const allNames = {
+    ...names,
+    ...(filtered.data?.titles ?? {}),
+    ...more.titles,
+  };
+  return (
+    <>
+      <div className='mb-2 flex flex-wrap items-center justify-between gap-2'>
+        <div className='flex w-fit gap-1 rounded-lg bg-muted p-0.5'>
+          {(['all', 'user', 'ai'] as const).map((value) => (
+            <Button
+              key={value}
+              size='sm'
+              variant={filter === value ? 'secondary' : 'ghost'}
+              className={`h-6 px-2 text-xs ${
+                filter === value ? 'bg-background shadow-sm' : ''
+              }`}
+              onClick={() => setChosen({ value, at: Date.now() })}
+            >
+              {text(`feed.${value}`)}
+            </Button>
+          ))}
+        </div>
+        {toolbar}
+      </div>
+      {filter !== 'all' && !filtered.data ? (
+        <Loading />
+      ) : !more.records.length ? (
+        <p className='text-sm text-muted-foreground'>{text('feed.empty')}</p>
+      ) : (
+        // As record timelines commonly are: entries grouped by month under a
+        // light rule, each on a rail of icons, read as a sentence — who,
+        // what they did (muted), what changed — with when on the right.
+        <div className='grid grid-cols-[minmax(0,1fr)] gap-6'>
+          {months(more.records, language, timeZone).map(([month, events]) => (
+            <section
+              key={month}
+              className='grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4'
+            >
+              <div className='flex items-center gap-4 text-xs font-semibold text-muted-foreground/70'>
+                {month}
+                <span className='h-px flex-1 bg-border' />
+              </div>
+              <ol className='relative'>
+                {/* The rail behind the icons, slim and borderless. */}
+                <span
+                  aria-hidden
+                  className='absolute inset-y-0 left-0 w-5 rounded-full bg-muted/30'
+                />
+                {events.map((event, index) => {
+                  const key = toText(event.id);
+                  const ai = event.action === 'ai';
+                  // A note: its text in one line. Its edits and its removal
+                  // only say that they happened, so the text shows once, on
+                  // the entry that added it (the note as it now reads,
+                  // marked edited).
+                  const note = event.action === 'note';
+                  const pending =
+                    ai && entity === 'leads' && event.aiStatus === 'pending';
+                  const open = pending || focus === key || opened.has(key);
+                  // Files added or removed show the attachments' clip.
+                  // An entry of one of the record's activities: planned,
+                  // done or called off, or moved.
+                  // (On an activity's own timeline, its entries are its own.)
+                  const activityEvent =
+                    (event.entity === 'activities' &&
+                      entity !== 'activities') ||
+                    event.action === 'activityDeleted';
+                  // Every activity entry carries the Activities tab's icon.
+                  const Icon = activityEvent
+                    ? CalendarDays
+                    : filesOnly(event)
+                      ? Paperclip
+                      : (eventIcons[toText(event.action)] ?? PencilLine);
+                  return (
+                    <li
+                      id={`feed-${key}`}
+                      key={key}
+                      className='relative flex scroll-mt-24 gap-3'
+                    >
+                      <div className='flex w-5 shrink-0 flex-col items-center'>
+                        <span className='flex h-[26px] items-center justify-center'>
+                          <Icon
+                            className={`size-3.5 ${ai ? 'text-ai' : 'text-muted-foreground'}`}
+                          />
+                        </span>
+                        {index < events.length - 1 && (
+                          <span className='min-h-3 w-px flex-1 bg-border/50' />
+                        )}
+                      </div>
+                      <div
+                        className={`min-w-0 flex-1 pb-3 ${
+                          focus === key
+                            ? 'crm-arrive -mx-2 rounded-lg bg-ai/5 px-2'
+                            : ''
+                        }`}
+                      >
+                        <div className='flex min-h-[26px] items-center gap-3 text-sm'>
+                          {/* An entry is one line, never wrapped: what is
+                              long (a change's values, a note's excerpt, a
+                              verdict) gives way instead, cut where the line
+                              ends. */}
+                          {/* Clipped at its end: on a narrow column (a
+                              drawer's) nothing runs into the time. */}
+                          <span className='flex min-w-0 flex-1 items-center gap-x-1.5 overflow-hidden whitespace-nowrap'>
+                            {/* Who: a person, or "AI" for its own work. */}
+                            <span className='shrink-0'>
+                              {ai
+                                ? text('feed.ai')
+                                : meta?.users.find(
+                                    (u) => u.id === event.actorId,
+                                  )?.name}
+                            </span>
+                            {/* "Edited a note" leads to the note it changed,
+                                whose entry shows the text. */}
+                            {activityEvent ? (
+                              <ActivityEvent
+                                event={event}
+                                open={open}
+                                onToggle={() => toggle(key)}
+                                names={allNames}
+                                fileNames={fileNames}
+                              />
+                            ) : event.action === 'noteEdited' &&
+                              onOpenNote &&
+                              noteOf(event) ? (
+                              <button
+                                type='button'
+                                className='text-muted-foreground underline-offset-2 hover:text-foreground hover:underline'
+                                onClick={() => onOpenNote(noteOf(event)!)}
+                              >
+                                {text('feed.did.noteEdited')}
+                              </button>
+                            ) : (
+                              // Empty for files alone, whose "added" or
+                              // "removed" follows: hidden, so no gap doubles.
+                              // The verb gives way last, only once the values
+                              // have, so the tags after it stay in view on a
+                              // narrow column; clipped, not ellipsed, since a
+                              // squeeze of a fraction of a pixel would
+                              // otherwise end it in an ellipsis.
+                              <span className='min-w-0 shrink-[0.001] overflow-hidden text-clip text-muted-foreground empty:hidden'>
+                                {ai
+                                  ? // While it runs, and if it never finished,
+                                    // the line says so rather than that a
+                                    // suggestion was given.
+                                    text(
+                                      event.aiStatus === 'running'
+                                        ? 'feed.evaluating'
+                                        : event.aiStatus === 'failed'
+                                          ? 'feed.evaluationFailed'
+                                          : 'feed.evaluated',
+                                    )
+                                  : filesOnly(event)
+                                    ? ''
+                                    : // A status or stage move reads as any
+                                      // other field's update.
+                                      text(
+                                        `feed.did.${
+                                          moves.has(toText(event.action))
+                                            ? 'updated'
+                                            : toText(event.action)
+                                        }`,
+                                        {
+                                          defaultValue: text(
+                                            `events.${toText(event.action)}`,
+                                          ),
+                                        },
+                                      )}
+                              </span>
+                            )}
+                            {/* A status or stage move, drawn as the
+                                field changes below it are. */}
+                            {event.fromValue && statusKey && !activityEvent ? (
+                              <span className='inline-flex items-baseline gap-1.5'>
+                                <span className='text-muted-foreground'>
+                                  {text(fieldLabelKey(entity, statusKey))}
+                                </span>
+                                {optionText(event.fromValue)}
+                                <span aria-hidden>→</span>
+                                {optionText(event.toValue)}
+                              </span>
+                            ) : null}
+                            {ai && event.aiStatus === 'running' ? (
+                              <Spinner className='size-3.5 shrink-0 text-ai' />
+                            ) : ai &&
+                              !pending &&
+                              event.aiStatus !== 'failed' ? (
+                              <EvaluationFeedEntry entry={event} />
+                            ) : null}
+                            {/* A creation says only that it happened: the
+                                values it started with are the record's own
+                                first state. */}
+                            {!ai &&
+                              !note &&
+                              event.action !== 'created' &&
+                              !toText(event.action).startsWith('note') &&
+                              event.action !== 'aiRevise' &&
+                              !activityEvent && (
+                                <HistoryChanges
+                                  entity={entity}
+                                  record={record}
+                                  changes={event.changes}
+                                  previous={event.previous}
+                                  movedField={
+                                    event.fromValue ? statusKey : undefined
+                                  }
+                                  names={allNames}
+                                  fileNames={fileNames}
+                                  open={open}
+                                  onToggle={() => toggle(key)}
+                                />
+                              )}
+                            {/* A note in one line, as a change is: its text
+                                cut where the line ends, opening the note in
+                                the Notes tab, where it is read whole and
+                                changed. */}
+                            {/* What the person asked the AI to change, in
+                                their words, cut where the line ends. */}
+                            {event.action === 'aiRevise' ? (
+                              <span className='min-w-0 truncate'>
+                                「{noteText(event).replace(/\s+/g, ' ')}」
+                              </span>
+                            ) : null}
+                            {note ? (
+                              onOpenNote ? (
+                                <button
+                                  type='button'
+                                  className='min-w-0 truncate text-left underline-offset-2 hover:underline'
+                                  onClick={() => onOpenNote(key)}
+                                >
+                                  {markdownLine(noteText(event))}
+                                </button>
+                              ) : (
+                                <span className='min-w-0 truncate'>
+                                  {markdownLine(noteText(event))}
+                                </span>
+                              )
+                            ) : null}
+                            {/* The AI's part in a person's change, last on the
+                                line: proposed
+                                in the chat or an evaluation, or, for a lead,
+                                organised from pasted text. */}
+                            {event.source === 'assistant' && (
+                              <Badge variant='ai'>
+                                {text('feed.aiProposed')}
+                              </Badge>
+                            )}
+                            {event.source === 'capture' && (
+                              <Badge variant='ai'>
+                                {text('feed.aiCaptured')}
+                              </Badge>
+                            )}
+                            {/* An edited note says so, its edit time on
+                                hover. */}
+                            {note && event.editedAt ? (
+                              <span
+                                className='shrink-0 text-xs text-muted-foreground'
+                                title={localDate(
+                                  event.editedAt,
+                                  language,
+                                  timeZone,
+                                )}
+                              >
+                                {text('notes.edited')}
+                              </span>
+                            ) : null}
+                            {/* An evaluation opens into its record (not
+                                while it runs: there is nothing to open). */}
+                            {ai && !pending && event.aiStatus !== 'running' && (
+                              <Button
+                                size='icon-xs'
+                                variant='outline'
+                                className='rounded-full'
+                                aria-expanded={open}
+                                aria-label={text(open ? 'collapse' : 'expand')}
+                                onClick={() => toggle(key)}
+                              >
+                                <ChevronDown
+                                  className={`transition-transform ${open ? 'rotate-180' : ''}`}
+                                />
+                              </Button>
+                            )}
+                          </span>
+                          <time
+                            dateTime={toText(event.createdAt)}
+                            // On the entry's first line, however far the
+                            // line unfolds below it.
+                            className='shrink-0 self-start text-xs leading-[26px] text-muted-foreground/80 tabular-nums'
+                          >
+                            {localDate(event.createdAt, language, timeZone)}
+                          </time>
+                        </div>
+                        {/* A waiting verdict is handled here, open; any other
+                            evaluation is its record, when opened. */}
+                        {pending ? (
+                          <div className='mt-1'>
+                            <VerdictPanel
+                              entry={
+                                {
+                                  id: key,
+                                  status: 'pending',
+                                  createdAt: toText(event.createdAt),
+                                  ai: event.ai,
+                                } as EvaluationEntry
+                              }
+                              leadId={id}
+                              leadName={recordName}
+                              editable={editable}
+                              onChanged={refresh}
+                            />
+                          </div>
+                        ) : ai && open ? (
+                          <div className='mt-1'>
+                            {/* A decided evaluation opened: its own card,
+                                read-only, on a neutral ground. */}
+                            <VerdictPanel
+                              entry={
+                                {
+                                  id: key,
+                                  status: toText(event.aiStatus),
+                                  createdAt: toText(event.createdAt),
+                                  ai: event.ai,
+                                } as EvaluationEntry
+                              }
+                              leadId={id}
+                              leadName={recordName}
+                              // The lead's latest evaluation may be run again;
+                              // an earlier one is only its record.
+                              editable={editable && key === latestEvaluation}
+                              onChanged={refresh}
+                              full
+                            />
+                          </div>
+                        ) : null}
+                        {/* An activity's edit, unfolded likewise. */}
+                        {activityEvent && activityState(event) === 'edited' && (
+                          <HistoryChanges
+                            part='rows'
+                            open={open}
+                            entity='activities'
+                            record={(event.activity ?? {}) as CrmRecord}
+                            changes={event.changes}
+                            previous={event.previous}
+                            names={allNames}
+                            fileNames={fileNames}
+                          />
+                        )}
+                        {/* A save's fields, unfolded under the whole entry. */}
+                        {!ai &&
+                          !note &&
+                          event.action !== 'created' &&
+                          !toText(event.action).startsWith('note') &&
+                          event.action !== 'aiRevise' &&
+                          !activityEvent && (
+                            <HistoryChanges
+                              part='rows'
+                              open={open}
+                              entity={entity}
+                              record={record}
+                              changes={event.changes}
+                              previous={event.previous}
+                              movedField={
+                                event.fromValue ? statusKey : undefined
+                              }
+                              names={allNames}
+                              fileNames={fileNames}
+                            />
+                          )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            </section>
+          ))}
+        </div>
+      )}
+      {more.hasMore && (
+        <Button
+          className='mt-3'
+          variant='ghost'
+          size='sm'
+          disabled={more.loading}
+          onClick={() => void more.loadMore()}
+        >
+          {text('loadMore')} · {more.total - more.records.length}
+        </Button>
+      )}
+    </>
+  );
+}
+
+// A record's notes tab: the note box, then every note, newest first, with
+// who wrote it and when; its author may change or remove one. The same
+// notes show in the timeline among its other entries.
+export function NotesPanel({
+  entity,
+  id,
+  focusId,
+}: {
+  entity: Entity;
+  id: string;
+  // The note the timeline opened, brought into view and marked.
+  focusId?: string;
+}): ReactElement {
+  const { text, language } = useCrmText();
+  const { data: meta } = useMetadata();
+  const api = useCrmApi();
+  const scopeKey = useCrmScopeKey();
+  const base = `${toText(entity)}/${toText(id)}/history?action=note`;
+  const first = useQuery({
+    queryKey: [...scopeKey, base],
+    queryFn: () =>
+      api<{ data: Data[]; total: number }>(
+        `${base}&pageSize=${toText(PAGE_SIZE)}`,
+      ),
+  });
+  const more = useMore<Data>(
+    base,
+    first.data ? { data: first.data.data, total: first.data.total } : undefined,
+  );
+  const timeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
+  // The note asked for: brought into view once loaded, the pages before it
+  // loaded first.
+  const loaded = more.records.some((note) => toText(note.id) === focusId);
+  useEffect(() => {
+    if (focusId && loaded)
+      document
+        .getElementById(`note-${focusId}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [focusId, loaded]);
+  useEffect(() => {
+    if (focusId && !loaded && more.hasMore && !more.loading)
+      void more.loadMore();
+  }, [focusId, loaded, more]);
+  return (
+    <div>
+      <NoteComposer entity={entity} id={id} />
+      {first.isLoading ? (
+        <Loading />
+      ) : !more.records.length ? (
+        <p className='text-sm text-muted-foreground'>{text('notes.empty')}</p>
+      ) : (
+        <ol className='grid gap-4'>
+          {more.records.map((note) => (
+            <li
+              key={toText(note.id)}
+              id={`note-${toText(note.id)}`}
+              // Marked as a timeline entry opened from elsewhere is.
+              className={
+                toText(note.id) === focusId
+                  ? 'crm-arrive -mx-2 rounded-lg bg-ai/5 px-2 py-1'
+                  : undefined
+              }
+            >
+              <div className='flex items-center justify-between gap-3 text-sm'>
+                <span className='flex min-w-0 items-center gap-1.5'>
+                  <span className='truncate'>
+                    {meta?.users.find((u) => u.id === note.actorId)?.name}
+                  </span>
+                  {note.source === 'assistant' && (
+                    <Badge variant='ai'>{text('feed.aiProposed')}</Badge>
+                  )}
+                </span>
+                <span className='shrink-0 text-xs text-muted-foreground/80 tabular-nums'>
+                  {note.editedAt ? `${toText(text('notes.edited'))} · ` : ''}
+                  {localDate(note.createdAt, language, timeZone)}
+                </span>
+              </div>
+              <NoteBody note={note} mine={note.actorId === meta?.userId} />
+            </li>
+          ))}
+        </ol>
+      )}
+      {more.hasMore && (
+        <Button
+          className='mt-3'
+          variant='ghost'
+          size='sm'
+          disabled={more.loading}
+          onClick={() => void more.loadMore()}
+        >
+          {text('loadMore')} · {more.total - more.records.length}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+// The note box atop a record's notes. Anyone who may read the record may add
+// a note, which everyone who may read it sees; Ctrl/⌘+Enter adds it.
+function NoteComposer({
+  entity,
+  id,
+}: {
+  entity: Entity;
+  id: string;
+}): ReactElement {
+  const { text } = useCrmText();
+  const api = useCrmApi();
+  const refresh = useRefresh();
+  const [draft, setDraft] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>();
+  const add = async (): Promise<void> => {
+    if (!draft.trim() || busy) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      await api(`${toText(entity)}/${toText(id)}/notes`, 'POST', {
+        text: draft,
+      });
+      setDraft('');
+      await refresh();
+    } catch (cause) {
+      setError(cause);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className='mb-5 grid gap-2'>
+      <Textarea
+        aria-label={text('notes.label')}
+        value={draft}
+        placeholder={text('notes.placeholder')}
+        maxLength={LONG_TEXT_LIMIT}
+        rows={2}
+        className='min-h-14 resize-y text-sm'
+        onChange={(event) => setDraft(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+            event.preventDefault();
+            void add();
+          }
+        }}
       />
+      {draft.trim() ? (
+        <div className='flex items-center justify-end gap-3'>
+          <span className='text-xs text-muted-foreground'>
+            {text('notes.shortcut')}
+          </span>
+          <Button size='sm' disabled={busy} onClick={() => void add()}>
+            {text('notes.add')}
+          </Button>
+        </div>
+      ) : null}
+      <ErrorNotice error={error} />
+    </div>
+  );
+}
+
+// A note in the feed: its text, and for its author, edit and delete in the
+// corner (delete asks once more).
+function NoteBody({ note, mine }: { note: Data; mine: boolean }): ReactElement {
+  const { text } = useCrmText();
+  const api = useCrmApi();
+  const refresh = useRefresh();
+  const body = toText((note.changes as Data | undefined)?.text ?? '');
+  const [draft, setDraft] = useState<string>();
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>();
+  const run = async (call: () => Promise<unknown>): Promise<void> => {
+    setBusy(true);
+    setError(undefined);
+    try {
+      await call();
+      await refresh();
+      setDraft(undefined);
+      setConfirming(false);
+    } catch (cause) {
+      setError(cause);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const path = `notes/${toText(note.id)}`;
+  if (draft !== undefined)
+    return (
+      <div className='mt-1 grid gap-2'>
+        <Textarea
+          aria-label={text('notes.label')}
+          value={draft}
+          maxLength={LONG_TEXT_LIMIT}
+          className='min-h-20 text-sm'
+          onChange={(event) => setDraft(event.target.value)}
+        />
+        <div className='flex justify-end gap-2'>
+          <Button size='sm' variant='ghost' onClick={() => setDraft(undefined)}>
+            {text('cancel')}
+          </Button>
+          <Button
+            size='sm'
+            disabled={busy || !draft.trim()}
+            onClick={() => void run(() => api(path, 'PATCH', { text: draft }))}
+          >
+            {text('save')}
+          </Button>
+        </div>
+        <ErrorNotice error={error} />
+      </div>
     );
   return (
-    <dl className='flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs'>
-      {shown.map((key) => (
+    <div className='group/note relative mt-1 rounded-lg bg-muted/40 px-3 py-2 text-sm'>
+      {/* A long note shows its first lines until opened. */}
+      <LongText value={body} />
+      {mine ? (
         <div
-          className='flex items-baseline gap-1 rounded bg-muted/60 px-1.5 py-0.5'
-          key={key}
+          className={`absolute top-1 right-1 flex gap-0.5 rounded-md bg-background/90 transition-opacity focus-within:opacity-100 group-hover/note:opacity-100 ${
+            confirming ? 'opacity-100' : 'opacity-0'
+          }`}
         >
-          <dt className='text-muted-foreground'>
-            {text(fieldLabelKey(entity, key), {
-              defaultValue: key,
-            })}
-          </dt>
-          {/* Clamped so one long value cannot turn a history row into a
-              paragraph; the full text stays available on hover. */}
-          <dd
-            // The descendant rule is needed because the shared value renderer
-            // sets whitespace-pre-wrap on its own span, which would otherwise
-            // win over the clamp here.
-            className='flex min-w-0 max-w-96 items-baseline gap-1 [&_*]:whitespace-nowrap'
-            title={
-              before && key in before
-                ? `${toText(before[key] ?? '')} → ${toText(changed[key] ?? '')}`
-                : toText(changed[key])
-            }
+          <Button
+            size='xs'
+            variant='ghost'
+            disabled={busy}
+            onClick={() => setDraft(body)}
           >
-            {before && key in before && (
-              <>
-                {/* Each side keeps at most half the chip, so a long
-                    value on one side never squeezes the other away. */}
-                <span className='min-w-0 max-w-48 truncate text-muted-foreground line-through decoration-muted-foreground/50'>
-                  {show(before, key)}
-                </span>
-                <span aria-hidden className='shrink-0 text-muted-foreground'>
-                  →
-                </span>
-              </>
-            )}
-            <span className='min-w-0 max-w-48 truncate'>
-              {show(changed, key)}
-            </span>
-          </dd>
+            <PencilLine />
+            {text('edit')}
+          </Button>
+          <Button
+            size='xs'
+            variant={confirming ? 'destructive' : 'ghost'}
+            disabled={busy}
+            onClick={() =>
+              confirming
+                ? void run(() => api(path, 'DELETE'))
+                : setConfirming(true)
+            }
+            onBlur={() => setConfirming(false)}
+          >
+            <Trash2 />
+            {text(confirming ? 'notes.confirmDelete' : 'delete')}
+          </Button>
         </div>
-      ))}
-    </dl>
+      ) : null}
+      <ErrorNotice error={error} />
+    </div>
+  );
+}
+
+// A group of the lead's particulars: a heading, then its rows, set off from
+// the group before by space alone.
+function InfoGroup({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}): ReactElement {
+  return (
+    <section className='py-3 first:pt-0 last:pb-0'>
+      <h3 className='px-2 pb-1.5 text-sm font-medium'>{title}</h3>
+      <dl>{children}</dl>
+    </section>
+  );
+}
+
+// A row of the lead's information card: the label, then the value (an
+// inline editor, a status, a time).
+function InfoRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}): ReactElement {
+  return (
+    <div className='grid grid-cols-[6.5rem_minmax(0,1fr)] items-start gap-2'>
+      <dt className='flex items-center gap-1.5 px-2 py-1.5 text-sm text-muted-foreground'>
+        <span className='min-w-0 leading-snug'>{label}</span>
+      </dt>
+      <dd className='min-w-0 text-sm'>{children}</dd>
+    </div>
   );
 }

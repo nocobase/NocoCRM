@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from 'react';
 import { Link } from 'react-router';
+import { useNavigationBadge } from './navigation-badges.js';
 import { EMPTY_ARRAY } from '@/lib/constants';
 import {
   Tooltip,
@@ -76,6 +77,7 @@ export function NavigationTree({
   const children = item.children ?? EMPTY_ARRAY;
   const Icon = item.route.navigation?.icon;
   const icon = Icon ? <Icon /> : null;
+  const badge = useNavigationBadge(item.route.name);
 
   const selected = containsSelection(item, selectedKey);
   const [disclosure, setDisclosure] = useState({
@@ -308,6 +310,7 @@ export function NavigationTree({
 
   return (
     <NavigationLink
+      badge={badge}
       collapsed={collapsed && desktop}
       icon={icon}
       inPopover={inPopover}
@@ -330,6 +333,9 @@ function containsSelection(
 }
 
 interface NavigationLinkProps {
+  // A count beside the label (navigation-badges.ts); a dot on the icon when
+  // the sidebar shows icons only.
+  readonly badge?: number;
   readonly collapsed: boolean;
   readonly icon: ReactNode;
   readonly inPopover?: boolean;
@@ -340,6 +346,7 @@ interface NavigationLinkProps {
 }
 
 function NavigationLink({
+  badge = 0,
   collapsed,
   icon,
   inPopover,
@@ -363,12 +370,26 @@ function NavigationLink({
       onClick={onNavigate}
       to={route}
     >
-      {icon ? <NavigationIcon>{icon}</NavigationIcon> : null}
+      {icon ? (
+        <span className='relative flex shrink-0'>
+          <NavigationIcon>{icon}</NavigationIcon>
+          {badge > 0 && collapsed && (
+            <span className='absolute -top-1 -right-1 hidden size-2 rounded-full bg-ai md:block' />
+          )}
+        </span>
+      ) : null}
       <span
         className={`${inPopover ? 'whitespace-nowrap' : 'truncate'} ${collapsed && icon ? 'md:hidden' : ''}`}
       >
         {label}
       </span>
+      {badge > 0 && (
+        <span
+          className={`ml-auto min-w-5 rounded-full bg-ai px-1.5 text-center text-xs leading-5 font-medium text-ai-foreground tabular-nums ${collapsed && icon ? 'md:hidden' : ''}`}
+        >
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
     </Link>
   );
   if (!collapsed) return link;
@@ -377,6 +398,7 @@ function NavigationLink({
       <TooltipTrigger render={link} aria-label={label} delay={0} />
       <TooltipContent role='tooltip' side='right' sideOffset={8}>
         {label}
+        {badge > 0 ? ` · ${String(badge)}` : ''}
       </TooltipContent>
     </Tooltip>
   );

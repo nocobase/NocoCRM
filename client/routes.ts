@@ -11,6 +11,7 @@ import {
   Handshake,
   LayoutDashboard,
   ListChecks,
+  ListTodo,
   Radar,
   Settings2,
 } from 'lucide-react';
@@ -38,6 +39,15 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     name: 'home',
     navigation: { title: 'navigation.home', icon: LayoutDashboard },
     path: '/',
+  },
+  // The AI's suggestions waiting on the reader, right under the overview.
+  {
+    name: 'crm-decisions',
+    path: '/crm/decisions',
+    auth: 'required',
+    authz: page('crm-decisions'),
+    navigation: { title: 'crm.decisions.title', icon: ListTodo },
+    componentLoader: () => import('./pages/crm-decisions.js'),
   },
   {
     name: 'crm-action',
