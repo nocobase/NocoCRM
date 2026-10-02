@@ -680,7 +680,8 @@ describe('CRM API security and domain rules', () => {
       'opportunities',
       toText(converted.convertedOpportunityId),
     );
-    expect(deal).toMatchObject({ currency: 'EUR', stage: 'contact' });
+    // A converted lead's deal starts at qualification.
+    expect(deal).toMatchObject({ currency: 'EUR', stage: 'qualification' });
     expect(toText(deal.expectedCloseAt).slice(0, 10)).toBe('2026-12-31');
   });
   it('converts atomically, links historical activities and makes the lead immutable', async () => {

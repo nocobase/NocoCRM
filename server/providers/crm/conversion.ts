@@ -167,6 +167,11 @@ export async function convertLead(
         ownerId: lead.ownerId,
         source: lead.source,
         accountId: account.id,
+        // A lead is converted once its scene, scale and deployment or
+        // edition are clear, which is what qualification asks for: the deal
+        // starts there rather than at first contact (the opportunity
+        // follow-up skill's stages).
+        stage: 'qualification',
         amount: input.amount ?? null,
         // What the person set on the deal in the conversion dialog beside
         // its name and amount; the rest comes from the lead and the account.
