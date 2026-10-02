@@ -358,49 +358,35 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       )}
     </InfoRow>
   );
-  // The tabs, marked by a line on the rule under them: side by side in the
-  // band across both columns, stacked above their content.
+  // The timeline first, where the lead opens, without a count: its entries
+  // only grow and the number says nothing. The activities' icon is their
+  // menu entry's. The notes also show in the timeline among its entries.
   const tabBar = (
-    <div role='tablist' className='flex gap-6'>
-      {(
-        [
-          // The timeline first, where the lead opens, without a count: its
-          // entries only grow and the number says nothing. The activities'
-          // icon is their menu entry's.
-          ['historyTab', 'historyTab', History, null],
-          [
-            'activities',
-            'entities.activities',
-            CalendarDays,
-            moreActivities.total,
-          ],
-          ['attachments', 'fields.attachments', Paperclip, attachmentCount],
-          // The notes, which also show in the timeline among its entries.
-          ['notes', 'notes.tab', StickyNote, detail.notesTotal ?? 0],
-        ] as const
-      ).map(([name, label, Icon, count]) => (
-        <button
-          key={name}
-          type='button'
-          role='tab'
-          aria-selected={name === tab}
-          onClick={() => setTab(name)}
-          className={`-mb-px flex items-center gap-1.5 rounded-t-sm border-b-2 py-2.5 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
-            name === tab
-              ? 'border-foreground text-foreground'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Icon className='size-4' />
-          {text(label)}
-          {count !== null && (
-            <span className='text-xs text-muted-foreground tabular-nums'>
-              {count}
-            </span>
-          )}
-        </button>
-      ))}
-    </div>
+    <DetailTabBar
+      active={tab}
+      onSelect={setTab}
+      tabs={[
+        { name: 'historyTab', label: 'historyTab', icon: History },
+        {
+          name: 'activities',
+          label: 'entities.activities',
+          icon: CalendarDays,
+          count: moreActivities.total,
+        },
+        {
+          name: 'attachments',
+          label: 'fields.attachments',
+          icon: Paperclip,
+          count: attachmentCount,
+        },
+        {
+          name: 'notes',
+          label: 'notes.tab',
+          icon: StickyNote,
+          count: detail.notesTotal ?? 0,
+        },
+      ]}
+    />
   );
   // "name / company", both edited in place: the page's heading, atop the
   // particulars (a <div> with the heading role, since the editors bring block
@@ -486,277 +472,209 @@ function LeadDetail({ id }: { id: string }): ReactElement {
     </div>
   ) : null;
   return (
-    <CrmFrame
-      // The page is the window's height and its two columns scroll each on
-      // their own, the rule between them running to the bottom. It has no
-      // header: the heading and the actions sit in the columns.
-      fill
-    >
-      <ErrorNotice error={error ?? loadError} />
-      {/* Container query, not a viewport one: opening the AI panel narrows this
-          area without changing the viewport, and a viewport breakpoint would
-          keep both columns in a box too small for them. */}
-      <div className='@container min-h-0 flex-1'>
-        {/* The lead's particulars in a narrow column on the left, the
-            timeline and the other tabs taking the rest, the way record pages
-            commonly lay them out. Stacked, the particulars come first (a
-            phone number before the history). */}
-        {/* Side by side each column scrolls by itself below the band, the
-            rule between them running to the bottom; stacked, they scroll
-            together. Their bars show only while they scroll. */}
-        <div className='flex h-full flex-col @3xl:-mx-4 md:@3xl:-mx-8'>
-          {/* Side by side, both columns are white (the card colour) out to
-            the page's edges: the block reaches past the frame's padding (the
-            -mx), which the columns' own padding gives back, the left track
-            widened by the same amount. A column's own negative margin would
-            be clipped by the scrolling grid. The rule between them is their
-            only divide. */}
-          {/* Side by side, a band across both columns carries the heading
-            over the particulars and the tabs over the rest, one rule under
-            both; the rule between the columns runs through it. */}
-          {/* The rule is each cell's own, under the heading and under the
-              tabs. */}
-          <div className='hidden @3xl:grid @3xl:grid-cols-[22rem_minmax(0,1fr)] md:@3xl:grid-cols-[23rem_minmax(0,1fr)]'>
-            <div className='flex items-center border-b bg-card pr-6 pl-4 md:pl-6'>
-              {heading}
-            </div>
-            <div className='flex items-center justify-between gap-2 border-b border-l bg-card pt-2 pr-4 pl-6 md:pr-8'>
-              {tabBar}
-              {aiTools}
-            </div>
-          </div>
-          <div
-            className='grid min-h-0 flex-1 items-start gap-6 overflow-y-auto pb-24 @3xl:grid-cols-[22rem_minmax(0,1fr)] @3xl:grid-rows-[minmax(0,1fr)] md:@3xl:grid-cols-[23rem_minmax(0,1fr)] @3xl:items-stretch @3xl:gap-0 @3xl:overflow-hidden @3xl:pb-0 scroll-quiet'
-            onScroll={revealScrollbar}
-          >
-            {/* Neither column is a card: the particulars stand on the page as
-              grouped fields, and the tabs take the rest beyond a rule, as
-              record pages commonly lay them out. */}
-            <section
-              className='min-w-0 pt-5 @3xl:overflow-y-auto @3xl:bg-card @3xl:pt-4 @3xl:pr-6 @3xl:pb-8 @3xl:pl-4 scroll-quiet'
-              onScroll={revealScrollbar}
-            >
-              {/* Stacked, the heading leads the page from here. */}
-              <div className='mb-3 @3xl:hidden'>{heading}</div>
-              {leadActions && <div className='mb-4'>{leadActions}</div>}
-              <div>
-                {/* Who has the lead and where it stands head the first group. */}
-                <InfoGroup title={text('leadGroups.general')}>
-                  <InfoRow label={text('fields.ownerId')}>
-                    {inline('ownerId')}
-                  </InfoRow>
-                  <InfoRow label={text('fields.status')}>
-                    <LeadStatusField
-                      record={record}
-                      editable={editable}
-                      statuses={(field('status').options ?? []).map(
-                        (value) => ({
-                          value,
-                          label: text(`options.${toText(value)}`, {
-                            defaultValue: value,
-                          }),
-                        }),
-                      )}
-                      reasons={(
-                        meta.settings.options.invalidReason ??
-                        field('invalidReason').options ??
-                        []
-                      ).map((value) => ({
-                        value,
-                        label: text(`options.${toText(value)}`, {
-                          defaultValue: value,
-                        }),
-                      }))}
-                      onSave={patch}
-                    />
-                    {/* A converted lead is read-only: its work goes on in
+    <DetailColumns
+      heading={heading}
+      actions={leadActions}
+      tabBar={tabBar}
+      aiTools={aiTools}
+      notice={<ErrorNotice error={error ?? loadError} />}
+      left={
+        <div>
+          {/* Who has the lead and where it stands head the first group. */}
+          <InfoGroup title={text('leadGroups.general')}>
+            <InfoRow label={text('fields.ownerId')}>
+              {inline('ownerId')}
+            </InfoRow>
+            <InfoRow label={text('fields.status')}>
+              <LeadStatusField
+                record={record}
+                editable={editable}
+                statuses={(field('status').options ?? []).map((value) => ({
+                  value,
+                  label: text(`options.${toText(value)}`, {
+                    defaultValue: value,
+                  }),
+                }))}
+                reasons={(
+                  meta.settings.options.invalidReason ??
+                  field('invalidReason').options ??
+                  []
+                ).map((value) => ({
+                  value,
+                  label: text(`options.${toText(value)}`, {
+                    defaultValue: value,
+                  }),
+                }))}
+                onSave={patch}
+              />
+              {/* A converted lead is read-only: its work goes on in
                         what it became, listed under its status. */}
-                    {converted && (
-                      <p className='px-2 pb-1 text-xs text-muted-foreground'>
-                        {text('convertedHint')}
-                      </p>
-                    )}
-                  </InfoRow>
-                  {converted && (
-                    <>
-                      {(
-                        [
-                          ['accounts', 'convertedAccountId'],
-                          ['contacts', 'convertedContactId'],
-                          ['opportunities', 'convertedOpportunityId'],
-                        ] as const
-                      ).map(([e, key]) => (
-                        <InfoRow key={key} label={text(`fields.${key}`)}>
-                          {/* An empty one is shown rather than dropped: "no
+              {converted && (
+                <p className='px-2 pb-1 text-xs text-muted-foreground'>
+                  {text('convertedHint')}
+                </p>
+              )}
+            </InfoRow>
+            {converted && (
+              <>
+                {(
+                  [
+                    ['accounts', 'convertedAccountId'],
+                    ['contacts', 'convertedContactId'],
+                    ['opportunities', 'convertedOpportunityId'],
+                  ] as const
+                ).map(([e, key]) => (
+                  <InfoRow key={key} label={text(`fields.${key}`)}>
+                    {/* An empty one is shown rather than dropped: "no
                               opportunity" is itself worth seeing. */}
-                          <div className='px-2 py-1.5'>
-                            {record[key] ? (
-                              <RecordLink
-                                entity={e}
-                                record={{
-                                  id: toText(record[key]),
-                                  name:
-                                    names[toText(record[key])] ??
-                                    text(`entities.${e}`),
-                                }}
-                              />
-                            ) : (
-                              <span className='text-muted-foreground'>—</span>
-                            )}
-                          </div>
-                        </InfoRow>
-                      ))}
-                    </>
-                  )}
-                  {leadGroups[0][1].map(fieldRow)}
-                </InfoGroup>
-                {leadGroups.slice(1).map(([group, keys]) => (
-                  <InfoGroup key={group} title={text(`leadGroups.${group}`)}>
-                    {keys.map(fieldRow)}
-                  </InfoGroup>
-                ))}
-                <InfoGroup title={text('leadGroups.system')}>
-                  <InfoRow label={text('fields.createdAt')}>
                     <div className='px-2 py-1.5'>
-                      {localDate(
-                        record.createdAt,
-                        language,
-                        meta.settings.timeZone,
-                      )}
-                    </div>
-                  </InfoRow>
-                  <InfoRow label={text('fields.updatedAt')}>
-                    <div className='px-2 py-1.5'>
-                      {localDate(
-                        record.updatedAt,
-                        language,
-                        meta.settings.timeZone,
-                      )}
-                    </div>
-                  </InfoRow>
-                  {/* When it was converted, under its last update. */}
-                  {converted && (
-                    <InfoRow label={text('fields.convertedAt')}>
-                      <div className='px-2 py-1.5'>
-                        {localDate(
-                          record.convertedAt,
-                          language,
-                          meta.settings.timeZone,
-                        )}
-                      </div>
-                    </InfoRow>
-                  )}
-                </InfoGroup>
-              </div>
-            </section>
-            <section
-              className='min-w-0 border-t pt-6 @3xl:overflow-y-auto @3xl:border-t-0 @3xl:border-l @3xl:bg-card @3xl:pt-4 @3xl:pr-4 @3xl:pb-24 @3xl:pl-6 md:@3xl:pr-8 scroll-quiet'
-              onScroll={revealScrollbar}
-            >
-              {/* Stacked, the tabs lead their content, staying in place as
-                it scrolls; side by side they are in the band above. */}
-              <div className='sticky top-0 z-10 mb-4 flex flex-wrap items-center justify-between gap-2 border-b bg-background @3xl:hidden'>
-                {tabBar}
-                {aiTools}
-              </div>
-              <div>
-                {tab === 'activities' ? (
-                  <div className='space-y-3'>
-                    {/* Scheduling lives inside its tab, the way upload lives in
-                    attachments. A converted lead rejects it server-side. */}
-                    {!converted &&
-                      Boolean(meta.permissions.activities.create) && (
-                        <Button
-                          size='sm'
-                          variant='outline'
-                          onClick={() =>
-                            setForm({
-                              entity: 'activities',
-                              initial: { leadId: id },
-                            })
-                          }
-                        >
-                          <Plus />
-                          {text('newActivity')}
-                        </Button>
-                      )}
-                    {!activities.length ? (
-                      <p className='text-sm text-muted-foreground'>
-                        {text('noActivities')}
-                      </p>
-                    ) : (
-                      <>
-                        {/* One continuous rule down the list; each item hangs a node on it. */}
-                        <ol className='relative ml-1.5 border-l border-border'>
-                          {activities.map((activity) => (
-                            <ActivityItem
-                              key={toText(activity.id)}
-                              activity={activity}
-                            />
-                          ))}
-                        </ol>
-                        {moreActivities.hasMore && (
-                          <Button
-                            className='mt-3'
-                            variant='ghost'
-                            size='sm'
-                            disabled={moreActivities.loading}
-                            onClick={() => void moreActivities.loadMore()}
-                          >
-                            {text('loadMore')} ·{' '}
-                            {moreActivities.total - activities.length}
-                          </Button>
-                        )}
-                      </>
-                    )}
-                  </div>
-                ) : tab === 'notes' ? (
-                  <NotesPanel entity='leads' id={id} focusId={noteFocus} />
-                ) : tab === 'attachments' ? (
-                  <RecordAttachments
-                    entity='leads'
-                    record={record}
-                    activities={activities}
-                    editable={editable}
-                    onError={setError}
-                    uploader={
-                      editable ? (
-                        <UploadZone
-                          entity='leads'
-                          record={record}
-                          busy={uploading}
-                          setBusy={setUploading}
-                          onError={setError}
+                      {record[key] ? (
+                        <RecordLink
+                          entity={e}
+                          record={{
+                            id: toText(record[key]),
+                            name:
+                              names[toText(record[key])] ??
+                              text(`entities.${e}`),
+                          }}
                         />
-                      ) : undefined
-                    }
-                  />
-                ) : (
-                  <HistoryFeed
-                    entity='leads'
-                    id={id}
-                    record={record}
-                    initial={{
-                      data: detail.history,
-                      total: detail.historyTotal ?? detail.history.length,
-                    }}
-                    names={names}
-                    statusKey='status'
-                    editable={editable && record.status !== 'converted'}
-                    recordName={contextName}
-                    focusId={focus?.id}
-                    focusAt={focus?.at}
-                    onOpenNote={(noteId) => {
-                      setNoteFocus(noteId);
-                      setTab('notes');
-                    }}
-                  />
-                )}
+                      ) : (
+                        <span className='text-muted-foreground'>—</span>
+                      )}
+                    </div>
+                  </InfoRow>
+                ))}
+              </>
+            )}
+            {leadGroups[0][1].map(fieldRow)}
+          </InfoGroup>
+          {leadGroups.slice(1).map(([group, keys]) => (
+            <InfoGroup key={group} title={text(`leadGroups.${group}`)}>
+              {keys.map(fieldRow)}
+            </InfoGroup>
+          ))}
+          <InfoGroup title={text('leadGroups.system')}>
+            <InfoRow label={text('fields.createdAt')}>
+              <div className='px-2 py-1.5'>
+                {localDate(record.createdAt, language, meta.settings.timeZone)}
               </div>
-            </section>
-          </div>
+            </InfoRow>
+            <InfoRow label={text('fields.updatedAt')}>
+              <div className='px-2 py-1.5'>
+                {localDate(record.updatedAt, language, meta.settings.timeZone)}
+              </div>
+            </InfoRow>
+            {/* When it was converted, under its last update. */}
+            {converted && (
+              <InfoRow label={text('fields.convertedAt')}>
+                <div className='px-2 py-1.5'>
+                  {localDate(
+                    record.convertedAt,
+                    language,
+                    meta.settings.timeZone,
+                  )}
+                </div>
+              </InfoRow>
+            )}
+          </InfoGroup>
         </div>
-      </div>
+      }
+      right={
+        <div>
+          {tab === 'activities' ? (
+            <div className='space-y-3'>
+              {/* Scheduling lives inside its tab, the way upload lives in
+                    attachments. A converted lead rejects it server-side. */}
+              {!converted && Boolean(meta.permissions.activities.create) && (
+                <Button
+                  size='sm'
+                  variant='outline'
+                  onClick={() =>
+                    setForm({
+                      entity: 'activities',
+                      initial: { leadId: id },
+                    })
+                  }
+                >
+                  <Plus />
+                  {text('newActivity')}
+                </Button>
+              )}
+              {!activities.length ? (
+                <p className='text-sm text-muted-foreground'>
+                  {text('noActivities')}
+                </p>
+              ) : (
+                <>
+                  {/* One continuous rule down the list; each item hangs a node on it. */}
+                  <ol className='relative ml-1.5 border-l border-border'>
+                    {activities.map((activity) => (
+                      <ActivityItem
+                        key={toText(activity.id)}
+                        activity={activity}
+                      />
+                    ))}
+                  </ol>
+                  {moreActivities.hasMore && (
+                    <Button
+                      className='mt-3'
+                      variant='ghost'
+                      size='sm'
+                      disabled={moreActivities.loading}
+                      onClick={() => void moreActivities.loadMore()}
+                    >
+                      {text('loadMore')} ·{' '}
+                      {moreActivities.total - activities.length}
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+          ) : tab === 'notes' ? (
+            <NotesPanel entity='leads' id={id} focusId={noteFocus} />
+          ) : tab === 'attachments' ? (
+            <RecordAttachments
+              entity='leads'
+              record={record}
+              activities={activities}
+              editable={editable}
+              onError={setError}
+              uploader={
+                editable ? (
+                  <UploadZone
+                    entity='leads'
+                    record={record}
+                    busy={uploading}
+                    setBusy={setUploading}
+                    onError={setError}
+                  />
+                ) : undefined
+              }
+            />
+          ) : (
+            <HistoryFeed
+              entity='leads'
+              id={id}
+              record={record}
+              initial={{
+                data: detail.history,
+                total: detail.historyTotal ?? detail.history.length,
+              }}
+              names={names}
+              statusKey='status'
+              editable={editable && record.status !== 'converted'}
+              recordName={contextName}
+              focusId={focus?.id}
+              focusAt={focus?.at}
+              onOpenNote={(noteId) => {
+                setNoteFocus(noteId);
+                setTab('notes');
+              }}
+            />
+          )}
+        </div>
+      }
+    >
       {form && <RecordForm {...form} onClose={() => setForm(undefined)} />}
       {convert && (
         <ConvertDialog lead={record} onClose={() => setConvert(false)} />
@@ -831,7 +749,152 @@ function LeadDetail({ id }: { id: string }): ReactElement {
           </DialogContent>
         </Dialog>
       )}
+    </DetailColumns>
+  );
+}
+
+// A record page laid out as the lead's: no header, the record's heading in a
+// band over its particulars on the left and the tabs in the same band over
+// the rest. The lead and the activity pages share it.
+export function DetailColumns({
+  heading,
+  actions,
+  tabBar,
+  aiTools,
+  notice,
+  left,
+  right,
+  children,
+}: {
+  heading: ReactNode;
+  actions: ReactNode;
+  tabBar: ReactNode;
+  aiTools?: ReactNode;
+  notice: ReactNode;
+  left: ReactNode;
+  right: ReactNode;
+  // The page's dialogs.
+  children?: ReactNode;
+}): ReactElement {
+  return (
+    <CrmFrame
+      // The page is the window's height and its two columns scroll each on
+      // their own, the rule between them running to the bottom. It has no
+      // header: the heading and the actions sit in the columns.
+      fill
+    >
+      {notice}
+      {/* Container query, not a viewport one: opening the AI panel narrows this
+          area without changing the viewport, and a viewport breakpoint would
+          keep both columns in a box too small for them. */}
+      <div className='@container min-h-0 flex-1'>
+        {/* The particulars in a narrow column on the left, the timeline and
+            the other tabs taking the rest, the way record pages commonly lay
+            them out. Stacked, the particulars come first (a phone number
+            before the history). */}
+        {/* Side by side each column scrolls by itself below the band, the
+            rule between them running to the bottom; stacked, they scroll
+            together. Their bars show only while they scroll. */}
+        <div className='flex h-full flex-col @3xl:-mx-4 md:@3xl:-mx-8'>
+          {/* Side by side, both columns are white (the card colour) out to
+            the page's edges: the block reaches past the frame's padding (the
+            -mx), which the columns' own padding gives back, the left track
+            widened by the same amount. A column's own negative margin would
+            be clipped by the scrolling grid. The rule between them is their
+            only divide. */}
+          {/* Side by side, a band across both columns carries the heading
+            over the particulars and the tabs over the rest, one rule under
+            both; the rule between the columns runs through it. */}
+          {/* The rule is each cell's own, under the heading and under the
+              tabs. */}
+          <div className='hidden @3xl:grid @3xl:grid-cols-[22rem_minmax(0,1fr)] md:@3xl:grid-cols-[23rem_minmax(0,1fr)]'>
+            <div className='flex items-center border-b bg-card pr-6 pl-4 md:pl-6'>
+              {heading}
+            </div>
+            <div className='flex items-center justify-between gap-2 border-b border-l bg-card pt-2 pr-4 pl-6 md:pr-8'>
+              {tabBar}
+              {aiTools}
+            </div>
+          </div>
+          <div
+            className='grid min-h-0 flex-1 items-start gap-6 overflow-y-auto pb-24 @3xl:grid-cols-[22rem_minmax(0,1fr)] @3xl:grid-rows-[minmax(0,1fr)] md:@3xl:grid-cols-[23rem_minmax(0,1fr)] @3xl:items-stretch @3xl:gap-0 @3xl:overflow-hidden @3xl:pb-0 scroll-quiet'
+            onScroll={revealScrollbar}
+          >
+            {/* Neither column is a card: the particulars stand on the page as
+              grouped fields, and the tabs take the rest beyond a rule, as
+              record pages commonly lay them out. */}
+            <section
+              className='min-w-0 pt-5 @3xl:overflow-y-auto @3xl:bg-card @3xl:pt-4 @3xl:pr-6 @3xl:pb-8 @3xl:pl-4 scroll-quiet'
+              onScroll={revealScrollbar}
+            >
+              {/* Stacked, the heading leads the page from here. */}
+              <div className='mb-3 @3xl:hidden'>{heading}</div>
+              {actions && <div className='mb-4'>{actions}</div>}
+              {left}
+            </section>
+            <section
+              className='min-w-0 border-t pt-6 @3xl:overflow-y-auto @3xl:border-t-0 @3xl:border-l @3xl:bg-card @3xl:pt-4 @3xl:pr-4 @3xl:pb-24 @3xl:pl-6 md:@3xl:pr-8 scroll-quiet'
+              onScroll={revealScrollbar}
+            >
+              {/* Stacked, the tabs lead their content, staying in place as
+                it scrolls; side by side they are in the band above. */}
+              <div className='sticky top-0 z-10 mb-4 flex flex-wrap items-center justify-between gap-2 border-b bg-background @3xl:hidden'>
+                {tabBar}
+                {aiTools}
+              </div>
+              {right}
+            </section>
+          </div>
+        </div>
+      </div>
+      {children}
     </CrmFrame>
+  );
+}
+
+// The tabs of a DetailColumns page, marked by a line on the rule under them:
+// side by side in the band across both columns, stacked above their content.
+// A tab without a count shows none.
+export function DetailTabBar({
+  tabs,
+  active,
+  onSelect,
+}: {
+  tabs: readonly {
+    name: string;
+    label: string;
+    icon: LucideIcon;
+    count?: number;
+  }[];
+  active: string;
+  onSelect: (name: string) => void;
+}): ReactElement {
+  const { text } = useCrmText();
+  return (
+    <div role='tablist' className='flex gap-6'>
+      {tabs.map(({ name, label, icon: Icon, count }) => (
+        <button
+          key={name}
+          type='button'
+          role='tab'
+          aria-selected={name === active}
+          onClick={() => onSelect(name)}
+          className={`-mb-px flex items-center gap-1.5 rounded-t-sm border-b-2 py-2.5 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
+            name === active
+              ? 'border-foreground text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Icon className='size-4' />
+          {text(label)}
+          {count !== undefined && (
+            <span className='text-xs text-muted-foreground tabular-nums'>
+              {count}
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -2523,9 +2586,9 @@ function NoteBody({ note, mine }: { note: Data; mine: boolean }): ReactElement {
   );
 }
 
-// A group of the lead's particulars: a heading, then its rows, set off from
-// the group before by space alone.
-function InfoGroup({
+// A group of a record's particulars (the lead's, the activity's): a heading,
+// then its rows, set off from the group before by space alone.
+export function InfoGroup({
   title,
   children,
 }: {
@@ -2540,9 +2603,9 @@ function InfoGroup({
   );
 }
 
-// A row of the lead's information card: the label, then the value (an
+// A row of a record's particulars: the label, then the value (an
 // inline editor, a status, a time).
-function InfoRow({
+export function InfoRow({
   label,
   children,
 }: {

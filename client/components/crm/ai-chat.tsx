@@ -253,13 +253,11 @@ function CrmAssistantPanel(): ReactElement | null {
     setWasOpen(open);
     if (!open) setExpanded(false);
   }
-  // The panel starts open on a screen wide enough to hold it beside the
-  // page (1280px, where styles.css pushes the page aside by the panel's
-  // width): the assistant is the CRM's front door, not a hidden extra.
-  // Narrower screens start with it closed, since it would cover the page.
-  // Once the user opens or closes it, that choice survives a reload.
+  // The panel starts closed on every screen; the floating launcher and the
+  // page shortcuts open it. Once the user opens or closes it, that choice
+  // survives a reload in the same tab.
   useEffect(() => {
-    let initial = window.matchMedia('(min-width: 1280px)').matches;
+    let initial = false;
     try {
       const stored = sessionStorage.getItem(openKey);
       if (stored !== null) initial = stored === '1';

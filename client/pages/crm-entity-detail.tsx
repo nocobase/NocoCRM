@@ -36,6 +36,7 @@ import {
   MapPinned,
   Megaphone,
   MessageSquare,
+  Paperclip,
   Phone,
   Plus,
   Radar,
@@ -121,7 +122,11 @@ import { ApprovalActions } from '../components/crm/approval-actions.js';
 import {
   ActivityItem,
   ConfirmDialog,
+  DetailColumns,
+  DetailTabBar,
   HistoryFeed,
+  InfoGroup,
+  InfoRow,
   NotesPanel,
   LeadRow,
   RecordAttachments,
@@ -151,18 +156,7 @@ const detailLayout: Partial<Record<Entity, readonly string[]>> = {
     'description',
     // Lost / pause reasons and the resume date live on the stage strip.
   ],
-  activities: [
-    'type',
-    'startAt',
-    'endAt',
-    'internalParticipants',
-    'externalParticipants',
-    'leadId',
-    'accountId',
-    'opportunityId',
-    'description',
-    'feedback',
-  ],
+  // Activities group their fields on a page of their own (see EntityDetail).
   // The decision fields are read-only rows: written by the approval actions.
   approvals: [
     'opportunityId',
@@ -613,6 +607,500 @@ export default function EntityDetail({
       ) : null}
     </span>
   );
+  // What the active tab shows, in the card or in the activity's right column.
+  const tabContent = (
+    <>
+      {activeTab === 'opportunityContacts' ? (
+        <OpportunityContacts
+          record={record}
+          editable={editable}
+          contacts={rows(detail.related.contacts) as CrmRecord[]}
+          contactsTotal={detail.relatedTotals?.contacts}
+          names={bareNames}
+          onSave={patch}
+          // A new person is created at the account, not on the deal:
+          // they then appear under "other contacts" to be added.
+          onCreate={
+            meta.permissions.contacts.create
+              ? () =>
+                  setForm({
+                    entity: 'contacts',
+                    initial: { accountId: record.accountId },
+                  })
+              : undefined
+          }
+        />
+      ) : activeTab === 'approvals' ? (
+        <div className='space-y-3'>
+          {editable && Boolean(meta.permissions.approvals.create) && (
+            <Button
+              size='sm'
+              variant='outline'
+              onClick={() =>
+                setForm({
+                  entity: 'approvals',
+                  initial: { opportunityId: id },
+                })
+              }
+            >
+              <Plus />
+              {text('newApproval')}
+            </Button>
+          )}
+          {!approvals.length ? (
+            <p className='text-sm text-muted-foreground'>{text('noRecords')}</p>
+          ) : (
+            <>
+              <ol className='relative ml-1.5 border-l border-border'>
+                {approvals.map((approval) => (
+                  <ApprovalItem key={toText(approval.id)} approval={approval} />
+                ))}
+              </ol>
+              {moreApprovals.hasMore && (
+                <Button
+                  className='mt-3'
+                  variant='ghost'
+                  size='sm'
+                  disabled={moreApprovals.loading}
+                  onClick={() => void moreApprovals.loadMore()}
+                >
+                  {text('loadMore')} · {moreApprovals.total - approvals.length}
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+      ) : activeTab === 'activities' ? (
+        <div className='space-y-3'>
+          {entity !== 'activities' &&
+            Boolean(meta.permissions.activities.create) && (
+              <Button
+                size='sm'
+                variant='outline'
+                onClick={() =>
+                  setForm({
+                    entity: 'activities',
+                    initial: relatedInput,
+                  })
+                }
+              >
+                <Plus />
+                {text('newActivity')}
+              </Button>
+            )}
+          {!activities.length ? (
+            <p className='text-sm text-muted-foreground'>
+              {text('noActivities')}
+            </p>
+          ) : (
+            <>
+              <ol className='relative ml-1.5 border-l border-border'>
+                {activities.map((activity) => (
+                  <ActivityItem key={toText(activity.id)} activity={activity} />
+                ))}
+              </ol>
+              {moreActivities.hasMore && (
+                <Button
+                  className='mt-3'
+                  variant='ghost'
+                  size='sm'
+                  disabled={moreActivities.loading}
+                  onClick={() => void moreActivities.loadMore()}
+                >
+                  {text('loadMore')} ·{' '}
+                  {moreActivities.total - activities.length}
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+      ) : activeTab === 'attachments' ? (
+        <RecordAttachments
+          entity={entity}
+          record={record}
+          activities={activities}
+          opportunities={linkedOpportunities}
+          approvals={approvals}
+          editable={editable}
+          onError={setError}
+          uploader={
+            editable && hasOwnFiles ? (
+              <UploadZone
+                entity={entity}
+                record={record}
+                busy={uploading}
+                setBusy={setUploading}
+                onError={setError}
+              />
+            ) : undefined
+          }
+        />
+      ) : activeTab === 'notes' ? (
+        <NotesPanel entity={entity} id={id} focusId={noteFocus} />
+      ) : activeTab === 'historyTab' ? (
+        <HistoryFeed
+          entity={entity}
+          id={id}
+          record={record}
+          initial={{
+            data: detail.history,
+            total: detail.historyTotal ?? detail.history.length,
+          }}
+          names={names}
+          statusKey={statusKey}
+          // A deal's AI follow-up is decided in its timeline, as a
+          // lead's: by whoever may edit it, while it is open.
+          editable={entity === 'opportunities' && editable && !closedDeal}
+          recordName={contextName}
+          focusId={focus?.id}
+          focusAt={focus?.at}
+          onOpenNote={(noteId) => {
+            setNoteFocus(noteId);
+            setTab('notes');
+          }}
+        />
+      ) : (
+        // A related list: name, status, owner, updated — with a create
+        // button where this object can start one of them.
+        <RelatedList
+          entity={activeTab as Entity}
+          records={rows(detail.related[activeTab as Entity]) as CrmRecord[]}
+          total={detail.relatedTotals?.[activeTab as Entity]}
+          base={`${activeTab}?${linkParam}`}
+          titles={names}
+          onCreate={
+            activeTab !== 'leads' &&
+            meta.permissions[activeTab as Entity]?.create
+              ? () =>
+                  setForm({
+                    entity: activeTab as Entity,
+                    initial: relatedInput,
+                  })
+              : undefined
+          }
+        />
+      )}
+    </>
+  );
+  // The page's dialogs.
+  const overlays = (
+    <>
+      {form && (
+        <RecordForm
+          {...form}
+          onClose={() => setForm(undefined)}
+          // An approval raised here shows up in this page's approvals tab;
+          // an activity in its activities tab. Other new records are opened.
+          onSaved={(r) => {
+            if (
+              !['activities', 'approvals'].includes(form.entity) &&
+              form.entity !== entity
+            ) {
+              if (drawer) drawer.open(form.entity, toText(r.id));
+              else void navigate(`/crm/${toText(form.entity)}/${toText(r.id)}`);
+            }
+          }}
+          andThen={
+            form.entity === 'approvals'
+              ? {
+                  label: text('saveAndSubmit'),
+                  run: async (r) => {
+                    await api(`approvals/${toText(r.id)}/submit`, 'POST', {
+                      comment: '',
+                    });
+                  },
+                }
+              : undefined
+          }
+        />
+      )}
+      {accountMove && (
+        <ConfirmDialog
+          title={text('changeAccountTitle')}
+          description={text('changeAccountContacts', {
+            names: dealContacts
+              .map((c) => {
+                const contactId = toText(c.contactId ?? '');
+                return bareNames[contactId] ?? names[contactId] ?? contactId;
+              })
+              .join('、'),
+          })}
+          busy={moving}
+          onCancel={() => {
+            accountMove.resolve();
+            setAccountMove(undefined);
+          }}
+          onConfirm={() => void confirmAccountMove()}
+        />
+      )}
+      {recording && (
+        <RecordOutcomeDialog
+          activity={record}
+          onClose={() => setRecording(false)}
+        />
+      )}
+      {confirmDelete && (
+        <ConfirmDialog
+          title={text('deleteRecordTitle', {
+            entity: text(`entity.${toText(entity)}`),
+            name: title,
+          })}
+          description={
+            blockerEntries.length ? (
+              // Blocked: say what is in the way, each linking to its tab,
+              // instead of a generic hint and a failed request.
+              <span className='block space-y-2'>
+                <span className='block'>
+                  {text(
+                    entity === 'opportunities'
+                      ? 'deleteOpportunityBlocked'
+                      : 'deleteBlocked',
+                  )}
+                </span>
+                {blockerEntries.map(([child, n]) => {
+                  // Name the records where the page already has them; fall
+                  // back to the count alone when it does not.
+                  const items = rows(detail.related[child]) as CrmRecord[];
+                  const shownItems = items.slice(0, 5);
+                  return (
+                    <span key={child} className='block text-sm'>
+                      <span className='text-foreground'>
+                        {text(`entities.${child}`)}（{n}）：
+                      </span>
+                      {shownItems.length
+                        ? shownItems.map((r, i) => (
+                            <span key={r.id}>
+                              {i > 0 && '、'}
+                              <RecordLink
+                                entity={child}
+                                record={{
+                                  id: r.id,
+                                  name: recordTitle(child, r, names),
+                                }}
+                              />
+                            </span>
+                          ))
+                        : null}
+                      {n > shownItems.length && (
+                        <button
+                          type='button'
+                          className='ml-1 text-primary hover:underline'
+                          onClick={() => {
+                            setConfirmDelete(false);
+                            setTab(child);
+                          }}
+                        >
+                          {text('andMore', { count: n - shownItems.length })}
+                        </button>
+                      )}
+                    </span>
+                  );
+                })}
+              </span>
+            ) : (
+              <span className='block space-y-1'>
+                <span className='block'>
+                  {text(
+                    entity === 'contacts'
+                      ? 'deleteContactHint'
+                      : entity === 'approvals'
+                        ? ['draft', 'withdrawn'].includes(toText(record.status))
+                          ? 'deleteApprovalHint'
+                          : 'deleteDecidedApprovalHint'
+                        : entity === 'activities'
+                          ? 'deleteActivityHint'
+                          : 'deleteHint',
+                  )}
+                </span>
+                {cascadedActivities.length > 0 && (
+                  <span className='block text-destructive'>
+                    {text('deleteAccountActivities', {
+                      count: cascadedActivities.length,
+                      entity: text(`entity.${toText(entity)}`),
+                    })}
+                  </span>
+                )}
+                {Object.entries(detail.unlinks ?? {})
+                  .filter(([, n]) => Number(n) > 0)
+                  .map(([child, n]) => (
+                    <span key={child} className='block'>
+                      {text('deleteContactUnlinks', {
+                        count: n,
+                        entity: text(`entities.${child}`),
+                      })}
+                    </span>
+                  ))}
+                {keptActivities.length > 0 && (
+                  <span className='block'>
+                    {text('deleteAccountKeptActivities', {
+                      count: keptActivities.length,
+                      entity: text(`entity.${toText(entity)}`),
+                    })}
+                  </span>
+                )}
+              </span>
+            )
+          }
+          busy={busy}
+          confirmDisabled={blockerEntries.length > 0}
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() => {
+            void (async () => {
+              setBusy(true);
+              setError(undefined);
+              try {
+                await api(`${toText(entity)}/${toText(id)}`, 'DELETE');
+                // Leave first: refreshing while still on the page refetches
+                // the record that no longer exists.
+                if (drawer?.inDrawer) drawer.close();
+                else void navigate(`/crm/${toText(entity)}`);
+                void refresh();
+              } catch (e) {
+                setError(e);
+                setConfirmDelete(false);
+              } finally {
+                setBusy(false);
+              }
+            })();
+          }}
+        />
+      )}
+    </>
+  );
+  // An activity is laid out as a lead: no header, its particulars in groups
+  // on the left and the timeline with its other tabs on the right.
+  if (entity === 'activities') {
+    const row = (key: string): ReactElement => (
+      <InfoRow key={key} label={text(fieldLabelKey(entity, key))}>
+        {inline(key)}
+      </InfoRow>
+    );
+    const time = (key: string): ReactElement => (
+      <InfoRow key={key} label={text(`fields.${key}`)}>
+        <div className='px-2 py-1.5'>
+          {localDate(record[key], language, meta.settings.timeZone)}
+        </div>
+      </InfoRow>
+    );
+    const tabIcons: Record<string, LucideIcon> = {
+      historyTab: History,
+      attachments: Paperclip,
+      notes: StickyNote,
+    };
+    return (
+      <DetailColumns
+        heading={
+          // A <div> with the heading role, since the editor brings block
+          // elements an <h1> may not hold.
+          <div
+            role='heading'
+            aria-level={1}
+            className='-mx-2 flex flex-wrap items-center'
+          >
+            <InlineField
+              entity={entity}
+              record={record}
+              field={field('name')}
+              editable={editable}
+              label={text(fieldLabelKey(entity, 'name'))}
+              size='heading'
+            />
+          </div>
+        }
+        actions={
+          <div className='flex flex-wrap items-center gap-2'>
+            {/* A planned activity: what came of it, recorded (and its lead
+                followed up anew), in one step. */}
+            {currentStatus === 'planned' && editable && (
+              <Button size='sm' onClick={() => setRecording(true)}>
+                <CalendarCheck />
+                {text('evaluation.recordOutcome')}
+              </Button>
+            )}
+            <AskAIButton entity={entity} recordId={id} name={contextName} />
+            {detail.permissions.delete && (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  aria-label={text('moreActions')}
+                  className={buttonVariants({
+                    size: 'icon-sm',
+                    variant: 'outline',
+                  })}
+                >
+                  <Ellipsis />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align='start'>
+                  <DropdownMenuItem
+                    variant='destructive'
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    <Trash2 />
+                    {text('deleteRecord', {
+                      entity: text('entity.activities'),
+                    })}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        }
+        // The timeline without a count, as on the lead page: its entries
+        // only grow.
+        tabBar={
+          <DetailTabBar
+            active={activeTab}
+            onSelect={setTab}
+            tabs={tabs.map(([name, label, count]) => ({
+              name,
+              label,
+              icon: tabIcons[name] ?? History,
+              count: name === 'historyTab' ? undefined : count,
+            }))}
+          />
+        }
+        notice={<ErrorNotice error={error ?? loadError} />}
+        left={
+          <>
+            {/* Who has it and where it stands, then what it is and when. */}
+            <InfoGroup title={text('activityGroups.general')}>
+              {row('ownerId')}
+              {statusKey && (
+                <InfoRow label={text(`fields.${statusKey}`)}>
+                  <StageField
+                    entity={entity}
+                    record={record}
+                    field={statusKey}
+                    editable={editable}
+                    title={title}
+                    onSave={patch}
+                  />
+                </InfoRow>
+              )}
+              {['type', 'startAt', 'endAt'].map(row)}
+            </InfoGroup>
+            <InfoGroup title={text('activityGroups.participants')}>
+              {['internalParticipants', 'externalParticipants'].map(row)}
+            </InfoGroup>
+            <InfoGroup title={text('activityGroups.related')}>
+              {['leadId', 'accountId', 'opportunityId'].map(row)}
+            </InfoGroup>
+            <InfoGroup title={text('activityGroups.content')}>
+              {['description', 'feedback'].map(row)}
+            </InfoGroup>
+            <InfoGroup title={text('activityGroups.system')}>
+              {time('createdAt')}
+              {time('updatedAt')}
+              {/* When it was done, under its last update. */}
+              {currentStatus === 'completed' && time('completedAt')}
+            </InfoGroup>
+          </>
+        }
+        right={tabContent}
+      >
+        {overlays}
+      </DetailColumns>
+    );
+  }
   return (
     <CrmFrame
       editableTitle
@@ -620,16 +1108,6 @@ export default function EntityDetail({
       description={`${toText(text(`entities.${toText(entity)}`))} ID: ${toText(record.id)}`}
       actions={
         <>
-          {/* A planned activity: what came of it, recorded (and its lead
-              followed up anew), in one step. */}
-          {entity === 'activities' &&
-            currentStatus === 'planned' &&
-            editable && (
-              <Button onClick={() => setRecording(true)}>
-                <CalendarCheck />
-                {text('evaluation.recordOutcome')}
-              </Button>
-            )}
           {entity === 'approvals' && (
             <ApprovalActions approval={record} names={names} />
           )}
@@ -771,12 +1249,12 @@ export default function EntityDetail({
         />
       )}
       <div className='@container'>
-        {/* An activity or an approval is mostly its own fields — long
-            description, feedback, a decision — with little on the right, so
-            those two give the left column the larger share. */}
+        {/* An approval is mostly its own fields — a long description, a
+            decision — with little on the right, so it gives the left column
+            the larger share. */}
         <div
           className={`grid items-start gap-6 ${toText(
-            ['activities', 'approvals'].includes(entity)
+            entity === 'approvals'
               ? '@3xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]'
               : '@3xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]',
           )}`}
@@ -959,374 +1437,11 @@ export default function EntityDetail({
                 ) : null}
               </div>
             </CardHeader>
-            <CardContent>
-              {activeTab === 'opportunityContacts' ? (
-                <OpportunityContacts
-                  record={record}
-                  editable={editable}
-                  contacts={rows(detail.related.contacts) as CrmRecord[]}
-                  contactsTotal={detail.relatedTotals?.contacts}
-                  names={bareNames}
-                  onSave={patch}
-                  // A new person is created at the account, not on the deal:
-                  // they then appear under "other contacts" to be added.
-                  onCreate={
-                    meta.permissions.contacts.create
-                      ? () =>
-                          setForm({
-                            entity: 'contacts',
-                            initial: { accountId: record.accountId },
-                          })
-                      : undefined
-                  }
-                />
-              ) : activeTab === 'approvals' ? (
-                <div className='space-y-3'>
-                  {editable && Boolean(meta.permissions.approvals.create) && (
-                    <Button
-                      size='sm'
-                      variant='outline'
-                      onClick={() =>
-                        setForm({
-                          entity: 'approvals',
-                          initial: { opportunityId: id },
-                        })
-                      }
-                    >
-                      <Plus />
-                      {text('newApproval')}
-                    </Button>
-                  )}
-                  {!approvals.length ? (
-                    <p className='text-sm text-muted-foreground'>
-                      {text('noRecords')}
-                    </p>
-                  ) : (
-                    <>
-                      <ol className='relative ml-1.5 border-l border-border'>
-                        {approvals.map((approval) => (
-                          <ApprovalItem
-                            key={toText(approval.id)}
-                            approval={approval}
-                          />
-                        ))}
-                      </ol>
-                      {moreApprovals.hasMore && (
-                        <Button
-                          className='mt-3'
-                          variant='ghost'
-                          size='sm'
-                          disabled={moreApprovals.loading}
-                          onClick={() => void moreApprovals.loadMore()}
-                        >
-                          {text('loadMore')} ·{' '}
-                          {moreApprovals.total - approvals.length}
-                        </Button>
-                      )}
-                    </>
-                  )}
-                </div>
-              ) : activeTab === 'activities' ? (
-                <div className='space-y-3'>
-                  {entity !== 'activities' &&
-                    Boolean(meta.permissions.activities.create) && (
-                      <Button
-                        size='sm'
-                        variant='outline'
-                        onClick={() =>
-                          setForm({
-                            entity: 'activities',
-                            initial: relatedInput,
-                          })
-                        }
-                      >
-                        <Plus />
-                        {text('newActivity')}
-                      </Button>
-                    )}
-                  {!activities.length ? (
-                    <p className='text-sm text-muted-foreground'>
-                      {text('noActivities')}
-                    </p>
-                  ) : (
-                    <>
-                      <ol className='relative ml-1.5 border-l border-border'>
-                        {activities.map((activity) => (
-                          <ActivityItem
-                            key={toText(activity.id)}
-                            activity={activity}
-                          />
-                        ))}
-                      </ol>
-                      {moreActivities.hasMore && (
-                        <Button
-                          className='mt-3'
-                          variant='ghost'
-                          size='sm'
-                          disabled={moreActivities.loading}
-                          onClick={() => void moreActivities.loadMore()}
-                        >
-                          {text('loadMore')} ·{' '}
-                          {moreActivities.total - activities.length}
-                        </Button>
-                      )}
-                    </>
-                  )}
-                </div>
-              ) : activeTab === 'attachments' ? (
-                <RecordAttachments
-                  entity={entity}
-                  record={record}
-                  activities={activities}
-                  opportunities={linkedOpportunities}
-                  approvals={approvals}
-                  editable={editable}
-                  onError={setError}
-                  uploader={
-                    editable && hasOwnFiles ? (
-                      <UploadZone
-                        entity={entity}
-                        record={record}
-                        busy={uploading}
-                        setBusy={setUploading}
-                        onError={setError}
-                      />
-                    ) : undefined
-                  }
-                />
-              ) : activeTab === 'notes' ? (
-                <NotesPanel entity={entity} id={id} focusId={noteFocus} />
-              ) : activeTab === 'historyTab' ? (
-                <HistoryFeed
-                  entity={entity}
-                  id={id}
-                  record={record}
-                  initial={{
-                    data: detail.history,
-                    total: detail.historyTotal ?? detail.history.length,
-                  }}
-                  names={names}
-                  statusKey={statusKey}
-                  // A deal's AI follow-up is decided in its timeline, as a
-                  // lead's: by whoever may edit it, while it is open.
-                  editable={
-                    entity === 'opportunities' && editable && !closedDeal
-                  }
-                  recordName={contextName}
-                  focusId={focus?.id}
-                  focusAt={focus?.at}
-                  onOpenNote={(noteId) => {
-                    setNoteFocus(noteId);
-                    setTab('notes');
-                  }}
-                />
-              ) : (
-                // A related list: name, status, owner, updated — with a create
-                // button where this object can start one of them.
-                <RelatedList
-                  entity={activeTab as Entity}
-                  records={
-                    rows(detail.related[activeTab as Entity]) as CrmRecord[]
-                  }
-                  total={detail.relatedTotals?.[activeTab as Entity]}
-                  base={`${activeTab}?${linkParam}`}
-                  titles={names}
-                  onCreate={
-                    activeTab !== 'leads' &&
-                    meta.permissions[activeTab as Entity]?.create
-                      ? () =>
-                          setForm({
-                            entity: activeTab as Entity,
-                            initial: relatedInput,
-                          })
-                      : undefined
-                  }
-                />
-              )}
-            </CardContent>
+            <CardContent>{tabContent}</CardContent>
           </Card>
         </div>
       </div>
-      {form && (
-        <RecordForm
-          {...form}
-          onClose={() => setForm(undefined)}
-          // An approval raised here shows up in this page's approvals tab;
-          // an activity in its activities tab. Other new records are opened.
-          onSaved={(r) => {
-            if (
-              !['activities', 'approvals'].includes(form.entity) &&
-              form.entity !== entity
-            ) {
-              if (drawer) drawer.open(form.entity, toText(r.id));
-              else void navigate(`/crm/${toText(form.entity)}/${toText(r.id)}`);
-            }
-          }}
-          andThen={
-            form.entity === 'approvals'
-              ? {
-                  label: text('saveAndSubmit'),
-                  run: async (r) => {
-                    await api(`approvals/${toText(r.id)}/submit`, 'POST', {
-                      comment: '',
-                    });
-                  },
-                }
-              : undefined
-          }
-        />
-      )}
-      {accountMove && (
-        <ConfirmDialog
-          title={text('changeAccountTitle')}
-          description={text('changeAccountContacts', {
-            names: dealContacts
-              .map((c) => {
-                const contactId = toText(c.contactId ?? '');
-                return bareNames[contactId] ?? names[contactId] ?? contactId;
-              })
-              .join('、'),
-          })}
-          busy={moving}
-          onCancel={() => {
-            accountMove.resolve();
-            setAccountMove(undefined);
-          }}
-          onConfirm={() => void confirmAccountMove()}
-        />
-      )}
-      {recording && (
-        <RecordOutcomeDialog
-          activity={record}
-          onClose={() => setRecording(false)}
-        />
-      )}
-      {confirmDelete && (
-        <ConfirmDialog
-          title={text('deleteRecordTitle', {
-            entity: text(`entity.${toText(entity)}`),
-            name: title,
-          })}
-          description={
-            blockerEntries.length ? (
-              // Blocked: say what is in the way, each linking to its tab,
-              // instead of a generic hint and a failed request.
-              <span className='block space-y-2'>
-                <span className='block'>
-                  {text(
-                    entity === 'opportunities'
-                      ? 'deleteOpportunityBlocked'
-                      : 'deleteBlocked',
-                  )}
-                </span>
-                {blockerEntries.map(([child, n]) => {
-                  // Name the records where the page already has them; fall
-                  // back to the count alone when it does not.
-                  const items = rows(detail.related[child]) as CrmRecord[];
-                  const shownItems = items.slice(0, 5);
-                  return (
-                    <span key={child} className='block text-sm'>
-                      <span className='text-foreground'>
-                        {text(`entities.${child}`)}（{n}）：
-                      </span>
-                      {shownItems.length
-                        ? shownItems.map((r, i) => (
-                            <span key={r.id}>
-                              {i > 0 && '、'}
-                              <RecordLink
-                                entity={child}
-                                record={{
-                                  id: r.id,
-                                  name: recordTitle(child, r, names),
-                                }}
-                              />
-                            </span>
-                          ))
-                        : null}
-                      {n > shownItems.length && (
-                        <button
-                          type='button'
-                          className='ml-1 text-primary hover:underline'
-                          onClick={() => {
-                            setConfirmDelete(false);
-                            setTab(child);
-                          }}
-                        >
-                          {text('andMore', { count: n - shownItems.length })}
-                        </button>
-                      )}
-                    </span>
-                  );
-                })}
-              </span>
-            ) : (
-              <span className='block space-y-1'>
-                <span className='block'>
-                  {text(
-                    entity === 'contacts'
-                      ? 'deleteContactHint'
-                      : entity === 'approvals'
-                        ? ['draft', 'withdrawn'].includes(toText(record.status))
-                          ? 'deleteApprovalHint'
-                          : 'deleteDecidedApprovalHint'
-                        : entity === 'activities'
-                          ? 'deleteActivityHint'
-                          : 'deleteHint',
-                  )}
-                </span>
-                {cascadedActivities.length > 0 && (
-                  <span className='block text-destructive'>
-                    {text('deleteAccountActivities', {
-                      count: cascadedActivities.length,
-                      entity: text(`entity.${toText(entity)}`),
-                    })}
-                  </span>
-                )}
-                {Object.entries(detail.unlinks ?? {})
-                  .filter(([, n]) => Number(n) > 0)
-                  .map(([child, n]) => (
-                    <span key={child} className='block'>
-                      {text('deleteContactUnlinks', {
-                        count: n,
-                        entity: text(`entities.${child}`),
-                      })}
-                    </span>
-                  ))}
-                {keptActivities.length > 0 && (
-                  <span className='block'>
-                    {text('deleteAccountKeptActivities', {
-                      count: keptActivities.length,
-                      entity: text(`entity.${toText(entity)}`),
-                    })}
-                  </span>
-                )}
-              </span>
-            )
-          }
-          busy={busy}
-          confirmDisabled={blockerEntries.length > 0}
-          onCancel={() => setConfirmDelete(false)}
-          onConfirm={() => {
-            void (async () => {
-              setBusy(true);
-              setError(undefined);
-              try {
-                await api(`${toText(entity)}/${toText(id)}`, 'DELETE');
-                // Leave first: refreshing while still on the page refetches
-                // the record that no longer exists.
-                if (drawer?.inDrawer) drawer.close();
-                else void navigate(`/crm/${toText(entity)}`);
-                void refresh();
-              } catch (e) {
-                setError(e);
-                setConfirmDelete(false);
-              } finally {
-                setBusy(false);
-              }
-            })();
-          }}
-        />
-      )}
+      {overlays}
     </CrmFrame>
   );
 }

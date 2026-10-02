@@ -99,6 +99,14 @@ const wording = {
     company: ['Company', '公司'],
     system: ['System', '系统'],
   },
+  // The activity page's particulars, grouped as the lead's.
+  activityGroups: {
+    general: ['General', '概况'],
+    participants: ['Participants', '参与人'],
+    related: ['Related to', '关联'],
+    content: ['Content', '内容'],
+    system: ['System', '系统'],
+  },
   region: ['Region', '地区'],
   loadMore: ['Load more', '加载更多'],
   requiredField: ['This field is required', '此字段必填'],
