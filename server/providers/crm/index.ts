@@ -23,6 +23,10 @@ import { CrmService, array } from './service.js';
 import { CrmError } from './schema.js';
 import { CrmSkillNotes, crmSkillNotesToken } from './skills.js';
 import { LeadEvaluator, leadEvaluatorToken } from './lead-evaluation.js';
+import {
+  OpportunityEvaluator,
+  opportunityEvaluatorToken,
+} from './opportunity-evaluation.js';
 import { createCrmUserRoleScope } from './user-roles.js';
 import { CrmAiResources } from '../../ai/index.js';
 import {
@@ -87,6 +91,15 @@ export default class CrmProvider extends ServiceProvider<Application> {
           this.app.container,
         ),
     );
+    // Deals followed up by the AI (opportunity-evaluation.ts).
+    this.app.container.singleton(
+      opportunityEvaluatorToken,
+      () =>
+        new OpportunityEvaluator(
+          this.app.container.resolve(crmToken),
+          this.app.container,
+        ),
+    );
     registerCrmResources(this.app.container.resolve(authorizationToken));
   }
   public override async boot(): Promise<void> {
@@ -137,6 +150,9 @@ export default class CrmProvider extends ServiceProvider<Application> {
     const evaluator = this.app.container.resolve(leadEvaluatorToken);
     this.app.container.resolve(crmToken).leadCreated = (by, leadId) =>
       void evaluator.request(by, leadId).catch(() => undefined);
+    const deals = this.app.container.resolve(opportunityEvaluatorToken);
+    this.app.container.resolve(crmToken).opportunityOpened = (by, id) =>
+      void deals.request(by, id).catch(() => undefined);
     this.cron = createCronJobManager();
     this.cron.addJob({ cronTime: '*/30 * * * * *', onTick: () => this.scan() });
     this.cron.start();

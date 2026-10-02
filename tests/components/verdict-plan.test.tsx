@@ -128,7 +128,7 @@ describe('the activity a follow-up card creates', () => {
     render(
       <VerdictPanel
         entry={entry}
-        leadId='lead-1'
+        recordId='lead-1'
         editable
         onChanged={() => Promise.resolve()}
       />,
@@ -184,7 +184,7 @@ describe('the activity a follow-up card creates', () => {
     render(
       <VerdictPanel
         entry={entry}
-        leadId='lead-1'
+        recordId='lead-1'
         editable
         onChanged={() => Promise.resolve()}
       />,
@@ -198,7 +198,7 @@ describe('the activity a follow-up card creates', () => {
     render(
       <VerdictPanel
         entry={entry}
-        leadId='lead-1'
+        recordId='lead-1'
         editable={false}
         onChanged={() => Promise.resolve()}
       />,
@@ -246,7 +246,7 @@ describe('a follow-up that carries on an overdue activity', () => {
             },
           },
         }}
-        leadId='lead-1'
+        recordId='lead-1'
         editable
         onChanged={() => Promise.resolve()}
       />,
@@ -350,7 +350,7 @@ describe('a follow-up that carries on a planned activity', () => {
     render(
       <VerdictPanel
         entry={carry({ subject: '方案', body: '您好。' })}
-        leadId='lead-1'
+        recordId='lead-1'
         editable
         onChanged={() => Promise.resolve()}
       />,
@@ -364,7 +364,7 @@ describe('a follow-up that carries on a planned activity', () => {
     render(
       <VerdictPanel
         entry={carry({ subject: '方案', body: '您好，附上案例。' })}
-        leadId='lead-1'
+        recordId='lead-1'
         editable
         onChanged={() => Promise.resolve()}
       />,
@@ -382,7 +382,7 @@ describe('a follow-up that carries on a planned activity', () => {
     render(
       <VerdictPanel
         entry={carry({ subject: '方案', body: '您好。' })}
-        leadId='lead-1'
+        recordId='lead-1'
         editable
         onChanged={() => Promise.resolve()}
       />,
@@ -423,6 +423,108 @@ describe('a follow-up that carries on a planned activity', () => {
           followUp: false,
         }),
       }),
+    );
+  });
+});
+
+describe("a deal's follow-up card", () => {
+  const deal = (result: Record<string, unknown>) => ({
+    id: 'entry-2',
+    status: 'pending' as const,
+    createdAt: '2026-10-01T02:00:00.000Z',
+    ai: {
+      result: {
+        recommendation: 'advance' as const,
+        confidence: 'medium' as const,
+        stage: 'validation',
+        summary: '演示做过，客户试用反馈良好',
+        reasons: ['上周演示（活动）'],
+        risks: ['还没见过拍板人'],
+        nextStep: { type: 'meeting', subject: '技术评估会', inDays: 2 },
+        prep: ['带上部署方案'],
+        questions: [],
+        email: null,
+        updates: [
+          {
+            field: 'expectedCloseAt' as const,
+            value: '2026-12-31',
+            reason: '客户说年底上线',
+            current: null,
+          },
+          {
+            field: 'amount' as const,
+            value: '60000',
+            reason: '加了实施服务',
+            current: '50000',
+          },
+        ],
+        pauseReason: null,
+        resumeInDays: null,
+        lostReason: null,
+        revisitInDays: null,
+        changes: [],
+        ...result,
+      },
+    },
+  });
+
+  it('advances the stage with the updates still ticked and plans the next step', async () => {
+    render(
+      <VerdictPanel
+        entity='opportunities'
+        entry={deal({})}
+        recordId='opp-1'
+        editable
+        onChanged={() => Promise.resolve()}
+      />,
+    );
+    // The verdict in a few words, the stage it moves to and its risks.
+    expect(screen.getByText('推进到方案验证 · 把握中')).toBeTruthy();
+    expect(screen.getByText('改为方案验证')).toBeTruthy();
+    expect(screen.getByText('还没见过拍板人')).toBeTruthy();
+    // Both changes ticked; the amount is unticked here.
+    const boxes = screen.getAllByRole('checkbox');
+    expect(boxes).toHaveLength(2);
+    await userEvent.click(boxes[1]);
+    expect(screen.getByRole('button', { name: '名称' }).textContent).toBe(
+      '技术评估会',
+    );
+    await userEvent.click(screen.getByRole('button', { name: '采纳并推进' }));
+    expect(state.api).toHaveBeenCalledWith(
+      'opportunities/opp-1/evaluation/entry-2',
+      'POST',
+      { decision: 'accept', fields: ['expectedCloseAt'], activity: {} },
+    );
+  });
+
+  it('pauses with the task to resume it', async () => {
+    render(
+      <VerdictPanel
+        entity='opportunities'
+        entry={deal({
+          recommendation: 'pause',
+          stage: null,
+          nextStep: null,
+          prep: [],
+          updates: [],
+          pauseReason: 'budgetDeferred',
+          resumeInDays: 60,
+        })}
+        recordId='opp-1'
+        editable
+        onChanged={() => Promise.resolve()}
+      />,
+    );
+    expect(screen.getByText('预算推迟')).toBeTruthy();
+    // The task named as the server names it: the deal, then what it is.
+    expect(screen.getByRole('button', { name: '名称' }).textContent).toBe(
+      '张伟 恢复跟进',
+    );
+    await userEvent.click(screen.getByRole('button', { name: '采纳并暂停' }));
+    expect(state.api).toHaveBeenCalledWith(
+      'opportunities/opp-1/evaluation/entry-2',
+      'POST',
+      { decision: 'accept', fields: [], activity: {} },
     );
   });
 });

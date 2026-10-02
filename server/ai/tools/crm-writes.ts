@@ -249,6 +249,12 @@ export function crmWriteTools(
             ...input
           } = (raw ?? {}) as Row;
           const lead = await convertLead(service, actor, toText(id), input);
+          // The deal it opened is followed up by the AI at once.
+          if (lead.convertedOpportunityId)
+            service.opportunityOpened?.(
+              actor,
+              toText(lead.convertedOpportunityId),
+            );
           return summary('leads', lead, input);
         });
       },

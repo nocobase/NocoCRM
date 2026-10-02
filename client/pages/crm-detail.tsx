@@ -479,14 +479,14 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   const aiTools = meta?.assistant ? (
     <div className='flex flex-wrap items-center gap-1'>
       <EvaluationStatus
-        leadId={id}
+        recordId={id}
         onOpen={(entryId) => {
           setFocus({ id: entryId, at: Date.now() });
           setTab('historyTab');
         }}
       />
       {!converted && editable && (
-        <EvaluateButton leadId={id} onError={setError} />
+        <EvaluateButton recordId={id} onError={setError} />
       )}
     </div>
   ) : null;
@@ -499,48 +499,6 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       assistant={false}
     >
       <ErrorNotice error={error ?? loadError} />
-      {/* The AI's verdict on the lead, and the owner's decision on it. */}
-      {converted && (
-        <div className='flex gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4'>
-          <ArrowRightLeft className='mt-0.5 size-4 shrink-0 text-primary' />
-          <div className='min-w-0 flex-1 space-y-3'>
-            <p className='text-sm text-muted-foreground'>
-              {text('convertedHint')}
-            </p>
-            {/* A fixed grid, not a wrapping row: the three slots keep their
-                columns so the labels line up, and an empty one is shown rather
-                than dropped — "no opportunity" is itself worth seeing. */}
-            <dl className='grid gap-x-6 gap-y-3 sm:grid-cols-3'>
-              {[
-                ['accounts', 'convertedAccountId'],
-                ['contacts', 'convertedContactId'],
-                ['opportunities', 'convertedOpportunityId'],
-              ].map(([e, key]) => (
-                <div className='flex min-w-0 items-center gap-2' key={key}>
-                  <dt className='shrink-0 text-sm text-muted-foreground'>
-                    {text(`entities.${toText(e)}`)}
-                  </dt>
-                  <dd className='min-w-0 flex-1 truncate text-sm'>
-                    {record[key] ? (
-                      <RecordLink
-                        entity={e as Entity}
-                        record={{
-                          id: toText(record[key]),
-                          name:
-                            names[toText(record[key])] ??
-                            text(`entities.${toText(e)}`),
-                        }}
-                      />
-                    ) : (
-                      <span className='text-muted-foreground'>—</span>
-                    )}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-        </div>
-      )}
       {/* Container query, not a viewport one: opening the AI panel narrows this
           area without changing the viewport, and a viewport breakpoint would
           keep both columns in a box too small for them. */}
@@ -616,7 +574,45 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                       }))}
                       onSave={patch}
                     />
+                    {/* A converted lead is read-only: its work goes on in
+                        what it became, listed under its status. */}
+                    {converted && (
+                      <p className='px-2 pb-1 text-xs text-muted-foreground'>
+                        {text('convertedHint')}
+                      </p>
+                    )}
                   </InfoRow>
+                  {converted && (
+                    <>
+                      {(
+                        [
+                          ['accounts', 'convertedAccountId'],
+                          ['contacts', 'convertedContactId'],
+                          ['opportunities', 'convertedOpportunityId'],
+                        ] as const
+                      ).map(([e, key]) => (
+                        <InfoRow key={key} label={text(`fields.${key}`)}>
+                          {/* An empty one is shown rather than dropped: "no
+                              opportunity" is itself worth seeing. */}
+                          <div className='px-2 py-1.5'>
+                            {record[key] ? (
+                              <RecordLink
+                                entity={e}
+                                record={{
+                                  id: toText(record[key]),
+                                  name:
+                                    names[toText(record[key])] ??
+                                    text(`entities.${e}`),
+                                }}
+                              />
+                            ) : (
+                              <span className='text-muted-foreground'>—</span>
+                            )}
+                          </div>
+                        </InfoRow>
+                      ))}
+                    </>
+                  )}
                   {leadGroups[0][1].map(fieldRow)}
                 </InfoGroup>
                 {leadGroups.slice(1).map(([group, keys]) => (
@@ -634,21 +630,27 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                       )}
                     </div>
                   </InfoRow>
-                  {/* A converted lead is frozen, so its last update is the
-                    conversion: showing both would be the same moment twice. */}
-                  <InfoRow
-                    label={text(
-                      converted ? 'fields.convertedAt' : 'fields.updatedAt',
-                    )}
-                  >
+                  <InfoRow label={text('fields.updatedAt')}>
                     <div className='px-2 py-1.5'>
                       {localDate(
-                        converted ? record.convertedAt : record.updatedAt,
+                        record.updatedAt,
                         language,
                         meta.settings.timeZone,
                       )}
                     </div>
                   </InfoRow>
+                  {/* When it was converted, under its last update. */}
+                  {converted && (
+                    <InfoRow label={text('fields.convertedAt')}>
+                      <div className='px-2 py-1.5'>
+                        {localDate(
+                          record.convertedAt,
+                          language,
+                          meta.settings.timeZone,
+                        )}
+                      </div>
+                    </InfoRow>
+                  )}
                 </InfoGroup>
               </div>
             </section>
@@ -1754,7 +1756,9 @@ function ActivityEvent({
           </span>
         ) : null
       ) : toText(event.toValue) === 'completed' && activity.feedback ? (
-        <span className='min-w-0 truncate text-muted-foreground'>
+        // Only the room the name leaves (no basis of its own), so a long
+        // outcome is what gets cut, never the name.
+        <span className='min-w-0 flex-1 basis-0 truncate text-muted-foreground'>
           · {markdownLine(toText(activity.feedback))}
         </span>
       ) : null}
@@ -1905,6 +1909,9 @@ export function HistoryFeed({
         ? { data: filtered.data.data, total: filtered.data.total }
         : undefined,
   );
+  // The records the AI follows up, whose waiting cards are handled here.
+  const followed =
+    entity === 'leads' || entity === 'opportunities' ? entity : undefined;
   // The newest AI evaluation shown (the feed comes newest first).
   const latestEvaluation = toText(
     more.records.find((event) => event.action === 'ai')?.id ?? '',
@@ -2016,7 +2023,7 @@ export function HistoryFeed({
                   // marked edited).
                   const note = event.action === 'note';
                   const pending =
-                    ai && entity === 'leads' && event.aiStatus === 'pending';
+                    ai && followed && event.aiStatus === 'pending';
                   const open = pending || focus === key || opened.has(key);
                   // Files added or removed show the attachments' clip.
                   // An entry of one of the record's activities: planned,
@@ -2264,8 +2271,9 @@ export function HistoryFeed({
                                   ai: event.ai,
                                 } as EvaluationEntry
                               }
-                              leadId={id}
-                              leadName={recordName}
+                              entity={followed}
+                              recordId={id}
+                              recordName={recordName}
                               editable={editable}
                               onChanged={refresh}
                             />
@@ -2283,8 +2291,9 @@ export function HistoryFeed({
                                   ai: event.ai,
                                 } as EvaluationEntry
                               }
-                              leadId={id}
-                              leadName={recordName}
+                              entity={followed}
+                              recordId={id}
+                              recordName={recordName}
                               // The lead's latest evaluation may be run again;
                               // an earlier one is only its record.
                               editable={editable && key === latestEvaluation}

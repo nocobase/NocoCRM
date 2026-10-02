@@ -110,6 +110,8 @@ const wording = {
   noAttachments: ['No attachments yet', '暂无附件'],
   // Beside the button that creates a lead.
   leadFollowUpNow: ['AI follows up at once', 'AI 立刻跟进'],
+  // Under a conversion that opens an opportunity.
+  dealFollowUpNow: ['AI follows up the opportunity at once', 'AI 立刻跟进商机'],
   historyTab: ['Timeline', '动态'],
   feed: {
     all: ['All', '全部'],
@@ -209,6 +211,31 @@ const wording = {
     },
     // A value the AI left empty, in its own words of what changed.
     none: ['none', '无'],
+    // An opportunity's follow-up (opportunity-evaluation.ts): its
+    // recommendations, how likely it is to close, and what accepting does.
+    deal: {
+      advance: ['Advance', '推进'],
+      advanceTo: ['Advance to {{stage}}', '推进到{{stage}}'],
+      continue: ['Keep at it', '继续推进'],
+      pause: ['Pause', '暂停'],
+      lose: ['Mark lost', '输单'],
+      confidence: {
+        high: ['Likely', '把握高'],
+        medium: ['Possible', '把握中'],
+        low: ['Unlikely', '把握低'],
+      },
+      toStage: ['Move to {{stage}}', '改为{{stage}}'],
+      risks: ['Risks', '风险'],
+      resume: ['Resume', '恢复跟进'],
+      revisit: ['Revisit', '回访'],
+      updates: ['Suggested changes', '建议调整'],
+      acceptAdvance: ['Accept and advance', '采纳并推进'],
+      acceptPause: ['Accept and pause', '采纳并暂停'],
+      acceptLose: ['Accept and mark lost', '采纳并标为输单'],
+      // The task accepting plans to come back to the deal, after its name.
+      resumeName: ['resume', '恢复跟进'],
+      revisitName: ['revisit', '回访'],
+    },
     review: ['Review', '复查'],
     acceptFollow: ['Accept and plan the contact', '采纳并安排联系'],
     acceptNurture: ['Accept and nurture', '采纳并放入培育'],
@@ -246,7 +273,7 @@ const wording = {
     organiseOutcome: ['AI organise', 'AI 整理'],
     organising: ['Organising…', '正在整理…'],
     followUpAfter: [
-      'Let the AI follow the lead up once recorded',
+      'Let the AI follow up again once recorded',
       '记录后让 AI 继续跟进',
     ],
     recordOutcome: ['Record the outcome', '记录结果'],
@@ -423,6 +450,8 @@ const wording = {
     '该客户已有进行中的商机：',
   ],
   newAccountName: ['New account name', '新客户名称'],
+  // An empty field the conversion needs, in its row.
+  requiredEmpty: ['Required', '必填'],
   createOpportunity: ['Also create an opportunity', '同时创建商机'],
   overwriteFields: ['Overwrite these existing values', '覆盖以下已有值'],
   submit: ['Submit for approval', '提交审批'],
@@ -567,8 +596,8 @@ const wording = {
   decisions: {
     title: ['Waiting on me', '待我处理'],
     description: [
-      'What the AI suggests and waits for you to handle: its follow-up recommendations for your leads.',
-      'AI 提出、等你处理的建议：目前是线索的跟进建议。',
+      'What the AI suggests and waits for you to handle: its follow-up recommendations for your leads and opportunities.',
+      'AI 提出、等你处理的建议：线索和商机的跟进建议。',
     ],
     empty: ['Nothing is waiting on you.', '没有等你处理的事。'],
     openRecord: ['Open the record', '在记录中查看'],
@@ -1233,6 +1262,10 @@ const wording = {
     convertFirst: [
       'Convert the lead first; accepting records it.',
       '请先完成转化，采纳会在转化后记录。',
+    ],
+    opportunityClosed: [
+      'This opportunity is won or lost; there is nothing to follow up.',
+      '这个商机已经赢单或输单，不需要再跟进。',
     ],
     assistantUnavailable: [
       'The AI assistant is off or has no model configured. Enter the lead in the form instead.',

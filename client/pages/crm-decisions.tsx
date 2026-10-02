@@ -28,20 +28,35 @@ import {
 const isDecided = (entry: EvaluationEntry): boolean =>
   entry.status === 'accepted' || entry.status === 'dismissed';
 
-// A lead's evaluation waiting on its decision.
+// A lead's or a deal's follow-up waiting on its decision, with the record
+// it concerns.
 interface EvaluationItem extends EvaluationEntry {
-  lead: {
+  entity: 'leads' | 'opportunities';
+  lead?: {
     id: string;
     name: string;
     company: string | null;
     ownerId: string | null;
     status: string;
   };
+  opportunity?: {
+    id: string;
+    name: string;
+    account: string | null;
+    ownerId: string | null;
+    stage: string;
+  };
 }
 
+// The record an item concerns, whichever it is.
+const recordOf = (
+  entry: EvaluationItem,
+): { id: string; name: string; ownerId: string | null } =>
+  (entry.lead ?? entry.opportunity)!;
+
 // What waits on the reader (server/providers/crm/lead-evaluation.ts,
-// pendingDecisions): each new lead's evaluation. The reader's own leads,
-// or, for someone who may edit every lead, the team's. A list on the left,
+// pendingDecisions): the AI's follow-ups of leads and deals. The reader's
+// own, or, for someone who may edit every lead, the team's. A list on the left,
 // the chosen one on the right, decided there as on the lead's page. The
 // assistant's cards in a conversation are decided there, not here: a card
 // left undecided lapses once the conversation moves on.
@@ -75,10 +90,13 @@ export default function DecisionsPage(): ReactElement {
   // list.
   const current = items.find((entry) => entry.id === chosen) ?? items[0];
   const nameOf = (entry: EvaluationItem): string =>
-    recordTitle('leads', entry.lead as unknown as CrmRecord);
-  const kind = sentence(text('entity.leads'));
+    entry.lead
+      ? recordTitle('leads', entry.lead as unknown as CrmRecord)
+      : toText(entry.opportunity?.name);
+  const kindOf = (entry: EvaluationItem): string =>
+    sentence(text(`entity.${entry.entity}`));
   const ownerOf = (entry: EvaluationItem): string =>
-    toText(meta?.users.find((u) => u.id === entry.lead.ownerId)?.name);
+    toText(meta?.users.find((u) => u.id === recordOf(entry).ownerId)?.name);
   const when = (at: string): string =>
     localDate(at, language, meta?.settings.timeZone ?? 'Asia/Shanghai');
   return (
@@ -171,7 +189,7 @@ export default function DecisionsPage(): ReactElement {
                             on the right, so the verdict is the one tag. */}
                         <span className='flex min-w-0 items-center gap-2'>
                           <span className='shrink-0 text-xs text-muted-foreground'>
-                            {kind}
+                            {kindOf(entry)}
                           </span>
                           <span className='truncate font-medium'>
                             {nameOf(entry)}
@@ -231,7 +249,7 @@ export default function DecisionsPage(): ReactElement {
                 entry={current}
                 onRevised={(next) => setChosen(next.id)}
                 name={nameOf(current)}
-                kind={kind}
+                kind={kindOf(current)}
                 owner={ownerOf(current)}
                 when={when}
               />
@@ -293,8 +311,8 @@ function DetailHeading({
   );
 }
 
-// A lead's evaluation, decided here as on the lead's page, or opened in the
-// lead's timeline, where it is brought into view and marked.
+// A lead's or a deal's follow-up, decided here as on its page, or opened in
+// its timeline, where it is brought into view and marked.
 function EvaluationDetail({
   entry,
   name,
@@ -318,6 +336,15 @@ function EvaluationDetail({
         name={name}
         kind={kind}
         facts={[
+          ...(entry.opportunity
+            ? ([
+                ['fields.accountId', toText(entry.opportunity.account)],
+                [
+                  'fields.stage',
+                  toText(text(`options.${entry.opportunity.stage}`)),
+                ],
+              ] as [string, string][])
+            : []),
           ['fields.ownerId', owner],
           ['decisions.evaluatedAt', when(entry.createdAt)],
         ]}
@@ -328,7 +355,7 @@ function EvaluationDetail({
             nativeButton={false}
             render={
               <Link
-                to={`/crm/leads/${entry.lead.id}/history?focus=${entry.id}`}
+                to={`/crm/${entry.entity}/${recordOf(entry).id}/history?focus=${entry.id}`}
               />
             }
           >
@@ -339,11 +366,12 @@ function EvaluationDetail({
       />
       <VerdictPanel
         key={entry.id}
+        entity={entry.entity}
         entry={entry}
-        leadId={entry.lead.id}
-        leadName={name}
+        recordId={recordOf(entry).id}
+        recordName={name}
         editable
-        // Whole, waiting or decided, as the lead's timeline shows it.
+        // Whole, waiting or decided, as the record's timeline shows it.
         full
         onRevised={onRevised}
         onChanged={async () => {

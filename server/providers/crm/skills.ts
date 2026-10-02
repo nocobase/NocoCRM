@@ -15,21 +15,23 @@ import { LONG_TEXT_LIMIT } from './limits.js';
 import { CrmError, object, toText } from './schema.js';
 import { encodeRow, jsonValue } from './values.js';
 
-// The CRM's own AI skill (ai/skills/<name>/SKILL.md): how the assistant
+// The CRM's own AI skills (ai/skills/<name>/SKILL.md): how the assistant
 // follows up a lead — where it stands, what to recommend and what to do
 // next, from its first evaluation on (the former lead evaluation and lead
-// follow-up skills, merged). The files ship with the source and change with
-// it. Everyone reads them on the Sales skills page of the main menu, and
-// whoever holds the sales capability manageSkills (sales managers and
-// administrators by default) adds the company's own practice there as notes,
-// which are stored in crm_settings and appended to the skill the AI loads;
-// the plugin's read-only skill catalog shows that composed skill. The notes
-// only add to the skill (NocoSolution's layering: what a customer adds may
-// not overrule what ships), and the wording that joins them says so. The AI
-// Employee plugin keeps skills in memory, registered from the files at boot,
-// so the composed skill is registered again at start and after every save; a
-// restart rebuilds it from the file and the stored notes.
-export const CRM_SKILLS = ['lead-follow-up'] as const;
+// follow-up skills, merged) — and how it moves an opportunity through the
+// sales stages (opportunity-follow-up, opportunity-evaluation.ts). The files
+// ship with the source and change with it. Everyone reads them on the Sales
+// skills page of the main menu, and whoever holds the sales capability
+// manageSkills (sales managers and administrators by default) adds the
+// company's own practice there as notes, which are stored in crm_settings
+// and appended to the skill the AI loads; the plugin's read-only skill
+// catalog shows that composed skill. The notes only add to the skill
+// (NocoSolution's layering: what a customer adds may not overrule what
+// ships), and the wording that joins them says so. The AI Employee plugin
+// keeps skills in memory, registered from the files at boot, so the composed
+// skill is registered again at start and after every save; a restart
+// rebuilds it from the file and the stored notes.
+export const CRM_SKILLS = ['lead-follow-up', 'opportunity-follow-up'] as const;
 export type CrmSkillName = (typeof CRM_SKILLS)[number];
 
 const NOTES_ID = 'skill-notes';

@@ -27,6 +27,10 @@ import {
   leadEvaluatorToken,
   pendingDecisions,
 } from '../providers/crm/lead-evaluation.js';
+import {
+  latestOpportunityEvaluation,
+  opportunityEvaluatorToken,
+} from '../providers/crm/opportunity-evaluation.js';
 import { screenProposal } from '../ai/screen.js';
 import {
   capability,
@@ -561,6 +565,56 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         ),
       });
     });
+    // The same for a deal (opportunity-evaluation.ts): its newest follow-up,
+    // asking for another or redoing a waiting one, and the decision on it.
+    const dealEvaluator = () =>
+      app.container.has(opportunityEvaluatorToken)
+        ? app.container.resolve(opportunityEvaluatorToken)
+        : undefined;
+    routes.get('/opportunities/:id/evaluation', async (c) =>
+      c.json({
+        data: await latestOpportunityEvaluation(
+          service,
+          c.get('actor'),
+          c.req.param('id'),
+        ),
+      }),
+    );
+    routes.post('/opportunities/:id/evaluation', async (c) => {
+      const actor = c.get('actor');
+      await service.get(
+        actor,
+        'opportunities',
+        c.req.param('id'),
+        undefined,
+        'update',
+      );
+      const body = object(await c.req.json().catch(() => ({})));
+      const entry = await dealEvaluator()?.request(
+        actor,
+        c.req.param('id'),
+        body.revise
+          ? { entryId: body.revise, instruction: body.instruction }
+          : undefined,
+      );
+      if (!entry) throw new CrmError('assistantUnavailable', 409);
+      return c.json({ data: entry }, 201);
+    });
+    routes.post('/opportunities/:id/evaluation/:entryId', async (c) => {
+      const run = dealEvaluator();
+      if (!run) throw new CrmError('assistantUnavailable', 409);
+      const body = object(await c.req.json());
+      return c.json({
+        data: await run.decide(
+          c.get('actor'),
+          c.req.param('id'),
+          c.req.param('entryId'),
+          toText(body.decision) as 'accept',
+          body.fields,
+          body.activity,
+        ),
+      });
+    });
     routes.post('/leads/:id/evaluation/:entryId', async (c) => {
       const run = evaluator();
       if (!run) throw new CrmError('assistantUnavailable', 409);
@@ -608,7 +662,7 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
       c.json({
         data: await recordOutcome(
           service,
-          evaluator(),
+          { leads: evaluator(), opportunities: dealEvaluator() },
           c.get('actor'),
           c.req.param('id'),
           await c.req.json(),
@@ -633,16 +687,23 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         },
       });
     });
-    routes.post('/leads/:id/convert', async (c) =>
-      c.json({
-        data: await convertLead(
-          service,
+    routes.post('/leads/:id/convert', async (c) => {
+      const body = object(await c.req.json());
+      const lead = await convertLead(
+        service,
+        c.get('actor'),
+        c.req.param('id'),
+        body,
+      );
+      // The deal it opened is followed up by the AI at once, unless the
+      // person converting unticked that (`followUp: false`).
+      if (lead.convertedOpportunityId && body.followUp !== false)
+        service.opportunityOpened?.(
           c.get('actor'),
-          c.req.param('id'),
-          await c.req.json(),
-        ),
-      }),
-    );
+          toText(lead.convertedOpportunityId),
+        );
+      return c.json({ data: lead });
+    });
     routes.post('/approvals/:id/:action', async (c) =>
       c.json({
         data: await service.approvalAction(
@@ -749,12 +810,14 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         ...(await resolveTitles(service, c.get('actor'), {
           [entity]: result.data,
         })),
-        // Leads the AI is evaluating or has a verdict waiting on.
-        ...(entity === 'leads'
+        // Leads and deals the AI is following up or has a verdict waiting
+        // on.
+        ...(entity === 'leads' || entity === 'opportunities'
           ? {
               ai: await aiStates(
                 service,
                 result.data.map((record) => toText(record.id)),
+                entity,
               ),
             }
           : {}),

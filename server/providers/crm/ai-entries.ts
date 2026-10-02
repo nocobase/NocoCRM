@@ -34,7 +34,12 @@ export interface Verdict {
   prep?: string[];
   questions: string[];
   // Converting: the opportunity to open.
-  opportunity?: { name: string; amount: number | null } | null;
+  // Its currency, when the AI named one; else the CRM's default.
+  opportunity?: {
+    name: string;
+    amount: number | null;
+    currency?: string | null;
+  } | null;
   // Nurturing: when to look at it again.
   reviewInDays?: number | null;
   // What changed since the previous recommendation, when there was one.
@@ -43,6 +48,40 @@ export interface Verdict {
   email?: { subject: string; body: string } | null;
   // Particulars found on the web, offered to fill the lead.
   enrich?: Enrichment[];
+}
+
+// An opportunity's follow-up recommendation (opportunity-evaluation.ts):
+// move it to another stage, keep at it where it is, pause it or lose it,
+// with how likely it is to close, the reasons, the risks and what to do
+// next.
+export interface OpportunityVerdict {
+  recommendation: 'advance' | 'continue' | 'pause' | 'lose';
+  confidence: 'high' | 'medium' | 'low' | null;
+  // Advancing (or going back): the stage the evidence supports.
+  stage: string | null;
+  summary: string;
+  reasons: string[];
+  risks: string[];
+  nextStep: Verdict['nextStep'];
+  prep: string[];
+  questions: string[];
+  email: { subject: string; body: string } | null;
+  // The amount or the expected close date to change, with why, and what the
+  // deal holds now (null when empty).
+  updates: OpportunityUpdate[];
+  pauseReason: string | null;
+  resumeInDays: number | null;
+  lostReason: string | null;
+  // Lost: when to look in on the customer again, if worth it.
+  revisitInDays: number | null;
+  changes: string[];
+}
+
+export interface OpportunityUpdate {
+  field: 'amount' | 'expectedCloseAt';
+  value: string;
+  reason: string;
+  current: string | null;
 }
 
 // A value found on the web for one of the lead's fields, with its source and
@@ -54,16 +93,16 @@ export interface Enrichment {
   current: string | null;
 }
 
-export interface EvaluationEntry {
+export interface EvaluationEntry<V = Verdict> {
   id: string;
   recordId: string;
-  // `superseded`: a newer evaluation of the same lead replaced it.
+  // `superseded`: a newer evaluation of the same record replaced it.
   status:
     'running' | 'pending' | 'accepted' | 'dismissed' | 'failed' | 'superseded';
   createdAt: string;
   ai: {
     kind: typeof EVALUATION;
-    result?: Verdict;
+    result?: V;
     error?: string;
     sessionId?: string;
     decidedById?: string;
@@ -81,11 +120,14 @@ export interface EvaluationEntry {
     enrichedFields?: string[];
     enrichedById?: string;
     enrichedAt?: string;
+    // The deal's fields the person kept with an accept (an opportunity's
+    // amount or expected close date).
+    updatedFields?: string[];
   };
 }
 
-export function readEntry(row: Row): EvaluationEntry {
-  const ai = (jsonValue(row.ai) ?? {}) as EvaluationEntry['ai'];
+export function readEntry<V = Verdict>(row: Row): EvaluationEntry<V> {
+  const ai = (jsonValue(row.ai) ?? {}) as EvaluationEntry<V>['ai'];
   let status = toText(row.aiStatus) as EvaluationEntry['status'];
   if (
     status === 'running' &&

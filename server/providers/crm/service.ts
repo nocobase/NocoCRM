@@ -369,6 +369,11 @@ export class CrmService {
   // ways a lead is created one at a time outside the create route: the
   // assistant's create tool. Imports and the demo data are not evaluated.
   leadCreated?: (by: Actor, leadId: string) => void;
+  // Set by CrmProvider to the opportunity follow-up
+  // (opportunity-evaluation.ts), for a deal a conversion opened: the
+  // conversion route (unless the person unticked it) and the assistant's
+  // conversion tool.
+  opportunityOpened?: (by: Actor, opportunityId: string) => void;
   // Set by CrmProvider: the settings were saved (the assistant's prompt
   // follows the AI language setting).
   settingsSaved?: (settings: CrmSettings) => void;

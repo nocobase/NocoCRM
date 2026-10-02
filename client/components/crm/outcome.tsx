@@ -113,8 +113,8 @@ export function OutcomeBox({
 }
 
 // A planned activity's outcome, recorded from its own page: written (or
-// written up by the AI), the activity completed with it, and its lead
-// followed up anew when that is ticked.
+// written up by the AI), the activity completed with it, and its deal, or
+// else its lead, followed up anew when that is ticked.
 export function RecordOutcomeDialog({
   activity,
   onClose,
@@ -129,6 +129,7 @@ export function RecordOutcomeDialog({
   const [followUp, setFollowUp] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
+  const followable = Boolean(activity.opportunityId || activity.leadId);
   return (
     <Dialog
       open
@@ -153,8 +154,9 @@ export function RecordOutcomeDialog({
           value={outcome}
           onChange={setOutcome}
           disabled={busy}
-          // A follow-up is a lead's: offered only for an activity of one.
-          {...(activity.leadId ? { followUp, onFollowUp: setFollowUp } : {})}
+          // A follow-up is a deal's or a lead's: offered only for an
+          // activity of one.
+          {...(followable ? { followUp, onFollowUp: setFollowUp } : {})}
         />
         <DialogFooter>
           <Button variant='outline' disabled={busy} onClick={onClose}>
@@ -167,7 +169,7 @@ export function RecordOutcomeDialog({
               setError(undefined);
               api(`activities/${toText(activity.id)}/outcome`, 'POST', {
                 outcome,
-                followUp: Boolean(activity.leadId) && followUp,
+                followUp: followable && followUp,
               })
                 .then(() => refresh())
                 .then(onClose)

@@ -10,8 +10,14 @@ describe('long text as Markdown', () => {
       markdownLine(
         '**准备要点**\n- 梳理方案\n- 准备材料\n\n见[官网](https://a.example) 和 `code`，*斜体*，snake_case_name',
       ),
-    ).toBe('准备要点 梳理方案 准备材料 见官网 和 code，斜体，snake_case_name');
-    expect(markdownLine('## 标题\n> 引用\n1. 第一')).toBe('标题 引用 第一');
+    ).toBe('准备要点：梳理方案 准备材料 见官网 和 code，斜体，snake_case_name');
+    expect(markdownLine('## 标题\n> 引用\n1. 第一')).toBe('标题：引用 第一');
+    // An outcome as the AI writes it up: each heading leads its points.
+    expect(
+      markdownLine(
+        '**对方反馈**\n\n- 物流第二期再说。\n\n**Confirmed**\n\n- Scope: purchasing.',
+      ),
+    ).toBe('对方反馈：物流第二期再说。 Confirmed: Scope: purchasing.');
   });
 
   it('keeps the line breaks a person typed', () => {

@@ -1,12 +1,25 @@
 import { recordTitle } from './lookups.js';
 import { RecordPicker } from './record-picker.js';
 import { toText } from './api.js';
-import { useState, type ReactElement, type ReactNode } from 'react';
+import {
+  Fragment,
+  useState,
+  type KeyboardEvent,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Check, TriangleAlert } from 'lucide-react';
 import { Button } from '../ui/button.js';
 import { Input } from '../ui/input.js';
 import { Checkbox } from '../ui/checkbox.js';
+import { Textarea } from '../ui/textarea.js';
+import { Choice } from './form.js';
+import { CountryChoice, SubdivisionChoice } from './geography.js';
+import {
+  LONG_TEXT_LIMIT,
+  lengthLimit,
+} from '../../../server/providers/crm/limits.js';
 import {
   Dialog,
   DialogContent,
@@ -16,7 +29,8 @@ import {
   DialogFooter,
 } from '../ui/dialog.js';
 import { inherited, proposalFor } from './conversion-fields.js';
-import { ErrorNotice, Value } from './common.js';
+import { FollowUpOption } from './follow-up-option.js';
+import { ErrorNotice, LongText, Value } from './common.js';
 import {
   useCrmApi,
   useCrmQuery,
@@ -28,56 +42,285 @@ import {
   arrayValues,
   type CrmRecord,
   type Data,
-  type Entity,
+  type Field,
 } from './api.js';
 
 function Section({
   title,
+  note,
+  aside,
   children,
 }: {
   title: string;
+  // Right after the title: what the duplicate check found, when nothing.
+  note?: ReactNode;
+  // On the title's row, at its right: whether the record is created or
+  // linked, or whether there is one at all.
+  aside?: ReactNode;
   children: ReactNode;
 }): ReactElement {
   return (
     <section className='space-y-3 rounded-xl border p-4'>
-      <h3 className='text-sm font-medium'>{title}</h3>
+      <div className='flex min-h-8 flex-wrap items-center justify-between gap-2'>
+        <div className='flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1'>
+          <h3 className='text-sm font-medium'>{title}</h3>
+          {note}
+        </div>
+        {aside}
+      </div>
       {children}
     </section>
   );
 }
 
-// A compact "label value" list of the fields that will be written.
-export function FieldPreview({
+// The fields a new record takes from the lead (and a new deal's own), laid
+// out as they will be saved and each changeable, every section of the
+// dialog alike, the labels in one column of one width: read as a value, opened for editing by a
+// double-click, or Enter or F2 with focus (as the follow-up card's planned
+// activity is); Enter or leaving keeps a text, Escape takes it back. An
+// empty field shows a dash, so it can be filled too. The owner changes only
+// for whoever may assign records. What is changed (`onChange`) is sent with
+// the conversion over what the lead supplies, and the server checks it as
+// any other write.
+export function EditablePreview({
   entity,
   record,
   keys,
   names,
+  onChange,
+  disabled = false,
+  required = [],
 }: {
-  entity: Entity;
+  entity: 'accounts' | 'contacts' | 'opportunities';
   record: Data;
   keys: readonly string[];
   names: Record<string, string>;
-}): ReactElement {
+  onChange: (changes: Data) => void;
+  disabled?: boolean;
+  // Fields the conversion cannot go without (a name): marked while empty.
+  required?: readonly string[];
+}): ReactElement | null {
   const { text } = useCrmText();
   const { data: meta } = useMetadata();
-  const field = (key: string) =>
-    meta?.definitions[entity].fields.find((f) => f.key === key) ?? { key };
-  const present = keys.filter(
-    (key) => record[key] != null && record[key] !== '',
-  );
+  const [editing, setEditing] = useState<string | null>(null);
+  const [before, setBefore] = useState<unknown>();
+  if (!meta) return null;
+  const fieldOf = (key: string): Field =>
+    meta.definitions[entity].fields.find((f) => f.key === key) ?? {
+      key,
+      type: 'text',
+    };
+  const close = (): void => setEditing(null);
+  const open = (key: string): void => {
+    setBefore(record[key]);
+    setEditing(key);
+  };
+  const keysOf = (
+    event: KeyboardEvent<HTMLElement>,
+    key: string,
+    multiline = false,
+  ) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      // Back to what it held when it opened; the dialog stays open.
+      event.stopPropagation();
+      onChange({ [key]: before });
+      close();
+    } else if (
+      event.key === 'Enter' &&
+      !multiline &&
+      !event.nativeEvent.isComposing
+    ) {
+      event.preventDefault();
+      close();
+    }
+  };
+  const choices = (key: string): { value: string; label: string }[] =>
+    key === 'ownerId'
+      ? meta.users
+          .filter(
+            (u) =>
+              !u.disabled &&
+              u.roles.some((r) =>
+                ['sales-representative', 'sales-manager'].includes(r),
+              ),
+          )
+          .map((u) => ({ value: u.id, label: u.name }))
+      : (meta.settings.options[key] ?? fieldOf(key).options ?? []).map((v) => ({
+          value: v,
+          label: toText(text(`options.${toText(v)}`, { defaultValue: v })),
+        }));
+  const editor = (key: string): ReactNode => {
+    const field = fieldOf(key);
+    const label = toText(text(`fields.${key}`));
+    const value = toText(record[key] ?? '');
+    if (field.type === 'country')
+      return (
+        <CountryChoice
+          label={label}
+          value={value}
+          codes={field.options ?? []}
+          onChange={(v) => {
+            // A province only means something under its own country.
+            onChange({ country: v || null, state: null });
+            close();
+          }}
+        />
+      );
+    if (field.type === 'subdivision')
+      return (
+        <SubdivisionChoice
+          label={label}
+          value={value}
+          country={toText(record.country ?? '')}
+          onChange={(v) => {
+            onChange({ state: v || null });
+            close();
+          }}
+        />
+      );
+    if (field.type === 'select' || field.type === 'relation')
+      return (
+        <Choice
+          label={label}
+          value={value}
+          choices={choices(key)}
+          defaultOpen
+          // A currency beside its amount, as on the deal's page.
+          compact={key === 'currency'}
+          below={key === 'currency'}
+          onOpenChange={(isOpen) => !isOpen && close()}
+          onChange={(v) => {
+            onChange({ [key]: v || null });
+            close();
+          }}
+        />
+      );
+    if (field.type === 'textarea')
+      return (
+        <Textarea
+          autoFocus
+          value={value}
+          maxLength={LONG_TEXT_LIMIT}
+          aria-label={label}
+          onChange={(event) => onChange({ [key]: event.target.value })}
+          onBlur={close}
+          onKeyDown={(event) => keysOf(event, key, true)}
+          className='max-h-60 min-h-16 bg-background'
+        />
+      );
+    if (field.type === 'number' || field.type === 'date')
+      return (
+        <Input
+          autoFocus
+          type={field.type}
+          min={field.type === 'number' ? 0 : undefined}
+          step={field.type === 'number' ? '0.01' : undefined}
+          value={field.type === 'date' ? value.slice(0, 10) : value}
+          aria-label={label}
+          onChange={(event) =>
+            onChange({
+              [key]:
+                event.target.value === ''
+                  ? null
+                  : field.type === 'number'
+                    ? Number(event.target.value)
+                    : event.target.value,
+            })
+          }
+          onBlur={close}
+          onKeyDown={(event) => keysOf(event, key)}
+        />
+      );
+    return (
+      <Input
+        autoFocus
+        type={field.type === 'email' ? 'email' : 'text'}
+        value={value}
+        maxLength={lengthLimit(field.type ?? 'text')}
+        aria-label={label}
+        onChange={(event) => onChange({ [key]: event.target.value })}
+        onBlur={close}
+        onKeyDown={(event) => keysOf(event, key)}
+      />
+    );
+  };
+  // One value, read or opened for editing. `bare`: an amount without its
+  // currency sign, where the currency stands beside it.
+  const cell = (key: string, bare = false): ReactNode => {
+    const label = toText(text(`fields.${key}`));
+    const canEdit = !disabled && (key !== 'ownerId' || meta.assign);
+    const empty = record[key] == null || record[key] === '';
+    if (editing === key) return editor(key);
+    return (
+      <div
+        role={canEdit ? 'button' : undefined}
+        tabIndex={canEdit ? 0 : undefined}
+        aria-label={canEdit ? label : undefined}
+        // Wrapped, not cut: an address or an introduction reads whole
+        // without opening it.
+        className={`-mx-2 min-h-7 rounded-md px-2 py-1 break-words ${
+          canEdit
+            ? 'cursor-text transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
+            : ''
+        }`}
+        onDoubleClick={canEdit ? () => open(key) : undefined}
+        onKeyDown={(event) => {
+          if (canEdit && (event.key === 'Enter' || event.key === 'F2')) {
+            event.preventDefault();
+            open(key);
+          }
+        }}
+      >
+        {empty ? (
+          <span
+            className={
+              required.includes(key)
+                ? 'text-destructive'
+                : 'text-muted-foreground'
+            }
+          >
+            {required.includes(key) ? text('requiredEmpty') : '—'}
+          </span>
+        ) : fieldOf(key).type === 'textarea' ? (
+          // As a long text reads on a record's page: Markdown, folded after
+          // a few lines.
+          <LongText value={toText(record[key])} />
+        ) : (
+          <Value
+            record={record as CrmRecord}
+            field={fieldOf(key)}
+            lookup={names}
+            bare={bare}
+          />
+        )}
+      </div>
+    );
+  };
   return (
-    <dl className='grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm'>
-      {present.map((key) => (
-        <div key={key} className='contents'>
-          <dt className='text-muted-foreground'>{text(`fields.${key}`)}</dt>
-          <dd className='min-w-0 truncate'>
-            <Value
-              record={record as CrmRecord}
-              field={field(key)}
-              lookup={names}
-            />
+    <dl className='grid grid-cols-[8rem_minmax(0,1fr)] items-center gap-x-3 gap-y-0.5 text-sm'>
+      {keys.map((key) => (
+        <Fragment key={key}>
+          <dt
+            className={`text-muted-foreground ${
+              fieldOf(key).type === 'textarea' ? 'self-start pt-1' : ''
+            }`}
+          >
+            {toText(text(`fields.${key === 'money' ? 'amount' : key}`))}
+          </dt>
+          <dd className='min-w-0'>
+            {key === 'money' ? (
+              // A deal's amount as its page shows it: the currency, then the
+              // bare number, each changed in place.
+              <div className='flex items-center gap-2'>
+                <div className='shrink-0'>{cell('currency')}</div>
+                <div className='min-w-0 flex-1'>{cell('amount', true)}</div>
+              </div>
+            ) : (
+              cell(key)
+            )}
           </dd>
-        </div>
+        </Fragment>
       ))}
     </dl>
   );
@@ -85,9 +328,10 @@ export function FieldPreview({
 
 // What the duplicate check found when it found nothing, so that an empty
 // list of matches reads as checked rather than as not looked at.
+// In the theme's success colour, as the follow-up card's own check is.
 function Checked({ children }: { children: ReactNode }): ReactElement {
   return (
-    <p className='flex items-center gap-1.5 text-xs text-muted-foreground'>
+    <p className='flex items-center gap-1.5 text-xs text-success'>
       <Check className='size-3.5 shrink-0' />
       {children}
     </p>
@@ -103,7 +347,11 @@ export function ConvertDialog({
   lead: CrmRecord;
   onClose: () => void;
   // The opportunity the AI's follow-up proposed, to start from.
-  initial?: { opportunityName: string; amount: number | null };
+  initial?: {
+    opportunityName: string;
+    amount: number | null;
+    currency?: string | null;
+  };
   // Runs once the lead is converted, before the dialog closes: accepting
   // the AI's conversion proposal records the decision here.
   onConverted?: () => Promise<unknown>;
@@ -137,6 +385,15 @@ export function ConvertDialog({
   }));
   const [error, setError] = useState<unknown>();
   const [busy, setBusy] = useState(false);
+  // Whether the AI follows up the opportunity the conversion opens at once.
+  const [followUp, setFollowUp] = useState(true);
+  // What the person changed on the new account and the new contact, over
+  // what the lead supplies, and on the deal beside its name and amount.
+  const [accountEdits, setAccountEdits] = useState<Data>({});
+  const [contactEdits, setContactEdits] = useState<Data>({});
+  const [dealEdits, setDealEdits] = useState<Data>(() =>
+    initial?.currency ? { currency: initial.currency } : {},
+  );
   const set = (key: string, value: unknown): void =>
     setInput((v) => ({
       ...v,
@@ -205,7 +462,16 @@ export function ConvertDialog({
     ...(pickedContact.data?.titles ?? {}),
   };
   // What is actually submitted: the derived choices, not the raw state.
-  const resolved: Data = { ...input, accountId, contactId };
+  const resolved: Data = {
+    ...input,
+    accountId,
+    contactId,
+    // Changes to a record only when it is created here; one linked keeps
+    // its own values, bar the overwrites ticked.
+    ...(accountId ? {} : { account: accountEdits }),
+    ...(contactId ? {} : { contact: contactEdits }),
+    ...(input.createOpportunity === true ? { opportunity: dealEdits } : {}),
+  };
   // The deals still open at the chosen account: a new opportunity beside
   // them may duplicate one already being worked.
   const accountDeals = useCrmQuery<CrmRecord[]>(
@@ -372,7 +638,10 @@ export function ConvertDialog({
               setBusy(true);
               setError(undefined);
               try {
-                await api(`leads/${toText(lead.id)}/convert`, 'POST', resolved);
+                await api(`leads/${toText(lead.id)}/convert`, 'POST', {
+                  ...resolved,
+                  followUp,
+                });
                 await onConverted?.();
                 await refresh();
                 onClose();
@@ -384,93 +653,104 @@ export function ConvertDialog({
             })();
           }}
         >
-          <Section title={text('entities.accounts')}>
-            <div className='flex flex-wrap items-center gap-3'>
-              {modeToggle('accounts', true)}
-              {accountId !== null && accountId !== undefined && (
-                <div className='min-w-48 flex-1'>
-                  <RecordPicker
-                    entity='accounts'
-                    label={text('entities.accounts')}
-                    value={toText(accountId)}
-                    titles={names}
-                    onChange={(v) => set('accountId', v || null)}
-                  />
-                </div>
-              )}
-            </div>
-            {chips(suggestedAccounts, 'accounts')}
-            {preview.data && !suggestedAccounts.length && (
-              <Checked>{text('noDuplicateAccounts')}</Checked>
+          <Section
+            title={text('entities.accounts')}
+            note={
+              preview.data && !suggestedAccounts.length ? (
+                <Checked>{text('noDuplicateAccounts')}</Checked>
+              ) : undefined
+            }
+            aside={modeToggle('accounts', true)}
+          >
+            {accountId !== null && accountId !== undefined && (
+              <RecordPicker
+                entity='accounts'
+                label={text('entities.accounts')}
+                value={toText(accountId)}
+                titles={names}
+                onChange={(v) => set('accountId', v || null)}
+              />
             )}
-            {accountId ? (
-              overwriteList('accounts', account)
+            {chips(suggestedAccounts, 'accounts')}
+            {/* Linking: the overwrites once one is picked, nothing before;
+                creating: the new account's fields. */}
+            {accountId !== null ? (
+              accountId ? (
+                overwriteList('accounts', account)
+              ) : null
             ) : (
-              <>
-                <label className='grid gap-1.5 text-sm'>
-                  {text('newAccountName')}
-                  <Input
-                    required
-                    value={toText(input.accountName)}
-                    onChange={(e) => set('accountName', e.target.value)}
-                  />
-                </label>
-                <FieldPreview
-                  entity='accounts'
-                  record={{
-                    ...proposalFor(lead, 'accounts'),
-                    name: undefined,
-                  }}
-                  keys={inherited.accounts}
-                  names={names}
-                />
-              </>
+              // The name first, as the conversion sends it (accountName),
+              // then what the account takes from the lead.
+              <EditablePreview
+                entity='accounts'
+                record={{
+                  ...proposalFor(lead, 'accounts'),
+                  ...accountEdits,
+                  name: input.accountName,
+                }}
+                keys={inherited.accounts}
+                required={['name']}
+                names={names}
+                disabled={busy}
+                onChange={({ name, ...changes }) => {
+                  if (name !== undefined) set('accountName', name ?? '');
+                  setAccountEdits((edits) => ({ ...edits, ...changes }));
+                }}
+              />
             )}
           </Section>
 
-          <Section title={text('entities.contacts')}>
-            <div className='flex flex-wrap items-center gap-3'>
-              {modeToggle('contacts', Boolean(account))}
-              {contactId !== null && contactId !== undefined && (
-                <div className='min-w-48 flex-1'>
-                  <RecordPicker
-                    entity='contacts'
-                    bare
-                    label={text('entities.contacts')}
-                    value={toText(contactId)}
-                    titles={names}
-                    filter={
-                      account ? { accountId: toText(account.id) } : undefined
-                    }
-                    onChange={(v) => set('contactId', v || null)}
-                  />
-                </div>
-              )}
-            </div>
-            {chips(suggestedContacts, 'contacts')}
-            {preview.data && !suggestedContacts.length && (
-              <Checked>{text('noDuplicateContacts')}</Checked>
-            )}
-            {contactId ? (
-              overwriteList('contacts', contact)
-            ) : (
-              <FieldPreview
+          <Section
+            title={text('entities.contacts')}
+            note={
+              preview.data && !suggestedContacts.length ? (
+                <Checked>{text('noDuplicateContacts')}</Checked>
+              ) : undefined
+            }
+            aside={modeToggle('contacts', Boolean(account))}
+          >
+            {contactId !== null && contactId !== undefined && (
+              <RecordPicker
                 entity='contacts'
-                record={proposalFor(lead, 'contacts')}
+                bare
+                label={text('entities.contacts')}
+                value={toText(contactId)}
+                titles={names}
+                filter={account ? { accountId: toText(account.id) } : undefined}
+                onChange={(v) => set('contactId', v || null)}
+              />
+            )}
+            {chips(suggestedContacts, 'contacts')}
+            {contactId !== null ? (
+              contactId ? (
+                overwriteList('contacts', contact)
+              ) : null
+            ) : (
+              <EditablePreview
+                entity='contacts'
+                record={{ ...proposalFor(lead, 'contacts'), ...contactEdits }}
                 keys={inherited.contacts}
                 names={names}
+                disabled={busy}
+                onChange={(changes) =>
+                  setContactEdits((edits) => ({ ...edits, ...changes }))
+                }
               />
             )}
           </Section>
 
-          <Section title={text('entities.opportunities')}>
-            <label className='flex items-center gap-2 text-sm'>
-              <Checkbox
-                checked={Boolean(input.createOpportunity)}
-                onCheckedChange={(v) => set('createOpportunity', v === true)}
-              />
-              {text('createOpportunity')}
-            </label>
+          <Section
+            title={text('entities.opportunities')}
+            aside={
+              <label className='flex items-center gap-2 text-sm'>
+                <Checkbox
+                  checked={Boolean(input.createOpportunity)}
+                  onCheckedChange={(v) => set('createOpportunity', v === true)}
+                />
+                {text('createOpportunity')}
+              </label>
+            }
+          >
             {openDeals.length > 0 && (
               <p className='flex items-start gap-1.5 text-xs text-warning'>
                 <TriangleAlert className='mt-px size-3.5 shrink-0' />
@@ -483,27 +763,29 @@ export function ConvertDialog({
               </p>
             )}
             {input.createOpportunity === true && (
-              <div className='grid gap-3 sm:grid-cols-[1fr_auto]'>
-                <label className='grid gap-1.5 text-sm'>
-                  {text('fields.name')}
-                  <Input
-                    required
-                    value={toText(input.opportunityName ?? '')}
-                    onChange={(e) => set('opportunityName', e.target.value)}
-                  />
-                </label>
-                <label className='grid gap-1.5 text-sm'>
-                  {text('fields.amount')}（{meta?.settings.currency}）
-                  <Input
-                    type='number'
-                    min='0'
-                    step='0.01'
-                    className='w-36'
-                    value={Number(input.amount)}
-                    onChange={(e) => set('amount', Number(e.target.value))}
-                  />
-                </label>
-              </div>
+              // Its name, amount in its currency and when it is expected
+              // to close, as the account's and the contact's fields are;
+              // the rest the deal takes from the lead and the account.
+              <EditablePreview
+                entity='opportunities'
+                record={{
+                  name: input.opportunityName,
+                  amount: input.amount,
+                  currency:
+                    dealEdits.currency ?? meta?.settings.currency ?? 'USD',
+                  expectedCloseAt: dealEdits.expectedCloseAt,
+                }}
+                // The amount in one row with its currency (`money`).
+                keys={['name', 'money', 'expectedCloseAt']}
+                required={['name']}
+                names={names}
+                disabled={busy}
+                onChange={({ name, amount, ...changes }) => {
+                  if (name !== undefined) set('opportunityName', name ?? '');
+                  if (amount !== undefined) set('amount', amount ?? 0);
+                  setDealEdits((edits) => ({ ...edits, ...changes }));
+                }}
+              />
             )}
           </Section>
 
@@ -511,6 +793,16 @@ export function ConvertDialog({
             {text('conversionImpact', { activities: linkedActivities })}
           </p>
           <DialogFooter>
+            {/* The deal it opens, followed up by the AI at once unless
+                unticked, as a new lead is. */}
+            {input.createOpportunity === true && (
+              <FollowUpOption
+                checked={followUp}
+                onChange={setFollowUp}
+                disabled={busy}
+                label='dealFollowUpNow'
+              />
+            )}
             <Button
               type='button'
               variant='outline'
@@ -522,7 +814,15 @@ export function ConvertDialog({
             <Button
               type='submit'
               // Linking was chosen but nothing picked yet: nothing to submit.
-              disabled={busy || accountId === '' || contactId === ''}
+              // A new account and a new deal need their names.
+              disabled={
+                busy ||
+                accountId === '' ||
+                contactId === '' ||
+                (!accountId && !toText(input.accountName).trim()) ||
+                (input.createOpportunity === true &&
+                  !toText(input.opportunityName).trim())
+              }
             >
               {busy ? text('saving') : text('convert')}
             </Button>

@@ -93,6 +93,10 @@ import {
   pendingDecisions,
   researchDue,
 } from '../../server/providers/crm/lead-evaluation.js';
+import {
+  OpportunityEvaluator,
+  latestOpportunityEvaluation,
+} from '../../server/providers/crm/opportunity-evaluation.js';
 import { loggingToken } from '@nocobase/app-server/logging';
 import { userManagementServiceToken } from '@nocobase/app-plugin-users/server/tokens';
 import {
@@ -614,6 +618,57 @@ describe('CRM API security and domain rules', () => {
     );
     expect(kept.accountId).toBeNull();
     expect(kept.leadId).toBe(lead.id);
+  });
+  it('saves the values the person changed in the conversion dialog', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Edited Person',
+      company: 'Edited Works',
+      jobTitle: 'Buyer',
+      source: 'exhibition',
+    });
+    const converted = await convertLead(service, actor('rep'), lead.id, {
+      account: { industry: 'manufacturing', website: 'https://edited.test' },
+      contact: { jobTitle: 'Purchasing director', phone: '13800000000' },
+      createOpportunity: true,
+      opportunityName: 'Edited deal',
+      amount: 50000,
+      opportunity: {
+        currency: 'EUR',
+        expectedCloseAt: '2026-12-31',
+        // Only the currency and the close date are taken from here.
+        stage: 'won',
+      },
+    });
+    expect(
+      await service.get(
+        actor('rep'),
+        'accounts',
+        toText(converted.convertedAccountId),
+      ),
+    ).toMatchObject({
+      name: 'Edited Works',
+      industry: 'manufacturing',
+      website: 'https://edited.test',
+      source: 'exhibition',
+    });
+    expect(
+      await service.get(
+        actor('rep'),
+        'contacts',
+        toText(converted.convertedContactId),
+      ),
+    ).toMatchObject({
+      name: 'Edited Person',
+      jobTitle: 'Purchasing director',
+      phone: '13800000000',
+    });
+    const deal = await service.get(
+      actor('rep'),
+      'opportunities',
+      toText(converted.convertedOpportunityId),
+    );
+    expect(deal).toMatchObject({ currency: 'EUR', stage: 'contact' });
+    expect(toText(deal.expectedCloseAt).slice(0, 10)).toBe('2026-12-31');
   });
   it('converts atomically, links historical activities and makes the lead immutable', async () => {
     const lead = await service.save(actor('rep'), 'leads', {
@@ -1658,10 +1713,12 @@ describe('CRM API security and domain rules', () => {
     ]);
     // Reports come from the plugin's report skill, whose tool the model
     // activates by loading it; skills have to be on for that.
-    // It also loads the lead follow-up skill when asked what to do next.
+    // It also loads the lead and deal follow-up skills when asked what to
+    // do next.
     expect(crmEmployee.skills).toEqual([
       'business-analysis-report',
       'lead-follow-up',
+      'opportunity-follow-up',
     ]);
     expect(crmEmployee.chatSettings?.enableSkills).toBe(true);
     expect(crmAssistant({ avatar: 'https://crm.example/x.png' }).avatar).toBe(
@@ -3210,17 +3267,44 @@ describe('CRM lead evaluation', () => {
         ...follow,
         recommendation: 'convert',
         nextStep: null,
-        opportunity: { name: '设备点检系统（企业版）', amount: null },
+        opportunity: {
+          name: '设备点检系统（企业版）',
+          amount: 50000,
+          currency: 'cny',
+        },
       });
       await convert.evaluator.request(actor('rep'), lead.id);
       await convert.evaluator.idle();
       const proposal = await latestEvaluation(service, actor('rep'), lead.id);
+      // The deal's currency as the AI named it, in the CRM's form.
       expect(proposal?.ai.result).toMatchObject({
         recommendation: 'convert',
-        opportunity: { name: '设备点检系统（企业版）' },
+        opportunity: { name: '设备点检系统（企业版）', currency: 'CNY' },
       });
+      expect(convert.prompts.at(-1)).toContain('opportunity.currency');
+      // A currency the CRM does not price in is left out.
+      const unknown = evaluating({
+        ...follow,
+        recommendation: 'convert',
+        nextStep: null,
+        opportunity: { name: '另一个', amount: 1, currency: 'XYZ' },
+      });
+      await unknown.evaluator.request(actor('rep'), lead.id);
+      await unknown.evaluator.idle();
+      expect(
+        (await latestEvaluation(service, actor('rep'), lead.id))?.ai.result
+          ?.opportunity,
+      ).toMatchObject({ name: '另一个', currency: null });
+      await convert.evaluator.request(actor('rep'), lead.id);
+      await convert.evaluator.idle();
+      const proposal2 = await latestEvaluation(service, actor('rep'), lead.id);
       await expect(
-        convert.evaluator.decide(actor('rep'), lead.id, proposal!.id, 'accept'),
+        convert.evaluator.decide(
+          actor('rep'),
+          lead.id,
+          proposal2!.id,
+          'accept',
+        ),
       ).rejects.toMatchObject({ code: 'convertFirst', status: 409 });
       // Nurturing plans a review task the given days ahead.
       const nurtured = await service.save(actor('rep'), 'leads', {
@@ -3581,7 +3665,7 @@ describe('CRM lead evaluation', () => {
       expect(
         await recordOutcome(
           service,
-          doneRun.evaluator,
+          { leads: doneRun.evaluator },
           actor('rep'),
           toText(second.id),
           { outcome: '演示顺利', followUp: false },
@@ -3600,7 +3684,7 @@ describe('CRM lead evaluation', () => {
       expect(
         await recordOutcome(
           service,
-          doneRun.evaluator,
+          { leads: doneRun.evaluator },
           actor('rep'),
           toText(third.id),
           { outcome: '确认下周签约' },
@@ -3617,7 +3701,7 @@ describe('CRM lead evaluation', () => {
       await expect(
         recordOutcome(
           service,
-          doneRun.evaluator,
+          { leads: doneRun.evaluator },
           actor('rep'),
           toText(third.id),
           { outcome: '再记一次' },
@@ -3866,6 +3950,372 @@ describe('CRM lead evaluation', () => {
         })
       ).data.map((entry) => entry.action),
     ).toContain('created');
+  });
+});
+
+describe('CRM opportunity follow-up', () => {
+  // The AI Employee plugin as the follow-up uses it: a conversation, the
+  // opportunity-follow-up skill, and an employee whose run returns `verdict`.
+  const following = (verdict: unknown) => {
+    const prompts: string[] = [];
+    const container = new ServiceContainer();
+    container.instance(aiConversationsManagerToken, {
+      create: async () => ({ sessionId: 'deal-session' }),
+    } as unknown as ReturnType<
+      typeof container.resolve<typeof aiConversationsManagerToken>
+    >);
+    container.instance(aiManagerToken, {
+      skillsManager: {
+        getSkills: async (name: string) =>
+          name === 'opportunity-follow-up'
+            ? { content: '# 推进商机\n\n技能正文。' }
+            : undefined,
+      },
+    } as unknown as ReturnType<
+      typeof container.resolve<typeof aiManagerToken>
+    >);
+    container.instance(agentServiceFactoryToken, {
+      createAIEmployee: async () => ({
+        invoke: async (input: {
+          userMessages: { content: { content: string } }[];
+        }) => {
+          prompts.push(input.userMessages[0].content.content);
+          return { structuredResponse: verdict };
+        },
+      }),
+    } as unknown as ReturnType<
+      typeof container.resolve<typeof agentServiceFactoryToken>
+    >);
+    container.instance(loggingToken, {
+      getLogger: () => ({ warn: () => undefined }),
+    } as unknown as ReturnType<typeof container.resolve<typeof loggingToken>>);
+    return { evaluator: new OpportunityEvaluator(service, container), prompts };
+  };
+  const deal = async (name: string) => {
+    const account = await service.save(actor('rep'), 'accounts', {
+      name: `${name} 客户`,
+    });
+    const contact = await service.save(actor('rep'), 'contacts', {
+      name: `${name} 王总`,
+      accountId: account.id,
+    });
+    const opportunity = await service.save(actor('rep'), 'opportunities', {
+      name,
+      accountId: account.id,
+      amount: 50000,
+      stage: 'qualification',
+      contacts: [{ contactId: contact.id, role: 'decisionMaker' }],
+    });
+    return { account, opportunity };
+  };
+  const advance = {
+    recommendation: 'advance',
+    confidence: 'medium',
+    stage: 'validation',
+    summary: '演示做过，客户在社区版上试用并反馈良好。',
+    reasons: ['上周演示后客户试用了两个场景（活动）'],
+    risks: ['还没见过拍板人'],
+    nextStep: { type: 'meeting', subject: '技术评估会', inDays: 2 },
+    prep: ['带上部署方案'],
+    questions: ['数据库用什么？'],
+    email: null,
+    updates: [
+      {
+        field: 'expectedCloseAt',
+        value: '2026-12-31',
+        reason: '客户说年底上线',
+      },
+      { field: 'amount', value: '60000', reason: '加了实施服务' },
+    ],
+    changes: [],
+  };
+
+  it('follows a deal up as its owner and applies an accepted advance', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const { account, opportunity } = await deal('跟进报工系统');
+      await service.save(actor('rep'), 'activities', {
+        type: 'meeting',
+        name: '产品演示',
+        status: 'completed',
+        startAt: '2026-09-20T02:00:00Z',
+        opportunityId: opportunity.id,
+        accountId: account.id,
+        feedback: '客户在社区版上试了两个场景，反馈良好',
+      });
+      const { evaluator, prompts } = following(advance);
+      const entry = await evaluator.request(actor('rep'), opportunity.id);
+      expect(entry).toMatchObject({ status: 'running' });
+      await evaluator.idle();
+      // The skill, the deal, its people and what came of its activities.
+      expect(prompts[0]).toContain('技能正文');
+      expect(prompts[0]).toContain('跟进报工系统');
+      expect(prompts[0]).toContain('决策');
+      expect(prompts[0]).toContain('客户在社区版上试了两个场景');
+      const pending = await latestOpportunityEvaluation(
+        service,
+        actor('rep'),
+        opportunity.id,
+      );
+      expect(pending).toMatchObject({
+        status: 'pending',
+        ai: {
+          result: {
+            recommendation: 'advance',
+            stage: 'validation',
+            updates: [
+              { field: 'expectedCloseAt', value: '2026-12-31', current: null },
+              { field: 'amount', value: '60000', current: '50000' },
+            ],
+          },
+        },
+      });
+      // Waiting on its owner, beside the leads.
+      const waiting = await pendingDecisions(service, actor('rep'));
+      expect(waiting.data.find((row) => row.id === pending!.id)).toMatchObject({
+        entity: 'opportunities',
+        opportunity: { name: '跟进报工系统', account: '跟进报工系统 客户' },
+      });
+      // Accepted with only the date picked: the stage moves, the date is
+      // set, the amount stays, and the meeting is planned on the deal.
+      const decided = await evaluator.decide(
+        actor('rep'),
+        opportunity.id,
+        pending!.id,
+        'accept',
+        ['expectedCloseAt'],
+        { name: '技术评估会（含部署）' },
+      );
+      expect(decided).toMatchObject({
+        status: 'accepted',
+        ai: { updatedFields: ['expectedCloseAt'] },
+      });
+      const after = await service.get(
+        actor('rep'),
+        'opportunities',
+        opportunity.id,
+      );
+      expect(after.stage).toBe('validation');
+      expect(Number(after.amount)).toBe(50000);
+      expect(toText(after.expectedCloseAt).slice(0, 10)).toBe('2026-12-31');
+      const planned = await service.get(
+        actor('rep'),
+        'activities',
+        toText(decided.ai.activityId),
+      );
+      expect(planned).toMatchObject({
+        name: '技术评估会（含部署）',
+        type: 'meeting',
+        status: 'planned',
+        opportunityId: opportunity.id,
+        accountId: account.id,
+      });
+      expect(toText(planned.description)).toContain('带上部署方案');
+      // Recorded as the AI's proposal the person confirmed.
+      const changes = await service.historyOf(
+        actor('rep'),
+        'opportunities',
+        opportunity.id,
+        { pageSize: 50 },
+      );
+      expect(
+        changes.data
+          .filter((event) => event.entity === 'opportunities')
+          .map((event) => [event.action, event.source]),
+      ).toContainEqual(['stage', 'assistant']);
+      await expect(
+        evaluator.decide(actor('rep'), opportunity.id, pending!.id, 'dismiss'),
+      ).rejects.toMatchObject({ code: 'evaluationDecided' });
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+
+  it('pauses or loses a deal with its reason and plans the task to come back', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const { opportunity: paused } = await deal('暂停的商机');
+      const pause = following({
+        ...advance,
+        recommendation: 'pause',
+        stage: null,
+        nextStep: null,
+        pauseReason: 'budgetDeferred',
+        resumeInDays: 60,
+      });
+      await pause.evaluator.request(actor('rep'), paused.id);
+      await pause.evaluator.idle();
+      const card = await latestOpportunityEvaluation(
+        service,
+        actor('rep'),
+        paused.id,
+      );
+      // Pausing changes neither amount nor date, nor plans a next step.
+      expect(card?.ai.result).toMatchObject({
+        recommendation: 'pause',
+        nextStep: null,
+        pauseReason: 'budgetDeferred',
+        resumeInDays: 60,
+      });
+      const decided = await pause.evaluator.decide(
+        actor('rep'),
+        paused.id,
+        card!.id,
+        'accept',
+        ['amount'],
+      );
+      const pausedNow = await service.get(
+        actor('rep'),
+        'opportunities',
+        paused.id,
+      );
+      expect(pausedNow).toMatchObject({
+        stage: 'paused',
+        pauseReason: 'budgetDeferred',
+      });
+      expect(Number(pausedNow.amount)).toBe(60000);
+      expect(toText(pausedNow.resumeAt)).not.toBe('');
+      expect(
+        await service.get(
+          actor('rep'),
+          'activities',
+          toText(decided.ai.activityId),
+        ),
+      ).toMatchObject({ type: 'task', name: '暂停的商机 resume' });
+
+      const { opportunity: lost } = await deal('输掉的商机');
+      const lose = following({
+        ...advance,
+        recommendation: 'lose',
+        confidence: 'low',
+        lostReason: 'toCompetitor',
+        revisitInDays: 180,
+      });
+      await lose.evaluator.request(actor('rep'), lost.id);
+      await lose.evaluator.idle();
+      const lostCard = await latestOpportunityEvaluation(
+        service,
+        actor('rep'),
+        lost.id,
+      );
+      // Losing keeps no stage, next step or updates of its own.
+      expect(lostCard?.ai.result).toMatchObject({
+        recommendation: 'lose',
+        confidence: null,
+        stage: null,
+        nextStep: null,
+        updates: [],
+        lostReason: 'toCompetitor',
+        revisitInDays: 180,
+      });
+      const lostDecision = await lose.evaluator.decide(
+        actor('rep'),
+        lost.id,
+        lostCard!.id,
+        'accept',
+      );
+      expect(
+        await service.get(actor('rep'), 'opportunities', lost.id),
+      ).toMatchObject({ stage: 'lost', lostReason: 'toCompetitor' });
+      expect(
+        await service.get(
+          actor('rep'),
+          'activities',
+          toText(lostDecision.ai.activityId),
+        ),
+      ).toMatchObject({ type: 'task', name: '输掉的商机 revisit' });
+      // A closed deal has nothing to follow up.
+      await expect(
+        lose.evaluator.request(actor('rep'), lost.id),
+      ).rejects.toMatchObject({ code: 'opportunityClosed' });
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+
+  it('follows a deal up again after an outcome on one of its activities', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const { account, opportunity } = await deal('结果后跟进');
+      const { evaluator } = following({ ...advance, stage: null });
+      const activity = await service.save(actor('rep'), 'activities', {
+        type: 'call',
+        name: '电话确认',
+        status: 'planned',
+        startAt: new Date(Date.now() + 86_400_000).toISOString(),
+        opportunityId: opportunity.id,
+        accountId: account.id,
+      });
+      expect(
+        await recordOutcome(
+          service,
+          { opportunities: evaluator },
+          actor('rep'),
+          toText(activity.id),
+          { outcome: '客户确认下周做概念验证' },
+        ),
+      ).toEqual({ followUp: true });
+      await evaluator.idle();
+      // Advancing without a stage to move to is keeping at it.
+      expect(
+        (
+          await latestOpportunityEvaluation(
+            service,
+            actor('rep'),
+            opportunity.id,
+          )
+        )?.ai.result,
+      ).toMatchObject({ recommendation: 'continue', stage: null });
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+
+  it('follows up the deal a conversion opens unless the person unticks it', async () => {
+    const opened = vi.fn();
+    service.opportunityOpened = opened;
+    try {
+      const first = await service.save(actor('rep'), 'leads', {
+        name: '转化跟进',
+        company: '转化跟进精工',
+      });
+      const converted = await request(
+        `/leads/${toText(first.id)}/convert`,
+        'rep',
+        'POST',
+        { createOpportunity: true, opportunityName: '转化跟进系统', amount: 0 },
+      );
+      expect(converted.status).toBe(200);
+      const lead = ((await converted.json()) as { data: CrmRecord }).data;
+      expect(opened).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'rep' }),
+        lead.convertedOpportunityId,
+      );
+      opened.mockClear();
+      const second = await service.save(actor('rep'), 'leads', {
+        name: '不跟进',
+        company: '不跟进精工',
+      });
+      expect(
+        (
+          await request(`/leads/${toText(second.id)}/convert`, 'rep', 'POST', {
+            createOpportunity: true,
+            opportunityName: '不跟进系统',
+            amount: 0,
+            followUp: false,
+          })
+        ).status,
+      ).toBe(200);
+      expect(opened).not.toHaveBeenCalled();
+    } finally {
+      service.opportunityOpened = undefined;
+    }
   });
 });
 

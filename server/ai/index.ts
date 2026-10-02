@@ -13,8 +13,9 @@ import { crmRecordTools } from './tools/crm-records.js';
 import { crmWriteTools } from './tools/crm-writes.js';
 import { encodeRow } from '../providers/crm/values.js';
 
-// Marks that the lead follow-up skill joined a saved skill selection.
-const CHAT_SKILLS_MARKER = 'ai-skills-lead-follow-up-v1';
+// Marks that one of the CRM's chat skills joined a saved skill selection
+// (`ai-skills-lead-follow-up-v1` for the first).
+const chatSkillMarker = (name: string): string => `ai-skills-${name}-v1`;
 
 // The application's AI resources, registered with the AI Employee plugin
 // from CrmProvider: the CRM assistant employee, its read tools and its
@@ -46,9 +47,14 @@ export class CrmAiResources extends AIResourceRegistrar {
           enabledSkills: [...REPORT_SKILLS, ...CRM_CHAT_SKILLS],
         },
       });
-    // A selection saved before the lead follow-up skill came gets it once
-    // (marker in crmSettings); removed afterwards, it stays removed.
-    else if (employee && !(await this.marked(CHAT_SKILLS_MARKER))) {
+    // A selection saved before one of the CRM's chat skills came gets it
+    // once (a marker per skill in crmSettings); removed afterwards, it stays
+    // removed.
+    else if (employee) {
+      const added: string[] = [];
+      for (const name of CRM_CHAT_SKILLS)
+        if (!(await this.marked(chatSkillMarker(name)))) added.push(name);
+      if (!added.length) return;
       const enabled = employee.skillSettings?.enabledSkills ?? [];
       await aiEmployeeManager.upsertEmployee({
         ...employee,
@@ -56,11 +62,11 @@ export class CrmAiResources extends AIResourceRegistrar {
           ...employee.skillSettings,
           enabledSkills: [
             ...enabled,
-            ...CRM_CHAT_SKILLS.filter((name) => !enabled.includes(name)),
+            ...added.filter((name) => !enabled.includes(name)),
           ],
         },
       });
-      await this.mark(CHAT_SKILLS_MARKER);
+      for (const name of added) await this.mark(chatSkillMarker(name));
     }
   }
   private async marked(id: string): Promise<boolean> {

@@ -168,6 +168,13 @@ export async function convertLead(
         source: lead.source,
         accountId: account.id,
         amount: input.amount ?? null,
+        // What the person set on the deal in the conversion dialog beside
+        // its name and amount; the rest comes from the lead and the account.
+        ...Object.fromEntries(
+          Object.entries(object(input.opportunity ?? {})).filter(([key]) =>
+            ['currency', 'expectedCloseAt'].includes(key),
+          ),
+        ),
         contacts: [{ contactId: contact.id, role: 'other' }],
       },
       undefined,

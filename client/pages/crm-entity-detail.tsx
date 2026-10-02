@@ -103,6 +103,10 @@ import {
   Value,
 } from '../components/crm/common.js';
 import { InlineField } from '../components/crm/inline.js';
+import {
+  EvaluateButton,
+  EvaluationStatus,
+} from '../components/crm/lead-evaluation.js';
 import { Choice, RecordForm } from '../components/crm/form.js';
 import { StageField } from '../components/crm/reasons.js';
 import { StageStepper } from '../components/crm/stage-stepper.js';
@@ -279,6 +283,8 @@ export default function EntityDetail({
   const [tabSlug, setTab] = useDetailTab();
   // The note the timeline opened in the Notes tab.
   const [noteFocus, setNoteFocus] = useState<string>();
+  // The AI entry the timeline was opened at (a deal's latest follow-up).
+  const [focus, setFocus] = useState<{ id: string; at: number }>();
   // The related lists and the history arrive one page each with the
   // record; these grow them from the list and history endpoints.
   const linkParam =
@@ -428,6 +434,10 @@ export default function EntityDetail({
   ]).size;
   const statusKey = definition.statusField;
   const currentStatus = statusKey ? toText(record[statusKey]) : '';
+  // A won or lost deal: nothing left for the AI to follow up.
+  const closedDeal =
+    entity === 'opportunities' &&
+    (currentStatus === 'won' || currentStatus === 'lost');
   // The details card: every writable field except those in the summary row,
   // arrays the inline editor does not handle, and reasons for a status that
   // is not current.
@@ -1064,6 +1074,34 @@ export default function EntityDetail({
                   }}
                   names={names}
                   statusKey={statusKey}
+                  // A deal's AI follow-up is decided in its timeline, as a
+                  // lead's: by whoever may edit it, while it is open.
+                  editable={
+                    entity === 'opportunities' && editable && !closedDeal
+                  }
+                  recordName={contextName}
+                  focusId={focus?.id}
+                  focusAt={focus?.at}
+                  toolbar={
+                    entity === 'opportunities' && meta?.assistant ? (
+                      <div className='flex flex-wrap items-center gap-1'>
+                        <EvaluationStatus
+                          entity='opportunities'
+                          recordId={id}
+                          onOpen={(entryId) =>
+                            setFocus({ id: entryId, at: Date.now() })
+                          }
+                        />
+                        {editable && !closedDeal && (
+                          <EvaluateButton
+                            entity='opportunities'
+                            recordId={id}
+                            onError={setError}
+                          />
+                        )}
+                      </div>
+                    ) : undefined
+                  }
                   onOpenNote={(noteId) => {
                     setNoteFocus(noteId);
                     setTab('notes');
