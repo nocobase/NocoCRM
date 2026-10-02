@@ -515,31 +515,32 @@ function EntityList({
           {text('newRecord', { entity: text(`entity.${toText(entity)}`) })}
         </Button>
       )}
-      {/* The list page's assistant entry is about the funnel as a whole:
-          turn the attention metrics above into follow-up activities. A lead
-          is captured in prose through "New lead" itself. */}
-      {meta?.assistant &&
-        ['leads', 'accounts', 'opportunities'].includes(entity) && (
-          <div className='flex flex-wrap items-center'>
-            <Button
-              variant='ghost'
-              className='text-ai hover:text-ai'
-              onClick={() =>
-                window.dispatchEvent(
-                  new CustomEvent('crm-assistant', {
-                    detail: {
-                      prompt: text(`prompts.planFollowUps.${toText(entity)}`),
-                      send: true,
-                    },
-                  }),
-                )
-              }
-            >
-              <Sparkles />
-              {text('planFollowUps')}
-            </Button>
-          </div>
-        )}
+      {/* The list page's assistant entry is about the list as a whole:
+          turn the attention metrics above into follow-up activities. Not on
+          the leads list, where the AI follows each lead up itself (its daily
+          check finds those left uncontacted or quiet), and a lead is captured
+          in prose through "New lead". */}
+      {meta?.assistant && ['accounts', 'opportunities'].includes(entity) && (
+        <div className='flex flex-wrap items-center'>
+          <Button
+            variant='ghost'
+            className='text-ai hover:text-ai'
+            onClick={() =>
+              window.dispatchEvent(
+                new CustomEvent('crm-assistant', {
+                  detail: {
+                    prompt: text(`prompts.planFollowUps.${toText(entity)}`),
+                    send: true,
+                  },
+                }),
+              )
+            }
+          >
+            <Sparkles />
+            {text('planFollowUps')}
+          </Button>
+        </div>
+      )}
     </>
   );
   const change =

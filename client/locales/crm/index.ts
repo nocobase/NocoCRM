@@ -512,7 +512,6 @@ const wording = {
     ],
   },
   comment: ['Comment', '审批意见'],
-  nextActivity: ['Plan next activity', '安排下一次活动'],
   active: ['Active', '有效'],
   completed: ['Completed', '已完成'],
   overdue: ['Overdue', '已逾期'],
@@ -933,10 +932,6 @@ const wording = {
       '分析销售情况：各阶段商机分布、本月进展与在手商机、卡在哪里、最有价值的三项下一步行动。预览里没有的记录要查了再说，不要猜。',
     ],
     planFollowUps: {
-      leads: [
-        'Review the leads awaiting first follow-up and the stalled ones. Rank them by urgency, say who to contact today and why, and create one follow-up activity for each of the three most urgent.',
-        '看一遍待首次跟进和停滞的线索，按紧急程度排序，说明今天先联系谁、为什么，并为最紧急的三条各创建一条跟进活动。',
-      ],
       accounts: [
         'Review the accounts not contacted for a long time and those with no open opportunity. Rank them by value and risk, say who to contact this week and why, and create one activity for each of the three most important.',
         '看一遍长期未联系和没有进行中商机的客户，按价值和风险排序，说明本周先联系谁、为什么，并为最重要的三个各创建一条活动。',
@@ -965,10 +960,6 @@ const wording = {
     assistApproval: [
       'Help me review this request: first state what is asked (topic, the discount / payment terms / clauses involved, amount); then where the opportunity stands (stage, amount, expected close date, decision makers, recent activities and feedback) and this account’s earlier approvals; check it against the approval rules in the business instructions, point out risks and what the applicant should add; and end with your recommendation — approve, reject, or needs more — with reasons. Do not propose any action.',
       '帮我审这条申请：先说明申请的内容（事项、涉及的折扣/账期/条款、金额），再看所属商机的现状（阶段、金额、预计成交日、决策人、最近活动和反馈），以及这个客户此前的审批记录；对照业务指导里的审批规则，指出风险和需要申请人补充的信息，最后给出你的建议（同意 / 拒绝 / 需补充）及理由。不要提出任何动作。',
-    ],
-    nextActivity: [
-      'Based on this activity and its feedback, and on where the linked lead, account or opportunity stands now (stage, expected close date, open items, recent activities — read the record if needed), propose the next activity: type, when, with whom, and what it should achieve.',
-      '根据这次活动和它的反馈，并结合关联线索、客户或商机当前的情况（阶段、预计成交日、待办事项、最近活动，需要时先读取该记录），提出下一次活动：类型、时间、参与人、目标。',
     ],
     prepareActivity: [
       'Help me prepare for this activity: review the background and previous communication, list the points to confirm and the questions to ask.',

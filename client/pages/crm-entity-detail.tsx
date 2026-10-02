@@ -128,7 +128,7 @@ import { RecordOutcomeDialog } from '../components/crm/outcome.js';
 const shortcuts: Partial<Record<Entity, readonly string[]>> = {
   accounts: ['summarizeAccount', 'researchCompany', 'findOpportunities'],
   opportunities: ['analyzeOpportunity'],
-  activities: ['prepareActivity', 'reportActivity', 'nextActivity'],
+  activities: ['prepareActivity', 'reportActivity'],
 };
 
 // The details card, per object: the order the specification lists the fields

@@ -12,6 +12,9 @@ vi.mock('../../client/layouts/components/user-menu.js', () => ({
 vi.mock('../../client/components/crm/notification-bell.js', () => ({
   NotificationBell: () => <button aria-label='Notifications' />,
 }));
+vi.mock('../../client/components/crm/ai-chat.js', () => ({
+  AssistantButton: () => <button aria-label='AI 助手' />,
+}));
 it('hides Settings when navigation has no accessible pages', () => {
   render(
     <MemoryRouter>
@@ -36,12 +39,11 @@ it('keeps Settings visible and current on an accessible settings page', () => {
   expect(
     screen.queryByRole('button', { name: 'Notifications' }),
   ).not.toBeInTheDocument();
-  expect(
-    screen.queryByRole('button', { name: 'AI 助手' }),
-  ).not.toBeInTheDocument();
+  // The assistant opens from the header on every surface.
+  expect(screen.getByRole('button', { name: 'AI 助手' })).toBeInTheDocument();
 });
 
-it('keeps CRM notifications on application pages and leaves the assistant to its launcher', () => {
+it('keeps CRM notifications on application pages, the assistant beside the account menu', () => {
   render(
     <MemoryRouter initialEntries={['/leads']}>
       <HeaderActions showSettings showDev={false} />
@@ -50,8 +52,5 @@ it('keeps CRM notifications on application pages and leaves the assistant to its
   expect(
     screen.getByRole('button', { name: 'Notifications' }),
   ).toBeInTheDocument();
-  // The assistant opens from the floating launcher, not the header.
-  expect(
-    screen.queryByRole('button', { name: 'AI 助手' }),
-  ).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'AI 助手' })).toBeInTheDocument();
 });
