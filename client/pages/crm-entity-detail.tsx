@@ -569,7 +569,7 @@ export default function EntityDetail({
   // Editable fields pad their value by px-2; the negative margin puts the
   // text itself flush with the description below.
   const heading = (
-    <span className='-mx-2 flex flex-wrap items-center'>
+    <span className='-mx-2 flex flex-wrap items-center py-1.5'>
       {entity === 'opportunities' && record.accountId ? (
         <>
           <AccountCrumb
@@ -986,7 +986,7 @@ export default function EntityDetail({
           <div
             role='heading'
             aria-level={1}
-            className='-mx-2 flex flex-wrap items-center'
+            className='-mx-2 flex flex-wrap items-center py-1.5'
           >
             <InlineField
               entity={entity}
@@ -1125,7 +1125,7 @@ export default function EntityDetail({
           <div
             role='heading'
             aria-level={1}
-            className='-mx-2 flex flex-wrap items-center font-heading text-xl font-semibold tracking-tight'
+            className='-mx-2 flex flex-wrap items-center py-1.5 font-heading text-xl font-semibold tracking-tight'
           >
             {record.accountId ? (
               <>

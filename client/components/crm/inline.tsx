@@ -174,9 +174,14 @@ export function InlineField({
       ? 'font-heading text-xl font-semibold tracking-tight md:text-xl'
       : 'font-heading text-3xl font-semibold tracking-tight md:text-3xl';
   const readText = titled ? titleType : 'text-sm';
+  // A title's parts (a lead's name and company, an account and its deal)
+  // sit side by side and wrap: the negative margin takes the padding out of
+  // the line box, so a part that wraps onto the next row sits one line below,
+  // as a long part's own second line does. The heading pads itself instead.
+  const titleRow = titled ? '-my-1.5' : '';
   if (!editable)
     return (
-      <div className={`px-2 py-1.5 ${readText}`}>
+      <div className={`px-2 py-1.5 ${titleRow} ${readText}`}>
         <Value
           record={record}
           field={field}
@@ -204,7 +209,7 @@ export function InlineField({
         role='button'
         tabIndex={0}
         aria-label={label}
-        className={`${titled ? 'w-auto max-w-full' : 'w-full'} cursor-text rounded-md px-2 py-1.5 text-left transition-colors select-text hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${readText}`}
+        className={`${titled ? 'w-auto max-w-full' : 'w-full'} cursor-text rounded-md px-2 py-1.5 text-left transition-colors select-text hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${titleRow} ${readText}`}
         onDoubleClick={() => {
           // The double-click also selected the word under it; left alone, that
           // selection lands on the new value once the editor closes, so a

@@ -397,7 +397,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
     <div
       role='heading'
       aria-level={1}
-      className='-mx-2 flex flex-wrap items-center'
+      className='-mx-2 flex flex-wrap items-center py-1.5'
     >
       <InlineField
         entity='leads'
