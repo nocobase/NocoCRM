@@ -162,8 +162,13 @@ const wording = {
     },
     again: ['Follow up', '跟进'],
     running: [
-      'The AI is reviewing this lead…',
-      'AI 正在查看这条线索、准备跟进建议…',
+      'The AI is reviewing it and preparing a suggestion…',
+      'AI 正在查看、准备跟进建议…',
+    ],
+    // A follow-up waiting for its turn behind others.
+    queued: [
+      'Waiting its turn behind other follow-ups…',
+      '排队中，前面还有其他跟进…',
     ],
     failed: [
       'The follow-up did not finish. Follow up again to retry.',

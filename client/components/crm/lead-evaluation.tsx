@@ -141,6 +141,8 @@ export interface EvaluationEntry {
     updatedFields?: string[];
     // What started a follow-up the system ran on its own.
     trigger?: string;
+    // When a running follow-up began; absent while it waits its turn.
+    startedAt?: string;
   };
 }
 
@@ -611,8 +613,13 @@ export function VerdictPanel({
       {entry.status === 'running' && (
         <p className='flex items-center gap-2 text-muted-foreground'>
           <Spinner />
+          {/* Not begun yet: waiting its turn behind other follow-ups. */}
           {text(
-            entry.ai.instruction ? 'evaluation.revising' : 'evaluation.running',
+            !entry.ai.startedAt
+              ? 'evaluation.queued'
+              : entry.ai.instruction
+                ? 'evaluation.revising'
+                : 'evaluation.running',
           )}
         </p>
       )}

@@ -35,6 +35,8 @@ import {
 } from './lead-evaluation.js';
 import { followUpOpportunity } from './feedback.js';
 import { jsonIn } from './lead-capture.js';
+import { JobInterruptedError } from '@nocobase/jobs';
+import { markStarted, within, type FollowUpPayload } from './follow-up-jobs.js';
 import { TEXT_LIMIT } from './limits.js';
 import {
   CrmError,
@@ -576,6 +578,7 @@ export const opportunityEvaluatorToken: ServiceToken<OpportunityEvaluator> =
 
 export class OpportunityEvaluator {
   private queue: Promise<void> = Promise.resolve();
+  private dispatch?: (payload: FollowUpPayload) => Promise<void>;
 
   constructor(
     private readonly service: CrmService,
@@ -686,13 +689,11 @@ export class OpportunityEvaluator {
       })
       .execute();
     const owner = toText(opportunity.ownerId || by.id);
-    this.queue = this.queue.then(() =>
-      this.run(
-        id,
-        opportunityId,
-        owner,
-        owner === by.id ? by.locale : undefined,
-      ).catch(() => undefined),
+    await this.enqueue(
+      id,
+      opportunityId,
+      owner,
+      owner === by.id ? by.locale : undefined,
     );
     return {
       id,
@@ -706,6 +707,71 @@ export class OpportunityEvaluator {
   // Waits for everything queued so far (tests and shutdown).
   async idle(): Promise<void> {
     await this.queue;
+  }
+
+  // Where follow-ups go once the jobs service runs them (follow-up-jobs.ts),
+  // as for a lead (LeadEvaluator.useJobs).
+  useJobs(dispatch: (payload: FollowUpPayload) => Promise<void>): void {
+    this.dispatch = dispatch;
+  }
+
+  private async enqueue(
+    id: string,
+    opportunityId: string,
+    owner: string,
+    language: string | undefined,
+  ): Promise<void> {
+    if (this.dispatch)
+      try {
+        await this.dispatch({
+          entity: 'opportunities',
+          entryId: id,
+          language: language ?? null,
+        });
+        return;
+      } catch {
+        // The jobs service is not taking tasks: run it here instead.
+      }
+    this.queue = this.queue.then(() =>
+      this.run(id, opportunityId, owner, language).catch(() => undefined),
+    );
+  }
+
+  // A follow-up task's run, as LeadEvaluator.runEntry: the card still
+  // running, as the deal's owner now; nothing otherwise.
+  async runEntry(
+    entryId: string,
+    language: string | null,
+    signal: AbortSignal,
+  ): Promise<void> {
+    const row = await this.service.database
+      .query()
+      .selectFrom('crmHistory')
+      .selectAll()
+      .where('id', '=', entryId)
+      .where('entity', '=', 'opportunities')
+      .executeTakeFirst();
+    if (!row || toText(row.aiStatus) !== 'running') return;
+    const deal = await this.service.database
+      .query()
+      .selectFrom('crmOpportunities')
+      .select('ownerId')
+      .where('id', '=', toText(row.recordId))
+      .executeTakeFirst();
+    if (!deal) {
+      await this.finish(entryId, 'failed', {
+        ...readEntry<OpportunityVerdict>(row).ai,
+        error: 'notFound',
+      });
+      return;
+    }
+    await this.run(
+      entryId,
+      toText(row.recordId),
+      toText(deal.ownerId || row.actorId),
+      language ?? undefined,
+      signal,
+    );
   }
 
   private async finish(
@@ -726,10 +792,12 @@ export class OpportunityEvaluator {
     opportunityId: string,
     ownerId: string,
     language?: string,
+    signal?: AbortSignal,
   ): Promise<void> {
     const logger = this.container
       .resolve(loggingToken)
       .getLogger('crm-opportunity-evaluation');
+    await markStarted(this.service.database, id, true);
     let sessionId: string | undefined;
     let asked: EvaluationEntry<OpportunityVerdict>['ai'] | undefined;
     try {
@@ -813,7 +881,7 @@ export class OpportunityEvaluator {
         agent.invoke({
           userMessages: [{ role: 'user', content: { type: 'text', content } }],
           ...(textJson ? {} : { responseFormat: shape }),
-          signal: AbortSignal.timeout(180_000),
+          signal: within(180_000, signal),
         });
       const read = (result: Awaited<ReturnType<typeof ask>>) =>
         shape.safeParse(
@@ -882,6 +950,11 @@ export class OpportunityEvaluator {
         result: previous ? result : { ...result, changes: [] },
       });
     } catch (error) {
+      // Stopped with the application: waits for the next start.
+      if (signal?.aborted) {
+        await markStarted(this.service.database, id, false);
+        throw new JobInterruptedError();
+      }
       logger.warn({ sessionId, error }, 'opportunity follow-up failed');
       await this.finish(id, 'failed', {
         kind: EVALUATION,

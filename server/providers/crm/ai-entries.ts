@@ -8,9 +8,11 @@ import type { Row } from '@nocobase/db';
 // other.
 
 export const EVALUATION = 'evaluation';
-// An entry still running after this long is taken to have died with the
-// process that ran it.
+// A run started this long ago and still going is taken to have died with
+// the process that ran it; one still waiting its turn (no `startedAt`), after
+// a day, its task lost (a process killed without shutting down).
 const STALE_AFTER_MS = 10 * 60 * 1000;
+const QUEUED_STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 
 // A lead's follow-up recommendation (lead-evaluation.ts): keep following it
 // up, nurture it, convert it or set it aside as invalid, with the grade,
@@ -126,6 +128,8 @@ export interface EvaluationEntry<V = Verdict> {
     // What started a follow-up the system ran on its own (a signal, a
     // changed company, an activity marked done); absent when asked for.
     trigger?: string;
+    // When a running card's run began; absent while it waits its turn.
+    startedAt?: string;
   };
 }
 
@@ -134,7 +138,9 @@ export function readEntry<V = Verdict>(row: Row): EvaluationEntry<V> {
   let status = toText(row.aiStatus) as EvaluationEntry['status'];
   if (
     status === 'running' &&
-    Date.now() - Date.parse(toText(row.createdAt)) > STALE_AFTER_MS
+    (ai.startedAt
+      ? Date.now() - Date.parse(ai.startedAt) > STALE_AFTER_MS
+      : Date.now() - Date.parse(toText(row.createdAt)) > QUEUED_STALE_AFTER_MS)
   )
     status = 'failed';
   return {

@@ -22,6 +22,17 @@ const jobs: AppConfigFactory<AppJobsConfig> = defineAppConfig(({ paths }) => ({
     removeOnComplete: { count: 1000 },
     removeOnFail: { age: 604_800 },
   },
+  // The CRM's AI follow-ups of leads and deals (an application addition,
+  // server/providers/crm/follow-up-jobs.ts): four at a time, each a few model
+  // calls of up to minutes. A deployment raises `concurrency` in config.yml,
+  // or moves them to Redis (`adapter: redis` and a connection) to run them
+  // across instances; a failure is the card's own, so one attempt.
+  crmFollowUps: {
+    adapter: 'memory',
+    concurrency: 4,
+    attempts: 1,
+    persistence: { path: paths.storage('jobs') },
+  },
 }));
 
 export default jobs;

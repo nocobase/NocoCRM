@@ -103,6 +103,9 @@ import {
   scanLeadSignals,
 } from '../../server/providers/crm/lead-signals.js';
 import { loggingToken } from '@nocobase/app-server/logging';
+import { JobInterruptedError } from '@nocobase/jobs';
+import { readEntry } from '../../server/providers/crm/ai-entries.js';
+import type { FollowUpPayload } from '../../server/providers/crm/follow-up-jobs.js';
 import { userManagementServiceToken } from '@nocobase/app-plugin-users/server/tokens';
 import {
   DEMO_MARKER,
@@ -2966,7 +2969,12 @@ describe('CRM lead capture', () => {
 describe('CRM lead evaluation', () => {
   // The AI Employee plugin as the evaluator uses it: a conversation, the
   // lead-evaluation skill, and an employee whose run returns `verdict`.
-  const evaluating = (verdict: unknown) => {
+  // `abortable`: the run gives up on a signal already aborted, as a model
+  // call does when the application stops.
+  const evaluating = (
+    verdict: unknown,
+    options: { abortable?: boolean } = {},
+  ) => {
     const prompts: string[] = [];
     const container = new ServiceContainer();
     container.instance(aiConversationsManagerToken, {
@@ -2989,7 +2997,10 @@ describe('CRM lead evaluation', () => {
       createAIEmployee: async () => ({
         invoke: async (input: {
           userMessages: { content: { content: string } }[];
+          signal?: AbortSignal;
         }) => {
+          if (options.abortable && input.signal?.aborted)
+            throw new Error('aborted');
           prompts.push(input.userMessages[0].content.content);
           return { structuredResponse: verdict };
         },
@@ -4003,6 +4014,89 @@ describe('CRM lead evaluation', () => {
       enabled.mockRestore();
     }
   });
+  it('runs a queued follow-up once, as its task, and hands it back on shutdown', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const lead = await service.save(actor('rep'), 'leads', {
+        name: '排队',
+        company: '排队精工',
+        source: 'website',
+      });
+      const { evaluator, prompts } = evaluating(follow);
+      const queued: FollowUpPayload[] = [];
+      evaluator.useJobs(async (payload) => {
+        queued.push(payload);
+      });
+      const entry = await evaluator.request(actor('rep'), lead.id);
+      await evaluator.idle();
+      // Queued as a task, nothing run in this process; waiting its turn.
+      expect(queued).toEqual([
+        { entity: 'leads', entryId: entry!.id, language: 'en-US' },
+      ]);
+      expect(prompts).toHaveLength(0);
+      const waiting = await latestEvaluation(service, actor('rep'), lead.id);
+      expect(waiting).toMatchObject({ status: 'running' });
+      expect(waiting?.ai.startedAt).toBeUndefined();
+      // Shutting down mid-run hands it back, still running, not begun.
+      const stopped = new AbortController();
+      stopped.abort();
+      const stopping = evaluating(follow, { abortable: true });
+      await expect(
+        stopping.evaluator.runEntry(entry!.id, 'en-US', stopped.signal),
+      ).rejects.toBeInstanceOf(JobInterruptedError);
+      const handedBack = await latestEvaluation(service, actor('rep'), lead.id);
+      expect(handedBack).toMatchObject({ status: 'running' });
+      expect(handedBack?.ai.startedAt).toBeUndefined();
+      // The task runs it to a card.
+      await evaluator.runEntry(
+        entry!.id,
+        'en-US',
+        new AbortController().signal,
+      );
+      expect(
+        await latestEvaluation(service, actor('rep'), lead.id),
+      ).toMatchObject({ status: 'pending', ai: { result: { grade: 'A' } } });
+      // Replayed after recovery, it does nothing.
+      const before = prompts.length;
+      await evaluator.runEntry(
+        entry!.id,
+        'en-US',
+        new AbortController().signal,
+      );
+      expect(prompts).toHaveLength(before);
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+
+  it('tells a follow-up waiting its turn from one that died', () => {
+    const row = (minutesAgo: number, ai: Record<string, unknown> = {}) => ({
+      id: 'e',
+      recordId: 'r',
+      aiStatus: 'running',
+      createdAt: new Date(Date.now() - minutesAgo * 60_000).toISOString(),
+      ai: JSON.stringify({ kind: 'evaluation', ...ai }),
+    });
+    // Waiting an hour behind others: still running.
+    expect(readEntry(row(60)).status).toBe('running');
+    // Waiting a day: its task was lost.
+    expect(readEntry(row(25 * 60)).status).toBe('failed');
+    // Begun eleven minutes ago and still going: died with its process.
+    expect(
+      readEntry(
+        row(60, {
+          startedAt: new Date(Date.now() - 11 * 60_000).toISOString(),
+        }),
+      ).status,
+    ).toBe('failed');
+    expect(
+      readEntry(
+        row(60, { startedAt: new Date(Date.now() - 60_000).toISOString() }),
+      ).status,
+    ).toBe('running');
+  });
 });
 
 describe('CRM opportunity follow-up', () => {
@@ -4485,7 +4579,7 @@ describe('lead signals', () => {
           .query()
           .insertInto('crmHistory')
           .values({
-            id: `signal-${lead}`,
+            id: requests.length > 1 ? `signal-${lead}-again` : `signal-${lead}`,
             entity: 'leads',
             recordId: lead,
             actorId: by.id,
@@ -4511,6 +4605,25 @@ describe('lead signals', () => {
     requests.length = 0;
     await scanLeadSignals(service, evaluator, new Date(), 1000);
     expect(requests.some((r) => r.lead === quiet.id)).toBe(false);
+    // Unless that follow-up failed: the next pass tries again.
+    await database
+      .query()
+      .updateTable('crmHistory')
+      .set({ aiStatus: 'failed' })
+      .where('id', '=', `signal-${toText(quiet.id)}`)
+      .execute();
+    await database
+      .query()
+      .deleteFrom('crmHistory')
+      .where('id', '=', `signal-${toText(quiet.id)}-again`)
+      .execute();
+    requests.length = 0;
+    await scanLeadSignals(service, evaluator, new Date(), 1000);
+    expect(requests).toContainEqual({
+      by: 'rep',
+      lead: quiet.id,
+      trigger: 'uncontacted',
+    });
   });
 
   it('follows up what an activity marked done belongs to, through the update route', async () => {

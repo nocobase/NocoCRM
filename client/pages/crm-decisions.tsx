@@ -207,10 +207,13 @@ export default function DecisionsPage(): ReactElement {
                           decided one says what became of it first. */}
                       {entry.status === 'running' && (
                         <span className='text-xs text-muted-foreground'>
+                          {/* Not begun yet: waiting its turn behind other follow-ups. */}
                           {text(
-                            entry.ai.instruction
-                              ? 'evaluation.revising'
-                              : 'evaluation.running',
+                            !entry.ai.startedAt
+                              ? 'evaluation.queued'
+                              : entry.ai.instruction
+                                ? 'evaluation.revising'
+                                : 'evaluation.running',
                           )}
                         </span>
                       )}

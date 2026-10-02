@@ -21,6 +21,8 @@ import { contactTime } from './zone-time.js';
 import { mergePlanDescription, planDescription } from './plan.js';
 import { followUpLead } from './feedback.js';
 import { jsonIn } from './lead-capture.js';
+import { JobInterruptedError } from '@nocobase/jobs';
+import { markStarted, within, type FollowUpPayload } from './follow-up-jobs.js';
 import { LONG_TEXT_LIMIT, TEXT_LIMIT } from './limits.js';
 import {
   CrmError,
@@ -774,6 +776,7 @@ export const leadEvaluatorToken: ServiceToken<LeadEvaluator> =
 
 export class LeadEvaluator {
   private queue: Promise<void> = Promise.resolve();
+  private dispatch?: (payload: FollowUpPayload) => Promise<void>;
 
   constructor(
     private readonly service: CrmService,
@@ -881,16 +884,10 @@ export class LeadEvaluator {
       })
       .execute();
     const owner = toText(lead.ownerId || by.id);
-    this.queue = this.queue.then(() =>
-      // In the language of whoever asked when that is the owner, else in
-      // the language the owner last used.
-      this.run(
-        id,
-        leadId,
-        owner,
-        owner === by.id ? by.locale : undefined,
-      ).catch(() => undefined),
-    );
+    // In the language of whoever asked when that is the owner, else in the
+    // language the owner last used.
+    const language = owner === by.id ? by.locale : undefined;
+    await this.enqueue(id, leadId, owner, language);
     return {
       id,
       recordId: leadId,
@@ -910,9 +907,79 @@ export class LeadEvaluator {
     };
   }
 
-  // Waits for everything queued so far (tests and shutdown).
+  // Waits for everything queued in this process so far (tests, which run
+  // without the jobs service).
   async idle(): Promise<void> {
     await this.queue;
+  }
+
+  // Where follow-ups go once the application's jobs service runs them
+  // (follow-up-jobs.ts, set by CrmProvider); without it, as in tests, they
+  // queue in this process one at a time.
+  useJobs(dispatch: (payload: FollowUpPayload) => Promise<void>): void {
+    this.dispatch = dispatch;
+  }
+
+  private async enqueue(
+    id: string,
+    leadId: string,
+    owner: string,
+    language: string | undefined,
+  ): Promise<void> {
+    if (this.dispatch)
+      try {
+        await this.dispatch({
+          entity: 'leads',
+          entryId: id,
+          language: language ?? null,
+        });
+        return;
+      } catch {
+        // The jobs service is not taking tasks (starting or stopping): run
+        // it here rather than leave the card running with nothing behind it.
+      }
+    this.queue = this.queue.then(() =>
+      this.run(id, leadId, owner, language).catch(() => undefined),
+    );
+  }
+
+  // A follow-up task's run (follow-up-jobs.ts): the card, still running,
+  // filled as the lead's owner now; nothing when it is no longer running
+  // (decided, superseded, or already done by a task run before), so a
+  // replayed task does no harm.
+  async runEntry(
+    entryId: string,
+    language: string | null,
+    signal: AbortSignal,
+  ): Promise<void> {
+    const row = await this.service.database
+      .query()
+      .selectFrom('crmHistory')
+      .selectAll()
+      .where('id', '=', entryId)
+      .where('entity', '=', 'leads')
+      .executeTakeFirst();
+    if (!row || toText(row.aiStatus) !== 'running') return;
+    const lead = await this.service.database
+      .query()
+      .selectFrom('crmLeads')
+      .select('ownerId')
+      .where('id', '=', toText(row.recordId))
+      .executeTakeFirst();
+    if (!lead) {
+      await this.finish(entryId, 'failed', {
+        ...readEntry(row).ai,
+        error: 'notFound',
+      });
+      return;
+    }
+    await this.run(
+      entryId,
+      toText(row.recordId),
+      toText(lead.ownerId || row.actorId),
+      language ?? undefined,
+      signal,
+    );
   }
 
   private async finish(
@@ -933,10 +1000,13 @@ export class LeadEvaluator {
     leadId: string,
     ownerId: string,
     language?: string,
+    // The task's signal: the application stopping hands the task back.
+    signal?: AbortSignal,
   ): Promise<void> {
     const logger = this.container
       .resolve(loggingToken)
       .getLogger('crm-lead-evaluation');
+    await markStarted(this.service.database, id, true);
     let sessionId: string | undefined;
     // The entry's own request (a revision's card and instruction), kept
     // through to a failure as well.
@@ -1035,7 +1105,7 @@ export class LeadEvaluator {
               },
             ],
             // A web search can take minutes when the provider is busy.
-            signal: AbortSignal.timeout(240_000),
+            signal: within(240_000, signal),
           });
           research = textOf(found.message?.content).trim().slice(0, 8000);
           researchedAt = new Date().toISOString();
@@ -1048,7 +1118,7 @@ export class LeadEvaluator {
         agent.invoke({
           userMessages: [{ role: 'user', content: { type: 'text', content } }],
           ...(textJson ? {} : { responseFormat: verdictShape }),
-          signal: AbortSignal.timeout(180_000),
+          signal: within(180_000, signal),
         });
       const read = (result: Awaited<ReturnType<typeof ask>>) =>
         verdictShape.safeParse(
@@ -1126,6 +1196,12 @@ export class LeadEvaluator {
         } satisfies Verdict,
       });
     } catch (error) {
+      // Stopped with the application: the card waits for the task to run
+      // again at the next start, not failed.
+      if (signal?.aborted) {
+        await markStarted(this.service.database, id, false);
+        throw new JobInterruptedError();
+      }
       logger.warn({ sessionId, error }, 'lead evaluation failed');
       await this.finish(id, 'failed', {
         kind: EVALUATION,

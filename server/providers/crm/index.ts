@@ -16,6 +16,9 @@ import { notificationServiceToken } from '@nocobase/app-plugin-notification/serv
 import { workflowServiceToken } from '@nocobase/app-plugin-workflow/server';
 import { schedulerServiceToken } from '@nocobase/app-plugin-scheduler/server/tokens';
 import { scanLeadSignals } from './lead-signals.js';
+import { jobExecutorServiceToken } from '@nocobase/app-server/jobs';
+import type { JobExecutor } from '@nocobase/jobs';
+import { createFollowUpJob, FOLLOW_UP_JOBS } from './follow-up-jobs.js';
 import { followUpAfterActivity } from './feedback.js';
 import {
   provisionCrm,
@@ -48,6 +51,7 @@ export const crmToken: ServiceToken<CrmService> =
 export default class CrmProvider extends ServiceProvider<Application> {
   public readonly name: string = 'crm/provider';
   private cron?: CronJobManager;
+  private followUps?: JobExecutor;
   private unregisterRoleScope?: () => void;
   private reminding = false;
   private delivering = false;
@@ -201,6 +205,28 @@ export default class CrmProvider extends ServiceProvider<Application> {
       void evaluator.request(by, leadId).catch(() => undefined);
     const deals = this.app.container.resolve(opportunityEvaluatorToken);
     const service = this.app.container.resolve(crmToken);
+    // The follow-ups run as tasks of the jobs service (follow-up-jobs.ts):
+    // kept across a restart, as many at once as `crmFollowUps` allows.
+    if (this.app.container.has(jobExecutorServiceToken)) {
+      const executor = this.app.container
+        .resolve(jobExecutorServiceToken)
+        .getJobExecutor('crm', FOLLOW_UP_JOBS);
+      const FollowUpJob = createFollowUpJob((payload, signal) =>
+        payload.entity === 'opportunities'
+          ? deals.runEntry(payload.entryId, payload.language, signal)
+          : evaluator.runEntry(payload.entryId, payload.language, signal),
+      );
+      executor.registerJob(FollowUpJob);
+      await executor.setup();
+      this.followUps = executor;
+      const dispatch = async (
+        payload: ConstructorParameters<typeof FollowUpJob>[0],
+      ): Promise<void> => {
+        await executor.addJob(new FollowUpJob(payload));
+      };
+      evaluator.useJobs(dispatch);
+      deals.useJobs(dispatch);
+    }
     service.opportunityOpened = (by, id) =>
       void deals.request(by, id).catch(() => undefined);
     // An activity marked done its deal's, or else its lead's, follow-up;
@@ -221,6 +247,8 @@ export default class CrmProvider extends ServiceProvider<Application> {
     this.cron.start();
   }
   public override async shutdown(): Promise<void> {
+    // A follow-up running is handed back, to run again at the next start.
+    await this.followUps?.shutdown();
     this.unregisterRoleScope?.();
     this.unregisterRoleScope = undefined;
     this.cron?.close();

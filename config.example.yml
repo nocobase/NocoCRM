@@ -127,6 +127,14 @@ snowflake:
 #       port: 6379
 #     # namespace: my-app # defaults to the application name; set it when deployments share one Redis
 
+# The CRM's AI follow-ups of leads and deals run on their own jobs configuration, crmFollowUps (memory, four at
+# a time, defined in server/config/jobs.ts). Raise concurrency, or move them to Redis to run across instances:
+# jobs:
+#   crmFollowUps:
+#     concurrency: 6
+#     # adapter: redis
+#     # connection: { host: 127.0.0.1, port: 6379 }
+
 # The jobs configuration the Scheduler plugin's schedules run on, by name. Left out, they follow jobs.default.
 # scheduler:
 #   jobs: redis

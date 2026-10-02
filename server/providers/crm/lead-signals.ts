@@ -110,10 +110,14 @@ export async function scanLeadSignals(
       continue;
     const signal = leadSignal(lead, activities.get(id) ?? [], now.getTime());
     if (!signal || !lead.ownerId) continue;
+    // Once a week per signal, counting only follow-ups that came to
+    // something: one that failed (a model error, a task lost with a killed
+    // process) is tried again on the next pass.
     if (
       own.some(
         (e) =>
           e.ai.trigger === signal &&
+          e.status !== 'failed' &&
           now.getTime() - Date.parse(e.createdAt) < SAME_SIGNAL_WITHIN,
       )
     )
