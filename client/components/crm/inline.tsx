@@ -11,6 +11,7 @@ import { Choice, MultiChoice } from './form.js';
 import { RecordMultiPicker, RecordPicker } from './record-picker.js';
 import { CountryChoice, SubdivisionChoice } from './geography.js';
 import { Value } from './common.js';
+import { DateTimeInput } from './datetime-input.js';
 import {
   arrayValues,
   errorCode,
@@ -114,20 +115,16 @@ export function InlineField({
         ?.focus();
   }, [editing]);
 
-  // Native date inputs speak local wall-clock time with no zone, so the stored
-  // ISO value has to be converted in on open and back out on save; handing an
-  // ISO string straight to datetime-local leaves the control blank.
+  // A native date input speaks yyyy-mm-dd with no zone, so the stored ISO
+  // value is cut down on open; a datetime keeps its ISO instant, which
+  // DateTimeInput shows on the 24-hour clock and hands back as ISO.
   const toInputValue = (raw: unknown): string => {
     // SQLite hands booleans back as 1 / 0; the picker speaks "true" / "false".
     if (field.type === 'boolean') return raw ? 'true' : 'false';
-    if (field.type !== 'datetime' && field.type !== 'date') return toText(raw);
+    if (field.type !== 'date') return toText(raw);
     const parsed = raw ? new Date(toText(raw)) : undefined;
     if (!parsed || !Number.isFinite(+parsed)) return '';
-    return field.type === 'datetime'
-      ? new Date(+parsed - parsed.getTimezoneOffset() * 60000)
-          .toISOString()
-          .slice(0, 16)
-      : parsed.toISOString().slice(0, 10);
+    return parsed.toISOString().slice(0, 10);
   };
 
   const save = async (raw: unknown): Promise<void> => {
@@ -138,9 +135,7 @@ export function InlineField({
           ? Number(raw)
           : raw === ''
             ? null
-            : field.type === 'datetime'
-              ? new Date(toText(raw)).toISOString()
-              : raw;
+            : raw;
     const same = Array.isArray(next)
       ? JSON.stringify(next) ===
         JSON.stringify(arrayValues(record[field.key]).map(toText))
@@ -274,6 +269,8 @@ export function InlineField({
       // one control (a select and its popup) must not count as leaving.
       onBlur={(event) => {
         if (saving || event.currentTarget.contains(event.relatedTarget)) return;
+        // The date and time popup holds focus while open and saves on close.
+        if (field.type === 'datetime' && popupOpenRef.current) return;
         // Nothing to save for a list: the value only changes by picking one, so
         // leaving without a pick simply returns to the read view.
         if (picker.includes(field.type)) {
@@ -418,6 +415,23 @@ export function InlineField({
             if (event.key === 'Escape') setEditing(false);
           }}
         />
+      ) : field.type === 'datetime' ? (
+        <DateTimeInput
+          label={label}
+          value={draft}
+          disabled={saving}
+          onChange={(v) => setDraft(v ?? '')}
+          onOpenChange={(open) => {
+            popupOpenRef.current = open;
+            // Like the other popup pickers, closing the popup is done: what
+            // was picked saves, and nothing picked returns to the read view.
+            if (!open) void save(draft);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') void save(draft);
+            if (event.key === 'Escape') setEditing(false);
+          }}
+        />
       ) : (
         <Input
           aria-label={label}
@@ -429,9 +443,7 @@ export function InlineField({
           type={
             ['date', 'email', 'number'].includes(field.type)
               ? field.type
-              : field.type === 'datetime'
-                ? 'datetime-local'
-                : 'text'
+              : 'text'
           }
           value={draft}
           maxLength={lengthLimit(field.type)}
