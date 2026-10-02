@@ -77,6 +77,7 @@ import {
 import { crmRoutes } from '../../server/routes/crm.js';
 import { captureLeads } from '../../server/providers/crm/lead-capture.js';
 import {
+  followUpAfterActivity,
   organiseFeedback,
   recordOutcome,
 } from '../../server/providers/crm/feedback.js';
@@ -97,6 +98,10 @@ import {
   OpportunityEvaluator,
   latestOpportunityEvaluation,
 } from '../../server/providers/crm/opportunity-evaluation.js';
+import {
+  leadSignal,
+  scanLeadSignals,
+} from '../../server/providers/crm/lead-signals.js';
 import { loggingToken } from '@nocobase/app-server/logging';
 import { userManagementServiceToken } from '@nocobase/app-plugin-users/server/tokens';
 import {
@@ -3951,6 +3956,53 @@ describe('CRM lead evaluation', () => {
       ).data.map((entry) => entry.action),
     ).toContain('created');
   });
+  it('keeps what started a follow-up and looks a changed company up again', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const lead = await service.save(actor('rep'), 'leads', {
+        name: '触发',
+        company: '触发精工',
+        source: 'website',
+        // Particulars it already holds: an ordinary follow-up does not
+        // look the company up again soon after.
+        website: 'https://chufa.test',
+        industry: 'manufacturing',
+      });
+      // The first follow-up looks the company up.
+      const first = evaluating(follow);
+      await first.evaluator.request(actor('rep'), lead.id);
+      await first.evaluator.idle();
+      expect(first.prompts).toHaveLength(2);
+      // An activity done: followed up, the company looked up recently.
+      const done = evaluating(follow);
+      await done.evaluator.request(
+        actor('rep'),
+        lead.id,
+        undefined,
+        'activityDone',
+      );
+      await done.evaluator.idle();
+      expect(done.prompts).toHaveLength(1);
+      expect(
+        (await latestEvaluation(service, actor('rep'), lead.id))?.ai,
+      ).toMatchObject({ trigger: 'activityDone', result: { grade: 'A' } });
+      // Its company changed: looked up again, however recent the last look.
+      const changed = evaluating(follow);
+      await changed.evaluator.request(
+        actor('rep'),
+        lead.id,
+        undefined,
+        'companyChanged',
+      );
+      await changed.evaluator.idle();
+      expect(changed.prompts).toHaveLength(2);
+      expect(changed.prompts[0]).toContain('先联网调查');
+    } finally {
+      enabled.mockRestore();
+    }
+  });
 });
 
 describe('CRM opportunity follow-up', () => {
@@ -4316,6 +4368,246 @@ describe('CRM opportunity follow-up', () => {
     } finally {
       service.opportunityOpened = undefined;
     }
+  });
+});
+
+describe('lead signals', () => {
+  const now = Date.parse('2026-10-10T01:00:00Z');
+  const daysAgo = (days: number) =>
+    new Date(now - days * 86_400_000).toISOString();
+
+  it('tells what should have happened on a lead and has not', () => {
+    // A new lead three days old, nothing done: not contacted.
+    expect(leadSignal({ status: 'new', createdAt: daysAgo(3) }, [], now)).toBe(
+      'uncontacted',
+    );
+    // A day old, or with a call planned ahead, or one done: nothing yet.
+    expect(leadSignal({ status: 'new', createdAt: daysAgo(1) }, [], now)).toBe(
+      undefined,
+    );
+    expect(
+      leadSignal(
+        { status: 'new', createdAt: daysAgo(3) },
+        [{ status: 'planned', startAt: daysAgo(-1) }],
+        now,
+      ),
+    ).toBe(undefined);
+    expect(
+      leadSignal(
+        { status: 'new', createdAt: daysAgo(3) },
+        [{ status: 'completed', startAt: daysAgo(2) }],
+        now,
+      ),
+    ).toBe(undefined);
+    // Worked, nothing for fifteen days: silent; a cancelled one does not
+    // count as something happening.
+    expect(
+      leadSignal(
+        { status: 'working', createdAt: daysAgo(40) },
+        [
+          { status: 'completed', startAt: daysAgo(15) },
+          { status: 'cancelled', startAt: daysAgo(3) },
+        ],
+        now,
+      ),
+    ).toBe('silent');
+    expect(
+      leadSignal(
+        { status: 'working', createdAt: daysAgo(40) },
+        [{ status: 'completed', startAt: daysAgo(10) }],
+        now,
+      ),
+    ).toBe(undefined);
+    // Nurtured, its review task due: due.
+    expect(
+      leadSignal(
+        { status: 'nurturing', createdAt: daysAgo(90) },
+        [{ status: 'planned', startAt: daysAgo(1) }],
+        now,
+      ),
+    ).toBe('nurtureDue');
+    expect(
+      leadSignal(
+        { status: 'nurturing', createdAt: daysAgo(90) },
+        [{ status: 'planned', startAt: daysAgo(-5) }],
+        now,
+      ),
+    ).toBe(undefined);
+    expect(
+      leadSignal({ status: 'converted', createdAt: daysAgo(90) }, [], now),
+    ).toBe(undefined);
+  });
+
+  it('starts a follow-up per signal as the owner, once a week, never over a waiting card', async () => {
+    const quiet = await service.save(actor('rep'), 'leads', {
+      name: '没人联系',
+      company: '信号精工',
+      source: 'website',
+    });
+    const waiting = await service.save(actor('rep'), 'leads', {
+      name: '有卡片等着',
+      source: 'website',
+    });
+    for (const id of [quiet.id, waiting.id])
+      await database
+        .query()
+        .updateTable('crmLeads')
+        .set({ createdAt: new Date(Date.now() - 3 * 86_400_000).toISOString() })
+        .where('id', '=', id)
+        .execute();
+    await database
+      .query()
+      .insertInto('crmHistory')
+      .values({
+        id: 'signal-waiting-card',
+        entity: 'leads',
+        recordId: waiting.id,
+        actorId: 'rep',
+        action: 'ai',
+        source: 'ai',
+        aiStatus: 'pending',
+        ai: JSON.stringify({ kind: 'evaluation' }),
+        changes: JSON.stringify({}),
+        createdAt: new Date().toISOString(),
+      })
+      .execute();
+    const requests: { by: string; lead: string; trigger: unknown }[] = [];
+    const evaluator = {
+      available: async () => true,
+      request: async (
+        by: Actor,
+        lead: string,
+        _revise: unknown,
+        trigger: unknown,
+      ) => {
+        requests.push({ by: by.id, lead, trigger });
+        await database
+          .query()
+          .insertInto('crmHistory')
+          .values({
+            id: `signal-${lead}`,
+            entity: 'leads',
+            recordId: lead,
+            actorId: by.id,
+            action: 'ai',
+            source: 'ai',
+            aiStatus: 'dismissed',
+            ai: JSON.stringify({ kind: 'evaluation', trigger }),
+            changes: JSON.stringify({}),
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+        return { id: `signal-${lead}` };
+      },
+    } as unknown as LeadEvaluator;
+    await scanLeadSignals(service, evaluator, new Date(), 1000);
+    expect(requests).toContainEqual({
+      by: 'rep',
+      lead: quiet.id,
+      trigger: 'uncontacted',
+    });
+    expect(requests.some((r) => r.lead === waiting.id)).toBe(false);
+    // The same signal does not start again within the week.
+    requests.length = 0;
+    await scanLeadSignals(service, evaluator, new Date(), 1000);
+    expect(requests.some((r) => r.lead === quiet.id)).toBe(false);
+  });
+
+  it('follows up what an activity marked done belongs to, through the update route', async () => {
+    const completed = vi.fn();
+    const companyChanged = vi.fn();
+    service.activityCompleted = completed;
+    service.leadCompanyChanged = companyChanged;
+    try {
+      const lead = await service.save(actor('rep'), 'leads', {
+        name: '路由信号',
+        company: '旧公司',
+        source: 'website',
+      });
+      const activity = await service.save(actor('rep'), 'activities', {
+        type: 'call',
+        name: '电话',
+        status: 'planned',
+        startAt: new Date().toISOString(),
+        leadId: lead.id,
+      });
+      expect(
+        (
+          await request(`/activities/${toText(activity.id)}`, 'rep', 'PATCH', {
+            status: 'completed',
+          })
+        ).status,
+      ).toBe(200);
+      expect(completed).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'rep' }),
+        expect.objectContaining({ id: activity.id, leadId: lead.id }),
+      );
+      // Its company changed by a person: looked up again; another field, not.
+      await request(`/leads/${toText(lead.id)}`, 'rep', 'PATCH', {
+        jobTitle: '经理',
+      });
+      expect(companyChanged).not.toHaveBeenCalled();
+      await request(`/leads/${toText(lead.id)}`, 'rep', 'PATCH', {
+        company: '新公司',
+      });
+      expect(companyChanged).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'rep' }),
+        lead.id,
+      );
+    } finally {
+      service.activityCompleted = undefined;
+      service.leadCompanyChanged = undefined;
+    }
+  });
+
+  it('follows up the deal an activity belongs to, else its open lead', async () => {
+    const leads = {
+      request: vi.fn(async () => ({ id: 'l' })),
+      available: async () => true,
+    };
+    const deals = {
+      request: vi.fn(async () => ({ id: 'd' })),
+      available: async () => true,
+    };
+    const account = await service.save(actor('rep'), 'accounts', {
+      name: '活动归属客户',
+    });
+    const deal = await service.save(actor('rep'), 'opportunities', {
+      name: '活动归属商机',
+      accountId: account.id,
+    });
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: '活动归属线索',
+      source: 'website',
+    });
+    const evaluators = {
+      leads: leads as unknown as LeadEvaluator,
+      opportunities: deals as unknown as OpportunityEvaluator,
+    };
+    expect(
+      await followUpAfterActivity(service, evaluators, actor('rep'), {
+        opportunityId: deal.id,
+        leadId: lead.id,
+      }),
+    ).toBe(true);
+    expect(deals.request).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'rep' }),
+      deal.id,
+      undefined,
+      'activityDone',
+    );
+    expect(leads.request).not.toHaveBeenCalled();
+    expect(
+      await followUpAfterActivity(service, evaluators, actor('rep'), {
+        leadId: lead.id,
+      }),
+    ).toBe(true);
+    expect(leads.request).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'rep' }),
+      lead.id,
+      undefined,
+      'activityDone',
+    );
   });
 });
 

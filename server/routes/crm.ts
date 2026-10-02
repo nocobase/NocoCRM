@@ -842,16 +842,38 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           .catch(() => undefined);
       return c.json({ data: record }, 201);
     });
-    routes.patch('/:entity/:id', async (c) =>
-      c.json({
-        data: await service.save(
-          c.get('actor'),
-          asEntity(c.req.param('entity')),
-          await c.req.json(),
-          c.req.param('id'),
-        ),
-      }),
-    );
+    routes.patch('/:entity/:id', async (c) => {
+      const actor = c.get('actor');
+      const entity = asEntity(c.req.param('entity'));
+      const id = c.req.param('id');
+      // What the change is measured against: an activity marked done, a
+      // lead's company changed.
+      const before =
+        entity === 'activities' || entity === 'leads'
+          ? await service.get(actor, entity, id).catch(() => undefined)
+          : undefined;
+      const record = await service.save(actor, entity, await c.req.json(), id);
+      if (
+        entity === 'activities' &&
+        before &&
+        before.status !== 'completed' &&
+        record.status === 'completed'
+      )
+        service.activityCompleted?.(actor, record);
+      if (
+        entity === 'leads' &&
+        before &&
+        ['new', 'working', 'nurturing'].includes(toText(record.status)) &&
+        (['company', 'website'] as const).some(
+          (key) =>
+            toText(record[key] ?? '').trim() !== '' &&
+            toText(record[key] ?? '').trim() !==
+              toText(before[key] ?? '').trim(),
+        )
+      )
+        service.leadCompanyChanged?.(actor, id);
+      return c.json({ data: record });
+    });
     routes.delete('/:entity/:id', async (c) => {
       await service.remove(
         c.get('actor'),

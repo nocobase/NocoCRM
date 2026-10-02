@@ -374,6 +374,12 @@ export class CrmService {
   // conversion route (unless the person unticked it) and the assistant's
   // conversion tool.
   opportunityOpened?: (by: Actor, opportunityId: string) => void;
+  // Set by CrmProvider: an activity's status set to completed outside the
+  // outcome dialogs (its form, a list, the assistant), which follow its
+  // record up themselves; and a lead's company or website changed by a
+  // person, which has the AI look the company up again.
+  activityCompleted?: (by: Actor, activity: CrmRecord) => void;
+  leadCompanyChanged?: (by: Actor, leadId: string) => void;
   // Set by CrmProvider: the settings were saved (the assistant's prompt
   // follows the AI language setting).
   settingsSaved?: (settings: CrmSettings) => void;

@@ -600,6 +600,9 @@ export class OpportunityEvaluator {
     by: Actor,
     opportunityId: string,
     revise?: { entryId: unknown; instruction: unknown },
+    // What started it, when not a person asking (one of its activities
+    // marked done); shown on the card.
+    trigger?: 'activityDone',
   ): Promise<EvaluationEntry<OpportunityVerdict> | null> {
     if (!(await this.available())) return null;
     const opportunity = await this.service.get(
@@ -664,6 +667,7 @@ export class OpportunityEvaluator {
             instructedById: by.id,
           }
         : {}),
+      ...(trigger ? { trigger } : {}),
     } as const;
     await this.service.database
       .query()
@@ -864,7 +868,7 @@ export class OpportunityEvaluator {
           kind: EVALUATION,
           sessionId,
           error: 'unreadable',
-          ...(asked?.revises ? carried(asked) : {}),
+          ...(asked ? carried(asked) : {}),
         });
         return;
       }
@@ -872,7 +876,7 @@ export class OpportunityEvaluator {
       await this.finish(id, 'pending', {
         kind: EVALUATION,
         sessionId,
-        ...(asked?.revises ? carried(asked) : {}),
+        ...(asked ? carried(asked) : {}),
         // Nothing to compare with on a first follow-up, whatever the model
         // wrote ("无").
         result: previous ? result : { ...result, changes: [] },
@@ -1034,7 +1038,13 @@ export class OpportunityEvaluator {
       told.followUp !== false &&
       decided.status === 'accepted'
     )
-      await followUpOpportunity(this.service, this, actor, opportunityId);
+      await followUpOpportunity(
+        this.service,
+        this,
+        actor,
+        opportunityId,
+        'activityDone',
+      );
     return decided;
   }
 }

@@ -160,7 +160,6 @@ const wording = {
       running: ['AI working', 'AI 跟进中'],
       pending: ['AI suggestion', 'AI 建议待处理'],
     },
-    evaluate: ['Follow up with AI', '让 AI 跟进'],
     again: ['Follow up', '跟进'],
     running: [
       'The AI is reviewing this lead…',
@@ -211,6 +210,30 @@ const wording = {
     },
     // A value the AI left empty, in its own words of what changed.
     none: ['none', '无'],
+    // What started a follow-up the system ran on its own (lead-signals.ts,
+    // an activity marked done, a company changed).
+    trigger: {
+      uncontacted: [
+        'New lead not contacted in 2 days: the AI followed it up.',
+        '新线索 2 天还没联系，AI 自动跟进。',
+      ],
+      silent: [
+        'No activity in 14 days: the AI followed it up.',
+        '14 天没有活动，AI 自动跟进。',
+      ],
+      nurtureDue: [
+        'Nurture review due: the AI looked the company up again and followed it up.',
+        '培育复查到期，AI 重新调研并跟进。',
+      ],
+      companyChanged: [
+        'The company changed: the AI looked it up again and followed it up.',
+        '公司信息有变化，AI 重新调研并跟进。',
+      ],
+      activityDone: [
+        'An activity was done: the AI followed up again.',
+        '活动已完成，AI 继续跟进。',
+      ],
+    },
     // An opportunity's follow-up (opportunity-evaluation.ts): its
     // recommendations, how likely it is to close, and what accepting does.
     deal: {

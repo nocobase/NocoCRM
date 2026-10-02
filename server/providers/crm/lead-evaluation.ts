@@ -392,6 +392,9 @@ async function related(
     ['contacts', toText(lead.name ?? '') || undefined],
     ['contacts', domain],
     ['leads', domain],
+    // The same person come back as another lead.
+    ['leads', toText(lead.phone ?? '') || undefined],
+    ['leads', toText(lead.email ?? '') || undefined],
     ['opportunities', toText(lead.company ?? '') || undefined],
   ];
   const found = new Map<string, Row>();
@@ -468,6 +471,17 @@ export async function notesOf(
     return [];
   }
 }
+
+// What may start a follow-up besides a person asking (lead-signals.ts and
+// the activity and lead routes): a new lead left uncontacted, a lead gone
+// quiet, a nurtured lead's review falling due, its company changed by a
+// person, or one of its activities marked done.
+export type FollowUpTrigger =
+  'uncontacted' | 'silent' | 'nurtureDue' | 'companyChanged' | 'activityDone';
+const RESEARCH_TRIGGERS: ReadonlySet<string> = new Set([
+  'companyChanged',
+  'nurtureDue',
+]);
 
 // How long a lead's company particulars count as recent: a follow-up
 // looks the company up on the web again only after this.
@@ -786,6 +800,9 @@ export class LeadEvaluator {
     by: Actor,
     leadId: string,
     revise?: { entryId: unknown; instruction: unknown },
+    // What started it, when not a person asking (a signal, see
+    // lead-signals.ts); shown on the card, and some always search the web.
+    trigger?: FollowUpTrigger,
   ): Promise<EvaluationEntry | null> {
     if (!(await this.available())) return null;
     const lead = await this.service.get(by, 'leads', leadId);
@@ -857,6 +874,7 @@ export class LeadEvaluator {
                 instructedById: by.id,
               }
             : {}),
+          ...(trigger ? { trigger } : {}),
         }),
         changes: JSON.stringify({}),
         createdAt,
@@ -887,6 +905,7 @@ export class LeadEvaluator {
               instructedById: by.id,
             }
           : {}),
+        ...(trigger ? { trigger } : {}),
       },
     };
   }
@@ -994,7 +1013,13 @@ export class LeadEvaluator {
       // First the web research, as text, when it is due; a search that
       // fails or takes too long leaves the follow-up to go on without it.
       // A revision changes the card as asked and does not search again.
-      const due = revision ? false : await researchDue(this.service, lead, id);
+      // A changed company and a nurtured lead's review look the company up
+      // again, however recent the last look.
+      const due = revision
+        ? false
+        : (asked?.trigger !== undefined &&
+            RESEARCH_TRIGGERS.has(asked.trigger)) ||
+          (await researchDue(this.service, lead, id));
       let research = '';
       let researchedAt: string | undefined;
       if (due)
@@ -1070,7 +1095,7 @@ export class LeadEvaluator {
           kind: EVALUATION,
           sessionId,
           error: 'unreadable',
-          ...(asked?.revises ? carried(asked) : {}),
+          ...(asked ? carried(asked) : {}),
         });
         return;
       }
@@ -1085,7 +1110,7 @@ export class LeadEvaluator {
       await this.finish(id, 'pending', {
         kind: EVALUATION,
         sessionId,
-        ...(asked?.revises ? carried(asked) : {}),
+        ...(asked ? carried(asked) : {}),
         ...(searchedAt ? { researchedAt: searchedAt } : {}),
         result: {
           ...clip(
@@ -1255,7 +1280,7 @@ export class LeadEvaluator {
       told.followUp !== false &&
       decided.status === 'accepted'
     )
-      await followUpLead(this.service, this, actor, leadId);
+      await followUpLead(this.service, this, actor, leadId, 'activityDone');
     return decided;
   }
 
@@ -1572,18 +1597,28 @@ function cleanEnrich(
   return out;
 }
 
-// What a revision's entry keeps through its run: the card it redoes and
-// the person's instruction.
+// What an entry keeps through its run besides its result: for a revision,
+// the card it redoes and the person's instruction; for a follow-up the
+// system started, what started it (`trigger`).
 export function carried(
-  ai: Pick<EvaluationEntry['ai'], 'revises' | 'instruction' | 'instructedById'>,
-): Pick<EvaluationEntry['ai'], 'revises' | 'instruction' | 'instructedById'> {
-  return ai.revises
-    ? {
-        revises: ai.revises,
-        instruction: ai.instruction,
-        instructedById: ai.instructedById,
-      }
-    : {};
+  ai: Pick<
+    EvaluationEntry['ai'],
+    'revises' | 'instruction' | 'instructedById' | 'trigger'
+  >,
+): Pick<
+  EvaluationEntry['ai'],
+  'revises' | 'instruction' | 'instructedById' | 'trigger'
+> {
+  return {
+    ...(ai.revises
+      ? {
+          revises: ai.revises,
+          instruction: ai.instruction,
+          instructedById: ai.instructedById,
+        }
+      : {}),
+    ...(ai.trigger ? { trigger: ai.trigger } : {}),
+  };
 }
 
 // The verdict within the CRM's lengths.

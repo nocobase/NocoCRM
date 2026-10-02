@@ -139,6 +139,8 @@ export interface EvaluationEntry {
     instructedById?: string;
     // A deal's fields the person kept with an accept.
     updatedFields?: string[];
+    // What started a follow-up the system ran on its own.
+    trigger?: string;
   };
 }
 
@@ -310,7 +312,8 @@ export function EvaluateButton({
     >
       {/* The AI's mark, as on every AI entry point. */}
       {busy ? <Spinner /> : <Sparkles />}
-      {text(entry ? 'evaluation.again' : 'evaluation.evaluate')}
+      {/* "Follow up", the first time as every time after. */}
+      {text('evaluation.again')}
     </Button>
   );
 }
@@ -588,6 +591,14 @@ export function VerdictPanel({
           </span>
         )}
       </div>
+      {/* A follow-up the system started says what started it. */}
+      {entry.ai.trigger && (
+        <p className='text-muted-foreground'>
+          {text(`evaluation.trigger.${entry.ai.trigger}`, {
+            defaultValue: '',
+          })}
+        </p>
+      )}
       {/* A card redone on someone's word says whose and what. */}
       {entry.ai.instruction && (
         <p className='text-muted-foreground'>

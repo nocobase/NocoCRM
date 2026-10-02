@@ -145,12 +145,25 @@ export function crmWriteTools(
         return guarded(async () => {
           const args = (raw ?? {}) as Row;
           const entity = asEntity(toText(args.entity));
+          // An activity marked done follows its record up, as on its page.
+          const before =
+            entity === 'activities'
+              ? await service
+                  .get(actor, entity, toText(args.id))
+                  .catch(() => undefined)
+              : undefined;
           const record = await service.save(
             actor,
             entity,
             args.input ?? {},
             toText(args.id),
           );
+          if (
+            before &&
+            before.status !== 'completed' &&
+            record.status === 'completed'
+          )
+            service.activityCompleted?.(actor, record);
           return summary(entity, record, args.input ?? {});
         });
       },

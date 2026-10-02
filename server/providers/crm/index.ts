@@ -14,6 +14,9 @@ import { authorizationToken } from '@nocobase/app-plugin-authorization';
 import { aiManagerToken } from '@nocobase/app-plugin-ai-employee/server';
 import { notificationServiceToken } from '@nocobase/app-plugin-notification/server';
 import { workflowServiceToken } from '@nocobase/app-plugin-workflow/server';
+import { schedulerServiceToken } from '@nocobase/app-plugin-scheduler/server/tokens';
+import { scanLeadSignals } from './lead-signals.js';
+import { followUpAfterActivity } from './feedback.js';
 import {
   provisionCrm,
   registerCrmResources,
@@ -134,6 +137,52 @@ export default class CrmProvider extends ServiceProvider<Application> {
           language: settings.aiLanguage,
         }).catch(() => undefined);
     }
+    // The daily look over the open leads for what has not happened
+    // (lead-signals.ts): a scheduler task, so administrators see each pass,
+    // what it started, and may switch it off on the scheduled tasks page.
+    // At nine in the morning of the CRM's time zone as it stands at boot.
+    if (this.app.container.has(schedulerServiceToken)) {
+      const scheduler = this.app.container.resolve(schedulerServiceToken);
+      const service = this.app.container.resolve(crmToken);
+      scheduler.registerTarget({
+        type: 'app.crm-lead-signals',
+        title: '线索信号巡检',
+        validate: (config) =>
+          config !== null &&
+          typeof config === 'object' &&
+          !Array.isArray(config)
+            ? { valid: true }
+            : { valid: false, reason: 'config-must-be-an-object' },
+        // Read on the scheduled tasks page in place of the type's name.
+        describe: async () => ({
+          targetLabel: '线索信号巡检',
+          description: 'AI 自动跟进新线索未联系、线索沉默、培育复查到期的线索',
+          state: 'ready',
+        }),
+        start: async () => {
+          const pass = await scanLeadSignals(
+            service,
+            this.app.container.resolve(leadEvaluatorToken),
+          );
+          return {
+            state: 'completed',
+            outcome: 'succeeded',
+            result: { checked: pass.checked, started: pass.started },
+          };
+        },
+      });
+      scheduler.defineSchedule({
+        key: 'crm.lead-signals',
+        title: '线索每日巡检',
+        description:
+          '每天检查进行中的线索：新线索 2 天没联系、跟进中 14 天没有活动、培育复查到期的，由 AI 自动跟进一次，进负责人的待我处理。',
+        schedule: {
+          cron: '0 9 * * *',
+          timezone: (await service.settings()).timeZone || 'Asia/Shanghai',
+        },
+        target: { type: 'app.crm-lead-signals', config: {} },
+      });
+    }
     // The Users page shows and assigns the CRM's roles through this scope.
     if (this.app.container.has(userRoleScopeRegistryToken))
       this.unregisterRoleScope = this.app.container
@@ -151,8 +200,22 @@ export default class CrmProvider extends ServiceProvider<Application> {
     this.app.container.resolve(crmToken).leadCreated = (by, leadId) =>
       void evaluator.request(by, leadId).catch(() => undefined);
     const deals = this.app.container.resolve(opportunityEvaluatorToken);
-    this.app.container.resolve(crmToken).opportunityOpened = (by, id) =>
+    const service = this.app.container.resolve(crmToken);
+    service.opportunityOpened = (by, id) =>
       void deals.request(by, id).catch(() => undefined);
+    // An activity marked done its deal's, or else its lead's, follow-up;
+    // a lead's company changed by a person, a follow-up that looks it up.
+    service.activityCompleted = (by, activity) =>
+      void followUpAfterActivity(
+        service,
+        { leads: evaluator, opportunities: deals },
+        by,
+        activity,
+      ).catch(() => undefined);
+    service.leadCompanyChanged = (by, leadId) =>
+      void evaluator
+        .request(by, leadId, undefined, 'companyChanged')
+        .catch(() => undefined);
     this.cron = createCronJobManager();
     this.cron.addJob({ cronTime: '*/30 * * * * *', onTick: () => this.scan() });
     this.cron.start();

@@ -123,6 +123,9 @@ export interface EvaluationEntry<V = Verdict> {
     // The deal's fields the person kept with an accept (an opportunity's
     // amount or expected close date).
     updatedFields?: string[];
+    // What started a follow-up the system ran on its own (a signal, a
+    // changed company, an activity marked done); absent when asked for.
+    trigger?: string;
   };
 }
 

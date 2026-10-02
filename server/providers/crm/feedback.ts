@@ -7,7 +7,7 @@ import { loggingToken } from '@nocobase/app-server/logging';
 import type { ServiceResolver } from '@nocobase/service-provider';
 import { CRM_ASSISTANT } from '../../ai/employees/crm-assistant.js';
 import type { Actor } from './authorization.js';
-import type { LeadEvaluator } from './lead-evaluation.js';
+import type { FollowUpTrigger, LeadEvaluator } from './lead-evaluation.js';
 import type { OpportunityEvaluator } from './opportunity-evaluation.js';
 import { LONG_TEXT_LIMIT } from './limits.js';
 import { CrmError, object, toText } from './schema.js';
@@ -196,23 +196,39 @@ export async function recordOutcome(
   );
   if (input.followUp === false) return { followUp: false };
   return {
-    followUp: activity.opportunityId
-      ? Boolean(evaluators.opportunities) &&
-        (await followUpOpportunity(
+    followUp: await followUpAfterActivity(service, evaluators, actor, activity),
+  };
+}
+
+// An activity done, by whatever way (its outcome recorded, or its status
+// set to completed on its page, a list or by the assistant): a new
+// follow-up of the deal it belongs to, or else of its lead while not
+// converted, as the person who did it. Whether one started.
+export async function followUpAfterActivity(
+  service: CrmService,
+  evaluators: { leads?: LeadEvaluator; opportunities?: OpportunityEvaluator },
+  actor: Actor,
+  activity: Record<string, unknown>,
+): Promise<boolean> {
+  if (activity.opportunityId)
+    return evaluators.opportunities
+      ? followUpOpportunity(
           service,
-          evaluators.opportunities!,
+          evaluators.opportunities,
           actor,
           toText(activity.opportunityId),
-        ))
-      : activity.leadId && evaluators.leads
-        ? await followUpLead(
-            service,
-            evaluators.leads,
-            actor,
-            toText(activity.leadId),
-          )
-        : false,
-  };
+          'activityDone',
+        )
+      : false;
+  return activity.leadId && evaluators.leads
+    ? followUpLead(
+        service,
+        evaluators.leads,
+        actor,
+        toText(activity.leadId),
+        'activityDone',
+      )
+    : false;
 }
 
 // A new follow-up of a lead the person may edit and that is still open;
@@ -222,11 +238,12 @@ export async function followUpLead(
   evaluator: LeadEvaluator,
   actor: Actor,
   leadId: string,
+  trigger?: FollowUpTrigger,
 ): Promise<boolean> {
   try {
     const lead = await service.get(actor, 'leads', leadId, undefined, 'update');
     if (lead.status === 'converted') return false;
-    return Boolean(await evaluator.request(actor, leadId));
+    return Boolean(await evaluator.request(actor, leadId, undefined, trigger));
   } catch {
     return false;
   }
@@ -239,6 +256,7 @@ export async function followUpOpportunity(
   evaluator: OpportunityEvaluator,
   actor: Actor,
   opportunityId: string,
+  trigger?: 'activityDone',
 ): Promise<boolean> {
   try {
     const opportunity = await service.get(
@@ -250,7 +268,9 @@ export async function followUpOpportunity(
     );
     if (opportunity.stage === 'won' || opportunity.stage === 'lost')
       return false;
-    return Boolean(await evaluator.request(actor, opportunityId));
+    return Boolean(
+      await evaluator.request(actor, opportunityId, undefined, trigger),
+    );
   } catch {
     return false;
   }
