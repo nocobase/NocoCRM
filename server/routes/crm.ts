@@ -54,6 +54,11 @@ import {
 } from '../providers/crm/service.js';
 import { conversionPreview, convertLead } from '../providers/crm/conversion.js';
 import {
+  leadDuplicates,
+  mergeLeads,
+  mergeProposal,
+} from '../providers/crm/lead-merge.js';
+import {
   demoStatus,
   populateDemo,
   resetDemo,
@@ -669,6 +674,40 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         ),
       }),
     );
+    // Open leads that repeat this one, and their merge (lead-merge.ts): the
+    // proposal (the AI's where it is on) and the merge the person confirms,
+    // `:id` being the lead kept. The kept lead is followed up anew unless the
+    // person unticked that (`followUp: false`).
+    routes.get('/leads/:id/duplicates', async (c) =>
+      c.json({
+        data: await leadDuplicates(service, c.get('actor'), c.req.param('id')),
+      }),
+    );
+    routes.post('/leads/:id/merge/proposal', async (c) =>
+      c.json({
+        data: await mergeProposal(
+          service,
+          app.container,
+          c.get('actor'),
+          c.req.param('id'),
+          await c.req.json(),
+        ),
+      }),
+    );
+    routes.post('/leads/:id/merge', async (c) => {
+      const body = object(await c.req.json());
+      const lead = await mergeLeads(
+        service,
+        c.get('actor'),
+        c.req.param('id'),
+        body,
+      );
+      if (body.followUp !== false)
+        await evaluator()
+          ?.request(c.get('actor'), toText(lead.id), undefined, 'merged')
+          .catch(() => null);
+      return c.json({ data: lead });
+    });
     routes.get('/leads/:id/conversion', async (c) => {
       const data = await conversionPreview(
         service,

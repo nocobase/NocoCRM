@@ -9,6 +9,7 @@ import type { ServiceResolver } from '@nocobase/service-provider';
 import { z } from 'zod';
 import { CRM_ASSISTANT } from '../../ai/employees/crm-assistant.js';
 import { structuredRunModel } from './ai-model.js';
+import { findDuplicates, type FoundDuplicate } from './lead-merge.js';
 import { capability, conditions, type Actor } from './authorization.js';
 import {
   isCountry,
@@ -118,7 +119,7 @@ export interface CapturedLead {
   // Fields the AI filled but is unsure of: the form asks for a check.
   uncertain: string[];
   // Records already in the CRM this lead may repeat.
-  duplicates: { entity: string; id: string; name: string }[];
+  duplicates: FoundDuplicate[];
 }
 
 const RULES = `- 文字里每一位外部联系人整理成一条线索；我们自己公司的人不算线索。只有公司、没有具体的人时，整理成一条只有公司的线索。
@@ -263,39 +264,15 @@ function currentLeads(value: unknown): Row[] {
   });
 }
 
-// Records the lead may repeat: the company among accounts and leads, the
-// email or phone among contacts and leads, as the reader may see them.
+// Records the lead may repeat, as the lead page's duplicate check finds
+// them (lead-merge.ts): open leads by the same person (mergeable) or
+// company, contacts by email or phone, accounts by company.
 async function duplicatesOf(
   service: CrmService,
   actor: Actor,
   input: Row,
 ): Promise<CapturedLead['duplicates']> {
-  const found = new Map<string, CapturedLead['duplicates'][number]>();
-  const probes: [string, string | undefined][] = [
-    ['accounts', toText(input.company ?? '') || undefined],
-    ['leads', toText(input.company ?? '') || undefined],
-    ['contacts', toText(input.email ?? '') || undefined],
-    ['leads', toText(input.email ?? '') || undefined],
-    ['contacts', toText(input.phone ?? '') || undefined],
-  ];
-  for (const [entity, search] of probes) {
-    if (!search) continue;
-    try {
-      const { data } = await service.list(actor, entity as never, {
-        search,
-        pageSize: 3,
-      });
-      for (const record of data)
-        found.set(`${entity}:${toText(record.id)}`, {
-          entity,
-          id: toText(record.id),
-          name: toText(record.name ?? record.company ?? ''),
-        });
-    } catch {
-      // A list the reader may not see contributes nothing.
-    }
-  }
-  return [...found.values()].slice(0, 5);
+  return findDuplicates(service, actor, input);
 }
 
 // The leads a reply wrote as text. DeepSeek at times answers with the JSON in

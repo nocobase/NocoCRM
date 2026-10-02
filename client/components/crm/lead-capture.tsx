@@ -21,6 +21,7 @@ import {
 import { Spinner } from '../ui/spinner.js';
 import { Textarea } from '../ui/textarea.js';
 import { ErrorNotice } from './common.js';
+import { MergeDialog } from './lead-merge.js';
 import { Choice, RecordForm } from './form.js';
 import { LengthHint } from './length-hint.js';
 import {
@@ -41,7 +42,16 @@ export interface CapturedLead {
   ref?: string;
   input: Data;
   uncertain: string[];
-  duplicates: { entity: string; id: string; name: string }[];
+  // What the CRM may already hold (lead-merge.ts, findDuplicates): a lead
+  // of the same person, which the new one may be merged into
+  // (`mergeable`), or of the same company, a contact, an account.
+  duplicates: {
+    entity: string;
+    id: string;
+    name: string;
+    matched?: string[];
+    mergeable?: boolean;
+  }[];
 }
 
 // The fields the AI writes, sent back as they stand when the user asks it to
@@ -80,6 +90,9 @@ interface ReviewRow {
   origin: Record<string, 'ai' | 'user' | 'all'>;
   selected: boolean;
   createdId: string;
+  // Merged into a lead the CRM already held instead of being created,
+  // which `createdId` then names.
+  merged?: boolean;
   error?: unknown;
   // Bumped when the review replaces the values, so the form remounts with
   // them; the form's own edits come back through its onChange.
@@ -518,6 +531,33 @@ function CaptureReview({
       );
   };
 
+  // A lead merged into one the CRM already held instead of being created:
+  // the merge dialog for what the review holds and that lead.
+  const [merging, setMerging] = useState<{
+    rowKey: string;
+    leadId: string;
+    input: Data;
+  }>();
+  const keys = new Set(fields.map((f) => f.key));
+  const mergeDialog = merging ? (
+    <MergeDialog
+      leadId={merging.leadId}
+      input={merging.input}
+      // Closed without merging, the lead is still to create or merge.
+      onClose={() => setMerging(undefined)}
+      onMerged={(keptId) => {
+        update(merging.rowKey, (r) => ({
+          ...r,
+          createdId: keptId,
+          merged: true,
+          error: undefined,
+        }));
+        setMerging(undefined);
+        void refresh();
+      }}
+    />
+  ) : null;
+
   if (!active)
     return (
       <div className='grid gap-4'>
@@ -541,6 +581,7 @@ function CaptureReview({
 
   return (
     <div className='grid gap-4'>
+      {mergeDialog}
       {many && (
         <div className='flex flex-wrap items-center gap-2'>
           <DialogDescription className='mr-auto'>
@@ -623,7 +664,11 @@ function CaptureReview({
                     <span className='flex flex-wrap gap-1'>
                       {row.createdId ? (
                         <Badge variant='success'>
-                          {text('leadCapture.created')}
+                          {text(
+                            row.merged
+                              ? 'leadCapture.merged'
+                              : 'leadCapture.created',
+                          )}
                         </Badge>
                       ) : (
                         <>
@@ -666,7 +711,11 @@ function CaptureReview({
         <div className='min-w-0'>
           {active.createdId ? (
             <div className='grid place-items-center gap-2 rounded-lg border p-8 text-sm'>
-              <Badge variant='success'>{text('leadCapture.created')}</Badge>
+              <Badge variant='success'>
+                {text(
+                  active.merged ? 'leadCapture.merged' : 'leadCapture.created',
+                )}
+              </Badge>
               <Link
                 to={`/crm/leads/${active.createdId}`}
                 target='_blank'
@@ -685,7 +734,25 @@ function CaptureReview({
                 review={active.uncertain}
                 changed={active.changed}
                 notice={(unfilled) => (
-                  <CaptureNotice lead={active} unfilled={unfilled} />
+                  <CaptureNotice
+                    lead={active}
+                    unfilled={unfilled}
+                    // Merged as it stands, not created: what it lacks to be
+                    // created does not matter.
+                    onMerge={(leadId) =>
+                      setMerging({
+                        rowKey: active.key,
+                        leadId,
+                        input: Object.fromEntries(
+                          Object.entries(active.input).filter(
+                            ([key, value]) =>
+                              keys.has(key) && value !== undefined,
+                          ),
+                        ),
+                      })
+                    }
+                    mergeBlocked={busy}
+                  />
                 )}
                 embedded={{
                   onChange: (next) =>
@@ -837,10 +904,17 @@ function CaptureReview({
 export function CaptureNotice({
   lead,
   unfilled,
+  onMerge,
+  mergeBlocked = false,
 }: {
   lead: Pick<CapturedLead, 'duplicates'>;
   // Required fields still empty, highlighted in the form below.
   unfilled: readonly string[];
+  // Merging the lead into one the CRM holds of the same person, where the
+  // review offers it.
+  onMerge?: (leadId: string) => void;
+  // Not while the review is busy.
+  mergeBlocked?: boolean;
 }): ReactElement {
   const { text, language } = useCrmText();
   return (
@@ -878,6 +952,18 @@ export function CaptureNotice({
               >
                 {`${text(`entity.${d.entity}`)} ${d.name}`}
               </Link>
+              {d.entity === 'leads' && d.mergeable && onMerge ? (
+                <Button
+                  type='button'
+                  size='xs'
+                  variant='outline'
+                  className='ml-1.5 align-baseline text-foreground'
+                  disabled={mergeBlocked}
+                  onClick={() => onMerge(d.id)}
+                >
+                  {text('leadCapture.mergeInto')}
+                </Button>
+              ) : null}
             </span>
           ))}
         </p>

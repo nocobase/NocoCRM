@@ -153,7 +153,13 @@ const wording = {
       noteEdited: ['edited a note', '编辑了备注'],
       noteDeleted: ['removed a note', '删除了一条备注'],
       aiRevise: ['asked the AI to revise the suggestion', '让 AI 修改建议'],
+      merged: ['merged in the lead', '合并了线索'],
     },
+    // What a merge moved over, after the lead merged in.
+    mergedMoved: [
+      '{{activities}} activities and {{notes}} notes moved over',
+      '移入活动 {{activities}} 条、备注 {{notes}} 条',
+    ],
     empty: ['Nothing here yet.', '还没有记录。'],
   },
   evaluation: {
@@ -243,6 +249,10 @@ const wording = {
       activityDone: [
         'An activity was done: the AI followed up again.',
         '活动已完成，AI 继续跟进。',
+      ],
+      merged: [
+        'Leads merged: the AI followed up again.',
+        '线索已合并，AI 重新跟进。',
       ],
     },
     // An opportunity's follow-up (opportunity-evaluation.ts): its
@@ -477,6 +487,44 @@ const wording = {
     '创建或关联客户与联系人。已有值默认保留，勾选的字段将被覆盖。所有变更将在同一事务中保存。',
   ],
   possibleDuplicates: ['Possible matches', '可能重复的记录'],
+  // Leads that repeat a lead, and their merge (lead-merge.tsx).
+  merge: {
+    notice: ['Possible duplicate leads', '可能重复的线索'],
+    matched: {
+      email: ['same email', '邮箱相同'],
+      phone: ['same phone', '电话相同'],
+      person: ['same person and company', '同一公司同一人'],
+    },
+    action: ['Merge…', '合并…'],
+    title: ['Merge duplicate leads', '合并重复线索'],
+    hint: [
+      'Keep one lead and pick the value to keep for each field. The other lead’s activities, notes and attachments move to the lead kept, and the other lead is deleted; what it held is recorded on the kept lead’s timeline.',
+      '保留一条线索，逐项选择要保留的值。另一条线索的活动、备注和附件会移到保留的线索，然后删除它；它原来的信息记在保留线索的动态里。',
+    ],
+    // From the capture review: what the AI organised, into a lead held.
+    hintUnsaved: [
+      'What the AI organised goes into the lead the CRM already holds: pick the value to keep for each field. No new lead is created; what was organised is recorded on that lead’s timeline.',
+      '把 AI 整理的内容并入已有线索，逐项选择要保留的值。不会新建线索；整理的内容记在这条线索的动态里。',
+    ],
+    keep: ['Keep', '保留'],
+    thisLead: ['this page', '本页'],
+    // A lead not yet saved, organised by the AI in the capture review.
+    newLabel: ['new', '新整理'],
+    unsaved: ['Not saved yet, organised by the AI', '尚未保存，由 AI 整理'],
+    history: [
+      'Created {{date}} · {{activities}} activities · {{notes}} notes',
+      '创建于 {{date}} · 活动 {{activities}} · 备注 {{notes}}',
+    ],
+    both: ['Keep both', '两段都保留'],
+    rest: [
+      'The other {{count}} fields are the same. Attachments of both are kept.',
+      '其余 {{count}} 项相同；两边的附件都会保留。',
+    ],
+    thinking: ['The AI is comparing the two leads…', 'AI 正在比较两条线索…'],
+    comparing: ['Comparing the two leads…', '正在比较两条线索…'],
+    followUp: ['AI follows up the merged lead', '合并后 AI 重新跟进'],
+    confirm: ['Merge', '合并'],
+  },
   // The conversion dialog's duplicate check, when it found nothing.
   noDuplicateAccounts: [
     'Checked: no possible duplicate account',
@@ -663,6 +711,10 @@ const wording = {
     ],
     fillRequired: ['Still required: {{fields}}', '需补充必填项：{{fields}}'],
     duplicates: ['Possibly already in the CRM:', 'CRM 里可能已有：'],
+    // Merge the lead, not yet saved, into the one the CRM holds instead of
+    // creating it.
+    mergeInto: ['Merge into it…', '合并到这条…'],
+    merged: ['Merged', '已合并'],
     found: [
       'The AI found {{count}} leads. Check them, then create the ones you want.',
       'AI 整理出 {{count}} 条线索，核对后创建需要的。',
@@ -1266,6 +1318,7 @@ const wording = {
     status: ['Status changed', '状态变更'],
     converted: ['Lead converted', '线索转化'],
     ai: ['AI follow-up', 'AI 跟进建议'],
+    merged: ['Leads merged', '线索合并'],
   },
   errors: {
     serverError: [

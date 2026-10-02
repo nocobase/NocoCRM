@@ -862,11 +862,29 @@ export class CrmService {
             }
           : {
               ...event,
-              changes: Object.fromEntries(
-                Object.entries(object(jsonValue(event.changes) ?? {})).filter(
-                  ([key]) => readable.includes(key),
-                ),
-              ),
+              changes:
+                event.action === 'merged'
+                  ? (() => {
+                      // A merge (lead-merge.ts): the lead merged in, by its
+                      // readable fields, and what came over with it.
+                      const merge = object(jsonValue(event.changes) ?? {});
+                      return {
+                        lead: Object.fromEntries(
+                          Object.entries(object(merge.lead ?? {})).filter(
+                            ([key]) => key === 'id' || readable.includes(key),
+                          ),
+                        ),
+                        activities: merge.activities ?? 0,
+                        notes: merge.notes ?? 0,
+                        // A lead not yet saved, merged from the capture review.
+                        ...(merge.captured ? { captured: true } : {}),
+                      };
+                    })()
+                  : Object.fromEntries(
+                      Object.entries(
+                        object(jsonValue(event.changes) ?? {}),
+                      ).filter(([key]) => readable.includes(key)),
+                    ),
               // Null for entries written before earlier values were kept.
               previous:
                 event.previous == null

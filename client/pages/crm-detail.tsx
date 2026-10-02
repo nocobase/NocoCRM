@@ -21,6 +21,7 @@ import {
 import {
   ArrowRightLeft,
   ArrowUpRight,
+  Merge,
   CalendarDays,
   CirclePlus,
   ChevronDown,
@@ -106,6 +107,7 @@ import {
 import { InlineField } from '../components/crm/inline.js';
 import { AskAIButton } from '../components/crm/ask-ai.js';
 import { ConvertDialog } from '../components/crm/conversion.js';
+import { LeadDuplicates } from '../components/crm/lead-merge.js';
 
 const drawerEntities: Entity[] = [
   'leads',
@@ -479,105 +481,128 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       aiTools={aiTools}
       notice={<ErrorNotice error={error ?? loadError} />}
       left={
-        <div>
-          {/* Who has the lead and where it stands head the first group. */}
-          <InfoGroup title={text('leadGroups.general')}>
-            <InfoRow label={text('fields.ownerId')}>
-              {inline('ownerId')}
-            </InfoRow>
-            <InfoRow label={text('fields.status')}>
-              <LeadStatusField
-                record={record}
-                editable={editable}
-                statuses={(field('status').options ?? []).map((value) => ({
-                  value,
-                  label: text(`options.${toText(value)}`, {
-                    defaultValue: value,
-                  }),
-                }))}
-                reasons={(
-                  meta.settings.options.invalidReason ??
-                  field('invalidReason').options ??
-                  []
-                ).map((value) => ({
-                  value,
-                  label: text(`options.${toText(value)}`, {
-                    defaultValue: value,
-                  }),
-                }))}
-                onSave={patch}
-              />
-              {/* A converted lead is read-only: its work goes on in
+        <>
+          {/* Open leads that repeat this one, each to merge. */}
+          <LeadDuplicates
+            lead={record}
+            onMerged={(keptId) => {
+              // This lead merged away: on to the one kept, before the
+              // refresh refetches a lead that no longer exists.
+              if (keptId !== toText(id)) {
+                if (drawer?.inDrawer) drawer.close();
+                else void navigate(`/crm/leads/${keptId}`);
+              }
+              void refresh();
+            }}
+          />
+          <div>
+            {/* Who has the lead and where it stands head the first group. */}
+            <InfoGroup title={text('leadGroups.general')}>
+              <InfoRow label={text('fields.ownerId')}>
+                {inline('ownerId')}
+              </InfoRow>
+              <InfoRow label={text('fields.status')}>
+                <LeadStatusField
+                  record={record}
+                  editable={editable}
+                  statuses={(field('status').options ?? []).map((value) => ({
+                    value,
+                    label: text(`options.${toText(value)}`, {
+                      defaultValue: value,
+                    }),
+                  }))}
+                  reasons={(
+                    meta.settings.options.invalidReason ??
+                    field('invalidReason').options ??
+                    []
+                  ).map((value) => ({
+                    value,
+                    label: text(`options.${toText(value)}`, {
+                      defaultValue: value,
+                    }),
+                  }))}
+                  onSave={patch}
+                />
+                {/* A converted lead is read-only: its work goes on in
                         what it became, listed under its status. */}
+                {converted && (
+                  <p className='px-2 pb-1 text-xs text-muted-foreground'>
+                    {text('convertedHint')}
+                  </p>
+                )}
+              </InfoRow>
               {converted && (
-                <p className='px-2 pb-1 text-xs text-muted-foreground'>
-                  {text('convertedHint')}
-                </p>
-              )}
-            </InfoRow>
-            {converted && (
-              <>
-                {(
-                  [
-                    ['accounts', 'convertedAccountId'],
-                    ['contacts', 'convertedContactId'],
-                    ['opportunities', 'convertedOpportunityId'],
-                  ] as const
-                ).map(([e, key]) => (
-                  <InfoRow key={key} label={text(`fields.${key}`)}>
-                    {/* An empty one is shown rather than dropped: "no
+                <>
+                  {(
+                    [
+                      ['accounts', 'convertedAccountId'],
+                      ['contacts', 'convertedContactId'],
+                      ['opportunities', 'convertedOpportunityId'],
+                    ] as const
+                  ).map(([e, key]) => (
+                    <InfoRow key={key} label={text(`fields.${key}`)}>
+                      {/* An empty one is shown rather than dropped: "no
                               opportunity" is itself worth seeing. */}
-                    <div className='px-2 py-1.5'>
-                      {record[key] ? (
-                        <RecordLink
-                          entity={e}
-                          record={{
-                            id: toText(record[key]),
-                            name:
-                              names[toText(record[key])] ??
-                              text(`entities.${e}`),
-                          }}
-                        />
-                      ) : (
-                        <span className='text-muted-foreground'>—</span>
-                      )}
-                    </div>
-                  </InfoRow>
-                ))}
-              </>
-            )}
-            {leadGroups[0][1].map(fieldRow)}
-          </InfoGroup>
-          {leadGroups.slice(1).map(([group, keys]) => (
-            <InfoGroup key={group} title={text(`leadGroups.${group}`)}>
-              {keys.map(fieldRow)}
+                      <div className='px-2 py-1.5'>
+                        {record[key] ? (
+                          <RecordLink
+                            entity={e}
+                            record={{
+                              id: toText(record[key]),
+                              name:
+                                names[toText(record[key])] ??
+                                text(`entities.${e}`),
+                            }}
+                          />
+                        ) : (
+                          <span className='text-muted-foreground'>—</span>
+                        )}
+                      </div>
+                    </InfoRow>
+                  ))}
+                </>
+              )}
+              {leadGroups[0][1].map(fieldRow)}
             </InfoGroup>
-          ))}
-          <InfoGroup title={text('leadGroups.system')}>
-            <InfoRow label={text('fields.createdAt')}>
-              <div className='px-2 py-1.5'>
-                {localDate(record.createdAt, language, meta.settings.timeZone)}
-              </div>
-            </InfoRow>
-            <InfoRow label={text('fields.updatedAt')}>
-              <div className='px-2 py-1.5'>
-                {localDate(record.updatedAt, language, meta.settings.timeZone)}
-              </div>
-            </InfoRow>
-            {/* When it was converted, under its last update. */}
-            {converted && (
-              <InfoRow label={text('fields.convertedAt')}>
+            {leadGroups.slice(1).map(([group, keys]) => (
+              <InfoGroup key={group} title={text(`leadGroups.${group}`)}>
+                {keys.map(fieldRow)}
+              </InfoGroup>
+            ))}
+            <InfoGroup title={text('leadGroups.system')}>
+              <InfoRow label={text('fields.createdAt')}>
                 <div className='px-2 py-1.5'>
                   {localDate(
-                    record.convertedAt,
+                    record.createdAt,
                     language,
                     meta.settings.timeZone,
                   )}
                 </div>
               </InfoRow>
-            )}
-          </InfoGroup>
-        </div>
+              <InfoRow label={text('fields.updatedAt')}>
+                <div className='px-2 py-1.5'>
+                  {localDate(
+                    record.updatedAt,
+                    language,
+                    meta.settings.timeZone,
+                  )}
+                </div>
+              </InfoRow>
+              {/* When it was converted, under its last update. */}
+              {converted && (
+                <InfoRow label={text('fields.convertedAt')}>
+                  <div className='px-2 py-1.5'>
+                    {localDate(
+                      record.convertedAt,
+                      language,
+                      meta.settings.timeZone,
+                    )}
+                  </div>
+                </InfoRow>
+              )}
+            </InfoGroup>
+          </div>
+        </>
       }
       right={
         <div>
@@ -1800,6 +1825,28 @@ function ActivityEvent({
 const noteText = (event: { changes?: unknown }): string =>
   toText((event.changes as Data | undefined)?.text ?? '');
 
+// A merge on the kept lead's timeline: the lead merged in, as it was, and
+// what came over with it (server/providers/crm/lead-merge.ts).
+function MergedLead({ changes }: { changes?: unknown }): ReactElement {
+  const { text } = useCrmText();
+  const values = (changes ?? {}) as Data;
+  const lead = (values.lead ?? {}) as Data;
+  const activities = Number(values.activities ?? 0);
+  const notes = Number(values.notes ?? 0);
+  return (
+    <>
+      <span className='min-w-0 truncate'>
+        {[lead.name, lead.company].filter(Boolean).map(toText).join(' / ')}
+      </span>
+      {activities || notes ? (
+        <span className='shrink-0 text-xs text-muted-foreground'>
+          {text('feed.mergedMoved', { activities, notes })}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
 // Each kind of entry's icon on the timeline's rail.
 const eventIcons: Record<string, LucideIcon> = {
   created: CirclePlus,
@@ -1814,6 +1861,7 @@ const eventIcons: Record<string, LucideIcon> = {
   noteDeleted: StickyNote,
   // A person asking the AI to redo its card, in their words.
   aiRevise: MessageCircle,
+  merged: Merge,
 };
 
 // An update that changed the files alone, which the timeline reads as
@@ -2138,6 +2186,7 @@ export function HistoryFeed({
                               event.action !== 'created' &&
                               !toText(event.action).startsWith('note') &&
                               event.action !== 'aiRevise' &&
+                              event.action !== 'merged' &&
                               !activityEvent && (
                                 <HistoryChanges
                                   entity={entity}
@@ -2159,6 +2208,9 @@ export function HistoryFeed({
                                 changed. */}
                             {/* What the person asked the AI to change, in
                                 their words, cut where the line ends. */}
+                            {event.action === 'merged' ? (
+                              <MergedLead changes={event.changes} />
+                            ) : null}
                             {event.action === 'aiRevise' ? (
                               <span className='min-w-0 truncate'>
                                 「{noteText(event).replace(/\s+/g, ' ')}」

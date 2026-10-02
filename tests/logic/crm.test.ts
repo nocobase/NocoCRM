@@ -77,6 +77,11 @@ import {
 import { crmRoutes } from '../../server/routes/crm.js';
 import { captureLeads } from '../../server/providers/crm/lead-capture.js';
 import {
+  findDuplicates,
+  matchReasons,
+  mergeProposal,
+} from '../../server/providers/crm/lead-merge.js';
+import {
   followUpAfterActivity,
   organiseFeedback,
   recordOutcome,
@@ -5925,5 +5930,267 @@ describe('notes in the activity feed', () => {
       await service.historyOf(actor('rep'), 'leads', id)
     ).data.filter((entry) => entry.action === 'note');
     expect(note).toMatchObject({ actorId: 'other', source: 'assistant' });
+  });
+});
+
+describe('duplicate leads and their merge', () => {
+  it('matches the same email, phone or person whatever their formatting', () => {
+    expect(
+      matchReasons(
+        {
+          email: 'Li@Example.test',
+          phone: '138 0143 3591',
+          name: '李雷',
+          company: '远航物流',
+        },
+        {
+          email: 'li@example.test',
+          phone: '+86 13801433591',
+          name: '李 雷',
+          company: '远航物流有限公司',
+        },
+      ),
+    ).toEqual(['email', 'phone', 'person']);
+    expect(
+      matchReasons(
+        { name: '李雷', company: '远航物流', phone: '3591' },
+        { name: '李雷', company: '远洋物流', phone: '+86 3591' },
+      ),
+    ).toEqual([]);
+  });
+  it('lists an open lead that repeats this one, and only to those who may read it', async () => {
+    const first = await service.save(actor('rep'), 'leads', {
+      name: '韩梅',
+      company: '合并测试甲',
+      email: 'han.mei@merge-a.test',
+      source: 'website',
+    });
+    const second = await service.save(actor('rep'), 'leads', {
+      name: '韩梅梅',
+      company: '合并测试甲公司',
+      email: 'HAN.MEI@merge-a.test',
+      source: 'exhibition',
+    });
+    expect((await request(`/leads/${first.id}/duplicates`)).status).toBe(401);
+    expect(
+      (await request(`/leads/${first.id}/duplicates`, 'outsider')).status,
+    ).toBe(403);
+    const response = await request(`/leads/${first.id}/duplicates`, 'rep');
+    expect(response.status).toBe(200);
+    expect(((await response.json()) as { data: unknown[] }).data).toEqual([
+      expect.objectContaining({
+        id: second.id,
+        matched: ['email'],
+        mergeable: true,
+      }),
+    ]);
+    // Without the assistant the proposal keeps the lead with more history.
+    await service.save(actor('rep'), 'activities', {
+      type: 'call',
+      name: '首次电话',
+      status: 'planned',
+      startAt: '2026-10-20T02:00:00Z',
+      leadId: second.id,
+    });
+    const proposal = await mergeProposal(
+      service,
+      new ServiceContainer(),
+      actor('rep'),
+      first.id,
+      { with: second.id },
+    );
+    expect(proposal).toMatchObject({ keepId: second.id, ai: false });
+    expect(proposal.keepable.sort()).toEqual([first.id, second.id].sort());
+  });
+  it('merges one lead into another: picked values, activities and notes moved, the merge on the timeline', async () => {
+    const kept = await service.save(actor('rep'), 'leads', {
+      name: '林涛',
+      company: '合并测试乙',
+      phone: '139 0000 1234',
+      source: 'website',
+      message: '想看演示',
+    });
+    const merged = await service.save(actor('rep'), 'leads', {
+      name: '林涛',
+      company: '合并测试乙有限公司',
+      phone: '+86 13900001234',
+      jobTitle: '技术总监',
+      source: 'exhibition',
+      message: '询问私有化报价',
+    });
+    const activity = await service.save(actor('rep'), 'activities', {
+      type: 'call',
+      name: '报价沟通',
+      status: 'planned',
+      startAt: '2026-10-21T02:00:00Z',
+      leadId: merged.id,
+    });
+    await service.addNote(actor('rep'), 'leads', merged.id, '预算已批');
+    const response = await request(`/leads/${kept.id}/merge`, 'rep', 'POST', {
+      from: merged.id,
+      picks: { company: merged.id, message: 'both' },
+      followUp: false,
+    });
+    expect(response.status).toBe(200);
+    const lead = await service.get(actor('rep'), 'leads', kept.id);
+    expect(lead).toMatchObject({
+      name: '林涛',
+      company: '合并测试乙有限公司',
+      // Empty on the kept lead, so the other's value, unasked.
+      jobTitle: null,
+      source: 'website',
+      message: '想看演示\n\n---\n\n询问私有化报价',
+    });
+    await expect(
+      service.get(actor('rep'), 'leads', merged.id),
+    ).rejects.toMatchObject({ code: 'notFound' });
+    expect(
+      await service.get(actor('rep'), 'activities', activity.id),
+    ).toMatchObject({ leadId: kept.id });
+    const history = (await service.historyOf(actor('rep'), 'leads', kept.id))
+      .data;
+    expect(history.find((e) => e.action === 'note')).toMatchObject({
+      changes: { text: '预算已批' },
+    });
+    expect(history.find((e) => e.action === 'merged')).toMatchObject({
+      changes: {
+        lead: { id: merged.id, company: '合并测试乙有限公司' },
+        activities: 1,
+        notes: 1,
+      },
+    });
+  });
+  it('finds what a lead not yet created repeats, however it is written', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: '郑朗',
+      company: '丰润食品集团',
+      phone: '138 0245 3665',
+      source: 'website',
+    });
+    const colleague = await service.save(actor('other'), 'leads', {
+      name: '王五',
+      company: '丰润食品',
+      source: 'website',
+    });
+    const found = await findDuplicates(service, actor('rep'), {
+      name: '郑朗',
+      company: '丰润食品集团有限公司',
+      phone: '+86 138-0245-3665',
+    });
+    expect(found.slice(0, 2)).toEqual([
+      expect.objectContaining({
+        entity: 'leads',
+        id: lead.id,
+        matched: ['phone', 'person'],
+        mergeable: true,
+      }),
+      // The same company, another person: worth knowing, not to merge.
+      expect.objectContaining({
+        entity: 'leads',
+        id: colleague.id,
+        matched: ['company'],
+        mergeable: false,
+      }),
+    ]);
+  });
+  it('merges a lead not yet saved into the one the CRM holds, creating nothing', async () => {
+    const held = await service.save(actor('rep'), 'leads', {
+      name: '罗雨萱',
+      company: '合并测试丁',
+      email: 'luo@merge-d.test',
+      source: 'marketing',
+      message: '下载了白皮书',
+    });
+    const input = {
+      name: '罗雨轩',
+      company: '合并测试丁',
+      email: 'LUO@merge-d.test',
+      jobTitle: '运营主管',
+      source: 'exhibition',
+      message: '想做巡店应用',
+    };
+    const proposal = await mergeProposal(
+      service,
+      new ServiceContainer(),
+      actor('rep'),
+      held.id,
+      { input },
+    );
+    // The lead the CRM holds is kept; an email only in another case is
+    // no choice to make.
+    expect(proposal).toMatchObject({ keepId: held.id, keepable: [held.id] });
+    expect(proposal.groups).not.toContain('email');
+    expect(proposal.groups).toEqual(
+      expect.arrayContaining(['name', 'jobTitle', 'source', 'message']),
+    );
+    const before = (await service.list(actor('rep'), 'leads', { pageSize: 1 }))
+      .total;
+    const response = await request(`/leads/${held.id}/merge`, 'rep', 'POST', {
+      input,
+      picks: { jobTitle: 'new', message: 'both' },
+      followUp: false,
+    });
+    expect(response.status).toBe(200);
+    expect(
+      (await service.list(actor('rep'), 'leads', { pageSize: 1 })).total,
+    ).toBe(before);
+    expect(await service.get(actor('rep'), 'leads', held.id)).toMatchObject({
+      name: '罗雨萱',
+      jobTitle: '运营主管',
+      source: 'marketing',
+      message: '下载了白皮书\n\n---\n\n想做巡店应用',
+    });
+    const history = (await service.historyOf(actor('rep'), 'leads', held.id))
+      .data;
+    expect(history.find((e) => e.action === 'merged')).toMatchObject({
+      source: 'capture',
+      changes: { captured: true, lead: { name: '罗雨轩' } },
+    });
+    // A status is never taken from a lead that does not exist.
+    expect(
+      (
+        await request(`/leads/${held.id}/merge`, 'rep', 'POST', {
+          input,
+          picks: { status: 'new' },
+          followUp: false,
+        })
+      ).status,
+    ).toBe(400);
+  });
+  it('refuses a merge the person may not make, or of leads that do not repeat each other', async () => {
+    const mine = await service.save(actor('rep'), 'leads', {
+      name: '周岚',
+      company: '合并测试丙',
+      email: 'zhou.lan@merge-c.test',
+      source: 'website',
+    });
+    const theirs = await service.save(actor('other'), 'leads', {
+      name: '周岚',
+      company: '合并测试丙',
+      email: 'zhou.lan@merge-c.test',
+      source: 'website',
+    });
+    const unrelated = await service.save(actor('rep'), 'leads', {
+      name: '吴迪',
+      company: '无关公司',
+      source: 'website',
+    });
+    expect(
+      (
+        await request(`/leads/${mine.id}/merge`, 'rep', 'POST', {
+          from: theirs.id,
+          followUp: false,
+        })
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await request(`/leads/${mine.id}/merge`, 'rep', 'POST', {
+          from: unrelated.id,
+          followUp: false,
+        })
+      ).status,
+    ).toBe(400);
+    expect(await service.get(actor('other'), 'leads', theirs.id)).toBeTruthy();
   });
 });

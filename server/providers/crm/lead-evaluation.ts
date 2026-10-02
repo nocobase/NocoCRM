@@ -484,7 +484,13 @@ export async function notesOf(
 // quiet, a nurtured lead's review falling due, its company changed by a
 // person, or one of its activities marked done.
 export type FollowUpTrigger =
-  'uncontacted' | 'silent' | 'nurtureDue' | 'companyChanged' | 'activityDone';
+  | 'uncontacted'
+  | 'silent'
+  | 'nurtureDue'
+  | 'companyChanged'
+  | 'activityDone'
+  // Two leads merged into this one (lead-merge.ts).
+  | 'merged';
 const RESEARCH_TRIGGERS: ReadonlySet<string> = new Set([
   'companyChanged',
   'nurtureDue',
