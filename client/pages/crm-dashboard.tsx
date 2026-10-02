@@ -250,7 +250,6 @@ export default function DashboardPage(): ReactElement {
       <CrmFrame
         title={text('dashboard')}
         description={text('dashboardDescription')}
-        assistant={false}
         titleAside={
           <div className='flex rounded-lg border p-0.5'>
             {(['mine', 'team'] as const).map((value) => (
@@ -695,35 +694,6 @@ function AgendaCard({
                   </span>
                 )}
               </p>
-              {entity === 'activities' && meta?.assistant && (
-                <div className='mt-1 flex gap-1'>
-                  {(['prepareActivity', 'reportActivity'] as const).map(
-                    (key) => (
-                      <Button
-                        key={key}
-                        size='sm'
-                        variant='ghost'
-                        className='h-7 px-2 text-xs text-ai hover:text-ai'
-                        onClick={() =>
-                          window.dispatchEvent(
-                            new CustomEvent('crm-assistant', {
-                              detail: {
-                                prompt: text(`prompts.${key}`),
-                                entity: 'activities',
-                                recordId: r.id,
-                                send: key === 'prepareActivity',
-                              },
-                            }),
-                          )
-                        }
-                      >
-                        <Sparkles />
-                        {text(key)}
-                      </Button>
-                    ),
-                  )}
-                </div>
-              )}
             </div>
           ))
         ) : (

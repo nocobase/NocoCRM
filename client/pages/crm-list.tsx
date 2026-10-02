@@ -690,7 +690,6 @@ function EntityList({
       }
       // No list page carries the generic assistant button: the global entry
       // and the record pages' own shortcuts cover it.
-      assistant={false}
     >
       <ErrorNotice error={query.error ?? error} />
       {activeMetric && (

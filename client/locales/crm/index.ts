@@ -114,9 +114,7 @@ const wording = {
   dealFollowUpNow: ['AI follows up the opportunity at once', 'AI 立刻跟进商机'],
   historyTab: ['Timeline', '动态'],
   feed: {
-    all: ['All', '全部'],
-    user: ['People', '人工'],
-    // The AI filter, and who did an AI entry on the timeline.
+    // Who did an AI entry on the timeline.
     ai: ['AI', 'AI'],
     aiProposed: ['AI proposed', 'AI 提议'],
     aiCaptured: ['Organised by AI', 'AI 整理'],
@@ -922,8 +920,6 @@ const wording = {
   upcoming: ['Upcoming', '待进行'],
   completedThisMonth: ['Completed this month', '本月完成'],
   updatedSuffix: ['updated', '更新'],
-  prepareActivity: ['Help me prepare', '帮我准备'],
-  reportActivity: ['Report back', '我要反馈'],
   more: ['View all', '查看全部'],
   showMore: ['Show more', '展开'],
   moreFields: ['More: {{fields}}', '更多：{{fields}}'],
@@ -967,14 +963,6 @@ const wording = {
     assistApproval: [
       'Help me review this request: first state what is asked (topic, the discount / payment terms / clauses involved, amount); then where the opportunity stands (stage, amount, expected close date, decision makers, recent activities and feedback) and this account’s earlier approvals; check it against the approval rules in the business instructions, point out risks and what the applicant should add; and end with your recommendation — approve, reject, or needs more — with reasons. Do not propose any action.',
       '帮我审这条申请：先说明申请的内容（事项、涉及的折扣/账期/条款、金额），再看所属商机的现状（阶段、金额、预计成交日、决策人、最近活动和反馈），以及这个客户此前的审批记录；对照业务指导里的审批规则，指出风险和需要申请人补充的信息，最后给出你的建议（同意 / 拒绝 / 需补充）及理由。不要提出任何动作。',
-    ],
-    prepareActivity: [
-      'Help me prepare for this activity: review the background and previous communication, list the points to confirm and the questions to ask.',
-      '帮我准备这次活动：回顾背景和之前的沟通，列出要确认的要点和要问的问题。',
-    ],
-    reportActivity: [
-      'Here is what happened in this activity: ',
-      '这次活动的情况是：',
     ],
     accounts: [
       'Summarize this account and suggest opportunities to deepen the relationship.',

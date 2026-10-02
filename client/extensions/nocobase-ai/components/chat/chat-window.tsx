@@ -25,6 +25,7 @@ export function AIChatWindow({
   placeholder,
   disclaimer,
   header,
+  showWorkContext = true,
   onToolCallDecision,
 }: AIChatWindowProps) {
   const t = useAITranslate();
@@ -110,6 +111,7 @@ export function AIChatWindow({
           attachmentActionIndex={attachmentActionIndex}
           placeholder={placeholder}
           disclaimer={disclaimer}
+          showWorkContext={showWorkContext}
         />
       </div>
     </section>
@@ -132,5 +134,8 @@ export type AIChatWindowProps = {
   disclaimer?: ReactNode | false;
   // Application change (NocoCRM): replaces the built-in header.
   header?: ReactNode;
+  // Application change (NocoCRM): whether the composer shows the draft's
+  // work context as chips; the CRM shows it in its header instead.
+  showWorkContext?: boolean;
   onToolCallDecision?: (decision: AIToolCallDecision) => void | Promise<void>;
 };

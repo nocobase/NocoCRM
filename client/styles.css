@@ -121,6 +121,12 @@
     margin-right: 28rem;
     transition: margin-right 200ms ease-in-out;
   }
+  /* The record drawer (crm-detail.tsx's RecordDrawer), also from the right,
+     moves left of the panel rather than lying under it. */
+  body.crm-assistant-open .crm-record-drawer {
+    right: 28rem;
+    transition: right 200ms ease-in-out;
+  }
 }
 
 /* A timeline entry the page was opened at (?focus=, from "Waiting on me"):

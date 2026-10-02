@@ -1,7 +1,6 @@
 import { recordTitle } from '../components/crm/lookups.js';
 import { sentence, toText, useMore } from '../components/crm/api.js';
 import {
-  useEffect,
   useState,
   type MouseEvent,
   type ReactElement,
@@ -48,6 +47,7 @@ import {
   Tag,
   Target,
   Trash2,
+  Ellipsis,
   User,
   UserCheck,
   Users,
@@ -56,7 +56,13 @@ import {
 } from 'lucide-react';
 import { KindTag } from '../components/crm/kind-tag.js';
 import { Badge } from '../components/ui/badge.js';
-import { Button } from '../components/ui/button.js';
+import { Button, buttonVariants } from '../components/ui/button.js';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../components/ui/dropdown-menu.js';
 import {
   Dialog,
   DialogContent,
@@ -103,6 +109,7 @@ import {
   Value,
 } from '../components/crm/common.js';
 import { InlineField } from '../components/crm/inline.js';
+import { AskAIButton } from '../components/crm/ask-ai.js';
 import {
   EvaluateButton,
   EvaluationStatus,
@@ -128,7 +135,6 @@ import { RecordOutcomeDialog } from '../components/crm/outcome.js';
 const shortcuts: Partial<Record<Entity, readonly string[]>> = {
   accounts: ['summarizeAccount', 'researchCompany', 'findOpportunities'],
   opportunities: ['analyzeOpportunity'],
-  activities: ['prepareActivity', 'reportActivity'],
 };
 
 // The details card, per object: the order the specification lists the fields
@@ -328,21 +334,11 @@ export default function EntityDetail({
   }>();
   const [moving, setMoving] = useState(false);
   const [busy, setBusy] = useState(false);
-  // The assistant panel attaches the record on screen to the conversation;
-  // its title follows once the record has loaded.
+  // The record's title, for "Ask AI" and the shortcuts, which start the
+  // assistant's conversation from it.
   const contextName = detail
     ? recordTitle(entity, detail.record, detail.titles)
     : undefined;
-  useEffect(() => {
-    window.dispatchEvent(
-      new CustomEvent('crm-context', {
-        detail: { entity, recordId: id, name: contextName },
-      }),
-    );
-    return () => {
-      window.dispatchEvent(new CustomEvent('crm-context', { detail: {} }));
-    };
-  }, [entity, id, contextName]);
   if (isLoading || !meta) return <Loading />;
   if (!detail)
     return (
@@ -565,9 +561,8 @@ export default function EntityDetail({
           entity,
           recordId: id,
           name: contextName,
-          // "Report back" is an opening the user completes; the rest are
-          // complete instructions.
-          send: key !== 'reportActivity',
+          // Each a complete instruction, sent at once.
+          send: true,
           // Background research is the one shortcut that looks outside the
           // CRM, so it alone turns on the model's web search.
           webSearch: key === 'researchCompany',
@@ -623,12 +618,6 @@ export default function EntityDetail({
       editableTitle
       title={heading}
       description={`${toText(text(`entities.${toText(entity)}`))} ID: ${toText(record.id)}`}
-      // Pages with shortcuts have their own entries; the contact and
-      // approval pages have none and no generic button either — the global
-      // entry serves them.
-      assistant={
-        !shortcuts[entity] && !['contacts', 'approvals'].includes(entity)
-      }
       actions={
         <>
           {/* A planned activity: what came of it, recorded (and its lead
@@ -641,17 +630,11 @@ export default function EntityDetail({
                 {text('evaluation.recordOutcome')}
               </Button>
             )}
-          {detail.permissions.delete && (
-            <Button variant='outline' onClick={() => setConfirmDelete(true)}>
-              <Trash2 />
-              {text('deleteRecord', {
-                entity: text(`entity.${toText(entity)}`),
-              })}
-            </Button>
-          )}
           {entity === 'approvals' && (
             <ApprovalActions approval={record} names={names} />
           )}
+          {/* A new conversation with the assistant about this record. */}
+          <AskAIButton entity={entity} recordId={id} name={contextName} />
           {meta?.assistant && shortcuts[entity] && (
             <div className='flex flex-wrap items-center'>
               {shortcuts[entity].map((key) => (
@@ -678,6 +661,32 @@ export default function EntityDetail({
               <Sparkles />
               {text('assistApproval')}
             </Button>
+          )}
+          {/* The rarer deleting, last, in a "More" menu, as on a lead's
+              page. */}
+          {detail.permissions.delete && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                aria-label={text('moreActions')}
+                className={buttonVariants({
+                  size: 'icon-sm',
+                  variant: 'outline',
+                })}
+              >
+                <Ellipsis />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuItem
+                  variant='destructive'
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  <Trash2 />
+                  {text('deleteRecord', {
+                    entity: text(`entity.${toText(entity)}`),
+                  })}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </>
       }
@@ -924,6 +933,30 @@ export default function EntityDetail({
                     </Button>
                   ))}
                 </div>
+                {/* A deal's AI follow-up, right of the tabs on every tab:
+                    where it stands (opening it in the timeline) and asking
+                    for another. */}
+                {entity === 'opportunities' && meta?.assistant ? (
+                  // Kept to the right when six tabs leave it no room
+                  // beside them.
+                  <div className='-mr-2.5 ml-auto flex flex-wrap items-center gap-1'>
+                    <EvaluationStatus
+                      entity='opportunities'
+                      recordId={id}
+                      onOpen={(entryId) => {
+                        setFocus({ id: entryId, at: Date.now() });
+                        setTab('historyTab');
+                      }}
+                    />
+                    {editable && !closedDeal && (
+                      <EvaluateButton
+                        entity='opportunities'
+                        recordId={id}
+                        onError={setError}
+                      />
+                    )}
+                  </div>
+                ) : null}
               </div>
             </CardHeader>
             <CardContent>
@@ -1082,26 +1115,6 @@ export default function EntityDetail({
                   recordName={contextName}
                   focusId={focus?.id}
                   focusAt={focus?.at}
-                  toolbar={
-                    entity === 'opportunities' && meta?.assistant ? (
-                      <div className='flex flex-wrap items-center gap-1'>
-                        <EvaluationStatus
-                          entity='opportunities'
-                          recordId={id}
-                          onOpen={(entryId) =>
-                            setFocus({ id: entryId, at: Date.now() })
-                          }
-                        />
-                        {editable && !closedDeal && (
-                          <EvaluateButton
-                            entity='opportunities'
-                            recordId={id}
-                            onError={setError}
-                          />
-                        )}
-                      </div>
-                    ) : undefined
-                  }
                   onOpenNote={(noteId) => {
                     setNoteFocus(noteId);
                     setTab('notes');

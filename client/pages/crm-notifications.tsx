@@ -9,7 +9,6 @@ export default function NotificationsPage(): ReactElement {
     <CrmFrame
       title={text('notifications')}
       description={text('notificationDescription')}
-      assistant={false}
     >
       <NotificationRuntime>
         <NotificationInbox />

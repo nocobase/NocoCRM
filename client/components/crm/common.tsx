@@ -14,10 +14,8 @@ import {
   ArrowUpRight,
   Inbox,
   LoaderCircle,
-  Sparkles,
   type LucideIcon,
 } from 'lucide-react';
-import { Button } from '../ui/button.js';
 import { Card, CardContent } from '../ui/card.js';
 import { Badge } from '../ui/badge.js';
 import { Alert, AlertDescription } from '../ui/alert.js';
@@ -28,7 +26,6 @@ import {
   localDate,
   money,
   useMetadata,
-  useAssistantAvailable,
   type CrmRecord,
   type Entity,
   type Field,
@@ -40,7 +37,6 @@ export function CrmFrame({
   titleAside,
   editableTitle = false,
   actions,
-  assistant = true,
   fill = false,
   children,
 }: {
@@ -55,16 +51,11 @@ export function CrmFrame({
   // field's padding around its line.
   editableTitle?: boolean;
   actions?: ReactNode;
-  // The action center is where the assistant's proposals already live, so a
-  // button to open the assistant there adds nothing.
-  assistant?: boolean;
   // The page takes exactly the viewport height and its content scrolls
   // inside (the board), instead of growing and scrolling as a whole.
   fill?: boolean;
   children: ReactNode;
 }): ReactElement {
-  const { text } = useCrmText();
-  const assistantAvailable = useAssistantAvailable();
   // Inside the record drawer the frame is a section of the drawer, not the
   // page's main landmark, and sits tighter.
   const inDrawer = useRecordDrawer()?.inDrawer ?? false;
@@ -120,20 +111,9 @@ export function CrmFrame({
             className={`flex flex-wrap items-center gap-2 md:font-heading md:text-3xl ${editableTitle ? 'md:min-h-[calc(1lh+--spacing(3))]' : 'md:min-h-lh'}`}
           >
             {titleAside && <div className='hidden md:block'>{titleAside}</div>}
+            {/* The assistant opens from the header's AI button, and about a
+                record from its "Ask AI": no generic entry here. */}
             {actions}
-            {assistant && assistantAvailable && (
-              <Button
-                variant='outline'
-                onClick={() =>
-                  window.dispatchEvent(
-                    new CustomEvent('crm-assistant', { detail: {} }),
-                  )
-                }
-              >
-                <Sparkles />
-                {text('assistant')}
-              </Button>
-            )}
           </div>
         </header>
       )}

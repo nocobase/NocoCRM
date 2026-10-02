@@ -46,12 +46,13 @@ import { sentence, toText, useCrmText, useMetadata, type Data } from './api.js';
 import { crmToolRenderers } from './ai-tool-renderers.js';
 
 // The CRM assistant: the AI Employee plugin's chat, mounted in the side
-// panel the header's sparkle opens, talking to the CRM employee defined in
+// panel the header's AI button opens, talking to the CRM employee defined in
 // server/ai, which reads the CRM and proposes writes the user confirms on
-// cards in the conversation. The page shortcuts ("Help me prepare", ...)
-// still dispatch `crm-assistant` events with a prompt; detail pages report
-// the record on screen through `crm-context`, and that record travels with
-// the conversation as work context the employee reads with get_record.
+// cards in the conversation. A record's "Ask AI" (ask-ai.tsx) and the page
+// shortcuts dispatch `crm-assistant` events: a new conversation whose
+// starting point is that record (work context the employee reads with
+// get_record), with a prompt for a shortcut. Nothing is attached by merely
+// being on a page: the header's button opens a blank conversation.
 
 const CRM_ASSISTANT = 'crm-assistant';
 const openKey = 'crm-assistant-open';
@@ -59,9 +60,9 @@ const openKey = 'crm-assistant-open';
 // whose task is queued for the chat that mounts and starts a conversation of
 // its own (restoring the remembered one would change the active
 // conversation under the queued task and drop it), or by the header's
-// button, which opens a new conversation about the page's record. Either
-// way the remembered conversation is not restored on that mount; it is still
-// in the conversation list. Only a reload brings it back.
+// button, which opens a blank new conversation. Either way the remembered
+// conversation is not restored on that mount; it is still in the
+// conversation list. Only a reload brings it back.
 let shortcutOpensPanel = false;
 
 // Whether the panel is open, for the header's button, which is not the
@@ -93,7 +94,7 @@ function recordItem(context: RecordContext): AIWorkContextItem {
     id: `${context.entity}/${context.recordId}`,
     title: context.name ?? `${context.entity} ${context.recordId}`,
     content: {
-      note: 'The user is viewing this CRM record. Read it with get_record before answering about it.',
+      note: 'The CRM record the user started this conversation from. Read it with get_record before answering about it.',
       entity: context.entity,
       recordId: context.recordId,
     },
@@ -238,7 +239,6 @@ function CrmAssistantPanel(): ReactElement | null {
   const { data: meta } = useMetadata();
   const controller = useAIChatController();
   const { open } = useAIChatControllerState(controller);
-  const [record, setRecord] = useState<RecordContext>();
   // The panel expands into a centred dialog for a longer conversation; the
   // same chat window stays mounted, so nothing is lost either way.
   const [expanded, setExpanded] = useState(false);
@@ -292,10 +292,11 @@ function CrmAssistantPanel(): ReactElement | null {
         ...(target ? [recordItem(target)] : []),
         ...(extra ? [extra] : []),
       ];
-      // No prompt and nothing to attach: just open the panel. A shortcut
-      // bringing context of its own ("Ask about it") starts its
-      // conversation with that context and an empty composer.
-      if (!prompt && !extra) {
+      // No prompt and nothing to attach: just open the panel. A record's
+      // "Ask AI", or a shortcut bringing context of its own ("Ask about it"
+      // on a card), starts its conversation with that context and an empty
+      // composer.
+      if (!prompt && !workContext.length) {
         controller.open();
         return;
       }
@@ -325,8 +326,6 @@ function CrmAssistantPanel(): ReactElement | null {
         reuseConversation: data.newConversation !== true,
       });
     };
-    const change = (event: Event): void =>
-      setRecord(recordContextOf((event as CustomEvent<Data>).detail ?? {}));
     // The header's button: closes the panel, or opens it on a new
     // conversation about the record on screen.
     const toggle = (): void => {
@@ -338,11 +337,9 @@ function CrmAssistantPanel(): ReactElement | null {
       controller.open();
     };
     window.addEventListener('crm-assistant', show);
-    window.addEventListener('crm-context', change);
     window.addEventListener('crm-assistant-toggle', toggle);
     return () => {
       window.removeEventListener('crm-assistant', show);
-      window.removeEventListener('crm-context', change);
       window.removeEventListener('crm-assistant-toggle', toggle);
     };
   }, [controller]);
@@ -392,11 +389,7 @@ function CrmAssistantPanel(): ReactElement | null {
             user talks to (NocoHeader). */}
         <div className='flex h-full min-h-0 flex-col'>
           <div className='flex min-h-0 flex-1 flex-col'>
-            <ConfiguredChat
-              controller={controller}
-              record={record}
-              actions={actions}
-            />
+            <ConfiguredChat controller={controller} actions={actions} />
           </div>
         </div>
       </ChatSurface>
@@ -408,11 +401,9 @@ function CrmAssistantPanel(): ReactElement | null {
 // model; a composer mounted earlier would send with an empty configuration.
 function ConfiguredChat({
   controller,
-  record,
   actions,
 }: {
   controller: AIChatController;
-  record: RecordContext | undefined;
   // The panel's expand and close buttons, in the chat's toolbar; above a
   // notice while the chat cannot start.
   actions: ReactNode;
@@ -449,13 +440,12 @@ function ConfiguredChat({
       modelConfigurationError?.message ?? toText(text('assistantNoModel')),
     );
   return (
-    <AIPageContextScope context={record ? [recordItem(record)] : []}>
+    <AIPageContextScope context={[]}>
       <AIChatProvider
         id='crm-assistant'
         controller={controller}
         defaultEmployee={CRM_ASSISTANT}
       >
-        <RecordContext record={record} />
         <RememberConversation />
         <AIChatWindow
           className='h-full'
@@ -468,6 +458,9 @@ function ConfiguredChat({
           // PowerPoint, text, CSV, JSON) as extracted text; images only for
           // a model that reads them (DeepSeek does not).
           enableAttachments
+          // The starting point shows in the header (NocoHeader), not as
+          // chips over the composer.
+          showWorkContext={false}
         />
       </AIChatProvider>
     </AIPageContextScope>
@@ -478,11 +471,10 @@ function ConfiguredChat({
 // user talks to (the employee's avatar, name and role, in the interface
 // language), with the conversation list's toggle before it and a new
 // conversation, the user's own instructions, expand and close after it.
-// Below, once a conversation is under way, what it started from: the
-// context its first message carried (the lead and its evaluation
-// for "Ask about it", the record a question was typed on), fixed for the
-// conversation whatever the page shows later; the composer's chip is the
-// page's record for the next message.
+// Below, what the conversation started from (a record's "Ask AI", the lead
+// and its evaluation for a card's "Ask about it"): from the moment it is
+// opened, as the draft carries it, and once under way as its first message
+// carried it, fixed whatever the page shows later.
 function NocoHeader({ actions }: { actions: ReactNode }): ReactElement {
   const { text, language } = useCrmText();
   const {
@@ -497,8 +489,11 @@ function NocoHeader({ actions }: { actions: ReactNode }): ReactElement {
     (conversation) => conversation.unread,
   ).length;
   const first = messages.find((message) => message.role === 'user');
+  const { workContext } = useAIChat();
   // Each item as its title, a record's led by its type ("线索 张伟一").
-  const startItems = (first?.metadata?.workContext ?? []).map((item) => {
+  const startItems = (
+    first ? (first.metadata?.workContext ?? []) : workContext
+  ).map((item) => {
     const entity =
       item.type === 'crm-record'
         ? toText((item.content as Data | undefined)?.entity ?? '')
@@ -567,8 +562,7 @@ function NocoHeader({ actions }: { actions: ReactNode }): ReactElement {
           {actions}
         </div>
       </header>
-      {/* What the conversation started from, once it is under way; its
-          title is the conversation list's. */}
+      {/* What the conversation starts from, from the moment it opens. */}
       {startItems.length ? (
         <p
           className='flex items-center gap-1.5 border-t bg-muted px-4 py-1.5 text-xs text-muted-foreground'
@@ -590,58 +584,6 @@ function NocoHeader({ actions }: { actions: ReactNode }): ReactElement {
       ) : null}
     </div>
   );
-}
-
-// Keeps the record on screen attached to the current draft, so a question
-// typed on a detail page is about that record without a shortcut; the chip
-// in the composer shows it and lets the user drop it. Not the record the
-// conversation started from, which it already carries.
-function RecordContext({
-  record,
-}: {
-  record: RecordContext | undefined;
-}): null {
-  const { workContext, addWorkContext, removeWorkContext } = useAIChat();
-  const { messages } = useAIChatMessages();
-  // The records the conversation started from, which the model already has
-  // with its first message: the page's record is not attached again when it
-  // is one of them, so the composer shows only what adds to the start.
-  const startIds = (
-    messages.find((message) => message.role === 'user')?.metadata
-      ?.workContext ?? []
-  )
-    .map((item) => item.id)
-    .join('\n');
-  // The item this keeps in step with the page, and only that one: a record a
-  // shortcut attached stays when the page shows none (the lead of an
-  // evaluation asked about from "Waiting on me").
-  const addedRef = useRef<AIWorkContextItem | undefined>(undefined);
-  // Each change to the list runs this again, and the second pass finds
-  // nothing to do; the loop settles in one round trip.
-  useEffect(() => {
-    const onScreen = record ? recordItem(record) : undefined;
-    const current =
-      onScreen && !startIds.split('\n').includes(onScreen.id ?? '')
-        ? onScreen
-        : undefined;
-    const mine = addedRef.current;
-    if (
-      mine &&
-      (!current || mine.id !== current.id || mine.title !== current.title)
-    ) {
-      addedRef.current = undefined;
-      const stale = workContext.find((item) => item.id === mine.id);
-      if (stale) {
-        removeWorkContext(stale);
-        return;
-      }
-    }
-    if (current && !workContext.some((item) => item.id === current.id)) {
-      addedRef.current = current;
-      addWorkContext(current);
-    }
-  }, [record, startIds, workContext, addWorkContext, removeWorkContext]);
-  return null;
 }
 
 // Reopens the conversation the user had open before the page was reloaded

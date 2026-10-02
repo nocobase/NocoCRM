@@ -55,6 +55,7 @@ export function ChatComposer({
   attachmentActionIndex = 0,
   placeholder,
   disclaimer,
+  showWorkContext = true,
 }: {
   actions?: AIChatComposerAction[];
   showEmployeeSelector?: boolean;
@@ -64,6 +65,9 @@ export function ChatComposer({
   attachmentActionIndex?: number;
   placeholder?: string;
   disclaimer?: ReactNode | false;
+  // Application change (NocoCRM): the draft's work context as chips here,
+  // or left to the chat's header.
+  showWorkContext?: boolean;
 }) {
   const t = useAITranslate();
   const {
@@ -193,7 +197,7 @@ export function ChatComposer({
               </InputGroupButton>
             </InputGroupAddon>
           ) : null}
-          {workContext.length ? (
+          {showWorkContext && workContext.length ? (
             <InputGroupAddon
               align='block-start'
               className='flex-wrap justify-start gap-1.5 px-3 pt-2'

@@ -124,6 +124,11 @@ const verdictShape = z.object({
         .nullable()
         .default(null)
         .describe('沿用的已有计划中活动的 ref（如 A1）；新安排时填 null'),
+      owner: z
+        .string()
+        .nullable()
+        .default(null)
+        .describe('活动负责人姓名，只能从可选负责人里选；没要求换人填 null'),
     })
     .nullable()
     .describe('继续跟进时的下一步；其余填 null'),
@@ -579,7 +584,13 @@ export async function activitiesOf(
   link: { leadId: string } | { opportunityId: string },
   timeZone: string,
   now = new Date(),
-): Promise<{ rows: Row[]; ids: Record<string, string> }> {
+): Promise<{
+  rows: Row[];
+  ids: Record<string, string>;
+  // Each reference's activity name, to put back where a model wrote a
+  // reference into text meant for a person.
+  names: Record<string, string>;
+}> {
   try {
     const names = new Map(
       (await service.users(actor)).map((u) => [toText(u.id), toText(u.name)]),
@@ -602,9 +613,11 @@ export async function activitiesOf(
     // Each by a short reference (A1, A2…) the verdict may point back to,
     // since ids are kept out of what the model reads and writes.
     const ids: Record<string, string> = {};
+    const titles: Record<string, string> = {};
     const rows = data.map((activity, index) => {
       const ref = `A${index + 1}`;
       ids[ref] = toText(activity.id);
+      titles[ref] = toText(activity.name);
       const start = new Date(toText(activity.startAt));
       return {
         ref,
@@ -622,9 +635,9 @@ export async function activitiesOf(
         outcome: text(activity.feedback),
       };
     });
-    return { rows, ids };
+    return { rows, ids, names: titles };
   } catch {
-    return { rows: [], ids: {} };
+    return { rows: [], ids: {}, names: {} };
   }
 }
 
@@ -646,6 +659,8 @@ function prompt(
   // The CRM's default currency, which a deal is opened in unless the
   // verdict names another.
   currency = 'USD',
+  // Whom the next step may go to, by name.
+  owners: readonly string[] = [],
 ): string {
   const fields = Object.fromEntries(
     definitions.leads.fields
@@ -677,6 +692,9 @@ ${skill}
 ${JSON.stringify(fields, null, 2)}
 \`\`\`
 
+# 可选负责人
+${owners.length ? owners.join('、') : '只有线索负责人。'}
+
 # 线索的活动
 ${activities.length ? `\`\`\`json\n${JSON.stringify(activities, null, 2)}\n\`\`\`` : '没有活动。'}
 
@@ -696,6 +714,33 @@ ${context.length ? `\`\`\`json\n${JSON.stringify(context, null, 2)}\n\`\`\`` : '
 ${OUTPUT}`;
 }
 
+// Whom an activity the AI plans may go to, by name: the active salespeople,
+// as the activity form offers them as owners.
+export async function ownerChoices(
+  service: CrmService,
+  actor: Actor,
+): Promise<Record<string, string>> {
+  return Object.fromEntries(
+    (await service.users(actor))
+      .filter(
+        (user) =>
+          !user.disabled &&
+          (user.roles as string[]).some((role) =>
+            ['sales-representative', 'sales-manager'].includes(role),
+          ),
+      )
+      .map((user) => [toText(user.name), toText(user.id)]),
+  );
+}
+
+// Text for a person with any activity reference (A1…) a model left in it
+// replaced by that activity's name: the references are the model's own.
+export function unref(text: string, names: Record<string, string>): string {
+  return text.replace(/\bA\d{1,3}\b/g, (ref) =>
+    names[ref] ? `「${names[ref]}」` : ref,
+  );
+}
+
 // How a verdict deals with a lead's or a deal's activities: an open one is
 // the next step rather than a new one beside it, and an overdue one is
 // asked about; `closing` says what the activities settle for that record.
@@ -706,7 +751,8 @@ export function activityRules(subject: string, closing: string): string {
 - 有计划中、已经逾期的活动：先弄清它做了没有、结果如何。nextStep.activity 填它的 ref，type 和 subject 写它现在的，inDays 写还没做的话改到几天后；questions 第一条问它做了没有、对方怎么说；summary 说明它已逾期，需要补记结果或改期。
 - 计划中的活动有几个：选时间最近的那个。
 - 没有计划中的活动：照常安排新的下一步，nextStep.activity 填 null。
-ref 只在 nextStep.activity 里用；summary、reasons 等写给人看的文字里提到活动时写它的名称，不要写 ref。
+ref 只在 nextStep.activity 里用；summary、reasons、prep、questions 等写给人看的文字里提到活动时写它的名称，不要写 ref。
+nextStep.owner 是这次活动的负责人姓名，只能从给定的可选负责人里选；资料或销售的修改意见明确要谁负责时才填，否则填 null（沿用现在的负责人）。
 ${closing}`;
 }
 
@@ -759,7 +805,7 @@ const OUTPUT = `# 输出
   "reasons": ["依据（来源）"],
   "edition": "版本名" | null,
   "invalidReason": ${invalidReasons.map((r) => `"${r}"`).join(' | ')} | null,
-  "nextStep": { "type": ${activityTypes.map((t) => `"${t}"`).join(' | ')}, "subject": "活动主题", "inDays": 0 到 30 的整数, "activity": "沿用的已有活动的 ref" | null } | null,
+  "nextStep": { "type": ${activityTypes.map((t) => `"${t}"`).join(' | ')}, "subject": "活动主题", "inDays": 0 到 30 的整数, "activity": "沿用的已有活动的 ref" | null, "owner": "可选负责人中的姓名" | null } | null,
   "prep": ["准备要点"],
   "questions": ["要问的问题"],
   "opportunity": { "name": "商机名称", "amount": 金额 | null, "currency": "CNY 这样的三位币种代码" | null } | null,
@@ -1131,6 +1177,7 @@ export class LeadEvaluator {
         settings.timeZone,
       );
       const previous = await previousOf(this.service, leadId, id);
+      const owners = await ownerChoices(this.service, actor);
       let parsed = read(
         await ask(
           prompt(
@@ -1145,6 +1192,7 @@ export class LeadEvaluator {
             due,
             revision,
             settings.currency,
+            Object.keys(owners),
           ),
         ),
       );
@@ -1187,6 +1235,7 @@ export class LeadEvaluator {
             parsed.data,
             activities.ids,
             settings.options.currency ?? [settings.currency],
+            { owners, names: activities.names },
           ),
           // Nothing to compare with on a first follow-up, whatever the
           // model wrote ("无").
@@ -1522,8 +1571,8 @@ export async function applyStep(
         ...(ownOf(edited, 'name')
           ? { name: toText(ownOf(edited, 'name')).slice(0, TEXT_LIMIT) }
           : {}),
-        ...(ownOf(edited, 'ownerId')
-          ? { ownerId: ownOf(edited, 'ownerId') }
+        ...((ownOf(edited, 'ownerId') ?? step.ownerId)
+          ? { ownerId: ownOf(edited, 'ownerId') ?? step.ownerId }
           : {}),
         ...(start.getTime() !== was.getTime()
           ? {
@@ -1552,7 +1601,7 @@ export async function applyStep(
       type: ownOf(edited, 'type') ?? step.type,
       name: toText(ownOf(edited, 'name') ?? step.subject).slice(0, TEXT_LIMIT),
       status: 'planned',
-      ownerId: ownOf(edited, 'ownerId') ?? ownerId,
+      ownerId: ownOf(edited, 'ownerId') ?? step.ownerId ?? ownerId,
       startAt: start.toISOString(),
       endAt: new Date(start.getTime() + 30 * 60000).toISOString(),
       ...link,
@@ -1701,8 +1750,9 @@ export function carried(
 function clip(
   verdict: Omit<Verdict, 'enrich' | 'nextStep'> & {
     nextStep:
-      | (Omit<NonNullable<Verdict['nextStep']>, 'activityId'> & {
+      | (Omit<NonNullable<Verdict['nextStep']>, 'activityId' | 'ownerId'> & {
           activity?: string | null;
+          owner?: string | null;
         })
       | null;
   },
@@ -1710,8 +1760,15 @@ function clip(
   activityIds: Record<string, string> = {},
   // The currencies a deal may be priced in; another is dropped.
   currencies: readonly string[] = [],
+  // Whom the next step may go to, by name, and the activities' names by
+  // reference, for any reference left in text.
+  people: {
+    owners?: Record<string, string>;
+    names?: Record<string, string>;
+  } = {},
 ): Omit<Verdict, 'enrich'> {
-  const line = (value: string): string => value.trim().slice(0, TEXT_LIMIT * 2);
+  const line = (value: string): string =>
+    unref(value.trim(), people.names ?? {}).slice(0, TEXT_LIMIT * 2);
   return {
     recommendation: verdict.recommendation,
     grade: verdict.grade,
@@ -1728,6 +1785,10 @@ function clip(
           // plans a new one.
           activityId: verdict.nextStep.activity
             ? (activityIds[verdict.nextStep.activity.trim()] ?? null)
+            : null,
+          // Its owner when the AI named one of those it may go to.
+          ownerId: verdict.nextStep.owner
+            ? (people.owners?.[verdict.nextStep.owner.trim()] ?? null)
             : null,
         }
       : null,

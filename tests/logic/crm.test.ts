@@ -4097,6 +4097,80 @@ describe('CRM lead evaluation', () => {
       ).status,
     ).toBe('running');
   });
+  it('gives the next step to the owner the AI names and keeps its references out of the text', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const lead = await service.save(actor('rep'), 'leads', {
+        name: '换人',
+        company: '换人精工',
+        source: 'website',
+        website: 'https://huanren.test',
+        industry: 'manufacturing',
+      });
+      await service.save(actor('rep'), 'activities', {
+        type: 'call',
+        name: '需求确认电话',
+        status: 'completed',
+        startAt: '2026-09-20T02:00:00Z',
+        leadId: lead.id,
+        feedback: '客户要先做收购到配送的跟踪',
+      });
+      const named = evaluating({
+        ...follow,
+        reasons: ['收购到配送跟踪是主要需求（A1反馈）'],
+        nextStep: {
+          type: 'call',
+          subject: '预算沟通',
+          inDays: 2,
+          activity: null,
+          owner: 'manager',
+        },
+      });
+      await named.evaluator.request(actor('rep'), lead.id);
+      await named.evaluator.idle();
+      // Offered the people it may give the step to, by name.
+      expect(named.prompts.at(-1)).toContain('可选负责人');
+      const card = await latestEvaluation(service, actor('rep'), lead.id);
+      expect(card?.ai.result).toMatchObject({
+        reasons: ['收购到配送跟踪是主要需求（「需求确认电话」反馈）'],
+        nextStep: { ownerId: 'manager' },
+      });
+      const decided = await named.evaluator.decide(
+        actor('manager'),
+        lead.id,
+        card!.id,
+        'accept',
+      );
+      expect(
+        await service.get(
+          actor('manager'),
+          'activities',
+          toText(decided.ai.activityId),
+        ),
+      ).toMatchObject({ name: '预算沟通', ownerId: 'manager' });
+      // A name it may not give it to is left out: the lead's owner keeps it.
+      const stranger = evaluating({
+        ...follow,
+        nextStep: {
+          type: 'call',
+          subject: '回访',
+          inDays: 2,
+          activity: null,
+          owner: '不认识的人',
+        },
+      });
+      await stranger.evaluator.request(actor('rep'), lead.id);
+      await stranger.evaluator.idle();
+      expect(
+        (await latestEvaluation(service, actor('rep'), lead.id))?.ai.result
+          ?.nextStep,
+      ).toMatchObject({ ownerId: null });
+    } finally {
+      enabled.mockRestore();
+    }
+  });
 });
 
 describe('CRM opportunity follow-up', () => {

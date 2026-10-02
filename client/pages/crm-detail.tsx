@@ -25,6 +25,7 @@ import {
   CirclePlus,
   ChevronDown,
   Clock,
+  User,
   Ellipsis,
   History,
   Paperclip,
@@ -62,6 +63,7 @@ import {
   useMetadata,
   useRefresh,
   localDate,
+  localTime,
   rows,
   arrayValues,
   errorCode,
@@ -102,6 +104,7 @@ import {
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu.js';
 import { InlineField } from '../components/crm/inline.js';
+import { AskAIButton } from '../components/crm/ask-ai.js';
 import { ConvertDialog } from '../components/crm/conversion.js';
 
 const drawerEntities: Entity[] = [
@@ -159,7 +162,7 @@ export function RecordDrawer({
         showCloseButton={false}
         // The primitive sizes a right sheet with side-scoped classes, so the
         // wider drawer has to override them at the same specificity.
-        className='gap-0 overflow-y-auto p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-none data-[side=right]:md:w-[72vw] data-[side=right]:lg:w-[64vw] data-[side=right]:xl:w-[56vw] data-[side=right]:2xl:max-w-[1100px]'
+        className='crm-record-drawer gap-0 overflow-y-auto p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-none data-[side=right]:md:w-[72vw] data-[side=right]:lg:w-[64vw] data-[side=right]:xl:w-[56vw] data-[side=right]:2xl:max-w-[1100px]'
       >
         {valid && (
           <RecordDrawerContext.Provider value={{ open, close, inDrawer: true }}>
@@ -267,21 +270,11 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<unknown>();
   const [busy, setBusy] = useState(false);
-  // The assistant panel attaches the lead on screen to the conversation;
-  // its title follows once the lead has loaded.
+  // The lead's title, for "Ask AI", which starts the assistant's
+  // conversation from it.
   const contextName = detail
     ? `${toText(detail.record.name)}${detail.record.company ? ` / ${toText(detail.record.company)}` : ''}`
     : undefined;
-  useEffect(() => {
-    window.dispatchEvent(
-      new CustomEvent('crm-context', {
-        detail: { entity: 'leads', recordId: id, name: contextName },
-      }),
-    );
-    return () => {
-      window.dispatchEvent(new CustomEvent('crm-context', { detail: {} }));
-    };
-  }, [id, contextName]);
   if (isLoading || !meta) return <Loading />;
   if (!detail)
     return (
@@ -437,47 +430,49 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       />
     </div>
   );
-  // Converting the lead, under its heading, and the rarer deleting in a
-  // "More" menu beside it.
-  const leadActions =
-    editable || detail.permissions.delete ? (
-      <div className='flex flex-wrap items-center gap-2'>
-        {editable && (
-          <Button size='sm' onClick={() => setConvert(true)}>
-            <ArrowRightLeft />
-            {text('convert')}
-          </Button>
-        )}
-        {detail.permissions.delete && (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              aria-label={text('moreActions')}
-              className={buttonVariants({
-                size: 'icon-sm',
-                variant: 'outline',
-              })}
+  // Converting the lead, under its heading, a new conversation with the
+  // assistant about it, and the rarer deleting in a "More" menu beside them.
+  const leadActions = (
+    <div className='flex flex-wrap items-center gap-2'>
+      {editable && (
+        <Button size='sm' onClick={() => setConvert(true)}>
+          <ArrowRightLeft />
+          {text('convert')}
+        </Button>
+      )}
+      <AskAIButton entity='leads' recordId={id} name={contextName} />
+      {detail.permissions.delete && (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            aria-label={text('moreActions')}
+            className={buttonVariants({
+              size: 'icon-sm',
+              variant: 'outline',
+            })}
+          >
+            <Ellipsis />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align='start'>
+            <DropdownMenuItem
+              variant='destructive'
+              onClick={() => setConfirmDelete(true)}
             >
-              <Ellipsis />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align='start'>
-              <DropdownMenuItem
-                variant='destructive'
-                onClick={() => setConfirmDelete(true)}
-              >
-                <Trash2 />
-                {text('deleteRecord', { entity: text('entity.leads') })}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      </div>
-    ) : null;
+              <Trash2 />
+              {text('deleteRecord', { entity: text('entity.leads') })}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </div>
+  );
   // The AI's part, in the timeline where its work is recorded: where its
   // latest follow-up recommendation stands, which opens it there, and the
   // one way to ask for another (the skill covers researching the company
   // and judging a conversion, which were shortcuts of their own).
+  // Its last button's text flush with the timeline's right edge below,
+  // past the button's own padding.
   const aiTools = meta?.assistant ? (
-    <div className='flex flex-wrap items-center gap-1'>
+    <div className='-mr-2.5 ml-auto flex flex-wrap items-center gap-1'>
       <EvaluationStatus
         recordId={id}
         onOpen={(entryId) => {
@@ -496,7 +491,6 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       // their own, the rule between them running to the bottom. It has no
       // header: the heading and the actions sit in the columns.
       fill
-      assistant={false}
     >
       <ErrorNotice error={error ?? loadError} />
       {/* Container query, not a viewport one: opening the AI panel narrows this
@@ -526,8 +520,9 @@ function LeadDetail({ id }: { id: string }): ReactElement {
             <div className='flex items-center border-b bg-card pr-6 pl-4 md:pl-6'>
               {heading}
             </div>
-            <div className='border-b border-l bg-card pt-2 pr-4 pl-6 md:pr-8'>
+            <div className='flex items-center justify-between gap-2 border-b border-l bg-card pt-2 pr-4 pl-6 md:pr-8'>
               {tabBar}
+              {aiTools}
             </div>
           </div>
           <div
@@ -660,8 +655,9 @@ function LeadDetail({ id }: { id: string }): ReactElement {
             >
               {/* Stacked, the tabs lead their content, staying in place as
                 it scrolls; side by side they are in the band above. */}
-              <div className='sticky top-0 z-10 mb-4 border-b bg-background @3xl:hidden'>
+              <div className='sticky top-0 z-10 mb-4 flex flex-wrap items-center justify-between gap-2 border-b bg-background @3xl:hidden'>
                 {tabBar}
+                {aiTools}
               </div>
               <div>
                 {tab === 'activities' ? (
@@ -750,7 +746,6 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                     recordName={contextName}
                     focusId={focus?.id}
                     focusAt={focus?.at}
-                    toolbar={aiTools}
                     onOpenNote={(noteId) => {
                       setNoteFocus(noteId);
                       setTab('notes');
@@ -1032,9 +1027,10 @@ export function WebsiteField({
 }
 
 export function ActivityItem({ activity }: { activity: Data }): ReactElement {
-  const { text, language } = useCrmText();
+  const { language } = useCrmText();
   const activityLink = useRecordLink('activities', toText(activity.id));
   const { data: meta } = useMetadata();
+  const zone = meta?.settings.timeZone ?? 'Asia/Shanghai';
   const status = toText(activity.status);
   return (
     <li className='relative pl-5'>
@@ -1050,8 +1046,7 @@ export function ActivityItem({ activity }: { activity: Data }): ReactElement {
       />
       {/* The activity opens in the page's drawer (its full page on a phone
           or in a new tab); its fields are edited there. The name is the link,
-          stretched over the whole entry, so the assistant shortcuts can sit
-          on the time's line above it: a button may not sit inside a link. */}
+          stretched over the whole entry. */}
       <div className='relative rounded-md px-2 py-2 transition-colors hover:bg-muted'>
         <div className='flex flex-wrap items-center gap-2'>
           <KindTag value={activity.type} />
@@ -1067,52 +1062,24 @@ export function ActivityItem({ activity }: { activity: Data }): ReactElement {
           <Status value={activity.status} />
         </div>
         <div className='mt-1 flex flex-wrap items-center gap-x-3 gap-y-1'>
+          {/* Whose it is, then when. */}
           <p className='inline-flex items-center gap-1 text-xs text-muted-foreground'>
-            <Clock className='size-3 shrink-0' />
-            {localDate(
-              activity.startAt,
-              language,
-              meta?.settings.timeZone ?? 'Asia/Shanghai',
-            )}
+            <User className='size-3 shrink-0' />
+            {meta?.users.find((u) => u.id === activity.ownerId)?.name ?? '—'}
           </p>
-          {/* An upcoming activity can be prepared for and reported on; a
-              finished one can still have its feedback added to. Cancelled and
-              no-show ones have neither. Both buttons pre-fill the assistant
-              and leave sending to the user, so "feedback" is finished in
-              their own words. */}
-          {meta?.assistant &&
-            (status === 'planned' || status === 'completed') && (
-              <div className='relative z-10 -my-1 flex gap-1'>
-                {(status === 'planned'
-                  ? (['prepareActivity', 'reportActivity'] as const)
-                  : (['reportActivity'] as const)
-                ).map((key) => (
-                  <Button
-                    key={key}
-                    size='sm'
-                    variant='ghost'
-                    className='h-6 px-1.5 text-xs text-ai hover:bg-background hover:text-ai'
-                    onClick={() =>
-                      window.dispatchEvent(
-                        new CustomEvent('crm-assistant', {
-                          detail: {
-                            prompt: text(`prompts.${key}`),
-                            entity: 'activities',
-                            recordId: activity.id,
-                            // "Report back" is only an opening the user
-                            // completes.
-                            send: key === 'prepareActivity',
-                          },
-                        }),
-                      )
-                    }
-                  >
-                    <Sparkles />
-                    {text(key)}
-                  </Button>
-                ))}
-              </div>
-            )}
+          <p className='inline-flex items-center gap-1 text-xs text-muted-foreground tabular-nums'>
+            <Clock className='size-3 shrink-0' />
+            {localDate(activity.startAt, language, zone)}
+            {/* Its end when it has one: the time alone on the same day. */}
+            {activity.endAt
+              ? ` – ${
+                  localDate(activity.endAt, language, zone, false) ===
+                  localDate(activity.startAt, language, zone, false)
+                    ? localTime(activity.endAt, zone)
+                    : localDate(activity.endAt, language, zone)
+                }`
+              : null}
+          </p>
         </div>
       </div>
     </li>
@@ -1839,7 +1806,6 @@ export function HistoryFeed({
   recordName,
   focusId,
   focusAt,
-  toolbar,
   onOpenNote,
 }: {
   entity: Entity;
@@ -1856,8 +1822,6 @@ export function HistoryFeed({
   // `focusAt` asks for it again (the same entry, clicked once more).
   focusId?: string;
   focusAt?: number;
-  // What the page adds beside the filter (a lead's AI status and shortcuts).
-  toolbar?: ReactNode;
   // Opens a note in the Notes tab, where it is read whole and changed: the
   // timeline only points to it.
   onOpenNote?: (noteId: string) => void;
@@ -1867,16 +1831,6 @@ export function HistoryFeed({
   const [searchParams] = useSearchParams();
   const focus = focusId ?? searchParams.get('focus') ?? undefined;
   const { data: meta } = useMetadata();
-  const api = useCrmApi();
-  const scopeKey = useCrmScopeKey();
-  // The filter chosen, and when: an entry asked for after that shows the
-  // whole timeline again, so the entry is there to be shown.
-  const [chosen, setChosen] = useState<{
-    value: 'all' | 'user' | 'ai';
-    at: number;
-  }>({ value: 'all', at: 0 });
-  const filter =
-    focusAt !== undefined && focusAt > chosen.at ? 'all' : chosen.value;
   // The evaluations opened into their records.
   const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set());
   // Opens or closes an entry: an AI entry's card, a save's fields.
@@ -1891,24 +1845,7 @@ export function HistoryFeed({
   const optionText = (value: unknown): string =>
     text(`options.${toText(value)}`, { defaultValue: toText(value) });
   const base = `${toText(entity)}/${toText(id)}/history`;
-  const filtered = useQuery({
-    queryKey: [...scopeKey, base, filter],
-    queryFn: () =>
-      api<{
-        data: Data[];
-        total: number;
-        titles?: Record<string, string>;
-      }>(`${base}?source=${filter}&pageSize=${toText(PAGE_SIZE)}`),
-    enabled: filter !== 'all',
-  });
-  const more = useMore<Data>(
-    filter === 'all' ? base : `${base}?source=${filter}`,
-    filter === 'all'
-      ? initial
-      : filtered.data
-        ? { data: filtered.data.data, total: filtered.data.total }
-        : undefined,
-  );
+  const more = useMore<Data>(base, initial);
   // The records the AI follows up, whose waiting cards are handled here.
   const followed =
     entity === 'leads' || entity === 'opportunities' ? entity : undefined;
@@ -1935,8 +1872,8 @@ export function HistoryFeed({
   const fileNames = Object.fromEntries(
     (files ?? []).map((file) => [file.id, file.filename]),
   );
-  // Bring the entry asked for into view once it has loaded: shown whatever
-  // the filter, the pages before it loaded first, and again on each ask.
+  // Bring the entry asked for into view once it has loaded: the pages
+  // before it loaded first, and again on each ask.
   const loaded = more.records.some((event) => toText(event.id) === focus);
   useEffect(() => {
     if (focus && loaded)
@@ -1945,9 +1882,8 @@ export function HistoryFeed({
         ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [focus, loaded, focusAt]);
   useEffect(() => {
-    if (focus && !loaded && filter === 'all' && more.hasMore && !more.loading)
-      void more.loadMore();
-  }, [focus, loaded, filter, more]);
+    if (focus && !loaded && more.hasMore && !more.loading) void more.loadMore();
+  }, [focus, loaded, more]);
   // The note an edit belongs to: named by the entry, or, for edits recorded
   // before they named it, the note that reads as the edit left it.
   const noteOf = (event: Data): string | undefined => {
@@ -1965,34 +1901,10 @@ export function HistoryFeed({
         ) || undefined
       : undefined;
   };
-  const allNames = {
-    ...names,
-    ...(filtered.data?.titles ?? {}),
-    ...more.titles,
-  };
+  const allNames = { ...names, ...more.titles };
   return (
     <>
-      <div className='mb-2 flex flex-wrap items-center justify-between gap-2'>
-        <div className='flex w-fit gap-1 rounded-lg bg-muted p-0.5'>
-          {(['all', 'user', 'ai'] as const).map((value) => (
-            <Button
-              key={value}
-              size='sm'
-              variant={filter === value ? 'secondary' : 'ghost'}
-              className={`h-6 px-2 text-xs ${
-                filter === value ? 'bg-background shadow-sm' : ''
-              }`}
-              onClick={() => setChosen({ value, at: Date.now() })}
-            >
-              {text(`feed.${value}`)}
-            </Button>
-          ))}
-        </div>
-        {toolbar}
-      </div>
-      {filter !== 'all' && !filtered.data ? (
-        <Loading />
-      ) : !more.records.length ? (
+      {!more.records.length ? (
         <p className='text-sm text-muted-foreground'>{text('feed.empty')}</p>
       ) : (
         // As record timelines commonly are: entries grouped by month under a

@@ -58,12 +58,14 @@ export interface Verdict {
   reasons: string[];
   edition: string | null;
   invalidReason: string | null;
-  // `activityId`: an activity already planned that the step carries on.
+  // `activityId`: an activity already planned that the step carries on;
+  // `ownerId`: whom the AI gave it to, when it named someone.
   nextStep: {
     type: string;
     subject: string;
     inDays: number;
     activityId?: string | null;
+    ownerId?: string | null;
   } | null;
   questions: string[];
   // Following up: what to prepare. Converting: the opportunity to open.
@@ -714,12 +716,16 @@ export function VerdictPanel({
                     if (instruction.trim()) void revise();
                   }
                 }}
-                className='max-h-40 min-h-8 resize-none bg-background py-1.5'
+                // One line as tall as an ordinary field (h-8), whatever the
+                // theme's scale: its padding is what the line and border
+                // leave of that height. More lines grow it.
+                className='max-h-40 min-h-8 resize-none bg-background py-[calc((var(--spacing)*8-1lh-2px)/2)]'
               />
               <Button
                 type='submit'
                 size='sm'
-                className='mb-0.5 shrink-0 bg-ai text-ai-foreground hover:bg-ai/90'
+                // As tall as the box beside it while that is one line.
+                className='h-8 shrink-0 bg-ai text-ai-foreground hover:bg-ai/90'
                 disabled={Boolean(busy) || !instruction.trim()}
               >
                 {busy === 'revise' ? <Spinner /> : <Sparkles />}
@@ -846,6 +852,11 @@ function carriedChanges(
     typeof plan.description === 'string' &&
     plan.description.trim() !== description.trim();
   const parts = edited ? {} : planPartChanges(description, verdict);
+  // The owner as the person set it, else as the AI gave it.
+  const wanted = (key: 'type' | 'name' | 'ownerId'): string | undefined =>
+    key === 'ownerId'
+      ? (plan.ownerId ?? verdict.nextStep?.ownerId ?? undefined)
+      : plan[key];
   const fields = (['type', 'name', 'ownerId', 'startAt'] as const).filter(
     (key) =>
       key === 'startAt'
@@ -853,7 +864,7 @@ function carriedChanges(
           (plan.startAt !== undefined &&
             new Date(plan.startAt).getTime() !==
               new Date(toText(existing.startAt)).getTime())
-        : plan[key] !== undefined && plan[key] !== toText(existing[key]),
+        : wanted(key) !== undefined && wanted(key) !== toText(existing[key]),
   );
   return {
     parts,
@@ -927,7 +938,7 @@ function PlannedActivity({
               meta.settings.timeZone,
             ).toISOString()
           : toText(existing.startAt),
-        ownerId: toText(existing.ownerId),
+        ownerId: toText(verdict.nextStep?.ownerId || existing.ownerId),
         // This follow-up's parts in place of an earlier one's.
         description: mergePlanDescription(
           toText(existing.description),
@@ -948,7 +959,12 @@ function PlannedActivity({
           (follow ? verdict.nextStep?.inDays : later.inDays) ?? 0,
           meta.settings.timeZone,
         ).toISOString(),
-        ownerId: toText(record?.ownerId || meta.userId),
+        // Whom the AI gave it to, else the record's owner.
+        ownerId: toText(
+          (follow && verdict.nextStep?.ownerId) ||
+            record?.ownerId ||
+            meta.userId,
+        ),
         // A review task starts with none; a follow-up with what to prepare,
         // ask and send.
         description: added,

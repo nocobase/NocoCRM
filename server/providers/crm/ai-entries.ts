@@ -32,6 +32,8 @@ export interface Verdict {
     subject: string;
     inDays: number;
     activityId?: string | null;
+    // Its owner, when the AI named one (else the record's owner).
+    ownerId?: string | null;
   } | null;
   prep?: string[];
   questions: string[];

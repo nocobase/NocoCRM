@@ -31,7 +31,9 @@ import {
   carried,
   editedPlan,
   notesOf,
+  ownerChoices,
   planTask,
+  unref,
 } from './lead-evaluation.js';
 import { followUpOpportunity } from './feedback.js';
 import { jsonIn } from './lead-capture.js';
@@ -124,6 +126,11 @@ function verdictShape(options: { pause: string[]; lost: string[] }) {
           .nullable()
           .default(null)
           .describe('沿用的已有计划中活动的 ref（如 A1）；新安排时填 null'),
+        owner: z
+          .string()
+          .nullable()
+          .default(null)
+          .describe('活动负责人姓名，只能从可选负责人里选；没要求换人填 null'),
       })
       .nullable()
       .describe('推进和继续推进时的下一步；其余填 null'),
@@ -386,7 +393,7 @@ function output(options: { pause: string[]; lost: string[] }): string {
   "summary": "一句话理由",
   "reasons": ["依据（来源）"],
   "risks": ["风险或缺口"],
-  "nextStep": { "type": ${list(activityTypes)}, "subject": "活动主题", "inDays": 0 到 30 的整数, "activity": "沿用的已有活动的 ref" | null } | null,
+  "nextStep": { "type": ${list(activityTypes)}, "subject": "活动主题", "inDays": 0 到 30 的整数, "activity": "沿用的已有活动的 ref" | null, "owner": "可选负责人中的姓名" | null } | null,
   "prep": ["准备要点"],
   "questions": ["要问的问题"],
   "email": { "subject": "邮件主题", "body": "邮件正文" } | null,
@@ -411,6 +418,8 @@ function prompt(input: {
   owner: string | null;
   options: { pause: string[]; lost: string[] };
   revision: { instruction: string; verdict: Row } | null;
+  // Whom the next step may go to, by name.
+  owners: readonly string[];
 }): string {
   const { opportunity, revision } = input;
   const fields = Object.fromEntries(
@@ -455,6 +464,9 @@ ${input.context.account ? json(input.context.account) : '没有客户信息。'}
 # 商机上的联系人和角色
 ${(input.context.contacts as Row[]).length ? json(input.context.contacts) : '还没有关联联系人。'}
 
+# 可选负责人
+${input.owners.length ? input.owners.join('、') : '只有商机负责人。'}
+
 # 商机的活动
 ${input.activities.length ? json(input.activities) : '没有活动。'}
 
@@ -485,8 +497,15 @@ function clip(
   verdict: Parsed,
   opportunity: CrmRecord,
   activityIds: Record<string, string>,
+  // Whom the next step may go to, by name, and the activities' names by
+  // reference, for any reference left in text.
+  people: {
+    owners?: Record<string, string>;
+    names?: Record<string, string>;
+  } = {},
 ): OpportunityVerdict {
-  const line = (value: string): string => value.trim().slice(0, TEXT_LIMIT * 2);
+  const line = (value: string): string =>
+    unref(value.trim(), people.names ?? {}).slice(0, TEXT_LIMIT * 2);
   const stage =
     verdict.stage && verdict.stage !== opportunity.stage ? verdict.stage : null;
   const moving =
@@ -542,6 +561,9 @@ function clip(
             // plans a new one.
             activityId: verdict.nextStep.activity
               ? (activityIds[verdict.nextStep.activity.trim()] ?? null)
+              : null,
+            ownerId: verdict.nextStep.owner
+              ? (people.owners?.[verdict.nextStep.owner.trim()] ?? null)
               : null,
           }
         : null,
@@ -894,6 +916,7 @@ export class OpportunityEvaluator {
         settings.timeZone,
       );
       const previous = await previousOf(this.service, opportunityId, id);
+      const owners = await ownerChoices(this.service, actor);
       const owner = (await this.service.users(actor)).find(
         (u) => toText(u.id) === toText(opportunity.ownerId),
       );
@@ -916,6 +939,7 @@ export class OpportunityEvaluator {
             owner: owner ? toText(owner.name) : null,
             options,
             revision,
+            owners: Object.keys(owners),
           }),
         ),
       );
@@ -940,7 +964,10 @@ export class OpportunityEvaluator {
         });
         return;
       }
-      const result = clip(parsed.data, opportunity, activities.ids);
+      const result = clip(parsed.data, opportunity, activities.ids, {
+        owners,
+        names: activities.names,
+      });
       await this.finish(id, 'pending', {
         kind: EVALUATION,
         sessionId,
