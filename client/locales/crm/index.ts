@@ -107,6 +107,12 @@ const wording = {
     content: ['Content', '内容'],
     system: ['System', '系统'],
   },
+  // The opportunity page's particulars, grouped as the lead's.
+  opportunityGroups: {
+    general: ['General', '概况'],
+    details: ['Details', '详情'],
+    system: ['System', '系统'],
+  },
   region: ['Region', '地区'],
   loadMore: ['Load more', '加载更多'],
   requiredField: ['This field is required', '此字段必填'],
@@ -365,12 +371,6 @@ const wording = {
   editRecord: ['Edit {{entity}}', '编辑{{entity}}'],
   deleteRecord: ['Delete {{entity}}', '删除{{entity}}'],
   changeAccountTitle: ['Change the account?', '更换所属客户？'],
-  changeStageTitle: ['Change the stage?', '修改商机阶段？'],
-  changeStageDescription: ['{{from}} → {{to}}', '{{from}} → {{to}}'],
-  changeStageWon: [
-    'Winning the deal also makes its account a customer.',
-    '赢单后，所属客户将自动变为正式客户。',
-  ],
   changeAccountContacts: [
     "The deal's contacts belong to the current account and will be removed from it: {{names}}.",
     '此商机的联系人属于原客户，更换后将从此商机移除：{{names}}。',
@@ -1164,6 +1164,8 @@ const wording = {
     createdAt: ['Created', '创建时间'],
     updatedAt: ['Updated', '更新时间'],
     closedAt: ['Closed', '关闭时间'],
+    // The current stage's chance of winning, from the stage settings.
+    probability: ['Win probability', '成交概率'],
     completedAt: ['Completed', '完成时间'],
     submittedAt: ['Submitted', '提交时间'],
     decidedAt: ['Decided', '审批时间'],

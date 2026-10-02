@@ -418,49 +418,46 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       />
     </div>
   );
-  // Converting the lead, under its heading, a new conversation with the
-  // assistant about it, and the rarer deleting in a "More" menu beside them.
+  // Everything the reader can do with the lead, together under its name:
+  // converting it, the assistant, asking the AI to follow it up, and the
+  // rarer deleting in "More"; under them, where the AI's latest follow-up
+  // stands, which opens it in the timeline. The tab band keeps only tabs.
   const leadActions = (
-    <div className='flex flex-wrap items-center gap-2'>
-      {editable && (
-        <Button size='sm' onClick={() => setConvert(true)}>
-          <ArrowRightLeft />
-          {text('convert')}
-        </Button>
-      )}
-      <AskAIButton entity='leads' recordId={id} name={contextName} />
-      {detail.permissions.delete && (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            aria-label={text('moreActions')}
-            className={buttonVariants({
-              size: 'icon-sm',
-              variant: 'outline',
-            })}
-          >
-            <Ellipsis />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align='start'>
-            <DropdownMenuItem
-              variant='destructive'
-              onClick={() => setConfirmDelete(true)}
+    <div className='flex flex-col items-start gap-2'>
+      <div className='flex flex-wrap items-center gap-2'>
+        {editable && (
+          <Button size='sm' onClick={() => setConvert(true)}>
+            <ArrowRightLeft />
+            {text('convert')}
+          </Button>
+        )}
+        <AskAIButton entity='leads' recordId={id} name={contextName} />
+        {meta.assistant && !converted && editable && (
+          <EvaluateButton recordId={id} onError={setError} />
+        )}
+        {detail.permissions.delete && (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label={text('moreActions')}
+              className={buttonVariants({
+                size: 'icon-sm',
+                variant: 'outline',
+              })}
             >
-              <Trash2 />
-              {text('deleteRecord', { entity: text('entity.leads') })}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-    </div>
-  );
-  // The AI's part, in the timeline where its work is recorded: where its
-  // latest follow-up recommendation stands, which opens it there, and the
-  // one way to ask for another (the skill covers researching the company
-  // and judging a conversion, which were shortcuts of their own).
-  // Its last button's text flush with the timeline's right edge below,
-  // past the button's own padding.
-  const aiTools = meta?.assistant ? (
-    <div className='-mr-2.5 ml-auto flex flex-wrap items-center gap-1'>
+              <Ellipsis />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='start'>
+              <DropdownMenuItem
+                variant='destructive'
+                onClick={() => setConfirmDelete(true)}
+              >
+                <Trash2 />
+                {text('deleteRecord', { entity: text('entity.leads') })}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
       <EvaluationStatus
         recordId={id}
         onOpen={(entryId) => {
@@ -468,17 +465,13 @@ function LeadDetail({ id }: { id: string }): ReactElement {
           setTab('historyTab');
         }}
       />
-      {!converted && editable && (
-        <EvaluateButton recordId={id} onError={setError} />
-      )}
     </div>
-  ) : null;
+  );
   return (
     <DetailColumns
       heading={heading}
       actions={leadActions}
       tabBar={tabBar}
-      aiTools={aiTools}
       notice={<ErrorNotice error={error ?? loadError} />}
       left={
         <>
@@ -785,7 +778,6 @@ export function DetailColumns({
   heading,
   actions,
   tabBar,
-  aiTools,
   notice,
   left,
   right,
@@ -794,7 +786,6 @@ export function DetailColumns({
   heading: ReactNode;
   actions: ReactNode;
   tabBar: ReactNode;
-  aiTools?: ReactNode;
   notice: ReactNode;
   left: ReactNode;
   right: ReactNode;
@@ -836,9 +827,10 @@ export function DetailColumns({
             <div className='flex items-center border-b bg-card pr-6 pl-4 md:pl-6'>
               {heading}
             </div>
-            <div className='flex items-center justify-between gap-2 border-b border-l bg-card pt-2 pr-4 pl-6 md:pr-8'>
+            {/* Only the tabs: a page with more than fit (the opportunity's
+                six) wraps them. The record's actions sit under its name. */}
+            <div className='flex flex-wrap items-center border-b border-l bg-card pt-2 pr-4 pl-6 md:pr-8'>
               {tabBar}
-              {aiTools}
             </div>
           </div>
           <div
@@ -865,7 +857,6 @@ export function DetailColumns({
                 it scrolls; side by side they are in the band above. */}
               <div className='sticky top-0 z-10 mb-4 flex flex-wrap items-center justify-between gap-2 border-b bg-background @3xl:hidden'>
                 {tabBar}
-                {aiTools}
               </div>
               {right}
             </section>
@@ -896,7 +887,7 @@ export function DetailTabBar({
 }): ReactElement {
   const { text } = useCrmText();
   return (
-    <div role='tablist' className='flex gap-6'>
+    <div role='tablist' className='flex flex-wrap gap-x-6'>
       {tabs.map(({ name, label, icon: Icon, count }) => (
         <button
           key={name}

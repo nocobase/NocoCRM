@@ -262,14 +262,27 @@ export function EvaluationStatus({
       ) : (
         <Sparkles className='size-3.5 text-ai' />
       )}
-      <span className='font-medium'>{text('evaluation.chip')}</span>
+      {/* In a narrow column the labels keep to one line and the verdict,
+          the one part that can run long, is cut with an ellipsis (shown
+          whole on hover, the chip's title aside). */}
+      <span className='shrink-0 font-medium whitespace-nowrap'>
+        {text('evaluation.chip')}
+      </span>
       {verdict && (
-        <Badge variant={pending ? 'ai' : 'muted'}>{label(verdict)}</Badge>
+        <Badge
+          variant={pending ? 'ai' : 'muted'}
+          className='min-w-0 shrink'
+          title={label(verdict)}
+        >
+          <span className='truncate'>{label(verdict)}</span>
+        </Badge>
       )}
       {pending ? (
-        <span className='font-medium text-ai'>{text('evaluation.handle')}</span>
+        <span className='shrink-0 font-medium whitespace-nowrap text-ai'>
+          {text('evaluation.handle')}
+        </span>
       ) : (
-        <span className='text-muted-foreground'>
+        <span className='shrink-0 whitespace-nowrap text-muted-foreground'>
           {text(`evaluation.statuses.${entry.status}`)}
         </span>
       )}

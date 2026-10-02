@@ -117,7 +117,6 @@ import {
 } from '../components/crm/lead-evaluation.js';
 import { Choice, RecordForm } from '../components/crm/form.js';
 import { StageField } from '../components/crm/reasons.js';
-import { StageStepper } from '../components/crm/stage-stepper.js';
 import { ApprovalActions } from '../components/crm/approval-actions.js';
 import {
   ActivityItem,
@@ -147,15 +146,7 @@ const shortcuts: Partial<Record<Entity, readonly string[]>> = {
 // country / state / city trio on one row. Objects without an entry fall back
 // to the schema's field order.
 const detailLayout: Partial<Record<Entity, readonly string[]>> = {
-  opportunities: [
-    'accountId',
-    'businessType',
-    'money',
-    'expectedCloseAt',
-    'source',
-    'description',
-    // Lost / pause reasons and the resume date live on the stage strip.
-  ],
+  // Opportunities group their fields on a page of their own (see EntityDetail).
   // Activities group their fields on a page of their own (see EntityDetail).
   // The decision fields are read-only rows: written by the approval actions.
   approvals: [
@@ -1101,6 +1092,225 @@ export default function EntityDetail({
       </DetailColumns>
     );
   }
+  // An opportunity too: account / name heading the column, the stage a row
+  // of its particulars (no stepper), every action under the name.
+  if (entity === 'opportunities') {
+    const row = (key: string): ReactElement => (
+      <InfoRow key={key} label={text(fieldLabelKey(entity, key))}>
+        {inline(key)}
+      </InfoRow>
+    );
+    const time = (key: string): ReactElement => (
+      <InfoRow key={key} label={text(`fields.${key}`)}>
+        <div className='px-2 py-1.5'>
+          {localDate(record[key], language, meta.settings.timeZone)}
+        </div>
+      </InfoRow>
+    );
+    const tabIcons: Record<string, LucideIcon> = {
+      historyTab: History,
+      activities: CalendarDays,
+      opportunityContacts: ContactRound,
+      approvals: ClipboardCheck,
+      attachments: Paperclip,
+      notes: StickyNote,
+    };
+    const stage = toText(record.stage);
+    const openStage = !['won', 'lost', 'paused'].includes(stage);
+    return (
+      <DetailColumns
+        heading={
+          // A <div> with the heading role, since the editor brings block
+          // elements an <h1> may not hold.
+          <div
+            role='heading'
+            aria-level={1}
+            className='-mx-2 flex flex-wrap items-center font-heading text-xl font-semibold tracking-tight'
+          >
+            {record.accountId ? (
+              <>
+                <AccountCrumb
+                  id={toText(record.accountId)}
+                  name={
+                    names[toText(record.accountId)] ?? text('entities.accounts')
+                  }
+                />
+                <span className='text-muted-foreground/60'>/</span>
+              </>
+            ) : null}
+            <InlineField
+              entity={entity}
+              record={record}
+              field={field('name')}
+              editable={editable}
+              label={text(fieldLabelKey(entity, 'name'))}
+              size='heading'
+            />
+          </div>
+        }
+        // Everything the reader can do with the deal, together under its
+        // name, as on the lead page; under them, where the AI's latest
+        // follow-up stands, which opens it in the timeline.
+        actions={
+          <div className='flex flex-col items-start gap-2'>
+            <div className='flex flex-wrap items-center gap-2'>
+              <AskAIButton entity={entity} recordId={id} name={contextName} />
+              {meta.assistant &&
+                (shortcuts.opportunities ?? []).map((key) => (
+                  <Button
+                    key={key}
+                    size='sm'
+                    variant='ghost'
+                    className='text-ai hover:text-ai'
+                    onClick={() => shortcut(key)}
+                  >
+                    <Sparkles />
+                    {text(key)}
+                  </Button>
+                ))}
+              {editable && !closedDeal && (
+                <EvaluateButton
+                  entity='opportunities'
+                  recordId={id}
+                  onError={setError}
+                />
+              )}
+              {detail.permissions.delete && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    aria-label={text('moreActions')}
+                    className={buttonVariants({
+                      size: 'icon-sm',
+                      variant: 'outline',
+                    })}
+                  >
+                    <Ellipsis />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align='start'>
+                    <DropdownMenuItem
+                      variant='destructive'
+                      onClick={() => setConfirmDelete(true)}
+                    >
+                      <Trash2 />
+                      {text('deleteRecord', {
+                        entity: text('entity.opportunities'),
+                      })}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+            <EvaluationStatus
+              entity='opportunities'
+              recordId={id}
+              onOpen={(entryId) => {
+                setFocus({ id: entryId, at: Date.now() });
+                setTab('historyTab');
+              }}
+            />
+          </div>
+        }
+        // The timeline without a count, as on the lead page.
+        tabBar={
+          <DetailTabBar
+            active={activeTab}
+            onSelect={setTab}
+            tabs={tabs.map(([name, label, count]) => ({
+              name,
+              label,
+              icon: tabIcons[name] ?? History,
+              count: name === 'historyTab' ? undefined : count,
+            }))}
+          />
+        }
+        notice={<ErrorNotice error={error ?? loadError} />}
+        left={
+          <>
+            {/* Who has it, where it stands and what it is worth. */}
+            <InfoGroup title={text('opportunityGroups.general')}>
+              {row('ownerId')}
+              <InfoRow label={text('fields.stage')}>
+                <StageField
+                  entity={entity}
+                  record={record}
+                  field='stage'
+                  editable={editable}
+                  title={title}
+                  // Every move clears both outcomes' fields first, as the
+                  // stepper did: a deal moved between lost and paused keeps
+                  // no stale reason or resume date.
+                  onSave={(values) =>
+                    patch({
+                      lostReason: null,
+                      pauseReason: null,
+                      resumeAt: null,
+                      ...values,
+                    })
+                  }
+                />
+              </InfoRow>
+              {openStage && (
+                <InfoRow label={text('fields.probability')}>
+                  <div className='px-2 py-1.5'>
+                    {`${Math.round((meta.probabilities[stage] ?? 0) * 100)}%`}
+                  </div>
+                </InfoRow>
+              )}
+              {/* Currency, then the bare number: both edit in place, and the
+                  sign is not repeated. */}
+              <InfoRow label={text('fields.amount')}>
+                <div className='flex items-center'>
+                  <div className='shrink-0'>{inline('currency')}</div>
+                  <div className='min-w-0 flex-1'>
+                    <InlineField
+                      entity={entity}
+                      record={record}
+                      field={field('amount')}
+                      editable={editable}
+                      lookup={names}
+                      label={text('fields.amount')}
+                      bare
+                    />
+                  </div>
+                </div>
+              </InfoRow>
+              {row('expectedCloseAt')}
+              {stage === 'paused' && row('resumeAt')}
+            </InfoGroup>
+            <InfoGroup title={text('opportunityGroups.details')}>
+              {['accountId', 'businessType', 'source'].map(row)}
+              {convertedFrom.length > 0 && (
+                <InfoRow label={text('convertedFrom')}>
+                  <div className='flex min-w-0 flex-wrap gap-x-3 gap-y-1 px-2 py-1.5'>
+                    {convertedFrom.map((lead) => (
+                      <RecordLink
+                        key={lead.id}
+                        entity='leads'
+                        record={{
+                          id: lead.id,
+                          name: recordTitle('leads', lead, names),
+                        }}
+                      />
+                    ))}
+                  </div>
+                </InfoRow>
+              )}
+              {row('description')}
+            </InfoGroup>
+            <InfoGroup title={text('opportunityGroups.system')}>
+              {time('createdAt')}
+              {time('updatedAt')}
+              {/* When it was won or lost, under its last update. */}
+              {closedDeal && time('closedAt')}
+            </InfoGroup>
+          </>
+        }
+        right={tabContent}
+      >
+        {overlays}
+      </DetailColumns>
+    );
+  }
   return (
     <CrmFrame
       editableTitle
@@ -1194,7 +1404,7 @@ export default function EntityDetail({
             </span>
           </LeadRow>
         )}
-        {statusKey && entity !== 'opportunities' && entity !== 'approvals' && (
+        {statusKey && entity !== 'approvals' && (
           <LeadRow label={text(`fields.${statusKey}`)} icon={CircleDot}>
             <StageField
               entity={entity}
@@ -1238,16 +1448,6 @@ export default function EntityDetail({
       {/* Same container query and 5:7 split as the lead page, so the two
           columns hold together with the AI panel open and stack only when
           the area itself is narrow. */}
-      {entity === 'opportunities' && (
-        // The stage is the page's main state, so it gets the room a stepper
-        // needs instead of a slot in the summary row.
-        <StageStepper
-          record={record}
-          editable={editable}
-          title={title}
-          onSave={patch}
-        />
-      )}
       <div className='@container'>
         {/* An approval is mostly its own fields — a long description, a
             decision — with little on the right, so it gives the left column
@@ -1411,30 +1611,6 @@ export default function EntityDetail({
                     </Button>
                   ))}
                 </div>
-                {/* A deal's AI follow-up, right of the tabs on every tab:
-                    where it stands (opening it in the timeline) and asking
-                    for another. */}
-                {entity === 'opportunities' && meta?.assistant ? (
-                  // Kept to the right when six tabs leave it no room
-                  // beside them.
-                  <div className='-mr-2.5 ml-auto flex flex-wrap items-center gap-1'>
-                    <EvaluationStatus
-                      entity='opportunities'
-                      recordId={id}
-                      onOpen={(entryId) => {
-                        setFocus({ id: entryId, at: Date.now() });
-                        setTab('historyTab');
-                      }}
-                    />
-                    {editable && !closedDeal && (
-                      <EvaluateButton
-                        entity='opportunities'
-                        recordId={id}
-                        onError={setError}
-                      />
-                    )}
-                  </div>
-                ) : null}
               </div>
             </CardHeader>
             <CardContent>{tabContent}</CardContent>
