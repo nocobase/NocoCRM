@@ -367,6 +367,13 @@ const wording = {
     'Enter times in your laptop timezone: {{zone}}.',
     '请按电脑时区 {{zone}} 输入时间。',
   ],
+  pickDateTime: ['Pick date and time', '选择日期时间'],
+  hour: ['Hour', '时'],
+  minute: ['Minute', '分'],
+  dateTimeFormatInvalid: [
+    'Enter a date and time as yyyy-mm-dd HH:mm, for example 2026-09-24 14:30.',
+    '请按 yyyy-mm-dd HH:mm 输入日期时间，如 2026-09-24 14:30。',
+  ],
   noRelatedRecords: [
     'No eligible records. Select the account first, or create a related record.',
     '没有可选记录。请先选择客户，或创建相关记录。',

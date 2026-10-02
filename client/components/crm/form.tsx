@@ -3,6 +3,7 @@ import {
   lengthLimit,
 } from '../../../server/providers/crm/limits.js';
 import { LengthHint } from './length-hint.js';
+import { DateTimeInput } from './datetime-input.js';
 import { RecordMultiPicker, RecordPicker } from './record-picker.js';
 import { FileDropZone, FileLinks } from './attachments.js';
 import { editsAll, fieldLabelKey, toText } from './api.js';
@@ -708,28 +709,32 @@ export function RecordForm({
           )}
         </div>
       );
-    const date = ['date', 'datetime'].includes(field.type);
-    const datetimeValue = value && date ? new Date(toText(value)) : null;
-    // Native datetime controls use the laptop timezone; display it explicitly in the form.
+    // Entered on the laptop's clock; the dialog names that timezone.
+    if (field.type === 'datetime')
+      return (
+        <DateTimeInput
+          id={common.id}
+          label={label}
+          value={toText(value ?? '')}
+          required={field.required}
+          onChange={(v) => set(field.key, v)}
+        />
+      );
+    const datetimeValue =
+      value && field.type === 'date' ? new Date(toText(value)) : null;
     const display =
       datetimeValue && Number.isFinite(+datetimeValue)
-        ? field.type === 'datetime'
-          ? new Date(+datetimeValue - datetimeValue.getTimezoneOffset() * 60000)
-              .toISOString()
-              .slice(0, 16)
-          : datetimeValue.toISOString().slice(0, 10)
+        ? datetimeValue.toISOString().slice(0, 10)
         : toText(value ?? '');
-    const typed = !['number', 'date', 'datetime'].includes(field.type);
+    const typed = !['number', 'date'].includes(field.type);
     return (
       <div>
         <Input
           {...common}
           type={
-            field.type === 'datetime'
-              ? 'datetime-local'
-              : ['date', 'email', 'number'].includes(field.type)
-                ? field.type
-                : 'text'
+            ['date', 'email', 'number'].includes(field.type)
+              ? field.type
+              : 'text'
           }
           value={display}
           maxLength={lengthLimit(field.type)}
@@ -743,9 +748,7 @@ export function RecordForm({
                 ? e.target.value === ''
                   ? null
                   : Number(e.target.value)
-                : field.type === 'datetime' && e.target.value
-                  ? new Date(e.target.value).toISOString()
-                  : e.target.value,
+                : e.target.value,
             )
           }
         />

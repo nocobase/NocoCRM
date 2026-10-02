@@ -179,6 +179,37 @@ describe('the activity a follow-up card creates', () => {
     );
   });
 
+  it('edits the start as yyyy-mm-dd HH:mm on a 24-hour clock', async () => {
+    render(
+      <VerdictPanel
+        entry={entry}
+        recordId='lead-1'
+        editable
+        onChanged={() => Promise.resolve()}
+      />,
+    );
+    await userEvent.dblClick(screen.getByRole('button', { name: '开始时间' }));
+    const start = screen.getByRole('textbox', { name: '开始时间' });
+    expect(start).not.toHaveAttribute('type', 'datetime-local');
+    expect((start as HTMLInputElement).value).toMatch(
+      /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/,
+    );
+    await userEvent.clear(start);
+    await userEvent.type(start, '2026-10-09 15:45{Enter}');
+    await userEvent.click(
+      screen.getByRole('button', { name: '采纳并安排联系' }),
+    );
+    // Typed on the laptop's clock, sent as the instant it names.
+    expect(state.api).toHaveBeenCalledWith(
+      'leads/lead-1/evaluation/entry-1',
+      'POST',
+      {
+        decision: 'accept',
+        fields: [],
+        activity: { startAt: new Date(2026, 9, 9, 15, 45).toISOString() },
+      },
+    );
+  });
   it('keeps the owner for whoever may not assign', () => {
     state.assign = false;
     render(

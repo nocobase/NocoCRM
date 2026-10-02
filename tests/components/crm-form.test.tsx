@@ -171,6 +171,25 @@ describe('CRM forms and file interchange', () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByText('External participants')).not.toBeInTheDocument();
   });
+  it('edits an activity time as yyyy-mm-dd HH:mm, not a locale clock', () => {
+    state.locale = 'en';
+    const startAt = new Date(2026, 8, 24, 14, 30).toISOString();
+    render(
+      <RecordForm
+        entity='activities'
+        initial={{ startAt }}
+        onClose={vi.fn()}
+      />,
+    );
+    const start = screen.getByLabelText('Start time');
+    // A native datetime-local control would show 02:30 PM in English.
+    expect(start).not.toHaveAttribute('type', 'datetime-local');
+    expect(start).toHaveValue('2026-09-24 14:30');
+    expect(screen.getByLabelText('End time')).toHaveAttribute(
+      'placeholder',
+      'yyyy-mm-dd HH:mm',
+    );
+  });
   it('renders Chinese labels and keeps a failed submission editable', async () => {
     state.locale = 'zh';
     state.api.mockRejectedValue(new Error('failed'));

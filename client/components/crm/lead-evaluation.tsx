@@ -26,6 +26,7 @@ import { ConvertDialog } from './conversion.js';
 import { OutcomeBox } from './outcome.js';
 import { Choice } from './form.js';
 import { Input } from '../ui/input.js';
+import { DateTimeInput } from './datetime-input.js';
 import { contactTime } from '../../../server/providers/crm/zone-time.js';
 import {
   mergePlanDescription,
@@ -865,10 +866,6 @@ function carriedChanges(
   };
 }
 
-// A datetime-local input's value for an instant, in the browser's time.
-const localInput = (at: Date): string =>
-  new Date(+at - at.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-
 // The activity accepting creates, laid out as the activity it will be:
 // type, name, when and whose, each changeable before accepting; the
 // preparation, questions and email draft go into its description. A lead
@@ -900,6 +897,9 @@ function PlannedActivity({
   // The field open for editing, and the plan as it was when it opened, for
   // Escape to go back to.
   const [editing, setEditing] = useState<keyof Plan | null>(null);
+  // The start's date and time popup holds focus while open, so leaving the
+  // text for it is not leaving the field; closing it is.
+  const timePopupRef = useRef(false);
   const [before, setBefore] = useState<Partial<Plan>>({});
   if (!meta) return null;
   const follow = stepsNext(verdict);
@@ -1181,18 +1181,29 @@ function PlannedActivity({
             language,
             meta.settings.timeZone,
           ),
-          <Input
-            autoFocus
-            type='datetime-local'
-            value={localInput(new Date(value.startAt))}
-            aria-label={toText(text('fields.startAt'))}
-            onChange={(event) => {
-              const at = new Date(event.target.value);
-              if (Number.isFinite(+at)) set('startAt', at.toISOString());
+          <div
+            onBlur={(event) => {
+              if (
+                !timePopupRef.current &&
+                !event.currentTarget.contains(event.relatedTarget)
+              )
+                close();
             }}
-            onBlur={close}
-            onKeyDown={(event) => keys(event)}
-          />,
+          >
+            <DateTimeInput
+              autoFocus
+              label={toText(text('fields.startAt'))}
+              value={value.startAt}
+              onChange={(at) => {
+                if (at) set('startAt', at);
+              }}
+              onOpenChange={(isOpen) => {
+                timePopupRef.current = isOpen;
+                if (!isOpen) close();
+              }}
+              onKeyDown={(event) => keys(event)}
+            />
+          </div>,
         )}
         {/* Another owner only for whoever may assign records. */}
         {row(
