@@ -102,6 +102,7 @@ export function DateTimeInput({
   id,
   label,
   value,
+  autoFocus,
   required,
   disabled,
   onChange,
@@ -112,6 +113,7 @@ export function DateTimeInput({
   label: string;
   // The stored ISO instant, or empty.
   value: string | null | undefined;
+  autoFocus?: boolean;
   required?: boolean;
   disabled?: boolean;
   // An ISO instant, or null once the text is cleared. Text that is not yet a
@@ -174,6 +176,7 @@ export function DateTimeInput({
         inputMode='numeric'
         autoComplete='off'
         value={draft}
+        autoFocus={autoFocus}
         required={required}
         disabled={disabled}
         onChange={(event) => {
