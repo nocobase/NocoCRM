@@ -536,8 +536,12 @@ export function RecordForm({
             if (picked) pickedNamesRef.current[v] = toText(picked.name);
             set(field.key, v || null);
           }}
+          // A record opened from its parent's page keeps that parent; one
+          // the AI organised (an embedded capture form) took its parent
+          // from a match the person may correct.
           disabled={
             !id &&
+            !embedded &&
             ['leadId', 'accountId', 'opportunityId'].includes(field.key) &&
             Boolean(initial[field.key])
           }
@@ -596,73 +600,96 @@ export function RecordForm({
       );
     if (field.type === 'contacts')
       return (
-        <div className='space-y-3'>
-          {rows(value).map((contact, index) => (
-            <div
-              className='grid grid-cols-2 gap-2 rounded-lg border p-3'
-              key={
-                toText(contact.contactId) || `unselected-${index.toString()}`
-              }
-            >
-              <RecordPicker
-                entity='contacts'
-                bare
-                label={text('entities.contacts')}
-                value={toText(contact.contactId ?? '')}
-                titles={titles}
-                filter={
-                  input.accountId
-                    ? { accountId: toText(input.accountId) }
-                    : undefined
-                }
-                onChange={(v) =>
-                  set(
-                    field.key,
-                    rows(value).map((c, i) =>
-                      i === index ? { ...c, contactId: v } : c,
-                    ),
-                  )
-                }
-              />
-              <Choice
-                label={text('fields.role')}
-                value={toText(contact.role ?? 'other')}
-                choices={[
-                  'decisionMaker',
-                  'champion',
-                  'evaluator',
-                  'influencer',
-                  'user',
-                  'blocker',
-                  'other',
-                ].map((v) => ({
-                  value: v,
-                  label: text(`options.${toText(v)}`),
-                }))}
-                onChange={(v) =>
-                  set(
-                    field.key,
-                    rows(value).map((c, i) =>
-                      i === index ? { ...c, role: v } : c,
-                    ),
-                  )
-                }
-              />
-              <Button
-                type='button'
-                variant='ghost'
-                onClick={() =>
-                  set(
-                    field.key,
-                    rows(value).filter((_, i) => i !== index),
-                  )
-                }
-              >
-                <Trash2 />
-                {text('remove')}
-              </Button>
+        <div className='space-y-2'>
+          {/* One list, a row per contact: who, their role, remove. */}
+          {rows(value).length > 0 && (
+            <div className='divide-y rounded-lg border'>
+              {rows(value).map((contact, index) => (
+                <div
+                  className='grid grid-cols-[minmax(0,1fr)_minmax(0,10rem)_auto] items-center gap-2 p-2'
+                  key={
+                    toText(contact.contactId) ||
+                    `${contact.person ? 'new' : 'unselected'}-${index.toString()}`
+                  }
+                >
+                  {/* A person the AI capture found who is not yet the
+                      account's contact (opportunity-capture.tsx): created
+                      with the opportunity, in the list it is linked from. */}
+                  {contact.person ? (
+                    <NewContact
+                      person={contact.person as Data}
+                      account={Boolean(input.accountId)}
+                    />
+                  ) : (
+                    <RecordPicker
+                      entity='contacts'
+                      bare
+                      label={text('entities.contacts')}
+                      value={toText(contact.contactId ?? '')}
+                      exclude={rows(value)
+                        .filter((_, i) => i !== index)
+                        .map((c) => toText(c.contactId ?? ''))
+                        .filter(Boolean)}
+                      titles={titles}
+                      filter={
+                        input.accountId
+                          ? { accountId: toText(input.accountId) }
+                          : undefined
+                      }
+                      onChange={(v) =>
+                        set(
+                          field.key,
+                          rows(value).map((c, i) =>
+                            i === index ? { ...c, contactId: v } : c,
+                          ),
+                        )
+                      }
+                    />
+                  )}
+                  <Choice
+                    label={text('fields.role')}
+                    value={toText(contact.role ?? 'other')}
+                    choices={[
+                      'decisionMaker',
+                      'champion',
+                      'evaluator',
+                      'influencer',
+                      'user',
+                      'blocker',
+                      'other',
+                    ].map((v) => ({
+                      value: v,
+                      label: text(`options.${toText(v)}`),
+                    }))}
+                    onChange={(v) =>
+                      set(
+                        field.key,
+                        rows(value).map((c, i) =>
+                          i === index ? { ...c, role: v } : c,
+                        ),
+                      )
+                    }
+                  />
+                  <Button
+                    type='button'
+                    variant='ghost'
+                    size='icon'
+                    className='text-muted-foreground hover:text-destructive'
+                    aria-label={text('remove')}
+                    title={text('remove')}
+                    onClick={() =>
+                      set(
+                        field.key,
+                        rows(value).filter((_, i) => i !== index),
+                      )
+                    }
+                  >
+                    <Trash2 />
+                  </Button>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
           <Button
             type='button'
             variant='outline'
@@ -985,8 +1012,9 @@ export function RecordForm({
                     const response = await api<{ data: CrmRecord }>(
                       recordId
                         ? `${toText(entity)}/${toText(recordId)}`
-                        : entity === 'leads' && !followUp
-                          ? 'leads?followUp=0'
+                        : (entity === 'leads' || entity === 'opportunities') &&
+                            !followUp
+                          ? `${entity}?followUp=0`
                           : entity,
                       recordId ? 'PATCH' : 'POST',
                       payload,
@@ -1014,12 +1042,18 @@ export function RecordForm({
             {typeof notice === 'function' ? notice(unfilled) : notice}
             {grid}
             <DialogFooter>
-              {/* A new lead: whether the AI follows it up at once. */}
-              {entity === 'leads' && !recordId && !onSubmit ? (
+              {/* A new lead or opportunity: whether the AI follows it up at
+                  once. */}
+              {(entity === 'leads' || entity === 'opportunities') &&
+              !recordId &&
+              !onSubmit ? (
                 <FollowUpOption
                   checked={followUp}
                   onChange={setFollowUp}
                   disabled={busy}
+                  {...(entity === 'opportunities'
+                    ? { label: 'dealFollowUpNow' }
+                    : {})}
                 />
               ) : null}
               <Button
@@ -1056,5 +1090,39 @@ export function RecordForm({
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+// A person to create as the account's contact with the opportunity: what
+// the text gave, marked new, in place of the picker.
+function NewContact({
+  person,
+  account,
+}: {
+  person: Data;
+  account: boolean;
+}): ReactElement {
+  const { text } = useCrmText();
+  const details = [person.jobTitle, person.phone, person.email]
+    .map((v) => toText(v ?? ''))
+    .filter(Boolean)
+    .join(' · ');
+  return (
+    <div
+      className='flex min-w-0 items-center gap-2 px-1 text-sm'
+      title={text(
+        account
+          ? 'dealCapture.newContactHint'
+          : 'dealCapture.newContactNeedsAccount',
+      )}
+    >
+      <Badge variant={account ? 'ai' : 'warning'} className='shrink-0'>
+        {text('dealCapture.newContact')}
+      </Badge>
+      <span className='shrink-0 font-medium'>{toText(person.name)}</span>
+      {details && (
+        <span className='truncate text-muted-foreground'>{details}</span>
+      )}
+    </div>
   );
 }

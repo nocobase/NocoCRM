@@ -72,7 +72,10 @@ function ResultList({
   isPicked,
   onPick,
   bare = false,
+  exclude = [],
 }: SearchProps & {
+  // Records not offered: already chosen elsewhere in the same list.
+  exclude?: readonly string[];
   search: string;
   setSearch: (v: string) => void;
   enabled: boolean;
@@ -88,8 +91,15 @@ function ResultList({
     debounced,
     enabled,
   );
-  const pages = query.data?.pages ?? [];
+  const pages = (query.data?.pages ?? []).map((page) => ({
+    ...page,
+    data: page.data.filter(
+      (record) =>
+        isPicked(toText(record.id)) || !exclude.includes(toText(record.id)),
+    ),
+  }));
   const total = pages[0]?.total ?? 0;
+  const shownCount = pages.reduce((n, p) => n + p.data.length, 0);
   return (
     <div className='flex max-h-80 w-72 flex-col'>
       <div className='relative border-b p-2'>
@@ -133,7 +143,7 @@ function ResultList({
           <li className='px-2 py-1.5 text-sm text-muted-foreground'>
             {text('loading')}
           </li>
-        ) : !total ? (
+        ) : !shownCount && !query.hasNextPage ? (
           <li className='px-2 py-1.5 text-sm text-muted-foreground'>
             {text('noMatches')}
           </li>
@@ -149,7 +159,14 @@ function ResultList({
               onClick={() => void query.fetchNextPage()}
             >
               {text('loadMore')} ·{' '}
-              {total - pages.reduce((n, p) => n + p.data.length, 0)}
+              {Math.max(
+                0,
+                total -
+                  (query.data?.pages ?? []).reduce(
+                    (n, p) => n + p.data.length,
+                    0,
+                  ),
+              )}
             </Button>
           </li>
         )}
@@ -170,8 +187,11 @@ export function RecordPicker({
   variant = 'default',
   onOpenChange,
   bare = false,
+  exclude,
 }: SearchProps & {
   value: string;
+  // Records not offered: already chosen elsewhere in the same list.
+  exclude?: readonly string[];
   // The picked record comes along, for a caller that wants its fields.
   onChange: (id: string, record?: CrmRecord) => void;
   label: string;
@@ -238,6 +258,7 @@ export function RecordPicker({
           setSearch={setSearch}
           enabled={open}
           bare={bare}
+          exclude={exclude}
           isPicked={(id) => id === value}
           onPick={(record, pageTitles) => {
             const id = toText(record.id);

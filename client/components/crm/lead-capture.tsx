@@ -99,10 +99,42 @@ interface ReviewRow {
   revision: number;
 }
 
-interface Turn {
+export interface Turn {
   id: string;
   from: 'user' | 'ai';
   text: string;
+}
+
+// The conversation that adjusts the captured values, on the capture's side
+// panel (bg-muted/30): the user's words in a bubble on the right, the AI's
+// reply on the left behind its mark.
+export function AdjustTurns({ turns }: { turns: Turn[] }): ReactElement {
+  return (
+    <>
+      {turns.map((turn) =>
+        turn.from === 'user' ? (
+          <p
+            key={turn.id}
+            className='ml-auto max-w-[90%] rounded-lg bg-muted px-3 py-1.5 text-sm whitespace-pre-wrap'
+          >
+            {turn.text}
+          </p>
+        ) : (
+          <p
+            key={turn.id}
+            className='flex max-w-[90%] gap-1.5 text-sm text-muted-foreground'
+          >
+            {/* As tall as one line of the text, so the mark sits on its
+                first line whatever the theme's line height. */}
+            <span className='flex h-[1lh] shrink-0 items-center'>
+              <Sparkles className='size-3.5 text-ai' />
+            </span>
+            <span className='whitespace-pre-wrap'>{turn.text}</span>
+          </p>
+        ),
+      )}
+    </>
+  );
 }
 
 const isEmpty = (value: unknown): boolean =>
@@ -819,23 +851,7 @@ function CaptureReview({
               <Sparkles className='size-4 text-ai' />
               {text('leadCapture.adjustTitle')}
             </h3>
-            {turns.map((turn) =>
-              turn.from === 'user' ? (
-                <p
-                  key={turn.id}
-                  className='ml-auto max-w-[90%] rounded-lg bg-background px-3 py-1.5 text-sm'
-                >
-                  {turn.text}
-                </p>
-              ) : (
-                <p
-                  key={turn.id}
-                  className='max-w-[90%] text-sm text-muted-foreground'
-                >
-                  {turn.text}
-                </p>
-              ),
-            )}
+            <AdjustTurns turns={turns} />
             <ErrorNotice error={adjustError} />
             <Textarea
               value={instruction}

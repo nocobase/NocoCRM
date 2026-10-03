@@ -1,3 +1,4 @@
+import { OpportunityCaptureDialog } from '../components/crm/opportunity-capture.js';
 import {
   PAGE_SIZE,
   useCrmScopeKey,
@@ -506,7 +507,10 @@ function EntityList({
       {writable && (
         <Button
           onClick={() =>
-            entity === 'leads' && meta?.assistant
+            // A new lead or opportunity starts with the AI while the
+            // assistant is on; the form is a tab away.
+            (entity === 'leads' || entity === 'opportunities') &&
+            meta?.assistant
               ? setCapturing(true)
               : setForm({ input: {} })
           }
@@ -1384,7 +1388,21 @@ function EntityList({
           </div>
         </section>
       )}
-      {capturing && (
+      {capturing && entity === 'opportunities' && (
+        <OpportunityCaptureDialog
+          draft={draft}
+          onDraft={setDraft}
+          onClose={() => {
+            setCapturing(false);
+            setDraft('');
+          }}
+          onForm={() => {
+            setCapturing(false);
+            setForm({ input: {} });
+          }}
+        />
+      )}
+      {capturing && entity === 'leads' && (
         <LeadCaptureDialog
           draft={draft}
           onDraft={setDraft}
@@ -1405,7 +1423,9 @@ function EntityList({
           id={form.id}
           titles={lookup}
           tabs={
-            entity === 'leads' && !form.id && meta?.assistant ? (
+            (entity === 'leads' || entity === 'opportunities') &&
+            !form.id &&
+            meta?.assistant ? (
               <CaptureTabs
                 current='form'
                 onSwitch={() => {

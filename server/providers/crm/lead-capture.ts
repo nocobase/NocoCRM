@@ -201,7 +201,7 @@ Rules for the change:
 - Every existing lead comes back with its ref as given; a lead the user adds has ref null; a lead the user removes is not returned.
 - Change only what the request mentions and return every other field as it is, values the user changed themselves included; a field the request clears is null.
 - A request for another language changes only the values it names into that language; every value it does not name keeps its language. For example, "translate the original message into English" changes message alone: name, company and jobTitle stay as they are. "everything in English" changes every text value.
-- In reply, call the fields what the user sees on the form (${formLabels(language)} and so on), never by their keys such as message or jobTitle.
+- In reply, call the fields what the user sees on the form (${formLabels(language)} and so on), never by their keys such as message or jobTitle. Name a choice by its label in the user's language too, never by its value ("跟进中" or "Working", not working).
 - reply says in one or two sentences what was changed; what cannot be done (not in the text, not among the options) is said plainly, never invented. ${
     language === 'zh-CN'
       ? 'Write reply in Chinese, unless the request asks for another language.'

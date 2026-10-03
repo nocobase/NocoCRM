@@ -28,7 +28,7 @@ export const dealContactRoles = {
 } as const satisfies Pairs;
 
 // The follow-up's conversation title.
-export const dealFollowUpTitle: Pair = ['推进商机', 'Opportunity follow-up'];
+export const dealFollowUpTitle: Pair = ['跟进商机', 'Opportunity follow-up'];
 
 // What the model writes in `changes` when nothing changed, and for a side
 // that has nothing; and in the research when nothing was found.

@@ -20,6 +20,11 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { crmToken } from '../providers/crm/index.js';
 import { crmSkillNotesToken } from '../providers/crm/skills.js';
 import { captureLeads } from '../providers/crm/lead-capture.js';
+import {
+  captureOpportunity,
+  matchAccount,
+  peopleOf,
+} from '../providers/crm/opportunity-capture.js';
 import { organiseFeedback, recordOutcome } from '../providers/crm/feedback.js';
 import {
   latestEvaluation,
@@ -710,6 +715,31 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         ),
       }),
     );
+    // New opportunity with the AI (opportunity-capture.ts): pasted text in,
+    // a prefilled opportunity out, matched to an account and its contacts;
+    // and the matching again when the user picks another account.
+    routes.post('/opportunities/capture', async (c) =>
+      c.json({
+        data: await captureOpportunity(
+          service,
+          app.container,
+          c.get('actor'),
+          await c.req.json(),
+          (await service.settings()).timeZone || 'Asia/Shanghai',
+        ),
+      }),
+    );
+    routes.post('/opportunities/capture/match', async (c) => {
+      const body = object(await c.req.json());
+      return c.json({
+        data: await matchAccount(
+          service,
+          c.get('actor'),
+          toText(body.accountId ?? ''),
+          peopleOf(body.people),
+        ),
+      });
+    });
     // What came of an activity, jotted down, written up by the AI as its
     // feedback for the person to read and record (feedback.ts).
     routes.post('/activities/:id/feedback/organise', async (c) =>
@@ -930,15 +960,20 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
       // (lead-capture.tsx) is recorded as organised by the AI. The mark
       // only labels the history entry; the write is the user's.
       const actor =
-        entity === 'leads' && c.req.query('via') === 'capture'
+        (entity === 'leads' || entity === 'opportunities') &&
+        c.req.query('via') === 'capture'
           ? { ...c.get('actor'), via: 'capture' as const }
           : c.get('actor');
       const record = await service.save(actor, entity, await c.req.json());
-      // A new lead is followed up by the AI in the background, unless the
-      // person creating it unticked that (`followUp=0`); the lead is created
-      // whether or not that can start.
+      // A new lead or opportunity is followed up by the AI in the
+      // background, unless the person creating it unticked that
+      // (`followUp=0`); the record is created whether or not that can start.
       if (entity === 'leads' && c.req.query('followUp') !== '0')
         await evaluator()
+          ?.request(actor, toText(record.id))
+          .catch(() => undefined);
+      if (entity === 'opportunities' && c.req.query('followUp') !== '0')
+        await dealEvaluator()
           ?.request(actor, toText(record.id))
           .catch(() => undefined);
       return c.json({ data: record }, 201);

@@ -79,6 +79,10 @@ import {
 import { crmRoutes } from '../../server/routes/crm.js';
 import { captureLeads } from '../../server/providers/crm/lead-capture.js';
 import {
+  captureOpportunity,
+  matchAccount,
+} from '../../server/providers/crm/opportunity-capture.js';
+import {
   findDuplicates,
   matchReasons,
   mergeProposal,
@@ -4203,7 +4207,7 @@ describe('CRM opportunity follow-up', () => {
       skillsManager: {
         getSkills: async (name: string) =>
           name === 'opportunity-follow-up'
-            ? { content: '# 推进商机\n\n技能正文。' }
+            ? { content: '# 跟进商机\n\n技能正文。' }
             : undefined,
       },
     } as unknown as ReturnType<
@@ -6661,5 +6665,171 @@ describe('phone numbers', () => {
       .where('name', '=', '迁移号码')
       .executeTakeFirst();
     expect(row?.phone).toBe('13800007788');
+  });
+});
+
+describe('CRM opportunity capture', () => {
+  it('organises a text into one opportunity on its account, matching its people and open deals', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const account = await service.save(actor('rep'), 'accounts', {
+        name: '商机整理精工有限公司',
+      });
+      const known = await service.save(actor('rep'), 'contacts', {
+        name: '陈整理',
+        accountId: account.id,
+        phone: '13801119999',
+      });
+      const open = await service.save(actor('rep'), 'opportunities', {
+        name: '在谈的生产平台',
+        accountId: account.id,
+        stage: 'proposal',
+        source: 'website',
+      });
+      const prompts: string[] = [];
+      const container = new ServiceContainer();
+      container.instance(aiConversationsManagerToken, {
+        create: async () => ({ sessionId: 'deal-capture' }),
+      } as unknown as ReturnType<
+        typeof container.resolve<typeof aiConversationsManagerToken>
+      >);
+      container.instance(agentServiceFactoryToken, {
+        createAIEmployee: async () => ({
+          invoke: async (input: {
+            userMessages: { content: { content: string } }[];
+          }) => {
+            prompts.push(input.userMessages[0].content.content);
+            return {
+              structuredResponse: {
+                deal: {
+                  name: '仓库系统（专业版）',
+                  company: '商机整理精工',
+                  businessType: 'expansion',
+                  amount: '300000',
+                  currency: 'CNY',
+                  expectedCloseAt: '2026-11-30',
+                  stage: 'qualification',
+                  source: null,
+                  description: '想把仓库搬上来',
+                  people: [
+                    {
+                      name: '陈整理',
+                      jobTitle: null,
+                      phone: '138 0111 9999',
+                      email: null,
+                      role: 'champion',
+                    },
+                    {
+                      name: '孙新人',
+                      jobTitle: 'IT 负责人',
+                      phone: '139 2222 3456',
+                      email: null,
+                      role: 'evaluator',
+                    },
+                  ],
+                  uncertain: ['expectedCloseAt'],
+                },
+                reply: null,
+              },
+            };
+          },
+        }),
+      } as unknown as ReturnType<
+        typeof container.resolve<typeof agentServiceFactoryToken>
+      >);
+      container.instance(loggingToken, {
+        getLogger: () => ({ warn: () => undefined }),
+      } as unknown as ReturnType<
+        typeof container.resolve<typeof loggingToken>
+      >);
+      const { deal } = await captureOpportunity(
+        service,
+        container,
+        actor('rep'),
+        { text: '商机整理精工的陈整理来信……' },
+        'Asia/Shanghai',
+      );
+      expect(prompts[0]).toContain(
+        'Organise the text below into one sales opportunity',
+      );
+      expect(deal.accounts).toEqual([{ id: account.id, name: account.name }]);
+      expect(deal.input).toMatchObject({
+        accountId: account.id,
+        name: '仓库系统（专业版）',
+        amount: 300000,
+        stage: 'qualification',
+        // One list: the contact it matched, and the person new to the CRM,
+        // created with the opportunity.
+        contacts: [
+          { contactId: known.id, role: 'champion' },
+          {
+            contactId: '',
+            role: 'evaluator',
+            person: {
+              name: '孙新人',
+              jobTitle: 'IT 负责人',
+              phone: '13922223456',
+              email: null,
+            },
+          },
+        ],
+      });
+      // Not given by the text: left for the person.
+      expect(deal.input).not.toHaveProperty('source');
+      expect(deal.people[1]).toMatchObject({
+        name: '孙新人',
+        phone: '13922223456',
+        contactId: null,
+      });
+      expect(deal.duplicates).toEqual([
+        { id: open.id, name: '在谈的生产平台', stage: 'proposal' },
+      ]);
+      expect(deal.uncertain).toEqual(['expectedCloseAt']);
+      // An adjustment shows the model everyone on the deal by name, a
+      // contact by its record, and returns them in the same list.
+      const adjusted = await captureOpportunity(
+        service,
+        container,
+        actor('rep'),
+        {
+          text: '商机整理精工的陈整理来信……',
+          instruction: '业务类型改成增购',
+          accountId: account.id,
+          deal: {
+            ...deal.input,
+            contacts: [
+              { contactId: known.id, role: 'champion' },
+              (deal.input.contacts as unknown[])[1],
+            ],
+          },
+        },
+        'Asia/Shanghai',
+      );
+      expect(prompts[1]).toContain('"name": "陈整理"');
+      expect(prompts[1]).toContain('"name": "孙新人"');
+      expect(prompts[1]).not.toContain('"contacts"');
+      expect(adjusted.deal.input.contacts).toEqual(deal.input.contacts);
+      // Another account picked: nobody matches there.
+      const other = await service.save(actor('rep'), 'accounts', {
+        name: '另一家整理客户',
+      });
+      const again = await matchAccount(service, actor('rep'), other.id, [
+        deal.people[0],
+      ]);
+      expect(again).toEqual({
+        people: [expect.objectContaining({ contactId: null })],
+        contacts: [
+          expect.objectContaining({
+            contactId: '',
+            person: expect.objectContaining({ name: '陈整理' }),
+          }),
+        ],
+        duplicates: [],
+      });
+    } finally {
+      enabled.mockRestore();
+    }
   });
 });

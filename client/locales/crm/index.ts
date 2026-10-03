@@ -836,11 +836,44 @@ const wording = {
       '会替换还没创建的线索',
     ],
   },
+  // New opportunity with the AI (opportunity-capture.tsx).
+  dealCapture: {
+    placeholder: [
+      'Paste anything: a customer email about buying more, a renewal, a tender notice, call notes. The AI fills in the opportunity, matches the account and its contacts, and you check it before saving.',
+      '粘贴任何内容：客户要增购的邮件、续约、招标公告、沟通记录。AI 会整理成一个商机，匹配客户和联系人，你核对后再保存。',
+    ],
+    noAccount: [
+      'The account “{{company}}” in the text is not in the CRM: pick an account, or create it first.',
+      '原文里的客户「{{company}}」在 CRM 里没有找到：请选择客户，没有的话先新建客户。',
+    ],
+    severalAccounts: [
+      'Several accounts may be “{{company}}”: pick the right one.',
+      '有几个客户可能是「{{company}}」：请选择正确的那个。',
+    ],
+    duplicates: [
+      'This account already has open opportunities:',
+      '这个客户已有进行中的商机：',
+    ],
+    newContact: ['New', '新建'],
+    newContactHint: [
+      'Created as the account’s contact with the opportunity; remove the row to leave them out.',
+      '创建商机时新建为这个客户的联系人；不需要就删掉这一行。',
+    ],
+    newContactNeedsAccount: [
+      'Pick the account first: new people become its contacts.',
+      '先选择客户：新联系人会建在这个客户下。',
+    ],
+    reorganiseHint: [
+      'The text changed: organise it again to replace the opportunity.',
+      '原文改过了，重新整理会替换上面的商机。',
+    ],
+    create: ['Create opportunity', '创建商机'],
+  },
   skillsPage: {
     title: ['Sales skills', '销售技能'],
     description: [
       'How the AI works on leads, opportunities and approvals. The built-in method ships with NocoCRM and changes with it; add your company’s own practice below and the AI follows both.',
-      'AI 跟进线索、推进商机和辅助审批时遵循的做法。内置做法随 NocoCRM 升级；在下面补充本公司的做法，AI 会一并遵守。',
+      'AI 跟进线索、跟进商机和辅助审批时遵循的做法。内置做法随 NocoCRM 升级；在下面补充本公司的做法，AI 会一并遵守。',
     ],
     builtIn: ['Built in', '内置'],
     showMethod: ['Show the built-in method', '查看内置做法'],
