@@ -127,6 +127,7 @@ import {
   dealSignal,
   scanDealSignals,
 } from '../../server/providers/crm/deal-signals.js';
+import { crmGuidance } from '../../server/ai/employees/crm-guidance.js';
 import { loggingToken } from '@nocobase/app-server/logging';
 import { JobInterruptedError } from '@nocobase/jobs';
 import { readEntry } from '../../server/providers/crm/ai-entries.js';
@@ -3427,6 +3428,31 @@ describe('CRM lead evaluation', () => {
         (Date.parse(toText(review.startAt)) - Date.now()) / 86_400_000;
       expect(days).toBeGreaterThan(28);
       expect(days).toBeLessThan(33);
+      // No time named: the CRM's nurture review interval, set in its
+      // settings, shown on the card and planned on accept.
+      await expect(
+        service.saveSettings(actor('admin'), { nurtureReviewDays: 0 }),
+      ).rejects.toMatchObject({ code: 'invalidInput' });
+      await service.saveSettings(actor('admin'), { nurtureReviewDays: 60 });
+      try {
+        const later = await service.save(actor('rep'), 'leads', {
+          name: '培育没说时间',
+          source: 'website',
+        });
+        const unsaid = evaluating({
+          ...follow,
+          recommendation: 'nurture',
+          grade: 'C',
+          nextStep: null,
+          reviewInDays: null,
+        });
+        await unsaid.evaluator.request(actor('rep'), later.id);
+        await unsaid.evaluator.idle();
+        const card = await latestEvaluation(service, actor('rep'), later.id);
+        expect(card?.ai.result?.reviewInDays).toBe(60);
+      } finally {
+        await service.saveSettings(actor('admin'), { nurtureReviewDays: 90 });
+      }
     } finally {
       enabled.mockRestore();
     }
@@ -7487,6 +7513,28 @@ describe('opportunity signals', () => {
     expect(dealSignal({ stage: 'won', createdAt: daysAgo(90) }, [], now)).toBe(
       undefined,
     );
+    // The days come from the settings: a shorter stall, a nearer close.
+    expect(
+      dealSignal(open, [{ status: 'completed', startAt: daysAgo(8) }], now, {
+        stale: 7,
+        closing: 3,
+      }),
+    ).toBe('silent');
+    expect(
+      dealSignal(
+        { ...open, expectedCloseAt: daysAgo(-5) },
+        [{ status: 'completed', startAt: daysAgo(2) }],
+        now,
+        { stale: 14, closing: 3 },
+      ),
+    ).toBe(undefined);
+  });
+
+  it("puts the settings' days into the business guidance", () => {
+    const guidance = crmGuidance({ uncontacted: 3, stale: 10, closing: 5 });
+    expect(guidance).toContain('新线索超过 3 天未首次联系');
+    expect(guidance).toContain('线索或商机超过 10 天没有活动');
+    expect(guidance).toContain('预计成交日期 5 天内到达');
   });
 
   it('starts a follow-up per signal as the owner, never over a waiting card', async () => {

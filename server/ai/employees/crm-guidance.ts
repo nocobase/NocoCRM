@@ -5,7 +5,17 @@
 // a deployment states its own rules here rather than in a setting. It ships
 // with NocoBase's own sales rules, which the demo dataset follows; editions
 // and prices are those published on nocobase.com/cn/commercial.
-export const crmGuidance = `# 公司定位
+// The follow-up thresholds come from the CRM's settings (the reminders
+// section), so the chat holds to the same days as the daily checks and the
+// dashboard.
+export interface GuidanceDays {
+  uncontacted: number;
+  stale: number;
+  closing: number;
+}
+export const crmGuidance = (
+  days: GuidanceDays = { uncontacted: 2, stale: 14, closing: 7 },
+): string => `# 公司定位
 - 公司名称：NocoBase（开源、AI 驱动的无代码/低代码开发平台，用于搭建企业内部系统和业务应用）。
 - 版本与授权：
   - 社区版：免费、开源，含数据建模、所见即所得界面、工作流和 AI 员工，只有社区支持，须保留 NocoBase 标识。
@@ -27,9 +37,9 @@ export const crmGuidance = `# 公司定位
 - 不要仅凭一次沟通推进阶段，证据不足时先创建获取证据的活动。
 
 # 跟进和审批
-- 新线索超过 2 天未首次联系，建议创建首次联系活动。
-- 线索或商机超过 14 天没有活动，建议安排下一步沟通。
-- 预计成交日期 7 天内到达但仍未关闭，建议确认进展或调整日期。
+- 新线索超过 ${days.uncontacted} 天未首次联系，建议创建首次联系活动。
+- 线索或商机超过 ${days.stale} 天没有活动，建议安排下一步沟通。
+- 预计成交日期 ${days.closing} 天内到达但仍未关闭，建议确认进展或调整日期。
 - 客户要的条件超出审批标准（见「跟进商机」和「审批辅助」技能）时，建议发起审批，审批通过前不答应客户。
 - 活动反馈要记录客户场景、已确认事实、下一步行动和负责人。
 

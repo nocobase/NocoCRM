@@ -284,8 +284,10 @@ function SettingsForm({
             fields([
               'activityReminderMinutes',
               'closeReminderDays',
+              'uncontactedDays',
               'leadStaleDays',
               'staleDays',
+              'nurtureReviewDays',
             ])
           ) : null}
         </CardContent>

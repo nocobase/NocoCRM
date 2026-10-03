@@ -428,8 +428,15 @@ export interface CrmSettings {
   timeZone: string;
   activityReminderMinutes: number;
   closeReminderDays: number;
+  // A new lead nobody has contacted in this many days (the daily lead check).
+  uncontactedDays: number;
+  // A lead or a deal with no activity in this many days: stalled on the
+  // dashboard, followed up by the daily checks.
   leadStaleDays: number;
   staleDays: number;
+  // How many days after nurturing a lead its review comes, when the
+  // customer named no time (lead-evaluation.ts).
+  nurtureReviewDays: number;
   // The language the AI writes in when it works on its own (a lead's
   // evaluation) and, in the chat, unless the user asks for another:
   // `zh-CN`, `en-US`, or `user` for each user's own language.
@@ -442,8 +449,10 @@ export const defaultSettings: CrmSettings = {
   timeZone: 'Asia/Shanghai',
   activityReminderMinutes: 30,
   closeReminderDays: 7,
-  leadStaleDays: 7,
+  uncontactedDays: 2,
+  leadStaleDays: 14,
   staleDays: 14,
+  nurtureReviewDays: 90,
   aiLanguage: 'zh-CN',
   options: {
     source: sources,

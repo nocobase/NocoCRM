@@ -1,6 +1,6 @@
 import { defineAIEmployee, type AIManager } from '@nocobase/ai-employee';
 import { compactSchema } from '../../providers/crm/schema.js';
-import { crmGuidance } from './crm-guidance.js';
+import { crmGuidance, type GuidanceDays } from './crm-guidance.js';
 
 export const CRM_ASSISTANT = 'crm-assistant';
 export const REPORT_SKILLS = ['business-analysis-report'] as const;
@@ -28,6 +28,9 @@ export interface CrmAssistantOptions {
   // assistant writes in unless the user asks for another, or `user`, the
   // language the user writes in.
   language?: string;
+  // The follow-up thresholds of the CRM's settings, put into the business
+  // guidance.
+  days?: GuidanceDays;
 }
 
 // The prompt's two sentences on language, first and last, for the setting.
@@ -74,7 +77,7 @@ The CRM objects and their fields, one object per line, where "!" marks a require
 ${compactSchema()}
 A country is its ISO 3166-1 alpha-2 code (CN, US); a subdivision is its ISO 3166-2 code (CN-44 for Guangdong); a city is free text. A lead is "new" until its first activity is completed, when the system moves it to "working" by itself; a lead converts with convert_lead, not by setting its status. Amounts without a currency use the CRM's default currency. For convert_lead, search accounts for the same company and contacts for the same email or phone first, and link them with accountId / contactId rather than creating duplicates.
 Business guidance for this deployment, which takes precedence over the general guidance above:
-${crmGuidance}
+${crmGuidance(options.days)}
 ${language.last}`,
     tools: [
       { name: 'search_records', autoCall: true },

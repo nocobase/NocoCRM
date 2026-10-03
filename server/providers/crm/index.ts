@@ -34,7 +34,7 @@ import {
   type Actor,
 } from './authorization.js';
 import { CrmService, array } from './service.js';
-import { CrmError } from './schema.js';
+import { CrmError, type CrmSettings } from './schema.js';
 import { CrmSkillNotes, crmSkillNotesToken } from './skills.js';
 import { LeadEvaluator, leadEvaluatorToken } from './lead-evaluation.js';
 import {
@@ -147,18 +147,28 @@ export default class CrmProvider extends ServiceProvider<Application> {
         : LOGO_AVATAR_PATH;
       const service = this.app.container.resolve(crmToken);
       const ai = this.app.container.resolve(aiManagerToken);
+      // The prompt's language and its guidance's follow-up thresholds come
+      // from the settings.
+      const promptOf = (settings: CrmSettings) => ({
+        avatar,
+        language: settings.aiLanguage,
+        days: {
+          uncontacted: settings.uncontactedDays,
+          stale: settings.leadStaleDays,
+          closing: settings.closeReminderDays,
+        },
+      });
       await new CrmAiResources(
         service,
         this.app.container.resolve(authorizationToken),
-        { avatar, language: (await service.settings()).aiLanguage },
+        promptOf(await service.settings()),
       ).registerAIResources(ai);
-      // The prompt follows the AI language setting: registered again, the
-      // plugin upserting by username, whenever the settings are saved.
+      // Registered again, the plugin upserting by username, whenever the
+      // settings are saved.
       service.settingsSaved = (settings) =>
-        void registerCrmAssistant(ai, {
-          avatar,
-          language: settings.aiLanguage,
-        }).catch(() => undefined);
+        void registerCrmAssistant(ai, promptOf(settings)).catch(
+          () => undefined,
+        );
     }
     // The daily look over the open leads for what has not happened
     // (lead-signals.ts): a scheduler task, so administrators see each pass,

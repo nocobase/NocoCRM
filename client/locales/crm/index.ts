@@ -1320,11 +1320,19 @@ const wording = {
       'Opportunity close reminder (days before)',
       '商机到期提醒（天）',
     ],
-    leadStaleDays: ['Lead stall threshold (days)', '线索停滞阈值（天）'],
+    uncontactedDays: [
+      'New lead uncontacted after (days)',
+      '新线索未联系阈值（天）',
+    ],
+    leadStaleDays: [
+      'Lead and opportunity stall threshold (days)',
+      '线索、商机停滞阈值（天）',
+    ],
     staleDays: [
       'Account inactivity threshold (days)',
       '客户长期未联系阈值（天）',
     ],
+    nurtureReviewDays: ['Nurture review after (days)', '培育复查间隔（天）'],
     accountType: ['Account type', '客户类型'],
   },
   options: {

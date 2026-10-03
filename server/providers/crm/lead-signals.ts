@@ -19,8 +19,13 @@ import type { CrmService } from './service.js';
 // see each pass and may switch it off.
 
 const DAY = 86_400_000;
-const UNCONTACTED_AFTER = 2 * DAY;
-const SILENT_AFTER = 14 * DAY;
+// The thresholds, in days, from the CRM's settings (uncontactedDays,
+// leadStaleDays), the dashboard's stalled leads counting by the same.
+export interface LeadSignalDays {
+  uncontacted: number;
+  stale: number;
+}
+const DEFAULT_DAYS: LeadSignalDays = { uncontacted: 2, stale: 14 };
 const SAME_SIGNAL_WITHIN = 7 * DAY;
 
 export interface LeadSignalPass {
@@ -34,8 +39,11 @@ export function leadSignal(
   lead: Row,
   activities: readonly Row[],
   now: number,
+  days: LeadSignalDays = DEFAULT_DAYS,
 ): FollowUpTrigger | undefined {
   const at = (value: unknown): number => Date.parse(toText(value));
+  const UNCONTACTED_AFTER = days.uncontacted * DAY;
+  const SILENT_AFTER = days.stale * DAY;
   const planned = activities.filter((a) => a.status === 'planned');
   const ahead = planned.some((a) => at(a.startAt) >= now);
   if (lead.status === 'new')
@@ -65,6 +73,11 @@ export async function scanLeadSignals(
 ): Promise<LeadSignalPass> {
   const pass: LeadSignalPass = { checked: 0, started: {} };
   if (!(await evaluator.available())) return pass;
+  const settings = await service.settings();
+  const days = {
+    uncontacted: settings.uncontactedDays,
+    stale: settings.leadStaleDays,
+  };
   const query = service.database.query();
   const leads = await query
     .selectFrom('crmLeads')
@@ -108,7 +121,12 @@ export async function scanLeadSignals(
     // there, nothing to add.
     if (own.some((e) => e.status === 'pending' || e.status === 'running'))
       continue;
-    const signal = leadSignal(lead, activities.get(id) ?? [], now.getTime());
+    const signal = leadSignal(
+      lead,
+      activities.get(id) ?? [],
+      now.getTime(),
+      days,
+    );
     if (!signal || !lead.ownerId) continue;
     // Once a week per signal, counting only follow-ups that came to
     // something: one that failed (a model error, a task lost with a killed

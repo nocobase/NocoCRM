@@ -301,11 +301,20 @@ export class CrmService {
     for (const key of [
       'activityReminderMinutes',
       'closeReminderDays',
+      'uncontactedDays',
       'leadStaleDays',
       'staleDays',
     ] as const)
       if (!Number.isFinite(value[key]) || value[key] < 0 || value[key] > 525600)
         throw new CrmError('invalidInput', 400, key);
+    // A nurture review is planned in whole days, within a year, as the AI
+    // gives it.
+    if (
+      !Number.isInteger(value.nurtureReviewDays) ||
+      value.nurtureReviewDays < 1 ||
+      value.nurtureReviewDays > 365
+    )
+      throw new CrmError('invalidInput', 400, 'nurtureReviewDays');
     await this.database.transaction(async ({ query }) => {
       const existing = await query
         .selectFrom('crmSettings')

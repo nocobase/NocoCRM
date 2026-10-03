@@ -16,9 +16,16 @@ import type { CrmService } from './service.js';
 // first. The scheduler plugin runs it once a day (CrmProvider).
 
 const DAY = 86_400_000;
-const SILENT_AFTER = 14 * DAY;
-const CLOSING_WITHIN = 7 * DAY;
 const SAME_SIGNAL_WITHIN = 7 * DAY;
+
+// The thresholds, in days, from the CRM's settings (leadStaleDays, which
+// covers deals too, and closeReminderDays), the dashboard counting by the
+// same.
+export interface DealSignalDays {
+  stale: number;
+  closing: number;
+}
+const DEFAULT_DAYS: DealSignalDays = { stale: 14, closing: 7 };
 
 export type DealSignal = 'silent' | 'closeDue' | 'resumeDue';
 
@@ -34,7 +41,10 @@ export function dealSignal(
   deal: Row,
   activities: readonly Row[],
   now: number,
+  days: DealSignalDays = DEFAULT_DAYS,
 ): DealSignal | undefined {
+  const SILENT_AFTER = days.stale * DAY;
+  const CLOSING_WITHIN = days.closing * DAY;
   const at = (value: unknown): number =>
     value ? new Date(value as string).getTime() : NaN;
   const stage = toText(deal.stage);
@@ -62,6 +72,11 @@ export async function scanDealSignals(
 ): Promise<DealSignalPass> {
   const pass: DealSignalPass = { checked: 0, started: {} };
   if (!(await evaluator.available())) return pass;
+  const settings = await service.settings();
+  const days = {
+    stale: settings.leadStaleDays,
+    closing: settings.closeReminderDays,
+  };
   const query = service.database.query();
   const deals = await query
     .selectFrom('crmOpportunities')
@@ -112,7 +127,12 @@ export async function scanDealSignals(
     // there, nothing to add.
     if (own.some((e) => e.status === 'pending' || e.status === 'running'))
       continue;
-    const signal = dealSignal(deal, activities.get(id) ?? [], now.getTime());
+    const signal = dealSignal(
+      deal,
+      activities.get(id) ?? [],
+      now.getTime(),
+      days,
+    );
     if (!signal || !deal.ownerId) continue;
     // Once a week per signal, counting only follow-ups that came to
     // something: one that failed is tried again on the next pass.
