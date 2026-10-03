@@ -1,5 +1,5 @@
 import { recordTitle } from '../components/crm/lookups.js';
-import { sentence, toText, useMore } from '../components/crm/api.js';
+import { toText, useMore } from '../components/crm/api.js';
 import {
   useState,
   type MouseEvent,
@@ -15,43 +15,20 @@ import {
 } from '../components/crm/record-drawer.js';
 import {
   ArrowUpRight,
-  Banknote,
   ClipboardCheck,
-  Briefcase,
-  Building2,
   CalendarCheck,
-  CalendarClock,
   CalendarDays,
-  CalendarPlus,
-  CircleDot,
   Clock,
-  Coins,
   ContactRound,
-  Factory,
-  FileText,
-  Globe,
   History,
-  Mail,
-  MapPin,
-  MapPinned,
-  Megaphone,
-  MessageSquare,
   Paperclip,
-  Phone,
   Plus,
-  Radar,
   Sparkles,
   Star,
-  Send,
-  ShieldCheck,
   StickyNote,
-  Tag,
   Target,
   Trash2,
   Ellipsis,
-  User,
-  UserCheck,
-  Users,
   X,
   type LucideIcon,
 } from 'lucide-react';
@@ -72,12 +49,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog.js';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '../components/ui/card.js';
 import {
   Table,
   TableBody,
@@ -127,7 +98,6 @@ import {
   InfoGroup,
   InfoRow,
   NotesPanel,
-  LeadRow,
   RecordAttachments,
   WebsiteField,
 } from './crm-detail.js';
@@ -139,100 +109,6 @@ import { RecordOutcomeDialog } from '../components/crm/outcome.js';
 const shortcuts: Partial<Record<Entity, readonly string[]>> = {
   accounts: ['summarizeAccount', 'researchCompany', 'findOpportunities'],
   opportunities: ['analyzeOpportunity'],
-};
-
-// The details card, per object: the order the specification lists the fields
-// in, with an icon each, the way the lead page does it. "region" is the
-// country / state / city trio on one row. Objects without an entry fall back
-// to the schema's field order.
-const detailLayout: Partial<Record<Entity, readonly string[]>> = {
-  // Opportunities group their fields on a page of their own (see EntityDetail).
-  // Activities group their fields on a page of their own (see EntityDetail).
-  // The decision fields are read-only rows: written by the approval actions.
-  approvals: [
-    'opportunityId',
-    'topic',
-    'approverId',
-    'description',
-    'decisionComment',
-  ],
-  contacts: [
-    'accountId',
-    'primary',
-    'phone',
-    'email',
-    'jobTitle',
-    'gender',
-    'employed',
-    'source',
-    'notes',
-  ],
-  accounts: [
-    'website',
-    'type',
-    'employees',
-    'industry',
-    'region',
-    'address',
-    'source',
-    'description',
-    'notes',
-  ],
-};
-const nameIcons: Partial<Record<Entity, LucideIcon>> = {
-  accounts: Building2,
-  contacts: User,
-  opportunities: Target,
-  activities: CalendarDays,
-  approvals: ClipboardCheck,
-};
-const fieldIcons: Record<string, LucideIcon> = {
-  name: Building2,
-  website: Globe,
-  type: Tag,
-  employees: Users,
-  industry: Factory,
-  region: MapPin,
-  money: Banknote,
-  address: MapPinned,
-  source: Megaphone,
-  description: FileText,
-  notes: StickyNote,
-  phone: Phone,
-  email: Mail,
-  jobTitle: Briefcase,
-  accountId: Building2,
-  amount: Banknote,
-  currency: Coins,
-  expectedCloseAt: CalendarClock,
-  businessType: Tag,
-  startAt: Clock,
-  endAt: Clock,
-  leadId: Radar,
-  opportunityId: Target,
-  feedback: MessageSquare,
-  gender: User,
-  employed: UserCheck,
-  primary: Star,
-  internalParticipants: Users,
-  externalParticipants: ContactRound,
-  topic: Tag,
-  approverId: ShieldCheck,
-  decisionComment: MessageSquare,
-};
-// Rows the page shows but never edits in place: the approval's decision trail.
-const readOnlyKeys: Record<string, Field> = {
-  decisionComment: { key: 'decisionComment', type: 'textarea' },
-};
-
-// Fields shown in the summary row rather than the details card.
-const summaryKeys = new Set(['ownerId', 'status', 'stage']);
-// Reason fields only mean something while their status is current.
-const reasonKeys: Record<string, string[]> = {
-  lostReason: ['lost'],
-  churnReason: ['churned'],
-  pauseReason: ['paused'],
-  resumeAt: ['paused'],
 };
 
 // The account a contact or a deal belongs to, in the title line.
@@ -419,38 +295,6 @@ export default function EntityDetail({
   const closedDeal =
     entity === 'opportunities' &&
     (currentStatus === 'won' || currentStatus === 'lost');
-  // The details card: every writable field except those in the summary row,
-  // arrays the inline editor does not handle, and reasons for a status that
-  // is not current.
-  const inSummary = new Set([...summaryKeys]);
-  const detailFields = definition.fields.filter(
-    (f) =>
-      !f.readOnly &&
-      // The name is the page heading, edited there.
-      f.key !== 'name' &&
-      !inSummary.has(f.key) &&
-      !['contacts', 'files'].includes(f.type) &&
-      (!reasonKeys[f.key] || reasonKeys[f.key].includes(currentStatus)),
-  );
-  // The card's row keys: the object's layout when it has one (the trio
-  // country/state/city folds into "region"), else the schema's field order.
-  const allowed = new Set(detailFields.map((f) => f.key));
-  const detailKeys = (
-    detailLayout[entity] ??
-    detailFields
-      .map((f) => f.key)
-      .filter((k) => !['state', 'city'].includes(k))
-      .map((k) => (k === 'country' ? 'region' : k))
-  ).filter((key) =>
-    key === 'region'
-      ? ['country', 'state', 'city'].some((k) => allowed.has(k))
-      : key === 'money'
-        ? allowed.has('amount')
-        : allowed.has(key) ||
-          (reasonKeys[key] && reasonKeys[key].includes(currentStatus)) ||
-          // The decision trail shows once there is one.
-          (key in readOnlyKeys && Boolean(record[key])),
-  );
   // Which related lists this object has, beyond activities.
   const relatedTabs = (
     entity === 'accounts'
@@ -555,50 +399,7 @@ export default function EntityDetail({
       }),
     );
   };
-  const closedAtKey =
-    entity === 'opportunities' && ['won', 'lost'].includes(currentStatus)
-      ? 'closedAt'
-      : entity === 'activities' && currentStatus === 'completed'
-        ? 'completedAt'
-        : entity === 'approvals' &&
-            ['approved', 'rejected'].includes(currentStatus)
-          ? 'decidedAt'
-          : undefined;
-  // The heading is the name field itself, editable in place; a contact's
-  // heading adds its account after a slash, as a link.
-  // Editable fields pad their value by px-2; the negative margin puts the
-  // text itself flush with the description below.
-  const heading = (
-    <span className='-mx-2 flex flex-wrap items-center py-1.5'>
-      {entity === 'opportunities' && record.accountId ? (
-        <>
-          <AccountCrumb
-            id={toText(record.accountId)}
-            name={names[toText(record.accountId)] ?? text('entities.accounts')}
-          />
-          <span className='text-muted-foreground/60'>/</span>
-        </>
-      ) : null}
-      <InlineField
-        entity={entity}
-        record={record}
-        field={field('name')}
-        editable={editable}
-        label={text(fieldLabelKey(entity, 'name'))}
-        size='title'
-      />
-      {entity === 'contacts' && record.accountId ? (
-        <>
-          <span className='text-muted-foreground/60'>/</span>
-          <AccountCrumb
-            id={toText(record.accountId)}
-            name={names[toText(record.accountId)] ?? text('entities.accounts')}
-          />
-        </>
-      ) : null}
-    </span>
-  );
-  // What the active tab shows, in the card or in the activity's right column.
+  // What the active tab shows, in the right column.
   const tabContent = (
     <>
       {activeTab === 'opportunityContacts' ? (
@@ -872,7 +673,14 @@ export default function EntityDetail({
                             </span>
                           ))
                         : null}
-                      {n > shownItems.length && (
+                      {/* The leads have no tab of their own (they are listed in
+                          the converted-from row), so their rest is a count. */}
+                      {n > shownItems.length && child === 'leads' && (
+                        <span className='ml-1 text-muted-foreground'>
+                          {text('andMore', { count: n - shownItems.length })}
+                        </span>
+                      )}
+                      {n > shownItems.length && child !== 'leads' && (
                         <button
                           type='button'
                           className='ml-1 text-primary hover:underline'
@@ -958,439 +766,462 @@ export default function EntityDetail({
       )}
     </>
   );
-  // An activity is laid out as a lead: no header, its particulars in groups
-  // on the left and the timeline with its other tabs on the right.
-  if (entity === 'activities') {
-    const row = (key: string): ReactElement => (
-      <InfoRow key={key} label={text(fieldLabelKey(entity, key))}>
-        {inline(key)}
-      </InfoRow>
-    );
-    const time = (key: string): ReactElement => (
-      <InfoRow key={key} label={text(`fields.${key}`)}>
-        <div className='px-2 py-1.5'>
-          {localDate(record[key], language, meta.settings.timeZone)}
+  // Every object's page is laid out as the lead's (DetailColumns): no
+  // header, the record's heading in a band over its particulars in groups,
+  // every action under the heading, the tabs alone on the right.
+  const row = (key: string): ReactElement => (
+    <InfoRow key={key} label={text(fieldLabelKey(entity, key))}>
+      {inline(key)}
+    </InfoRow>
+  );
+  const time = (key: string): ReactElement => (
+    <InfoRow key={key} label={text(`fields.${key}`)}>
+      <div className='px-2 py-1.5'>
+        {localDate(record[key], language, meta.settings.timeZone)}
+      </div>
+    </InfoRow>
+  );
+  // A long text (an approval's description, its decision comment) takes the
+  // whole column, its label above it: beside a label it would have a third
+  // of the narrow column.
+  const longRow = (key: string, value: ReactNode): ReactElement => (
+    <div key={key} className='py-0.5'>
+      <dt className='px-2 pt-1.5 text-sm text-muted-foreground'>
+        {text(fieldLabelKey(entity, key))}
+      </dt>
+      <dd className='min-w-0 text-sm'>{value}</dd>
+    </div>
+  );
+  // Country / state / city on one row, each edited by itself.
+  const regionRow = (
+    <InfoRow key='region' label={text('region')}>
+      <div className='flex flex-wrap items-center'>
+        {['country', 'state', 'city'].map((part, index) => (
+          <div className='flex min-w-0 items-center' key={part}>
+            {index > 0 && (
+              <span aria-hidden className='text-muted-foreground/60'>
+                /
+              </span>
+            )}
+            {inline(part)}
+          </div>
+        ))}
+      </div>
+    </InfoRow>
+  );
+  // The leads the record came from, each opening in the drawer: the one
+  // place they show on an account, whose deletion they block.
+  const convertedRow =
+    convertedFrom.length > 0 ? (
+      <InfoRow key='convertedFrom' label={text('convertedFrom')}>
+        <div className='flex min-w-0 flex-wrap gap-x-3 gap-y-1 px-2 py-1.5'>
+          {convertedFrom.map((lead) => (
+            <RecordLink
+              key={lead.id}
+              entity='leads'
+              record={{ id: lead.id, name: recordTitle('leads', lead, names) }}
+            />
+          ))}
         </div>
       </InfoRow>
-    );
-    const tabIcons: Record<string, LucideIcon> = {
-      historyTab: History,
-      attachments: Paperclip,
-      notes: StickyNote,
-    };
-    return (
-      <DetailColumns
-        heading={
-          // A <div> with the heading role, since the editor brings block
-          // elements an <h1> may not hold.
-          <div
-            role='heading'
-            aria-level={1}
-            className='-mx-2 flex flex-wrap items-center py-1.5'
-          >
-            <InlineField
-              entity={entity}
-              record={record}
-              field={field('name')}
-              editable={editable}
-              label={text(fieldLabelKey(entity, 'name'))}
-              size='heading'
-            />
-          </div>
-        }
-        actions={
-          <div className='flex flex-wrap items-center gap-2'>
-            {/* A planned activity: what came of it, recorded (and its lead
-                followed up anew), in one step. */}
-            {currentStatus === 'planned' && editable && (
-              <Button size='sm' onClick={() => setRecording(true)}>
-                <CalendarCheck />
-                {text('evaluation.recordOutcome')}
-              </Button>
-            )}
-            <AskAIButton entity={entity} recordId={id} name={contextName} />
-            {detail.permissions.delete && (
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  aria-label={text('moreActions')}
-                  className={buttonVariants({
-                    size: 'icon-sm',
-                    variant: 'outline',
-                  })}
-                >
-                  <Ellipsis />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align='start'>
-                  <DropdownMenuItem
-                    variant='destructive'
-                    onClick={() => setConfirmDelete(true)}
-                  >
-                    <Trash2 />
-                    {text('deleteRecord', {
-                      entity: text('entity.activities'),
-                    })}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-        }
-        // The timeline without a count, as on the lead page: its entries
-        // only grow.
-        tabBar={
-          <DetailTabBar
-            active={activeTab}
-            onSelect={setTab}
-            tabs={tabs.map(([name, label, count]) => ({
-              name,
-              label,
-              icon: tabIcons[name] ?? History,
-              count: name === 'historyTab' ? undefined : count,
-            }))}
-          />
-        }
-        notice={<ErrorNotice error={error ?? loadError} />}
-        left={
-          <>
-            {/* Who has it and where it stands, then what it is and when. */}
-            <InfoGroup title={text('activityGroups.general')}>
-              {row('ownerId')}
-              {statusKey && (
-                <InfoRow label={text(`fields.${statusKey}`)}>
-                  <StageField
-                    entity={entity}
-                    record={record}
-                    field={statusKey}
-                    editable={editable}
-                    title={title}
-                    onSave={patch}
-                  />
-                </InfoRow>
-              )}
-              {['type', 'startAt', 'endAt'].map(row)}
-            </InfoGroup>
-            <InfoGroup title={text('activityGroups.participants')}>
-              {['internalParticipants', 'externalParticipants'].map(row)}
-            </InfoGroup>
-            <InfoGroup title={text('activityGroups.related')}>
-              {['leadId', 'accountId', 'opportunityId'].map(row)}
-            </InfoGroup>
-            <InfoGroup title={text('activityGroups.content')}>
-              {['description', 'feedback'].map(row)}
-            </InfoGroup>
-            <InfoGroup title={text('activityGroups.system')}>
-              {time('createdAt')}
-              {time('updatedAt')}
-              {/* When it was done, under its last update. */}
-              {currentStatus === 'completed' && time('completedAt')}
-            </InfoGroup>
-          </>
-        }
-        right={tabContent}
+    ) : null;
+  const accountCrumb = record.accountId ? (
+    <AccountCrumb
+      id={toText(record.accountId)}
+      name={names[toText(record.accountId)] ?? text('entities.accounts')}
+    />
+  ) : null;
+  const slash = <span className='text-muted-foreground/60'>/</span>;
+  // The name, edited in place, with what goes before or after it (a deal's
+  // account, a contact's). A <div> with the heading role, since the editor
+  // brings block elements an <h1> may not hold.
+  const headingOf = (before?: ReactNode, after?: ReactNode): ReactElement => (
+    <div
+      role='heading'
+      aria-level={1}
+      className='-mx-2 flex flex-wrap items-center py-1.5 font-heading text-xl font-semibold tracking-tight'
+    >
+      {before}
+      <InlineField
+        entity={entity}
+        record={record}
+        field={field('name')}
+        editable={editable}
+        label={text(fieldLabelKey(entity, 'name'))}
+        size='heading'
+      />
+      {after}
+    </div>
+  );
+  const askAI = (
+    <AskAIButton entity={entity} recordId={id} name={contextName} />
+  );
+  // The object's AI shortcuts, each a complete instruction sent at once.
+  const aiShortcuts = meta.assistant
+    ? (shortcuts[entity] ?? []).map((key) => (
+        <Button
+          key={key}
+          size='sm'
+          variant='ghost'
+          className='text-ai hover:text-ai'
+          onClick={() => shortcut(key)}
+        >
+          <Sparkles />
+          {text(key)}
+        </Button>
+      ))
+    : null;
+  // The rarer deleting, last, in a "More" menu.
+  const moreMenu = detail.permissions.delete ? (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={text('moreActions')}
+        className={buttonVariants({ size: 'icon-sm', variant: 'outline' })}
       >
-        {overlays}
-      </DetailColumns>
-    );
-  }
-  // An opportunity too: account / name heading the column, the stage a row
-  // of its particulars (no stepper), every action under the name.
-  if (entity === 'opportunities') {
-    const row = (key: string): ReactElement => (
-      <InfoRow key={key} label={text(fieldLabelKey(entity, key))}>
-        {inline(key)}
-      </InfoRow>
-    );
-    const time = (key: string): ReactElement => (
-      <InfoRow key={key} label={text(`fields.${key}`)}>
-        <div className='px-2 py-1.5'>
-          {localDate(record[key], language, meta.settings.timeZone)}
-        </div>
-      </InfoRow>
-    );
-    const tabIcons: Record<string, LucideIcon> = {
-      historyTab: History,
-      activities: CalendarDays,
-      opportunityContacts: ContactRound,
-      approvals: ClipboardCheck,
-      attachments: Paperclip,
-      notes: StickyNote,
-    };
-    const stage = toText(record.stage);
-    const openStage = !['won', 'lost', 'paused'].includes(stage);
-    return (
-      <DetailColumns
-        heading={
-          // A <div> with the heading role, since the editor brings block
-          // elements an <h1> may not hold.
-          <div
-            role='heading'
-            aria-level={1}
-            className='-mx-2 flex flex-wrap items-center py-1.5 font-heading text-xl font-semibold tracking-tight'
-          >
-            {record.accountId ? (
-              <>
-                <AccountCrumb
-                  id={toText(record.accountId)}
-                  name={
-                    names[toText(record.accountId)] ?? text('entities.accounts')
-                  }
-                />
-                <span className='text-muted-foreground/60'>/</span>
-              </>
-            ) : null}
-            <InlineField
-              entity={entity}
-              record={record}
-              field={field('name')}
-              editable={editable}
-              label={text(fieldLabelKey(entity, 'name'))}
-              size='heading'
-            />
-          </div>
-        }
-        // Everything the reader can do with the deal, together under its
-        // name, as on the lead page; under them, where the AI's latest
-        // follow-up stands, which opens it in the timeline.
-        actions={
-          <div className='flex flex-col items-start gap-2'>
-            <div className='flex flex-wrap items-center gap-2'>
-              <AskAIButton entity={entity} recordId={id} name={contextName} />
-              {meta.assistant &&
-                (shortcuts.opportunities ?? []).map((key) => (
-                  <Button
-                    key={key}
-                    size='sm'
-                    variant='ghost'
-                    className='text-ai hover:text-ai'
-                    onClick={() => shortcut(key)}
-                  >
-                    <Sparkles />
-                    {text(key)}
-                  </Button>
-                ))}
-              {editable && !closedDeal && (
-                <EvaluateButton
-                  entity='opportunities'
-                  recordId={id}
-                  onError={setError}
-                />
-              )}
-              {detail.permissions.delete && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    aria-label={text('moreActions')}
-                    className={buttonVariants({
-                      size: 'icon-sm',
-                      variant: 'outline',
-                    })}
-                  >
-                    <Ellipsis />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align='start'>
-                    <DropdownMenuItem
-                      variant='destructive'
-                      onClick={() => setConfirmDelete(true)}
-                    >
-                      <Trash2 />
-                      {text('deleteRecord', {
-                        entity: text('entity.opportunities'),
-                      })}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-            <EvaluationStatus
-              entity='opportunities'
-              recordId={id}
-              onOpen={(entryId) => {
-                setFocus({ id: entryId, at: Date.now() });
-                setTab('historyTab');
-              }}
-            />
-          </div>
-        }
-        // The timeline without a count, as on the lead page.
-        tabBar={
-          <DetailTabBar
-            active={activeTab}
-            onSelect={setTab}
-            tabs={tabs.map(([name, label, count]) => ({
-              name,
-              label,
-              icon: tabIcons[name] ?? History,
-              count: name === 'historyTab' ? undefined : count,
-            }))}
-          />
-        }
-        notice={<ErrorNotice error={error ?? loadError} />}
-        left={
-          <>
-            {/* Who has it, where it stands and what it is worth. */}
-            <InfoGroup title={text('opportunityGroups.general')}>
-              {row('ownerId')}
-              <InfoRow label={text('fields.stage')}>
-                <StageField
-                  entity={entity}
-                  record={record}
-                  field='stage'
-                  editable={editable}
-                  title={title}
-                  // Every move clears both outcomes' fields first, as the
-                  // stepper did: a deal moved between lost and paused keeps
-                  // no stale reason or resume date.
-                  onSave={(values) =>
-                    patch({
-                      lostReason: null,
-                      pauseReason: null,
-                      resumeAt: null,
-                      ...values,
-                    })
-                  }
-                />
-              </InfoRow>
-              {openStage && (
-                <InfoRow label={text('fields.probability')}>
-                  <div className='px-2 py-1.5'>
-                    {`${Math.round((meta.probabilities[stage] ?? 0) * 100)}%`}
-                  </div>
-                </InfoRow>
-              )}
-              {/* Currency, then the bare number: both edit in place, and the
-                  sign is not repeated. */}
-              <InfoRow label={text('fields.amount')}>
-                <div className='flex items-center'>
-                  <div className='shrink-0'>{inline('currency')}</div>
-                  <div className='min-w-0 flex-1'>
-                    <InlineField
-                      entity={entity}
-                      record={record}
-                      field={field('amount')}
-                      editable={editable}
-                      lookup={names}
-                      label={text('fields.amount')}
-                      bare
-                    />
-                  </div>
-                </div>
-              </InfoRow>
-              {row('expectedCloseAt')}
-              {stage === 'paused' && row('resumeAt')}
-            </InfoGroup>
-            <InfoGroup title={text('opportunityGroups.details')}>
-              {['accountId', 'businessType', 'source'].map(row)}
-              {convertedFrom.length > 0 && (
-                <InfoRow label={text('convertedFrom')}>
-                  <div className='flex min-w-0 flex-wrap gap-x-3 gap-y-1 px-2 py-1.5'>
-                    {convertedFrom.map((lead) => (
-                      <RecordLink
-                        key={lead.id}
-                        entity='leads'
-                        record={{
-                          id: lead.id,
-                          name: recordTitle('leads', lead, names),
-                        }}
-                      />
-                    ))}
-                  </div>
-                </InfoRow>
-              )}
-              {row('description')}
-            </InfoGroup>
-            <InfoGroup title={text('opportunityGroups.system')}>
-              {time('createdAt')}
-              {time('updatedAt')}
-              {/* When it was won or lost, under its last update. */}
-              {closedDeal && time('closedAt')}
-            </InfoGroup>
-          </>
-        }
-        right={tabContent}
-      >
-        {overlays}
-      </DetailColumns>
-    );
-  }
-  return (
-    <CrmFrame
-      editableTitle
-      title={heading}
-      description={`${toText(text(`entities.${toText(entity)}`))} ID: ${toText(record.id)}`}
-      actions={
+        <Ellipsis />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align='start'>
+        <DropdownMenuItem
+          variant='destructive'
+          onClick={() => setConfirmDelete(true)}
+        >
+          <Trash2 />
+          {text('deleteRecord', { entity: text(`entity.${toText(entity)}`) })}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  ) : null;
+  // The buttons on one line, wrapping; under them, where the AI's latest
+  // work on the record stands, when it has any.
+  const actionsOf = (buttons: ReactNode, status?: ReactNode): ReactElement => (
+    <div className='flex flex-col items-start gap-2'>
+      <div className='flex flex-wrap items-center gap-2'>{buttons}</div>
+      {status}
+    </div>
+  );
+  const tabIcons: Record<string, LucideIcon> = {
+    historyTab: History,
+    activities: CalendarDays,
+    opportunityContacts: ContactRound,
+    contacts: ContactRound,
+    opportunities: Target,
+    approvals: ClipboardCheck,
+    attachments: Paperclip,
+    notes: StickyNote,
+  };
+  // The timeline without a count, as on the lead page: its entries only grow.
+  const tabBar = (
+    <DetailTabBar
+      active={activeTab}
+      onSelect={setTab}
+      tabs={tabs.map(([name, label, count]) => ({
+        name,
+        label,
+        icon: tabIcons[name] ?? History,
+        count: name === 'historyTab' ? undefined : count,
+      }))}
+    />
+  );
+  const page = (
+    heading: ReactNode,
+    actions: ReactNode,
+    left: ReactNode,
+  ): ReactElement => (
+    <DetailColumns
+      heading={heading}
+      actions={actions}
+      tabBar={tabBar}
+      notice={<ErrorNotice error={error ?? loadError} />}
+      left={left}
+      right={tabContent}
+    >
+      {overlays}
+    </DetailColumns>
+  );
+
+  if (entity === 'activities')
+    return page(
+      headingOf(),
+      actionsOf(
         <>
-          {entity === 'approvals' && (
-            <ApprovalActions approval={record} names={names} />
-          )}
-          {/* A new conversation with the assistant about this record. */}
-          <AskAIButton entity={entity} recordId={id} name={contextName} />
-          {meta?.assistant && shortcuts[entity] && (
-            <div className='flex flex-wrap items-center'>
-              {shortcuts[entity].map((key) => (
-                <Button
-                  key={key}
-                  variant='ghost'
-                  className='text-ai hover:text-ai'
-                  onClick={() => shortcut(key)}
-                >
-                  <Sparkles />
-                  {text(key)}
-                </Button>
-              ))}
-            </div>
-          )}
-          {/* The approver's one entry: a briefing before deciding. It
-              analyses only — the decision stays with the buttons above. */}
-          {meta?.assistant && detail.permissions.approve && (
-            <Button
-              variant='ghost'
-              className='text-ai hover:text-ai'
-              onClick={() => shortcut('assistApproval')}
-            >
-              <Sparkles />
-              {text('assistApproval')}
+          {/* A planned activity: what came of it, recorded (and its lead
+              followed up anew), in one step. */}
+          {currentStatus === 'planned' && editable && (
+            <Button size='sm' onClick={() => setRecording(true)}>
+              <CalendarCheck />
+              {text('evaluation.recordOutcome')}
             </Button>
           )}
-          {/* The rarer deleting, last, in a "More" menu, as on a lead's
-              page. */}
-          {detail.permissions.delete && (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                aria-label={text('moreActions')}
-                className={buttonVariants({
-                  size: 'icon-sm',
-                  variant: 'outline',
-                })}
-              >
-                <Ellipsis />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align='end'>
-                <DropdownMenuItem
-                  variant='destructive'
-                  onClick={() => setConfirmDelete(true)}
-                >
-                  <Trash2 />
-                  {text('deleteRecord', {
-                    entity: text(`entity.${toText(entity)}`),
-                  })}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          {askAI}
+          {moreMenu}
+        </>,
+      ),
+      <>
+        {/* Who has it and where it stands, then what it is and when. */}
+        <InfoGroup title={text('activityGroups.general')}>
+          {row('ownerId')}
+          {statusKey && (
+            <InfoRow label={text(`fields.${statusKey}`)}>
+              <StageField
+                entity={entity}
+                record={record}
+                field={statusKey}
+                editable={editable}
+                title={title}
+                onSave={patch}
+              />
+            </InfoRow>
           )}
-        </>
-      }
-    >
-      <ErrorNotice error={error ?? loadError} />
-      <div className='flex flex-wrap items-center gap-x-8 gap-y-2 rounded-xl border bg-card p-4'>
-        <LeadRow label={text(fieldLabelKey(entity, 'ownerId'))} icon={User}>
-          {inline('ownerId')}
-        </LeadRow>
-        {entity === 'approvals' && statusKey && (
-          // Moved only by the actions above, so shown rather than edited;
-          // the marker says which side of it the reader is on.
-          <LeadRow label={text(`fields.${statusKey}`)} icon={CircleDot}>
-            <span className='flex items-center gap-2 px-2 py-1.5'>
+          {['type', 'startAt', 'endAt'].map(row)}
+        </InfoGroup>
+        <InfoGroup title={text('activityGroups.participants')}>
+          {['internalParticipants', 'externalParticipants'].map(row)}
+        </InfoGroup>
+        <InfoGroup title={text('activityGroups.related')}>
+          {['leadId', 'accountId', 'opportunityId'].map(row)}
+        </InfoGroup>
+        <InfoGroup title={text('activityGroups.content')}>
+          {['description', 'feedback'].map(row)}
+        </InfoGroup>
+        <InfoGroup title={text('activityGroups.system')}>
+          {time('createdAt')}
+          {time('updatedAt')}
+          {/* When it was done, under its last update. */}
+          {currentStatus === 'completed' && time('completedAt')}
+        </InfoGroup>
+      </>,
+    );
+
+  if (entity === 'opportunities') {
+    const stage = toText(record.stage);
+    const openStage = !['won', 'lost', 'paused'].includes(stage);
+    return page(
+      headingOf(
+        accountCrumb ? (
+          <>
+            {accountCrumb}
+            {slash}
+          </>
+        ) : null,
+      ),
+      actionsOf(
+        <>
+          {askAI}
+          {aiShortcuts}
+          {editable && !closedDeal && (
+            <EvaluateButton
+              entity='opportunities'
+              recordId={id}
+              onError={setError}
+            />
+          )}
+          {moreMenu}
+        </>,
+        // Where the AI's latest follow-up stands, opening it in the
+        // timeline.
+        <EvaluationStatus
+          entity='opportunities'
+          recordId={id}
+          onOpen={(entryId) => {
+            setFocus({ id: entryId, at: Date.now() });
+            setTab('historyTab');
+          }}
+        />,
+      ),
+      <>
+        {/* Who has it, where it stands and what it is worth. */}
+        <InfoGroup title={text('opportunityGroups.general')}>
+          {row('ownerId')}
+          <InfoRow label={text('fields.stage')}>
+            <StageField
+              entity={entity}
+              record={record}
+              field='stage'
+              editable={editable}
+              title={title}
+              // Every move clears both outcomes' fields first, as the
+              // stepper did: a deal moved between lost and paused keeps no
+              // stale reason or resume date.
+              onSave={(values) =>
+                patch({
+                  lostReason: null,
+                  pauseReason: null,
+                  resumeAt: null,
+                  ...values,
+                })
+              }
+            />
+          </InfoRow>
+          {openStage && (
+            <InfoRow label={text('fields.probability')}>
+              <div className='px-2 py-1.5'>
+                {`${Math.round((meta.probabilities[stage] ?? 0) * 100)}%`}
+              </div>
+            </InfoRow>
+          )}
+          {/* Currency, then the bare number: both edit in place, and the
+              sign is not repeated. */}
+          <InfoRow label={text('fields.amount')}>
+            <div className='flex items-center'>
+              <div className='shrink-0'>{inline('currency')}</div>
+              <div className='min-w-0 flex-1'>
+                <InlineField
+                  entity={entity}
+                  record={record}
+                  field={field('amount')}
+                  editable={editable}
+                  lookup={names}
+                  label={text('fields.amount')}
+                  bare
+                />
+              </div>
+            </div>
+          </InfoRow>
+          {row('expectedCloseAt')}
+          {stage === 'paused' && row('resumeAt')}
+        </InfoGroup>
+        <InfoGroup title={text('opportunityGroups.details')}>
+          {['accountId', 'businessType', 'source'].map(row)}
+          {convertedRow}
+          {row('description')}
+        </InfoGroup>
+        <InfoGroup title={text('opportunityGroups.system')}>
+          {time('createdAt')}
+          {time('updatedAt')}
+          {/* When it was won or lost, under its last update. */}
+          {closedDeal && time('closedAt')}
+        </InfoGroup>
+      </>,
+    );
+  }
+
+  if (entity === 'accounts')
+    return page(
+      headingOf(),
+      actionsOf(
+        <>
+          {askAI}
+          {aiShortcuts}
+          {moreMenu}
+        </>,
+      ),
+      <>
+        {/* Who has it and where it stands (a churned account's reason
+            beside its status). */}
+        <InfoGroup title={text('accountGroups.general')}>
+          {row('ownerId')}
+          {statusKey && (
+            <InfoRow label={text(`fields.${statusKey}`)}>
+              <StageField
+                entity={entity}
+                record={record}
+                field={statusKey}
+                editable={editable}
+                title={title}
+                onSave={patch}
+              />
+            </InfoRow>
+          )}
+          {/* The reason stays editable while the account is churned. */}
+          {currentStatus === 'churned' && row('churnReason')}
+          {['type', 'source', 'notes'].map(row)}
+        </InfoGroup>
+        <InfoGroup title={text('accountGroups.company')}>
+          <InfoRow label={text('fields.website')}>
+            <WebsiteField
+              entity={entity}
+              record={record}
+              editable={editable}
+              label={text('fields.website')}
+            />
+          </InfoRow>
+          {['industry', 'employees'].map(row)}
+          {regionRow}
+          {['address', 'description'].map(row)}
+          {convertedRow}
+        </InfoGroup>
+        <InfoGroup title={text('accountGroups.system')}>
+          {time('createdAt')}
+          {time('updatedAt')}
+        </InfoGroup>
+      </>,
+    );
+
+  if (entity === 'contacts')
+    return page(
+      headingOf(
+        undefined,
+        accountCrumb ? (
+          <>
+            {slash}
+            {accountCrumb}
+          </>
+        ) : null,
+      ),
+      actionsOf(
+        <>
+          {askAI}
+          {moreMenu}
+        </>,
+      ),
+      <>
+        <InfoGroup title={text('contactGroups.general')}>
+          {[
+            'ownerId',
+            'accountId',
+            'primary',
+            'employed',
+            'gender',
+            'source',
+          ].map(row)}
+          {convertedRow}
+          {row('notes')}
+        </InfoGroup>
+        <InfoGroup title={text('contactGroups.reach')}>
+          {['jobTitle', 'phone', 'email'].map(row)}
+        </InfoGroup>
+        <InfoGroup title={text('contactGroups.system')}>
+          {time('createdAt')}
+          {time('updatedAt')}
+        </InfoGroup>
+      </>,
+    );
+
+  // An approval (leads have LeadDetail). Its status moves only through its
+  // actions, so it is shown rather than edited.
+  const approver = record.approverId === meta.userId;
+  const decided = ['approved', 'rejected'].includes(currentStatus);
+  return page(
+    headingOf(),
+    actionsOf(
+      <>
+        <ApprovalActions approval={record} names={names} />
+        {askAI}
+        {/* The approver's briefing before deciding. It analyses only — the
+            decision stays with the buttons before it. */}
+        {meta.assistant && detail.permissions.approve && (
+          <Button
+            size='sm'
+            variant='ghost'
+            className='text-ai hover:text-ai'
+            onClick={() => shortcut('assistApproval')}
+          >
+            <Sparkles />
+            {text('assistApproval')}
+          </Button>
+        )}
+        {moreMenu}
+      </>,
+    ),
+    <>
+      <InfoGroup title={text('approvalGroups.general')}>
+        {row('ownerId')}
+        {statusKey && (
+          <InfoRow label={text(`fields.${statusKey}`)}>
+            {/* The marker says which side of it the approver is on. */}
+            <span className='flex flex-wrap items-center gap-2 px-2 py-1.5'>
               <Status value={currentStatus} />
-              {record.approverId === meta.userId && (
+              {approver && (
                 <Badge
                   variant={
                     currentStatus === 'pending' ? 'default' : 'secondary'
@@ -1402,223 +1233,35 @@ export default function EntityDetail({
                 </Badge>
               )}
             </span>
-          </LeadRow>
+          </InfoRow>
         )}
-        {statusKey && entity !== 'approvals' && (
-          <LeadRow label={text(`fields.${statusKey}`)} icon={CircleDot}>
-            <StageField
-              entity={entity}
-              record={record}
-              field={statusKey}
-              editable={editable}
-              title={title}
-              onSave={patch}
-            />
-          </LeadRow>
-        )}
+        {['topic', 'approverId', 'opportunityId'].map(row)}
+      </InfoGroup>
+      <InfoGroup title={text('approvalGroups.content')}>
+        {longRow('description', inline('description'))}
+        {/* Written by the decision, so read only, and only once there is
+            one. */}
+        {record.decisionComment
+          ? longRow(
+              'decisionComment',
+              <span className='block px-2 py-1.5 whitespace-pre-wrap'>
+                <Value
+                  record={record}
+                  field={{ key: 'decisionComment', type: 'textarea' }}
+                  lookup={names}
+                />
+              </span>,
+            )
+          : null}
+      </InfoGroup>
+      <InfoGroup title={text('approvalGroups.system')}>
         {/* The approver's timeline starts when the request reached them, so
             for them the creation time is left out. */}
-        {!(entity === 'approvals' && record.approverId === meta.userId) && (
-          <LeadRow label={text('fields.createdAt')} icon={CalendarPlus}>
-            <span className='px-2 py-1.5 text-sm'>
-              {localDate(record.createdAt, language, meta.settings.timeZone)}
-            </span>
-          </LeadRow>
-        )}
-        {entity === 'approvals' && record.submittedAt ? (
-          <LeadRow label={text('fields.submittedAt')} icon={Send}>
-            <span className='px-2 py-1.5 text-sm'>
-              {localDate(record.submittedAt, language, meta.settings.timeZone)}
-            </span>
-          </LeadRow>
-        ) : null}
-        <LeadRow
-          label={text(`fields.${closedAtKey ?? 'updatedAt'}`)}
-          icon={closedAtKey ? CalendarCheck : History}
-        >
-          <span className='px-2 py-1.5 text-sm'>
-            {localDate(
-              record[closedAtKey ?? 'updatedAt'],
-              language,
-              meta.settings.timeZone,
-            )}
-          </span>
-        </LeadRow>
-      </div>
-      {/* Same container query and 5:7 split as the lead page, so the two
-          columns hold together with the AI panel open and stack only when
-          the area itself is narrow. */}
-      <div className='@container'>
-        {/* An approval is mostly its own fields — a long description, a
-            decision — with little on the right, so it gives the left column
-            the larger share. */}
-        <div
-          className={`grid items-start gap-6 ${toText(
-            entity === 'approvals'
-              ? '@3xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]'
-              : '@3xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]',
-          )}`}
-        >
-          <div className='space-y-6'>
-            <Card className='shadow-none'>
-              <CardHeader>
-                <CardTitle>
-                  {sentence(
-                    text('basicInfo', {
-                      entity: text(`entity.${toText(entity)}`),
-                    }),
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <dl>
-                  {detailKeys.map((key) => {
-                    // Only origin and not a working relation, so it is the last
-                    // line of the card rather than a tab of its own.
-                    const convertedRow =
-                      key === detailKeys[detailKeys.length - 1] &&
-                      convertedFrom.length > 0 ? (
-                        <div
-                          key='convertedFrom'
-                          className='grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-2 py-0.5'
-                        >
-                          <dt className='flex items-center gap-1.5 px-2 py-1.5 text-sm text-muted-foreground'>
-                            <Radar className='size-3.5 shrink-0' />
-                            <span className='min-w-0 leading-snug'>
-                              {text('convertedFrom')}
-                            </span>
-                          </dt>
-                          <dd className='flex min-w-0 flex-wrap gap-x-3 gap-y-1 px-2 py-1.5 text-sm'>
-                            {convertedFrom.map((lead) => (
-                              <RecordLink
-                                key={lead.id}
-                                entity='leads'
-                                record={{
-                                  id: lead.id,
-                                  name: recordTitle('leads', lead, names),
-                                }}
-                              />
-                            ))}
-                          </dd>
-                        </div>
-                      ) : null;
-                    // "name" is a company on an account, a person on a
-                    // contact, a deal on an opportunity, an event on an activity.
-                    const Icon =
-                      key === 'name'
-                        ? (nameIcons[entity] ?? fieldIcons.name)
-                        : fieldIcons[key];
-                    const row = (
-                      <div
-                        key={key}
-                        className='grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-2 py-0.5'
-                      >
-                        <dt className='flex items-center gap-1.5 px-2 py-1.5 text-sm text-muted-foreground'>
-                          {Icon ? <Icon className='size-3.5 shrink-0' /> : null}
-                          <span className='min-w-0 leading-snug'>
-                            {text(
-                              key === 'region'
-                                ? 'region'
-                                : key === 'money'
-                                  ? 'fields.amount'
-                                  : fieldLabelKey(entity, key),
-                            )}
-                          </span>
-                        </dt>
-                        <dd className='min-w-0 text-sm'>
-                          {key === 'region' ? (
-                            <div className='flex flex-wrap items-center'>
-                              {['country', 'state', 'city'].map(
-                                (part, index) => (
-                                  <div
-                                    className='flex min-w-0 items-center'
-                                    key={part}
-                                  >
-                                    {index > 0 && (
-                                      <span
-                                        aria-hidden
-                                        className='text-muted-foreground/60'
-                                      >
-                                        /
-                                      </span>
-                                    )}
-                                    {inline(part)}
-                                  </div>
-                                ),
-                              )}
-                            </div>
-                          ) : key === 'money' ? (
-                            // Currency, then the bare number: both edit in
-                            // place, and the sign is not repeated. The
-                            // currency takes its own width, so the number
-                            // follows it; its picker widens only while open.
-                            <div className='flex items-center'>
-                              <div className='shrink-0'>
-                                {inline('currency')}
-                              </div>
-                              <div className='min-w-0 flex-1'>
-                                <InlineField
-                                  entity={entity}
-                                  record={record}
-                                  field={field('amount')}
-                                  editable={editable}
-                                  lookup={names}
-                                  label={text('fields.amount')}
-                                  bare
-                                />
-                              </div>
-                            </div>
-                          ) : key === 'website' ? (
-                            <WebsiteField
-                              entity={entity}
-                              record={record}
-                              editable={editable}
-                              label={text('fields.website')}
-                            />
-                          ) : key in readOnlyKeys ? (
-                            <span className='block px-2 py-1.5 whitespace-pre-wrap'>
-                              <Value
-                                record={record}
-                                field={readOnlyKeys[key]}
-                                lookup={names}
-                              />
-                            </span>
-                          ) : (
-                            inline(key)
-                          )}
-                        </dd>
-                      </div>
-                    );
-                    return convertedRow ? [row, convertedRow] : row;
-                  })}
-                </dl>
-              </CardContent>
-            </Card>
-          </div>
-          <Card className='shadow-none'>
-            <CardHeader className='gap-3'>
-              <div className='flex flex-wrap items-center justify-between gap-2'>
-                <div className='-ml-2.5 flex flex-wrap gap-1'>
-                  {tabs.map(([name, label, count]) => (
-                    <Button
-                      key={name}
-                      size='sm'
-                      variant={name === activeTab ? 'secondary' : 'ghost'}
-                      onClick={() => setTab(name)}
-                    >
-                      {text(label)}
-                      <span className='text-muted-foreground'>{count}</span>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>{tabContent}</CardContent>
-          </Card>
-        </div>
-      </div>
-      {overlays}
-    </CrmFrame>
+        {!approver && time('createdAt')}
+        {record.submittedAt ? time('submittedAt') : null}
+        {time(decided ? 'decidedAt' : 'updatedAt')}
+      </InfoGroup>
+    </>,
   );
 }
 

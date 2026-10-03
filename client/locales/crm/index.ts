@@ -74,7 +74,6 @@ const wording = {
   no: ['No', '否'],
   choose: ['Select…', '请选择…'],
   selectCountryFirst: ['Select a country first', '请先选择国家 / 地区'],
-  basicInfo: ['{{entity}} information', '{{entity}}基本信息'],
   // The lead timeline's menu of asks to the AI.
   moreActions: ['More…', '更多…'],
   expand: ['Show details', '展开详情'],
@@ -111,6 +110,22 @@ const wording = {
   opportunityGroups: {
     general: ['General', '概况'],
     details: ['Details', '详情'],
+    system: ['System', '系统'],
+  },
+  // The account, contact and approval pages' particulars, likewise.
+  accountGroups: {
+    general: ['General', '概况'],
+    company: ['Company', '公司'],
+    system: ['System', '系统'],
+  },
+  contactGroups: {
+    general: ['General', '概况'],
+    reach: ['Contact details', '联系方式'],
+    system: ['System', '系统'],
+  },
+  approvalGroups: {
+    general: ['General', '概况'],
+    content: ['Content', '内容'],
     system: ['System', '系统'],
   },
   region: ['Region', '地区'],

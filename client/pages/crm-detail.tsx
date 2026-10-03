@@ -1003,26 +1003,6 @@ function LeadStatusField({
   );
 }
 
-export function LeadRow({
-  label,
-  icon: Icon,
-  children,
-}: {
-  label: string;
-  icon?: LucideIcon;
-  children: ReactElement;
-}): ReactElement {
-  return (
-    <div className='flex min-w-0 items-center gap-2'>
-      <span className='flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground'>
-        {Icon ? <Icon className='size-3.5 shrink-0' /> : null}
-        {label}
-      </span>
-      <div className='min-w-0 flex-1'>{children}</div>
-    </div>
-  );
-}
-
 // The one field where clicking the value opens a link instead of editing it.
 // Double-clicking the row (beside the link text) or Enter / F2 with focus
 // opens the editor, the same gesture as every other field.
