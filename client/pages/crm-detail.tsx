@@ -854,8 +854,10 @@ export function DetailColumns({
               {actions && <div className='mb-4'>{actions}</div>}
               {left}
             </section>
+            {/* Stacked, the tab bar's own rule is the divide: no rule above
+                it as well. */}
             <section
-              className='min-w-0 border-t pt-6 @3xl:overflow-y-auto @3xl:border-t-0 @3xl:border-l @3xl:bg-card @3xl:pt-4 @3xl:pr-4 @3xl:pb-24 @3xl:pl-6 md:@3xl:pr-8 scroll-quiet'
+              className='min-w-0 pt-6 @3xl:overflow-y-auto @3xl:border-l @3xl:bg-card @3xl:pt-4 @3xl:pr-4 @3xl:pb-24 @3xl:pl-6 md:@3xl:pr-8 scroll-quiet'
               onScroll={revealScrollbar}
             >
               {/* Stacked, the tabs lead their content, staying in place as
