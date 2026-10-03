@@ -2864,7 +2864,7 @@ describe('CRM lead capture', () => {
       );
       expect(runs[0].prompt).toContain('周立的职位是 IT 总监');
       expect(runs[0].prompt).toContain('"ref": "r1"');
-      expect(runs[0].prompt).not.toContain('ownerId 是线索的负责人');
+      expect(runs[0].prompt).not.toContain("ownerId is the lead's owner");
       expect(result.reply).toContain('IT 总监');
       const [revised, added, third] = result.leads;
       // A revision carries every field the AI writes, null where empty, so
@@ -2893,7 +2893,7 @@ describe('CRM lead capture', () => {
         { text: pasted },
         'UTC',
       );
-      expect(assigning.runs[0].prompt).toContain('ownerId 是线索的负责人');
+      expect(assigning.runs[0].prompt).toContain("ownerId is the lead's owner");
       expect(assigned.leads[0].input.ownerId).toBe('rep');
       expect(assigned.leads[1].input).not.toHaveProperty('ownerId');
 
