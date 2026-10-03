@@ -510,7 +510,7 @@ describe("a deal's follow-up card", () => {
       />,
     );
     // The verdict in a few words, the stage it moves to and its risks.
-    expect(screen.getByText('推进到方案验证 · 把握中')).toBeTruthy();
+    expect(screen.getByText('推进到方案验证 · 把握一般')).toBeTruthy();
     expect(screen.getByText('改为方案验证')).toBeTruthy();
     expect(screen.getByText('还没见过拍板人')).toBeTruthy();
     // Both changes ticked; the amount is unticked here.

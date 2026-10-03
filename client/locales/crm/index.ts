@@ -318,9 +318,9 @@ const wording = {
       pause: ['Pause', '暂停'],
       lose: ['Mark lost', '输单'],
       confidence: {
-        high: ['Likely', '把握高'],
-        medium: ['Possible', '把握中'],
-        low: ['Unlikely', '把握低'],
+        high: ['Likely', '把握较大'],
+        medium: ['Possible', '把握一般'],
+        low: ['Unlikely', '把握不大'],
       },
       toStage: ['Move to {{stage}}', '改为{{stage}}'],
       risks: ['Risks', '风险'],
