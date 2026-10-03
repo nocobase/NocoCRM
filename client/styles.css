@@ -192,3 +192,37 @@
 [data-slot='toast-viewport'] {
   z-index: 100;
 }
+
+/* The AI at work (a follow-up or an approval review being written): its
+   chip's border is a band of the theme's colours turning round it, so the
+   wait reads as work under way. Still for whoever asks for less motion. */
+@property --crm-ai-turn {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes crm-ai-turn {
+  to {
+    --crm-ai-turn: 360deg;
+  }
+}
+.crm-ai-working {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--card), var(--card)) padding-box,
+    conic-gradient(
+        from var(--crm-ai-turn),
+        var(--ai),
+        var(--info),
+        var(--success),
+        var(--warning),
+        var(--ai)
+      )
+      border-box;
+  animation: crm-ai-turn 2.4s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .crm-ai-working {
+    animation: none;
+  }
+}

@@ -443,9 +443,11 @@ export function ReviewStatus({
           type='button'
           onClick={() => onOpen(entry.id)}
           className={`inline-flex max-w-full items-center gap-1.5 rounded-lg border px-2 py-1 text-xs transition-colors ${
-            entry.status === 'pending'
-              ? 'border-ai/30 bg-ai/5 hover:bg-ai/10'
-              : 'hover:bg-muted'
+            entry.status === 'running'
+              ? 'crm-ai-working'
+              : entry.status === 'pending'
+                ? 'border-ai/30 bg-ai/5 hover:bg-ai/10'
+                : 'hover:bg-muted'
           }`}
         >
           {entry.status === 'running' ? (

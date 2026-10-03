@@ -278,9 +278,11 @@ export function EvaluationStatus({
       // Small, as the filter beside it; the button asking for a follow-up
       // keeps the text's size.
       className={`inline-flex max-w-full items-center gap-1.5 rounded-lg border px-2 py-1 font-sans text-xs font-normal tracking-normal transition-colors ${
-        pending
-          ? 'border-ai/30 bg-ai/5 hover:bg-ai/10'
-          : 'bg-card hover:bg-muted'
+        entry.status === 'running'
+          ? 'crm-ai-working'
+          : pending
+            ? 'border-ai/30 bg-ai/5 hover:bg-ai/10'
+            : 'bg-card hover:bg-muted'
       }`}
     >
       {entry.status === 'running' ? (
