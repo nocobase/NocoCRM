@@ -829,15 +829,24 @@ export function RecordForm({
               f.type === 'boolean' ? (
                 // A yes / no reads as "[x] Employed": the box leads and
                 // the text is the label, dropped to the input line so it
-                // sits level with the neighbouring controls.
-                <div className='flex min-h-8 items-center'>
-                  <label
-                    htmlFor={`crm-field-${toText(f.key)}`}
-                    className='flex cursor-pointer items-center gap-2 text-sm font-medium'
+                // sits level with the neighbouring controls: an empty line
+                // where their labels are, then the box on their inputs' line.
+                <div className='space-y-1.5'>
+                  <span
+                    aria-hidden
+                    className='invisible block text-sm font-medium'
                   >
-                    {fieldInput(f)}
-                    {text(fieldLabelKey(entity, toText(f.key)))}
-                  </label>
+                    &nbsp;
+                  </span>
+                  <div className='flex min-h-8 items-center'>
+                    <label
+                      htmlFor={`crm-field-${toText(f.key)}`}
+                      className='flex cursor-pointer items-center gap-2 text-sm font-medium'
+                    >
+                      {fieldInput(f)}
+                      {text(fieldLabelKey(entity, toText(f.key)))}
+                    </label>
+                  </div>
                 </div>
               ) : (
                 <div

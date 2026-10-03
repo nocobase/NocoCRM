@@ -26,6 +26,8 @@ import {
   ArrowUpRight,
   Merge,
   CalendarDays,
+  ClipboardCheck,
+  ContactRound,
   CirclePlus,
   ChevronDown,
   Clock,
@@ -842,7 +844,13 @@ export function DetailColumns({
             {/* The record's header, across both columns: the heading with
                 the actions at its right (below it when there is no room),
                 the AI's latest suggestion under it. */}
-            <header className='pt-5 @3xl:border-b @3xl:pt-4 @3xl:pr-4 @3xl:pb-3 @3xl:pl-4 md:@3xl:pr-8 md:@3xl:pl-6'>
+            {/* In a drawer the frame's own padding already sets it off from
+                the drawer's bar, so the header adds none above. */}
+            <header
+              className={`@3xl:border-b @3xl:pr-4 @3xl:pb-3 @3xl:pl-4 md:@3xl:pr-8 md:@3xl:pl-6 ${
+                inDrawer ? 'pt-0' : 'pt-5 @3xl:pt-4'
+              }`}
+            >
               <DetailBack entity={entity} />
               <div className='flex flex-wrap items-start justify-between gap-x-6 gap-y-2'>
                 <div className='min-w-0 flex-1 basis-full @3xl:basis-80'>
@@ -1591,6 +1599,29 @@ export function HistoryChanges({
       ) : (
         <span className='text-muted-foreground'>{text('noAttachments')}</span>
       )
+    ) : fields.find((f) => f.key === key)?.type === 'contacts' ? (
+      // A deal's contacts by name and role: a count says nothing when a
+      // role changed.
+      arrayValues(values[key]).length ? (
+        arrayValues(values[key])
+          .map((item) => {
+            const row = (item ?? {}) as Data;
+            // A contact's title reads "name / account"; the deal has one
+            // account, so the name alone.
+            const name = (
+              names[toText(row.contactId)] ?? toText(row.contactId).slice(0, 8)
+            ).split(' / ')[0];
+            return row.role
+              ? text('feed.contactRole', {
+                  name,
+                  role: text(`options.${toText(row.role)}`),
+                })
+              : name;
+          })
+          .join('、')
+      ) : (
+        <span className='text-muted-foreground'>—</span>
+      )
     ) : (
       (() => {
         const field = fields.find((f) => f.key === key) ?? {
@@ -1766,6 +1797,43 @@ const activityState = (event: Data): string => {
 // became of it ("planned", "completed", "cancelled", "moved", "edited",
 // "deleted"), its type and name (opening it, unless it is gone), and when
 // it is, what changed, or, done, what came of it.
+// One of a deal's approvals on the deal's timeline: submitted, approved,
+// rejected or withdrawn, the approval by name, and the decision comment
+// after a decision.
+function ApprovalEvent({ event }: { event: Data }): ReactElement {
+  const { text } = useCrmText();
+  const approval = (event.approval ?? {}) as Data;
+  const to = toText(event.toValue);
+  const comment =
+    ['approved', 'rejected'].includes(to) && approval.status === to
+      ? toText(approval.decisionComment ?? '')
+      : '';
+  return (
+    <>
+      <span className='shrink-0 text-muted-foreground'>
+        {text(`feed.approval.${to}`, { defaultValue: to })}
+      </span>
+      <span className='shrink-0 text-muted-foreground'>
+        {text('feed.approval.noun')}
+      </span>
+      <span className='min-w-0 shrink'>
+        <RecordLink
+          entity='approvals'
+          record={{ id: toText(approval.id), name: toText(approval.name) }}
+        />
+      </span>
+      {comment ? (
+        <span
+          className='min-w-0 truncate text-muted-foreground'
+          title={comment}
+        >
+          {comment}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
 function ActivityEvent({
   event,
   open,
@@ -1910,6 +1978,17 @@ const eventIcons: Record<string, LucideIcon> = {
   merged: Merge,
 };
 
+// An update that changed a deal's contacts alone (who, or their roles):
+// under the Contacts tab's icon, as files are under the clip.
+const contactsOnly = (event: Data): boolean => {
+  const keys = Object.keys((event.changes as Data | undefined) ?? {}).filter(
+    (key) => key !== 'id',
+  );
+  return (
+    event.action === 'updated' && keys.length === 1 && keys[0] === 'contacts'
+  );
+};
+
 // An update that changed the files alone, which the timeline reads as
 // files added or removed rather than as an update.
 const filesOnly = (event: Data): boolean => {
@@ -1990,14 +2069,24 @@ export function HistoryFeed({
   const { data: meta } = useMetadata();
   // The evaluations opened into their records.
   const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set());
+  // The entry the page was sent to opens on arrival and closes like any
+  // other after that: closing it marks this arrival (the entry and when it
+  // was asked for) closed, and a new arrival opens it again.
+  const arrival = focus ? `${focus}:${toText(focusAt ?? '')}` : '';
+  const [closedArrival, setClosedArrival] = useState('');
+  const isOpen = (key: string): boolean =>
+    opened.has(key) || (key === focus && closedArrival !== arrival);
   // Opens or closes an entry: an AI entry's card, a save's fields.
-  const toggle = (key: string): void =>
+  const toggle = (key: string): void => {
+    const wasOpen = isOpen(key);
+    if (wasOpen && key === focus) setClosedArrival(arrival);
     setOpened((previous) => {
       const next = new Set(previous);
-      if (next.has(key)) next.delete(key);
+      if (wasOpen) next.delete(key);
       else next.add(key);
       return next;
     });
+  };
   const timeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
   const optionText = (value: unknown): string =>
     text(`options.${toText(value)}`, { defaultValue: toText(value) });
@@ -2098,11 +2187,7 @@ export function HistoryFeed({
                   // follow-up card is.
                   const review = ai && entity === 'approvals';
                   const reviewWaiting = review && event.aiStatus === 'pending';
-                  const open =
-                    pending ||
-                    reviewWaiting ||
-                    focus === key ||
-                    opened.has(key);
+                  const open = pending || reviewWaiting || isOpen(key);
                   // Files added or removed show the attachments' clip.
                   // An entry of one of the record's activities: planned,
                   // done or called off, or moved.
@@ -2111,12 +2196,21 @@ export function HistoryFeed({
                     (event.entity === 'activities' &&
                       entity !== 'activities') ||
                     event.action === 'activityDeleted';
-                  // Every activity entry carries the Activities tab's icon.
+                  // One of a deal's approvals submitted, decided or
+                  // withdrawn.
+                  const approvalEvent =
+                    event.entity === 'approvals' && entity !== 'approvals';
+                  // Every activity entry carries the Activities tab's icon,
+                  // every approval entry the Approvals tab's.
                   const Icon = activityEvent
                     ? CalendarDays
-                    : filesOnly(event)
-                      ? Paperclip
-                      : (eventIcons[toText(event.action)] ?? PencilLine);
+                    : approvalEvent
+                      ? ClipboardCheck
+                      : contactsOnly(event)
+                        ? ContactRound
+                        : filesOnly(event)
+                          ? Paperclip
+                          : (eventIcons[toText(event.action)] ?? PencilLine);
                   return (
                     <li
                       id={`feed-${key}`}
@@ -2166,6 +2260,8 @@ export function HistoryFeed({
                                 names={allNames}
                                 fileNames={fileNames}
                               />
+                            ) : approvalEvent ? (
+                              <ApprovalEvent event={event} />
                             ) : event.action === 'noteEdited' &&
                               onOpenNote &&
                               noteOf(event) ? (
@@ -2222,7 +2318,10 @@ export function HistoryFeed({
                             )}
                             {/* A status or stage move, drawn as the
                                 field changes below it are. */}
-                            {event.fromValue && statusKey && !activityEvent ? (
+                            {event.fromValue &&
+                            statusKey &&
+                            !activityEvent &&
+                            !approvalEvent ? (
                               <span className='inline-flex items-baseline gap-1.5'>
                                 <span className='text-muted-foreground'>
                                   {text(fieldLabelKey(entity, statusKey))}
@@ -2250,7 +2349,8 @@ export function HistoryFeed({
                               !toText(event.action).startsWith('note') &&
                               event.action !== 'aiRevise' &&
                               event.action !== 'merged' &&
-                              !activityEvent && (
+                              !activityEvent &&
+                              !approvalEvent && (
                                 <HistoryChanges
                                   entity={entity}
                                   record={record}
@@ -2433,7 +2533,8 @@ export function HistoryFeed({
                           event.action !== 'created' &&
                           !toText(event.action).startsWith('note') &&
                           event.action !== 'aiRevise' &&
-                          !activityEvent && (
+                          !activityEvent &&
+                          !approvalEvent && (
                             <HistoryChanges
                               part='rows'
                               open={open}

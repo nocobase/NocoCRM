@@ -100,6 +100,7 @@ import {
 } from '@nocobase/app-plugin-ai-employee/server';
 import {
   LeadEvaluator,
+  activitiesOf,
   carried,
   contactTime,
   aiStates,
@@ -115,6 +116,7 @@ import {
 import {
   OpportunityEvaluator,
   accountResearchDue,
+  checkTerms,
   latestOpportunityEvaluation,
 } from '../../server/providers/crm/opportunity-evaluation.js';
 import {
@@ -4740,6 +4742,171 @@ describe('CRM opportunity follow-up', () => {
       enabled.mockRestore();
     }
   });
+  // The terms the model lists are checked by the code: an approval it names
+  // covers a term only when that approval is approved (or pending); one it
+  // names that was rejected or withdrawn leaves the term needing approval,
+  // and an approval is proposed for it.
+  it("checks every term against the deal's approvals itself", () => {
+    const dealApprovals = [
+      { name: '一期8折优惠申请', topic: 'discount', status: 'approved' },
+      { name: '3-3-4付款账期申请', topic: 'paymentTerms', status: 'rejected' },
+      { name: '源码交付条款申请', topic: 'contractTerms', status: 'withdrawn' },
+    ];
+    const { terms, approvals, holdsBack } = checkTerms(
+      [
+        {
+          topic: 'discount',
+          term: '85 折',
+          beyondStandard: true,
+          approval: '一期8折优惠申请',
+        },
+        // The model's word that the rejected one covers it is not taken.
+        {
+          topic: 'paymentTerms',
+          term: '4-3-3，尾款验收后 60 天',
+          beyondStandard: true,
+          approval: '3-3-4付款账期申请',
+        },
+        {
+          topic: 'contractTerms',
+          term: '源码托管，违约金上限 5%',
+          beyondStandard: true,
+          approval: null,
+        },
+        {
+          topic: 'other',
+          term: '合同用我方模板',
+          beyondStandard: false,
+          approval: null,
+        },
+      ],
+      dealApprovals,
+      [
+        {
+          topic: 'contractTerms',
+          name: '源码托管条款',
+          description: '客户接受源码托管',
+        },
+      ],
+      '。超出审批标准。',
+    );
+    expect(terms.map((t) => t.status)).toEqual([
+      'approved',
+      'needed',
+      'needed',
+      'standard',
+    ]);
+    expect(terms[0].approval).toBe('一期8折优惠申请');
+    // The model's own for the contract terms, one added for the payment.
+    expect(approvals).toEqual([
+      expect.objectContaining({ topic: 'contractTerms', name: '源码托管条款' }),
+      {
+        topic: 'paymentTerms',
+        name: '4-3-3，尾款验收后 60 天',
+        description: '4-3-3，尾款验收后 60 天。超出审批标准。',
+      },
+    ]);
+    expect(holdsBack).toBe(true);
+    // All covered: nothing holds the deal back.
+    expect(
+      checkTerms(
+        [
+          {
+            topic: 'discount',
+            term: '85 折',
+            beyondStandard: true,
+            approval: '一期8折优惠申请',
+          },
+        ],
+        dealApprovals,
+        [],
+        '',
+      ).holdsBack,
+    ).toBe(false);
+  });
+
+  // Terms still to be approved keep a deal short of the contract, whatever
+  // the model concluded.
+  it('keeps at it rather than advance to the contract while approvals are to be requested', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const { opportunity } = await deal('待审批不进合同');
+      const { evaluator } = following({
+        ...advance,
+        stage: 'contract',
+        updates: [],
+        approvals: [
+          {
+            topic: 'paymentTerms',
+            name: '尾款验收后 60 天',
+            description: '标准账期 30 天',
+          },
+        ],
+      });
+      await evaluator.request(actor('rep'), opportunity.id);
+      await evaluator.idle();
+      const card = await latestOpportunityEvaluation(
+        service,
+        actor('rep'),
+        opportunity.id,
+      );
+      expect(card?.ai.result).toMatchObject({
+        recommendation: 'continue',
+        stage: null,
+        approvals: [expect.objectContaining({ topic: 'paymentTerms' })],
+      });
+      // As on 老板电器: the model lists no approval and names a rejected
+      // one as covering the payment terms; the code proposes one anyway.
+      const rejected = await service.save(actor('rep'), 'approvals', {
+        name: '尾款 90 天',
+        opportunityId: opportunity.id,
+        topic: 'paymentTerms',
+        approverId: 'manager',
+      });
+      await service.approvalAction(actor('rep'), rejected.id, 'submit');
+      await service.approvalAction(
+        actor('manager'),
+        toText(rejected.id),
+        'reject',
+      );
+      const { evaluator: again } = following({
+        ...advance,
+        stage: 'contract',
+        updates: [],
+        approvals: [],
+        terms: [
+          {
+            topic: 'paymentTerms',
+            term: '尾款验收后 60 天',
+            beyondStandard: true,
+            approval: '尾款 90 天',
+          },
+        ],
+      });
+      await again.request(actor('rep'), opportunity.id);
+      await again.idle();
+      const checked = await latestOpportunityEvaluation(
+        service,
+        actor('rep'),
+        opportunity.id,
+      );
+      expect(checked?.ai.result).toMatchObject({
+        recommendation: 'continue',
+        stage: null,
+        terms: [{ term: '尾款验收后 60 天', status: 'needed' }],
+        approvals: [
+          expect.objectContaining({
+            topic: 'paymentTerms',
+            name: '尾款验收后 60 天',
+          }),
+        ],
+      });
+    } finally {
+      enabled.mockRestore();
+    }
+  });
   it('proposes the approvals a deal needs, submits those kept with the accept, and follows up on the decision', async () => {
     const enabled = vi
       .spyOn(service, 'assistantEnabled')
@@ -5058,6 +5225,31 @@ describe('CRM opportunity follow-up', () => {
           ['账期', 'rejected'],
         ].sort(),
       );
+      // The deal's history tells of each: submitted, decided, withdrawn,
+      // with the approval as it reads now.
+      const told = (
+        await service.historyOf(actor('rep'), 'opportunities', opportunity.id, {
+          pageSize: 100,
+        })
+      ).data.filter((event) => event.entity === 'approvals');
+      expect(
+        told
+          .map((event) => [
+            (event.approval as { name: string }).name,
+            toText(event.toValue),
+          ])
+          .sort(),
+      ).toEqual(
+        [
+          ['交付承诺', 'pending'],
+          ['交付承诺', 'withdrawn'],
+          ['折扣', 'approved'],
+          ['折扣', 'pending'],
+          ['账期', 'pending'],
+          ['账期', 'rejected'],
+        ].sort(),
+      );
+      expect(told.every((event) => event.action === 'status')).toBe(true);
       // The card keeps them through its run, as it keeps what started it.
       const outcomes = await approvalsSettled(service, last);
       expect(
@@ -6982,5 +7174,50 @@ describe('CRM opportunity capture', () => {
     } finally {
       enabled.mockRestore();
     }
+  });
+});
+
+describe('the activities a follow-up reads', () => {
+  // A next step carries on a planned activity by its reference; one done or
+  // called off has no id to carry on, so pointing at it plans a new one.
+  it('lets only a planned activity be carried on', async () => {
+    const account = await service.save(actor('rep'), 'accounts', {
+      name: '沿用活动客户',
+    });
+    const opportunity = await service.save(actor('rep'), 'opportunities', {
+      name: '沿用活动商机',
+      accountId: account.id,
+      stage: 'negotiation',
+    });
+    const at = (days: number) =>
+      new Date(Date.now() + days * 86_400_000).toISOString();
+    const done = await service.save(actor('rep'), 'activities', {
+      name: '商务谈判',
+      type: 'meeting',
+      status: 'completed',
+      startAt: at(-1),
+      opportunityId: opportunity.id,
+      feedback: '条款谈定',
+    });
+    const planned = await service.save(actor('rep'), 'activities', {
+      name: '跟进法务审核',
+      type: 'call',
+      status: 'planned',
+      startAt: at(3),
+      opportunityId: opportunity.id,
+    });
+    const { rows, ids, names } = await activitiesOf(
+      service,
+      actor('rep'),
+      { opportunityId: toText(opportunity.id) },
+      'Asia/Shanghai',
+    );
+    const refOf = (name: string) =>
+      toText(rows.find((row) => row.subject === name)?.ref);
+    expect(ids[refOf('跟进法务审核')]).toBe(planned.id);
+    expect(ids[refOf('商务谈判')]).toBeUndefined();
+    // Both still named, for a reference left in text.
+    expect(names[refOf('商务谈判')]).toBe('商务谈判');
+    expect(done.id).toBeTruthy();
   });
 });

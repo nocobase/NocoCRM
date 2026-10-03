@@ -36,6 +36,12 @@ export const dealWords = {
   noChange: ['没有变化', 'No change'],
   none: ['无', 'none'],
   nothingFound: ['未查到', 'Nothing found'],
+  // After a term the code found beyond the standard with no approval
+  // covering it, as the description of the approval it proposes.
+  termNeedsApproval: [
+    '。超出审批标准，审批通过前不要答应客户。',
+    '. Beyond the approval standards: do not promise it before it is approved.',
+  ],
 } as const satisfies Pairs;
 
 // The task planned after a pause (to resume) or a loss (to revisit), after

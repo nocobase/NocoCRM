@@ -22,6 +22,7 @@ import { Button } from '../ui/button.js';
 import { Textarea } from '../ui/textarea.js';
 import { Spinner } from '../ui/spinner.js';
 import { ErrorNotice, LongText, RecordLink, Value } from './common.js';
+import { KindTag } from './kind-tag.js';
 import { ConvertDialog } from './conversion.js';
 import {
   Dialog,
@@ -126,6 +127,15 @@ export interface DealVerdict {
   enrich?: Verdict['enrich'];
   // Approvals to request before promising the customer what needs them.
   approvals?: { topic: string; name: string; description: string }[];
+  // Every commercial term in the material, checked by the server against
+  // the deal's approvals: within the standards, approved, awaiting one, or
+  // needing one.
+  terms?: {
+    topic: string;
+    term: string;
+    status: 'standard' | 'approved' | 'pending' | 'needed';
+    approval?: string;
+  }[];
 }
 export type AnyVerdict = Verdict | DealVerdict;
 const isDeal = (verdict: AnyVerdict): verdict is DealVerdict =>
@@ -745,6 +755,11 @@ export function VerdictPanel({
           picked={picked}
           onPick={setPicked}
         />
+      )}
+      {/* The terms on the table and where each stands, so what is still to
+          be approved shows at a glance. */}
+      {verdict && isDeal(verdict) && (verdict.terms?.length ?? 0) > 0 && (
+        <DealTerms terms={verdict.terms ?? []} />
       )}
       {/* Approvals to request first, submitted with the accept. */}
       {verdict && isDeal(verdict) && (verdict.approvals?.length ?? 0) > 0 && (
@@ -2006,6 +2021,45 @@ function VerdictList({
 // The approvals the AI would request before the customer is promised what
 // needs them: each kept to start with and sent to a sales manager, both
 // changeable; submitted with the accept, then marked.
+// The deal's commercial terms, each with where it stands against the
+// approvals: within the standards, approved (by which), awaiting approval,
+// or needing it.
+function DealTerms({
+  terms,
+}: {
+  terms: NonNullable<DealVerdict['terms']>;
+}): ReactElement {
+  const { text } = useCrmText();
+  const tone = {
+    standard: 'muted',
+    approved: 'success',
+    pending: 'info',
+    needed: 'warning',
+  } as const;
+  return (
+    <div className='grid gap-1.5 rounded-lg border bg-background/60 p-3'>
+      <p className='font-medium'>{text('evaluation.deal.terms')}</p>
+      {terms.map((term) => (
+        <div
+          key={`${term.topic}-${term.term}`}
+          className='flex flex-wrap items-center gap-2'
+        >
+          <KindTag value={term.topic} />
+          <span className='min-w-0'>{term.term}</span>
+          <Badge variant={tone[term.status]}>
+            {text(`evaluation.deal.termStatus.${term.status}`)}
+          </Badge>
+          {term.approval && (
+            <span className='text-xs text-muted-foreground'>
+              {term.approval}
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ProposedApprovals({
   entry,
   approvals,

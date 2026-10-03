@@ -1859,6 +1859,8 @@ function ApprovalItem({ approval }: { approval: Data }): ReactElement {
   const { data: meta } = useMetadata();
   const status = toText(approval.status);
   const mine = Boolean(meta && approval.approverId === meta.userId);
+  const nameOf = (id: unknown): string =>
+    meta?.users.find((u) => u.id === toText(id))?.name ?? '';
   return (
     <li className='relative pl-5'>
       <span
@@ -1892,13 +1894,27 @@ function ApprovalItem({ approval }: { approval: Data }): ReactElement {
           )}
           <Status value={approval.status} />
         </div>
-        <p className='mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground'>
-          <Clock className='size-3 shrink-0' />
-          {localDate(
-            approval.updatedAt,
-            language,
-            meta?.settings.timeZone ?? 'Asia/Shanghai',
+        {/* Who asks and who decides, then when it last moved. */}
+        <p className='mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground'>
+          {[
+            ['fields.applicant', approval.ownerId],
+            ['fields.approverId', approval.approverId],
+          ].map(([label, id]) =>
+            id ? (
+              <span key={toText(label)}>
+                {text(toText(label))}{' '}
+                <span className='text-foreground'>{nameOf(id)}</span>
+              </span>
+            ) : null,
           )}
+          <span className='inline-flex items-center gap-1'>
+            <Clock className='size-3 shrink-0' />
+            {localDate(
+              approval.updatedAt,
+              language,
+              meta?.settings.timeZone ?? 'Asia/Shanghai',
+            )}
+          </span>
         </p>
       </Link>
     </li>

@@ -528,6 +528,39 @@ describe("a deal's follow-up card", () => {
     );
   });
 
+  // The terms on the table, each with where it stands against the approvals.
+  it('lists the terms and where each stands', () => {
+    render(
+      <VerdictPanel
+        entity='opportunities'
+        entry={deal({
+          terms: [
+            {
+              topic: 'discount',
+              term: '85 折',
+              status: 'approved',
+              approval: '一期8折优惠申请',
+            },
+            {
+              topic: 'paymentTerms',
+              term: '尾款验收后 60 天',
+              status: 'needed',
+            },
+          ],
+        })}
+        recordId='opp-1'
+        editable
+        onChanged={() => Promise.resolve()}
+      />,
+    );
+    expect(screen.getByText('条款核对')).toBeTruthy();
+    const row = (term: string) =>
+      screen.getByText(term).parentElement?.textContent ?? '';
+    expect(row('85 折')).toContain('已批准');
+    expect(row('85 折')).toContain('一期8折优惠申请');
+    expect(row('尾款验收后 60 天')).toContain('需审批');
+  });
+
   // Followed up after its approvals were decided: which, and how.
   it('names the approvals whose outcomes started it', () => {
     const entry = deal({});

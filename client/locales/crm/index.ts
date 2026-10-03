@@ -168,6 +168,16 @@ const wording = {
       deleted: ['deleted', '删除了'],
       to: ['to {{time}}', '改到 {{time}}'],
     },
+    // A deal's contact with their role, in a change of the deal's contacts.
+    contactRole: ['{{name}} ({{role}})', '{{name}}（{{role}}）'],
+    // One of a deal's approvals, read after the person's name.
+    approval: {
+      pending: ['submitted', '提交了'],
+      approved: ['approved', '批准了'],
+      rejected: ['rejected', '驳回了'],
+      withdrawn: ['withdrew', '撤回了'],
+      noun: ['approval', '审批'],
+    },
     // What a person did, read after their name on the timeline.
     did: {
       created: ['created the record', '创建了记录'],
@@ -302,6 +312,13 @@ const wording = {
     deal: {
       // Approvals the AI would request before promising the customer.
       approvals: ['Approvals to request', '建议发起的审批'],
+      terms: ['Terms', '条款核对'],
+      termStatus: {
+        standard: ['Within the standard', '标准内'],
+        approved: ['Approved', '已批准'],
+        pending: ['Awaiting approval', '审批中'],
+        needed: ['Needs approval', '需审批'],
+      },
       approvalsHint: [
         'submitted to the approver with the accept',
         '采纳时提交给审批人',

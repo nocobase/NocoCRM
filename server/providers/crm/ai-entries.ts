@@ -86,6 +86,20 @@ export interface OpportunityVerdict {
   // them (a discount over 10%, longer payment terms, changed contract
   // terms, a committed delivery date), submitted with the accept.
   approvals?: ProposedApproval[];
+  // Every commercial term in the material, checked by the code against
+  // the deal's approvals (opportunity-evaluation.ts, checkTerms).
+  terms?: CheckedTerm[];
+}
+
+export interface CheckedTerm {
+  topic: string;
+  // The term as agreed or asked, e.g. "balance 60 days after acceptance".
+  term: string;
+  // standard: within the standards; approved or pending: an approval of
+  // the deal covers it; needed: beyond them, nothing covering it.
+  status: 'standard' | 'approved' | 'pending' | 'needed';
+  // The covering approval's name, for approved and pending.
+  approval?: string;
 }
 
 export interface ProposedApproval {

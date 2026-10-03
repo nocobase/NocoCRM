@@ -718,7 +718,9 @@ export async function activitiesOf(
     const titles: Record<string, string> = {};
     const rows = data.map((activity, index) => {
       const ref = `A${index + 1}`;
-      ids[ref] = toText(activity.id);
+      // Only a planned activity can be carried on as the next step: a
+      // reference to one done or called off plans a new one instead.
+      if (activity.status === 'planned') ids[ref] = toText(activity.id);
       titles[ref] = toText(activity.name);
       const start = new Date(toText(activity.startAt));
       return {

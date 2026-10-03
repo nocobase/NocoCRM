@@ -751,6 +751,19 @@ export class CrmService {
       ).data)
         activities.set(toText(activity.id), activity);
     const activityIds = [...activities.keys()];
+    // A deal's approvals the reader may read: submitted, decided and
+    // withdrawn are part of the deal's story too. Only their status
+    // changes: an approval's AI review stays its approver's.
+    const approvals = new Map<string, CrmRecord>();
+    if (entity === 'opportunities' && options.action !== 'note')
+      for (const approval of (
+        await this.list(actor, 'approvals', {
+          opportunityId: id,
+          pageSize: 1000,
+        })
+      ).data)
+        approvals.set(toText(approval.id), approval);
+    const approvalIds = [...approvals.keys()];
     const activityFields = activityIds.length
       ? outputFields(
           'activities',
@@ -766,16 +779,27 @@ export class CrmService {
     // The record's own entries, and those of its activities that tell.
     const ofRecord = (eb: ExpressionBuilder): Expression<SqlBool> => {
       const own = eb.and([eb('entity', '=', entity), eb('recordId', '=', id)]);
-      return activityIds.length
-        ? eb.or([
-            own,
-            eb.and([
-              eb('entity', '=', 'activities'),
-              eb('recordId', 'in', activityIds),
-              eb('action', 'in', ['created', 'status', 'updated']),
-            ]),
-          ])
-        : own;
+      const linked = [
+        ...(activityIds.length
+          ? [
+              eb.and([
+                eb('entity', '=', 'activities'),
+                eb('recordId', 'in', activityIds),
+                eb('action', 'in', ['created', 'status', 'updated']),
+              ]),
+            ]
+          : []),
+        ...(approvalIds.length
+          ? [
+              eb.and([
+                eb('entity', '=', 'approvals'),
+                eb('recordId', 'in', approvalIds),
+                eb('action', '=', 'status'),
+              ]),
+            ]
+          : []),
+      ];
+      return linked.length ? eb.or([own, ...linked]) : own;
     };
     // People's own changes carry no source; the AI's carry `ai` (its own
     // work) or `assistant` (its proposal, confirmed).
@@ -838,99 +862,118 @@ export class CrmService {
         .execute();
     }
     const data = rows.map((event) =>
-      // An activity's entry: the activity as it now reads (name, type,
-      // status, time, outcome) and, for a new time, the time before.
-      // (Not the activity's own history, whose entries are its own.)
-      event.entity === 'activities' && entity !== 'activities'
+      // One of the deal's approvals changing status: the approval as it now
+      // reads, and its decision comment once decided.
+      event.entity === 'approvals' && entity !== 'approvals'
         ? (() => {
-            const activity = activities.get(toText(event.recordId))!;
-            const changes = object(jsonValue(event.changes) ?? {});
-            const previous = object(jsonValue(event.previous) ?? {});
+            const approval = approvals.get(toText(event.recordId))!;
             return {
               ...event,
-              // When it was planned for; for an edit, the fields it changed
-              // that the record is told of and the reader may read, before
-              // and after.
-              changes:
-                event.action === 'created'
-                  ? { startAt: changes.startAt ?? null }
-                  : event.action === 'updated'
-                    ? readableOf(changes)
-                    : {},
-              previous:
-                event.action === 'updated' ? readableOf(previous) : null,
+              changes: {},
+              previous: null,
               ai: null,
-              activity: {
-                id: activity.id,
-                name: activity.name,
-                type: activity.type,
-                status: activity.status,
-                startAt: activity.startAt,
-                feedback: activity.feedback ?? null,
+              approval: {
+                id: approval.id,
+                name: approval.name,
+                topic: approval.topic,
+                status: approval.status,
+                decisionComment: approval.decisionComment ?? null,
               },
             };
           })()
-        : // A note's text is the note, not a field of the record; an edit
-          // entry carries the text as changed, and a person's instruction to
-          // the AI to redo a card (aiRevise) its words.
-          event.action === 'note' ||
-            event.action === 'noteEdited' ||
-            event.action === 'aiRevise' ||
-            event.action === 'activityDeleted'
-          ? {
-              ...event,
-              changes: object(jsonValue(event.changes) ?? {}),
-              previous:
-                event.previous == null
-                  ? null
-                  : object(jsonValue(event.previous) ?? {}),
-              ai: null,
-            }
-          : {
-              ...event,
-              changes:
-                event.action === 'merged'
-                  ? (() => {
-                      // A merge (lead-merge.ts): the lead merged in, by its
-                      // readable fields, and what came over with it.
-                      const merge = object(jsonValue(event.changes) ?? {});
-                      return {
-                        lead: Object.fromEntries(
-                          Object.entries(object(merge.lead ?? {})).filter(
-                            ([key]) => key === 'id' || readable.includes(key),
+        : // An activity's entry: the activity as it now reads (name, type,
+          // status, time, outcome) and, for a new time, the time before.
+          // (Not the activity's own history, whose entries are its own.)
+          event.entity === 'activities' && entity !== 'activities'
+          ? (() => {
+              const activity = activities.get(toText(event.recordId))!;
+              const changes = object(jsonValue(event.changes) ?? {});
+              const previous = object(jsonValue(event.previous) ?? {});
+              return {
+                ...event,
+                // When it was planned for; for an edit, the fields it changed
+                // that the record is told of and the reader may read, before
+                // and after.
+                changes:
+                  event.action === 'created'
+                    ? { startAt: changes.startAt ?? null }
+                    : event.action === 'updated'
+                      ? readableOf(changes)
+                      : {},
+                previous:
+                  event.action === 'updated' ? readableOf(previous) : null,
+                ai: null,
+                activity: {
+                  id: activity.id,
+                  name: activity.name,
+                  type: activity.type,
+                  status: activity.status,
+                  startAt: activity.startAt,
+                  feedback: activity.feedback ?? null,
+                },
+              };
+            })()
+          : // A note's text is the note, not a field of the record; an edit
+            // entry carries the text as changed, and a person's instruction to
+            // the AI to redo a card (aiRevise) its words.
+            event.action === 'note' ||
+              event.action === 'noteEdited' ||
+              event.action === 'aiRevise' ||
+              event.action === 'activityDeleted'
+            ? {
+                ...event,
+                changes: object(jsonValue(event.changes) ?? {}),
+                previous:
+                  event.previous == null
+                    ? null
+                    : object(jsonValue(event.previous) ?? {}),
+                ai: null,
+              }
+            : {
+                ...event,
+                changes:
+                  event.action === 'merged'
+                    ? (() => {
+                        // A merge (lead-merge.ts): the lead merged in, by its
+                        // readable fields, and what came over with it.
+                        const merge = object(jsonValue(event.changes) ?? {});
+                        return {
+                          lead: Object.fromEntries(
+                            Object.entries(object(merge.lead ?? {})).filter(
+                              ([key]) => key === 'id' || readable.includes(key),
+                            ),
                           ),
-                        ),
-                        activities: merge.activities ?? 0,
-                        notes: merge.notes ?? 0,
-                        // A lead not yet saved, merged from the capture review.
-                        ...(merge.captured ? { captured: true } : {}),
-                      };
+                          activities: merge.activities ?? 0,
+                          notes: merge.notes ?? 0,
+                          // A lead not yet saved, merged from the capture review.
+                          ...(merge.captured ? { captured: true } : {}),
+                        };
+                      })()
+                    : Object.fromEntries(
+                        Object.entries(
+                          object(jsonValue(event.changes) ?? {}),
+                        ).filter(([key]) => readable.includes(key)),
+                      ),
+                // Null for entries written before earlier values were kept.
+                previous:
+                  event.previous == null
+                    ? null
+                    : Object.fromEntries(
+                        Object.entries(
+                          object(jsonValue(event.previous) ?? {}),
+                        ).filter(([key]) => readable.includes(key)),
+                      ),
+                ...(!readable.includes(definitions[entity].statusField ?? '')
+                  ? { fromValue: null, toValue: null }
+                  : {}),
+                // The AI's own work: what it concluded and where that stands.
+                ...(event.action === 'ai'
+                  ? (() => {
+                      const entry = readEntry(event);
+                      return { aiStatus: entry.status, ai: entry.ai };
                     })()
-                  : Object.fromEntries(
-                      Object.entries(
-                        object(jsonValue(event.changes) ?? {}),
-                      ).filter(([key]) => readable.includes(key)),
-                    ),
-              // Null for entries written before earlier values were kept.
-              previous:
-                event.previous == null
-                  ? null
-                  : Object.fromEntries(
-                      Object.entries(
-                        object(jsonValue(event.previous) ?? {}),
-                      ).filter(([key]) => readable.includes(key)),
-                    ),
-              ...(!readable.includes(definitions[entity].statusField ?? '')
-                ? { fromValue: null, toValue: null }
-                : {}),
-              // The AI's own work: what it concluded and where that stands.
-              ...(event.action === 'ai'
-                ? (() => {
-                    const entry = readEntry(event);
-                    return { aiStatus: entry.status, ai: entry.ai };
-                  })()
-                : { ai: null }),
-            },
+                  : { ai: null }),
+              },
     );
     return { data, total, page, pageSize };
   }
