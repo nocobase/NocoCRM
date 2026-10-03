@@ -802,6 +802,9 @@ export function DetailColumns({
   // The page's dialogs.
   children?: ReactNode;
 }): ReactElement {
+  // In the drawer the page is already on the popover's white, with its own
+  // padding: nothing to reach past.
+  const inDrawer = useRecordDrawer()?.inDrawer ?? false;
   return (
     <CrmFrame
       // The page is the window's height and its two columns scroll each on
@@ -821,7 +824,14 @@ export function DetailColumns({
         {/* Side by side each column scrolls by itself below the band, the
             rule between them running to the bottom; stacked, they scroll
             together. Their bars show only while they scroll. */}
-        <div className='flex h-full flex-col @3xl:-mx-4 md:@3xl:-mx-8'>
+        {/* Stacked too, the page is white (the card colour) out to the
+            screen's edges, as the columns are side by side: the block reaches
+            past the frame's padding and the scrolling area gives it back. */}
+        <div
+          className={`flex h-full flex-col @3xl:-mx-4 md:@3xl:-mx-8 ${
+            inDrawer ? '' : '-mx-4 bg-card md:-mx-8'
+          }`}
+        >
           {/* Side by side, both columns are white (the card colour) out to
             the page's edges: the block reaches past the frame's padding (the
             -mx), which the columns' own padding gives back, the left track
@@ -844,7 +854,9 @@ export function DetailColumns({
             </div>
           </div>
           <div
-            className='grid min-h-0 flex-1 items-start gap-6 overflow-y-auto pb-24 @3xl:grid-cols-[22rem_minmax(0,1fr)] @3xl:grid-rows-[minmax(0,1fr)] md:@3xl:grid-cols-[23rem_minmax(0,1fr)] @3xl:items-stretch @3xl:gap-0 @3xl:overflow-hidden @3xl:pb-0 scroll-quiet'
+            className={`grid min-h-0 flex-1 items-start gap-6 overflow-y-auto pb-24 ${
+              inDrawer ? '' : 'px-4 md:px-8 @3xl:px-0'
+            } @3xl:grid-cols-[22rem_minmax(0,1fr)] @3xl:grid-rows-[minmax(0,1fr)] md:@3xl:grid-cols-[23rem_minmax(0,1fr)] @3xl:items-stretch @3xl:gap-0 @3xl:overflow-hidden @3xl:pb-0 scroll-quiet`}
             onScroll={revealScrollbar}
           >
             {/* Neither column is a card: the particulars stand on the page as
@@ -869,7 +881,7 @@ export function DetailColumns({
             >
               {/* Stacked, the tabs lead their content, staying in place as
                 it scrolls; side by side they are in the band above. */}
-              <div className='sticky top-0 z-10 mb-4 flex flex-wrap items-center justify-between gap-2 border-b bg-background @3xl:hidden'>
+              <div className='sticky top-0 z-10 mb-4 flex flex-wrap items-center justify-between gap-2 border-b bg-card @3xl:hidden'>
                 {tabBar}
               </div>
               {right}
