@@ -230,6 +230,9 @@ const wording = {
     reason: ['Why', '理由'],
     reasons: ['Reasons', '依据'],
     findings: ['Found on the web', '联网查到'],
+    // A lead's suggested values, from its own material as well as the web.
+    fieldSuggestions: ['Suggested field updates', '建议更新的字段'],
+    basis: ['from {{basis}}', '出自 {{basis}}'],
     findingsDone: ['written by {{name}}, {{time}}', '{{name}} {{time}} 已写入'],
     source: ['Source', '来源'],
     writePicked: ['Write {{count}} into the lead', '写入所选 {{count}} 项'],

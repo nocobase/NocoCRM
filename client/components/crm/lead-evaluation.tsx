@@ -13,6 +13,7 @@ import {
   Copy,
   ExternalLink,
   Globe,
+  PencilLine,
   Sparkles,
   TriangleAlert,
 } from 'lucide-react';
@@ -23,6 +24,7 @@ import { Textarea } from '../ui/textarea.js';
 import { Spinner } from '../ui/spinner.js';
 import { ErrorNotice, LongText, RecordLink, Value } from './common.js';
 import { KindTag } from './kind-tag.js';
+import { markdownLine } from './line-breaks.js';
 import { ConvertDialog } from './conversion.js';
 import {
   Dialog,
@@ -95,7 +97,10 @@ export interface Verdict {
   enrich?: {
     field: string;
     value: string;
+    // The page it was found on, for the web.
     source: string | null;
+    // The CRM's own material it came from, when not the web.
+    basis?: string;
     current: string | null;
   }[];
 }
@@ -113,7 +118,13 @@ export interface DealVerdict {
   questions: string[];
   email: { subject: string; body: string } | null;
   updates: {
-    field: 'amount' | 'expectedCloseAt';
+    field:
+      | 'amount'
+      | 'currency'
+      | 'expectedCloseAt'
+      | 'businessType'
+      | 'source'
+      | 'description';
     value: string;
     reason: string;
     current: string | null;
@@ -1593,11 +1604,19 @@ function Findings({
   return (
     <div className='grid gap-1.5 rounded-lg border bg-background/60 p-3'>
       <div className='flex items-center gap-1.5 font-medium'>
-        <Globe className='size-4 text-muted-foreground' />
+        {/* Found on the web, or read from the CRM's own material too: a
+            lead's suggestions may be both. */}
+        {findings.every((finding) => finding.source) ? (
+          <Globe className='size-4 text-muted-foreground' />
+        ) : (
+          <PencilLine className='size-4 text-muted-foreground' />
+        )}
         {text(
-          entity === 'leads'
-            ? 'evaluation.findings'
-            : 'evaluation.findingsAccount',
+          entity !== 'leads'
+            ? 'evaluation.findingsAccount'
+            : findings.every((finding) => finding.source)
+              ? 'evaluation.findings'
+              : 'evaluation.fieldSuggestions',
         )}
         {done && (
           <span className='text-xs font-normal text-muted-foreground'>
@@ -1693,6 +1712,11 @@ function Findings({
                   <ExternalLink className='mr-0.5 inline size-3 align-[-1px]' />
                   {text('evaluation.source')}
                 </a>
+              )}
+              {!finding.source && finding.basis && (
+                <span className='ml-2 text-xs text-muted-foreground'>
+                  {text('evaluation.basis', { basis: finding.basis })}
+                </span>
               )}
             </span>
           </li>
@@ -2194,12 +2218,30 @@ function DealUpdates({
   const { data: meta } = useMetadata();
   const { text, language } = useCrmText();
   if (!meta) return null;
-  const shown = (field: string, value: string | null): string =>
+  // The new currency when the card changes it too, for the amount.
+  const newCurrency = updates.find((u) => u.field === 'currency')?.value;
+  const shown = (
+    field: string,
+    value: string | null,
+    side: 'current' | 'value' = 'value',
+  ): string =>
     value === null
       ? '—'
       : field === 'amount'
-        ? money(value, currency ?? meta.settings.currency, language)
-        : localDate(value, language, meta.settings.timeZone, false);
+        ? money(
+            value,
+            (side === 'value' ? newCurrency : undefined) ??
+              currency ??
+              meta.settings.currency,
+            language,
+          )
+        : field === 'expectedCloseAt'
+          ? localDate(value, language, meta.settings.timeZone, false)
+          : field === 'businessType' || field === 'source'
+            ? text(`options.${value}`, { defaultValue: value })
+            : field === 'description'
+              ? markdownLine(value)
+              : value;
   const written = new Set(entry.ai.updatedFields ?? []);
   return (
     <div className='grid gap-1.5 rounded-lg border bg-background/60 p-3'>
@@ -2227,7 +2269,7 @@ function DealUpdates({
               {text(`fields.${update.field}`)}
               {language.startsWith('zh') ? '：' : ': '}
             </span>
-            {shown(update.field, update.current)}
+            {shown(update.field, update.current, 'current')}
             <span className='mx-1 text-muted-foreground'>→</span>
             <span className='font-medium'>
               {shown(update.field, update.value)}

@@ -102,6 +102,7 @@ import {
   LeadEvaluator,
   activitiesOf,
   carried,
+  cleanEnrich,
   contactTime,
   aiStates,
   latestEvaluation,
@@ -3092,6 +3093,70 @@ describe('CRM lead evaluation', () => {
     enrich: [],
   };
 
+  // A follow-up suggests the lead's own fields from its material as well as
+  // the company's from the web: each cleaned to what the field takes, with
+  // where it came from.
+  it("cleans the values it suggests for a lead's fields", () => {
+    const found = cleanEnrich(
+      [
+        {
+          field: 'jobTitle',
+          value: '信息管理部经理',
+          source: '老板电器 工单系统沟通',
+        },
+        { field: 'phone', value: '138 0571 2233', source: '原始信息' },
+        { field: 'email', value: 'Zhou.Xiao@Robam.example', source: '备注' },
+        { field: 'email', value: 'not an address', source: '备注' },
+        { field: 'source', value: 'exhibition', source: '原始信息' },
+        { field: 'source', value: '展会', source: '原始信息' },
+        {
+          field: 'website',
+          value: 'https://www.robam.com',
+          source: 'https://www.robam.com/about',
+        },
+        // Already held: left out.
+        { field: 'company', value: '杭州老板电器', source: '原始信息' },
+      ],
+      { id: 'l1', company: '杭州老板电器', email: null },
+    );
+    expect(found).toEqual([
+      {
+        field: 'jobTitle',
+        value: '信息管理部经理',
+        source: null,
+        basis: '老板电器 工单系统沟通',
+        current: null,
+      },
+      {
+        field: 'phone',
+        value: '13805712233',
+        source: null,
+        basis: '原始信息',
+        current: null,
+      },
+      {
+        field: 'email',
+        value: 'zhou.xiao@robam.example',
+        source: null,
+        basis: '备注',
+        current: null,
+      },
+      {
+        field: 'source',
+        value: 'exhibition',
+        source: null,
+        basis: '原始信息',
+        current: null,
+      },
+      {
+        field: 'website',
+        value: 'https://www.robam.com',
+        source: 'https://www.robam.com/about',
+        current: null,
+      },
+    ]);
+  });
+
   it('evaluates a new lead as its owner and records the verdict for a decision', async () => {
     const enabled = vi
       .spyOn(service, 'assistantEnabled')
@@ -4772,6 +4837,65 @@ describe('CRM opportunity follow-up', () => {
       enabled.mockRestore();
     }
   });
+  // A follow-up fills or corrects the deal's own fields from its material:
+  // each checked against what the field takes.
+  it("suggests the deal's other fields too, each as the field takes it", async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const { opportunity } = await deal('补字段商机');
+      const run = following({
+        ...advance,
+        stage: null,
+        recommendation: 'continue',
+        approvals: [],
+        updates: [
+          { field: 'businessType', value: 'renewal', reason: '续约（活动）' },
+          { field: 'businessType', value: '续约', reason: '重复的一条' },
+          { field: 'source', value: 'exhibition', reason: '展会（线索）' },
+          { field: 'currency', value: 'eur', reason: '客户按欧元报价（备注）' },
+          {
+            field: 'description',
+            value: '售后工单与备件管理，一期华东 120 个网点',
+            reason: '商务谈判反馈',
+          },
+        ],
+      });
+      await run.evaluator.request(actor('rep'), opportunity.id);
+      await run.evaluator.idle();
+      const card = await latestOpportunityEvaluation(
+        service,
+        actor('rep'),
+        opportunity.id,
+      );
+      expect(
+        card?.ai.result?.updates.map((u) => [u.field, u.value, u.current]),
+      ).toEqual([
+        ['businessType', 'renewal', null],
+        ['source', 'exhibition', 'other'],
+        ['currency', 'EUR', 'USD'],
+        ['description', '售后工单与备件管理，一期华东 120 个网点', null],
+      ]);
+      // Accepting writes the ticked ones.
+      await run.evaluator.decide(
+        actor('rep'),
+        opportunity.id,
+        card!.id,
+        'accept',
+        ['businessType', 'description'],
+      );
+      expect(
+        await service.get(actor('rep'), 'opportunities', opportunity.id),
+      ).toMatchObject({
+        businessType: 'renewal',
+        description: '售后工单与备件管理，一期华东 120 个网点',
+      });
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+
   // An approval rejected is proposed again only once something has happened
   // since: what was missing supplied (a note, an activity done).
   it('proposes a rejected kind again only after something new', async () => {

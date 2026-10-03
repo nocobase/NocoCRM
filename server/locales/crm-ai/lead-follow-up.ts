@@ -27,4 +27,7 @@ export const followUpWords = {
   notFound: ['未查到', 'Nothing found'],
   // An example of an edition's name.
   editionExample: ['专业版', 'Professional'],
+  // How a suggested value names the CRM material it came from.
+  originalMessage: ['原始信息', 'original message'],
+  note: ['备注', 'note'],
 } as const satisfies Pairs;

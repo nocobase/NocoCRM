@@ -70,8 +70,9 @@ export interface OpportunityVerdict {
   prep: string[];
   questions: string[];
   email: { subject: string; body: string } | null;
-  // The amount or the expected close date to change, with why, and what the
-  // deal holds now (null when empty).
+  // The deal's fields to fill or correct (amount, currency, expected close
+  // date, business type, source, description), with why, and what the deal
+  // holds now (null when empty).
   updates: OpportunityUpdate[];
   pauseReason: string | null;
   resumeInDays: number | null;
@@ -110,7 +111,13 @@ export interface ProposedApproval {
 }
 
 export interface OpportunityUpdate {
-  field: 'amount' | 'expectedCloseAt';
+  field:
+    | 'amount'
+    | 'currency'
+    | 'expectedCloseAt'
+    | 'businessType'
+    | 'source'
+    | 'description';
   value: string;
   reason: string;
   current: string | null;
@@ -121,7 +128,11 @@ export interface OpportunityUpdate {
 export interface Enrichment {
   field: string;
   value: string;
+  // The page it was found on, for the web.
   source: string | null;
+  // The CRM's own material it came from (an activity's name, a note, the
+  // original message), when not the web.
+  basis?: string;
   current: string | null;
 }
 
