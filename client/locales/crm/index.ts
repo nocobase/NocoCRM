@@ -778,7 +778,7 @@ const wording = {
       'AI 提出、等你处理的建议：线索和商机的跟进建议。',
     ],
     empty: ['Nothing is waiting on you.', '没有等你处理的事。'],
-    openRecord: ['Open the record', '在记录中查看'],
+    openRecord: ['Open', '打开'],
     evaluatedAt: ['Suggested', '建议时间'],
     waiting: ['Waiting', '待处理'],
     handled: ['Handled', '已处理'],
