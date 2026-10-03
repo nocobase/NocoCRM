@@ -92,6 +92,7 @@ import { StageField } from '../components/crm/reasons.js';
 import { ApprovalActions } from '../components/crm/approval-actions.js';
 import {
   ActivityItem,
+  AfterSlash,
   ConfirmDialog,
   DetailColumns,
   DetailTabBar,
@@ -831,26 +832,36 @@ export default function EntityDetail({
       name={names[toText(record.accountId)] ?? text('entities.accounts')}
     />
   ) : null;
-  const slash = <span className='text-muted-foreground/60'>/</span>;
   // The name, edited in place, with what goes before or after it (a deal's
   // account, a contact's). A <div> with the heading role, since the editor
-  // brings block elements an <h1> may not hold.
+  // brings block elements an <h1> may not hold. Its negative margin is on
+  // the left only, lining the text up with the fields: one on the right
+  // would overflow the stacked column and make it scroll sideways.
+  const name = (
+    <InlineField
+      entity={entity}
+      record={record}
+      field={field('name')}
+      editable={editable}
+      label={text(fieldLabelKey(entity, 'name'))}
+      size='heading'
+    />
+  );
   const headingOf = (before?: ReactNode, after?: ReactNode): ReactElement => (
     <div
       role='heading'
       aria-level={1}
-      className='-mx-2 flex flex-wrap items-center py-1.5 font-heading text-xl font-semibold tracking-tight'
+      className='-ml-2 py-1.5 font-heading text-xl font-semibold tracking-tight'
     >
-      {before}
-      <InlineField
-        entity={entity}
-        record={record}
-        field={field('name')}
-        editable={editable}
-        label={text(fieldLabelKey(entity, 'name'))}
-        size='heading'
-      />
-      {after}
+      {before ? (
+        <>
+          {before}
+          <AfterSlash>{name}</AfterSlash>
+        </>
+      ) : (
+        name
+      )}
+      {after ? <AfterSlash>{after}</AfterSlash> : null}
     </div>
   );
   const askAI = (
@@ -996,14 +1007,7 @@ export default function EntityDetail({
   if (entity === 'opportunities') {
     const stage = toText(record.stage);
     return page(
-      headingOf(
-        accountCrumb ? (
-          <>
-            {accountCrumb}
-            {slash}
-          </>
-        ) : null,
-      ),
+      headingOf(accountCrumb),
       actionsOf(
         <>
           {askAI}
@@ -1142,15 +1146,7 @@ export default function EntityDetail({
 
   if (entity === 'contacts')
     return page(
-      headingOf(
-        undefined,
-        accountCrumb ? (
-          <>
-            {slash}
-            {accountCrumb}
-          </>
-        ) : null,
-      ),
+      headingOf(undefined, accountCrumb),
       actionsOf(
         <>
           {askAI}

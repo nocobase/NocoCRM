@@ -175,13 +175,24 @@ export function InlineField({
       : 'font-heading text-3xl font-semibold tracking-tight md:text-3xl';
   const readText = titled ? titleType : 'text-sm';
   // A title's parts (a lead's name and company, an account and its deal)
-  // sit side by side and wrap: the negative margin takes the padding out of
-  // the line box, so a part that wraps onto the next row sits one line below,
-  // as a long part's own second line does. The heading pads itself instead.
-  const titleRow = titled ? '-my-1.5' : '';
+  // flow as text, one run of words wrapping wherever the line is full, so
+  // a title breaks inside a name rather than only between its parts. Its
+  // padding and hover shading are drawn on each line it spans.
+  if (!editable && titled)
+    return (
+      <span className={`box-decoration-clone px-2 py-1.5 ${readText}`}>
+        <Value
+          record={record}
+          field={field}
+          lookup={lookup}
+          bare={bare}
+          plain={plain}
+        />
+      </span>
+    );
   if (!editable)
     return (
-      <div className={`px-2 py-1.5 ${titleRow} ${readText}`}>
+      <div className={`px-2 py-1.5 ${readText}`}>
         <Value
           record={record}
           field={field}
@@ -198,6 +209,8 @@ export function InlineField({
     setEditing(true);
   };
 
+  // A title's part is inline text (see above); any other value a block.
+  const Tag = titled ? 'span' : 'div';
   if (!editing)
     return (
       // Not a <button>: a single click has to leave the text selectable so a
@@ -205,11 +218,11 @@ export function InlineField({
       // a deliberate gesture — double-click, or Enter / F2 with focus. No
       // pencil: an icon at the end of the line ate the space long values need,
       // and hover shading already says the field is editable.
-      <div
+      <Tag
         role='button'
         tabIndex={0}
         aria-label={label}
-        className={`${titled ? 'w-auto max-w-full' : 'w-full'} cursor-text rounded-md px-2 py-1.5 text-left transition-colors select-text hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${titleRow} ${readText}`}
+        className={`${titled ? 'box-decoration-clone' : 'w-full'} cursor-text rounded-md px-2 py-1.5 text-left transition-colors select-text hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${readText}`}
         onDoubleClick={() => {
           // The double-click also selected the word under it; left alone, that
           // selection lands on the new value once the editor closes, so a
@@ -234,7 +247,7 @@ export function InlineField({
         {error ? (
           <span className='mt-1 block text-xs text-destructive'>{error}</span>
         ) : null}
-      </div>
+      </Tag>
     );
 
   const choices =

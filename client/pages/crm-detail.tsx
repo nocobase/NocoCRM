@@ -403,11 +403,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   // particulars (a <div> with the heading role, since the editors bring block
   // elements an <h1> may not hold).
   const heading = (
-    <div
-      role='heading'
-      aria-level={1}
-      className='-mx-2 flex flex-wrap items-center py-1.5'
-    >
+    <div role='heading' aria-level={1} className='-ml-2 py-1.5'>
       <InlineField
         entity='leads'
         record={record}
@@ -416,15 +412,16 @@ function LeadDetail({ id }: { id: string }): ReactElement {
         label={text(fieldLabelKey('leads', 'name'))}
         size='heading'
       />
-      <span className='text-xl text-muted-foreground/60'>/</span>
-      <InlineField
-        entity='leads'
-        record={record}
-        field={field('company')}
-        editable={editable}
-        label={text(fieldLabelKey('leads', 'company'))}
-        size='heading'
-      />
+      <AfterSlash>
+        <InlineField
+          entity='leads'
+          record={record}
+          field={field('company')}
+          editable={editable}
+          label={text(fieldLabelKey('leads', 'company'))}
+          size='heading'
+        />
+      </AfterSlash>
     </div>
   );
   // Everything the reader can do with the lead, together under its name:
@@ -882,6 +879,23 @@ export function DetailColumns({
       </div>
       {children}
     </CrmFrame>
+  );
+}
+
+// The part of a record's heading after a slash ("name / company", "account /
+// deal"). The heading flows as text and wraps wherever its line is full.
+export function AfterSlash({
+  children,
+}: {
+  children: ReactNode;
+}): ReactElement {
+  return (
+    <>
+      <span aria-hidden className='text-xl text-muted-foreground/60'>
+        /
+      </span>
+      {children}
+    </>
   );
 }
 
