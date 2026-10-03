@@ -2,7 +2,7 @@
 
 A CRM built as a NocoBase 3 application: leads, accounts, contacts, opportunities, activities, approvals, a team workspace, in-app notifications, and an AI assistant that reads the records a user may see and proposes changes as confirmable action cards. The server runs on `@nocobase/app-server` and the browser client is React with Refine, shadcn/ui, and Tailwind CSS.
 
-`SPEC.md` is the product specification the application implements. Everything in this directory is application-owned source code: pages, API routes, database tables, and business logic live here, not in a plugin.
+The product specification the application implements is `nocosolution/NocoCRM/SPEC.md`, in the private NocoSolution repository included as the optional `nocosolution/` submodule; the application builds and runs without it. Everything in this directory is application-owned source code: pages, API routes, database tables, and business logic live here, not in a plugin.
 
 ## Getting started
 
@@ -172,7 +172,7 @@ e2e/                     Browser tests needing a real server
 storage/                 SQLite database and uploads; gitignored
 config.yml               Your configuration, written by pnpm nocobase config init; gitignored
 config.example.yml       Documented configuration template
-SPEC.md                  Product specification the CRM implements
+nocosolution/            NocoSolution submodule (private, optional): series guidelines and the CRM's specification
 ```
 
 The three files named `runtime.ts`, `plugins.ts`, and `routes.ts` are composition roots: they list what the application is made of. Reading them tells you what is loaded and in what order.

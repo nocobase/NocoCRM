@@ -7,6 +7,8 @@ export default createApplicationConfig({
     'client-old/**',
     'public/r/**',
     'storage/**',
+    // The NocoSolution submodule: another repository's documents and scripts.
+    'nocosolution/**',
     // The AI Employee plugin's Registry UI, copied from the plugin package
     // and merged three-way on upgrades; its house style differs from ours.
     'client/extensions/nocobase-ai/**',

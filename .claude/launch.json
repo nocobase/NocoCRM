@@ -13,6 +13,20 @@
       "port": 13001,
       "autoPort": false,
       "url": "http://127.0.0.1:13001"
+    },
+    {
+      "name": "nocosolution-docs",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8765",
+        "--directory",
+        "nocosolution"
+      ],
+      "port": 8765,
+      "autoPort": false,
+      "url": "http://localhost:8765"
     }
   ]
 }

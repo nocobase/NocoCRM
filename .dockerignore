@@ -1,6 +1,7 @@
 .git
 .github
 playground
+nocosolution
 **/node_modules
 dist
 coverage
