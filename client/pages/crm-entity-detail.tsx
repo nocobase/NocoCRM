@@ -109,7 +109,6 @@ import { RecordOutcomeDialog } from '../components/crm/outcome.js';
 // Each is a complete instruction sent as soon as it is clicked.
 const shortcuts: Partial<Record<Entity, readonly string[]>> = {
   accounts: ['summarizeAccount', 'researchCompany', 'findOpportunities'],
-  opportunities: ['analyzeOpportunity'],
 };
 
 // The account a contact or a deal belongs to, in the title line.
@@ -995,7 +994,6 @@ export default function EntityDetail({
 
   if (entity === 'opportunities') {
     const stage = toText(record.stage);
-    const openStage = !['won', 'lost', 'paused'].includes(stage);
     return page(
       headingOf(
         accountCrumb ? (
@@ -1053,13 +1051,6 @@ export default function EntityDetail({
               }
             />
           </InfoRow>
-          {openStage && (
-            <InfoRow label={text('fields.probability')}>
-              <div className='px-2 py-1.5'>
-                {`${Math.round((meta.probabilities[stage] ?? 0) * 100)}%`}
-              </div>
-            </InfoRow>
-          )}
           {/* Currency, then the bare number: both edit in place, and the
               sign is not repeated. */}
           <InfoRow label={text('fields.amount')}>

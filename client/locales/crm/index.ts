@@ -971,7 +971,6 @@ const wording = {
   summarizeAccount: ['Summarize account', '总结客户'],
   researchCompany: ['Research company', '调研公司'],
   findOpportunities: ['Find opportunities', '发现销售机会'],
-  analyzeOpportunity: ['Analyze', '分析商机'],
   noRecords: ['None yet', '暂无'],
   showing: ['Showing', '当前显示'],
   metricNotes: {
@@ -1137,10 +1136,6 @@ const wording = {
     findOpportunities: [
       'Look for sales opportunities at this account: needs mentioned in activity feedback that no opportunity covers, expansion signals, renewals due. For each, say what evidence supports it and propose creating the opportunity or the activity to confirm it.',
       '在这个客户里找销售机会：活动反馈里提到但没有对应商机的需求、扩张信号、到期续约。每条说明依据，并提出创建商机或用于确认的活动。',
-    ],
-    analyzeOpportunity: [
-      'Analyze this opportunity and say how to advance it: whether the stage matches the evidence recorded, who the decision makers are and whether they are engaged, the risks, and whether the expected close date is realistic; then, per the business instructions, what evidence the next stage needs and what is missing, and the concrete next activity — propose that activity, and an approval if the recorded terms require one.',
-      '分析这个商机并给出推进建议：当前阶段和已记录证据是否匹配、决策人是谁以及是否已接触、风险、预计成交日是否现实；然后按业务指导说明下一阶段需要什么证据、现在缺什么，给出具体的下一个活动并提出该活动；如果已记录的条件需要审批，也一并提出。',
     ],
     accounts: [
       'Summarize this account and suggest opportunities to deepen the relationship.',

@@ -183,12 +183,12 @@ describe('the opportunity page', () => {
     expect(screen.queryByRole('button', { name: /赢单/ })).toBeNull();
   });
 
-  it("shows the open stage's win probability, and none once the deal is closed", () => {
+  it("shows the open stage's win probability beside the stage, not as a row of its own", () => {
     renderPage();
-    expect(screen.getByText('成交概率')).toBeTruthy();
-    expect(
-      screen.getByText(`${Math.round(probabilities.contact * 100)}%`),
-    ).toBeTruthy();
+    const chance = `${Math.round(probabilities.contact * 100)}%`;
+    const stage = screen.getByRole('button', { name: '阶段' });
+    expect(stage.textContent).toContain(chance);
+    expect(screen.queryByText('成交概率')).toBeNull();
     expect(screen.queryByText('关闭时间')).toBeNull();
   });
 
@@ -199,7 +199,7 @@ describe('the opportunity page', () => {
       closedAt: '2026-10-05T02:00:00.000Z',
     };
     renderPage();
-    expect(screen.queryByText('成交概率')).toBeNull();
+    expect(screen.queryByText('100%')).toBeNull();
     expect(screen.getByText('关闭时间')).toBeTruthy();
   });
 

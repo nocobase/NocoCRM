@@ -196,9 +196,25 @@ export function StageField({
       setBusy(false);
     }
   };
+  // An open deal's stage carries its win probability beside it, read only:
+  // the stage sets it, so it is not a field of its own.
+  const chance = (stage: string): string =>
+    entity === 'opportunities' &&
+    !['won', 'lost', 'paused'].includes(stage) &&
+    meta?.probabilities[stage] !== undefined
+      ? `${Math.round(meta.probabilities[stage] * 100)}%`
+      : '';
   const trigger = (
     <span className='flex min-w-0 items-center gap-2'>
       <Status value={current} />
+      {chance(current) ? (
+        <span
+          className='text-sm text-muted-foreground tabular-nums'
+          title={`${text('fields.probability')} ${chance(current)}`}
+        >
+          {chance(current)}
+        </span>
+      ) : null}
       {reasonShown ? (
         <span className='truncate text-sm text-muted-foreground'>
           {reasonShown}
@@ -258,6 +274,11 @@ export function StageField({
                   }}
                 >
                   {text(`options.${value}`)}
+                  {chance(value) ? (
+                    <span className='ml-auto pl-4 text-xs text-muted-foreground tabular-nums'>
+                      {chance(value)}
+                    </span>
+                  ) : null}
                 </DropdownMenuItem>
               );
             })}
