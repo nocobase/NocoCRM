@@ -16,9 +16,10 @@ import {
   Settings2,
 } from 'lucide-react';
 
-// Navigation is read from these declarations: the sidebar follows their
-// order: the workspace first, then the two object sections. A group without a path is menu-only; the sidebar renders it
-// as a headed section. Detail pages carry no navigation entry and select the
+// Navigation is read from these declarations, and the sidebar follows their
+// order: the workspace first, then the AI and the two object sections. A
+// group without a path is menu-only; the sidebar renders it as a headed
+// section. Detail pages carry no navigation entry and select the
 // nearest visible ancestor, which keeps an object highlighted on its records.
 //
 // Every page states its check: a page left without one is hidden from all but
@@ -40,14 +41,30 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     navigation: { title: 'navigation.home', icon: LayoutDashboard },
     path: '/',
   },
-  // The AI's suggestions waiting on the reader, right under the overview.
+  // The AI, right under the overview: its suggestions waiting on the
+  // reader, then its skills, read by everyone and edited by whoever holds
+  // manageSkills.
   {
-    name: 'crm-decisions',
-    path: '/crm/decisions',
-    auth: 'required',
-    authz: page('crm-decisions'),
-    navigation: { title: 'crm.decisions.title', icon: ListTodo },
-    componentLoader: () => import('./pages/crm-decisions.js'),
+    name: 'crm-ai',
+    navigation: { title: 'crm.navigation.ai' },
+    children: [
+      {
+        name: 'crm-decisions',
+        path: '/crm/decisions',
+        auth: 'required',
+        authz: page('crm-decisions'),
+        navigation: { title: 'crm.decisions.title', icon: ListTodo },
+        componentLoader: () => import('./pages/crm-decisions.js'),
+      },
+      {
+        name: 'crm-skills',
+        path: '/crm/skills',
+        auth: 'required',
+        authz: page('crm-skills'),
+        navigation: { title: 'crm.skillsPage.title', icon: BookOpenText },
+        componentLoader: () => import('./pages/crm-skills.js'),
+      },
+    ],
   },
   {
     name: 'crm-action',
@@ -86,23 +103,6 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
       },
       componentLoader: () => import('./pages/crm-list.js'),
     })),
-  },
-  // How the AI works: its skills, read by everyone and edited by whoever
-  // holds manageSkills. Later AI pages (suggestions, what the AI is doing)
-  // join this section.
-  {
-    name: 'crm-ai',
-    navigation: { title: 'crm.navigation.ai' },
-    children: [
-      {
-        name: 'crm-skills',
-        path: '/crm/skills',
-        auth: 'required',
-        authz: page('crm-skills'),
-        navigation: { title: 'crm.skillsPage.title', icon: BookOpenText },
-        componentLoader: () => import('./pages/crm-skills.js'),
-      },
-    ],
   },
   {
     name: 'crm-record',

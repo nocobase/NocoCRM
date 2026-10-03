@@ -100,7 +100,9 @@ export function NavigationTree({
   // collapsed, its popover). The CRM's primary objects sit in two such
   // sections, and a menu that hides them behind a click on every visit would
   // defeat the grouping. A collapsed sidebar drops the heading and keeps the
-  // children's icons. Settings and Dev keep the template's groups.
+  // children's icons. Sections stand apart and their entries sit close, so
+  // the grouping reads at a glance. Settings and Dev keep the template's
+  // groups.
   if (
     sections &&
     children.length > 0 &&
@@ -108,13 +110,17 @@ export function NavigationTree({
     !inPopover
   ) {
     return (
-      <section aria-label={label} className='pt-2'>
+      <section
+        aria-label={label}
+        className={collapsed ? 'pt-5 md:pt-2' : 'pt-5'}
+      >
         <p
           className={`px-3 pb-1 text-xs font-medium tracking-wide text-sidebar-foreground/60 ${collapsed ? 'md:hidden' : ''}`}
         >
           {label}
         </p>
-        <div className='space-y-1'>
+        {/* Entries a little shorter than elsewhere in the sidebar. */}
+        <div className='space-y-0.5 [&_a]:py-1.5'>
           {children.map((child) => (
             <NavigationTree
               collapsed={collapsed}
