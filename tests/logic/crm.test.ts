@@ -1857,8 +1857,8 @@ describe('CRM API security and domain rules', () => {
     });
     expect(search.status).toBe('success');
     expect(search.content.total).toBe(1);
-    const users = (await invoke('list_users', 'rep', {}))
-      .content as unknown as {
+    const users = (await invoke('list_users', 'rep', {})).content
+      .users as unknown as {
       id: string;
       roles: string[];
     }[];
@@ -1871,8 +1871,8 @@ describe('CRM API security and domain rules', () => {
     // A search narrows the list to the person named.
     expect(
       (
-        (await invoke('list_users', 'rep', { search: 'MANAGER' }))
-          .content as unknown as { id: string }[]
+        (await invoke('list_users', 'rep', { search: 'MANAGER' })).content
+          .users as unknown as { id: string }[]
       ).map((user) => user.id),
     ).toEqual(['manager']);
     // The current user's access per object, for the model to respect.
@@ -1895,8 +1895,8 @@ describe('CRM API security and domain rules', () => {
         can: { assign: false, approve: false, export: false },
       }),
     ]);
-    const asManager = (await invoke('list_users', 'manager', {}))
-      .content as unknown as { id: string; can?: Record<string, boolean> }[];
+    const asManager = (await invoke('list_users', 'manager', {})).content
+      .users as unknown as { id: string; can?: Record<string, boolean> }[];
     expect(asManager.find((user) => user.id === 'manager')?.can).toEqual(
       expect.objectContaining({ assign: true, approve: true }),
     );

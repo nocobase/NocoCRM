@@ -342,7 +342,7 @@ export function crmRecordTools(
       definition: {
         name: 'list_users',
         description:
-          'List the CRM users: id, name, username, roles (sales-representative, sales-manager, system-administrator) and which one is the current user ("current": true, with "can": what they may do beyond their own records — assign a record to someone else, approve, export — and "access": per object, the operations they may perform and on which records: all, own, created). Call it to turn a person\'s name into the id that ownerId, approverId or internalParticipants take, to know who may approve, and to learn whether the current user can own records or give one to someone else. Only sales representatives and managers can own records; only managers approve.',
+          'List the CRM users, as "users": id, name, username, roles (sales-representative, sales-manager, system-administrator) and which one is the current user ("current": true, with "can": what they may do beyond their own records — assign a record to someone else, approve, export — and "access": per object, the operations they may perform and on which records: all, own, created). Call it to turn a person\'s name into the id that ownerId, approverId or internalParticipants take, to know who may approve, and to learn whether the current user can own records or give one to someone else. Only sales representatives and managers can own records; only managers approve.',
         schema: {
           type: 'object',
           properties: {
@@ -372,7 +372,11 @@ export function crmRecordTools(
           const search = text(
             (input as Row | undefined)?.search,
           )?.toLowerCase();
-          return (await service.users(actor))
+          // An object rather than the bare list: the plugin hands an array
+          // result to the model as content parts, which DashScope refuses
+          // ("item must be dict and key[type] should in dict"), where an
+          // object is sent as JSON text like every other tool's result.
+          const users = (await service.users(actor))
             .filter((user) => !user.disabled)
             .filter(
               (user) =>
@@ -391,6 +395,7 @@ export function crmRecordTools(
                 ? { current: true, can, access }
                 : {}),
             }));
+          return { users };
         });
       },
     }),
