@@ -4985,6 +4985,36 @@ describe('CRM opportunity follow-up', () => {
         approval: '3月底上线交付承诺申请',
       },
     ]);
+    // Submitted again under the same name and approved: the latest one
+    // stands, not the one rejected before it.
+    expect(
+      checkTerms(
+        [
+          {
+            topic: 'commitment',
+            term: '3 月底上线',
+            beyondStandard: true,
+            approval: '3月底上线交付承诺申请',
+          },
+        ],
+        [
+          {
+            name: '3月底上线交付承诺申请',
+            topic: 'commitment',
+            status: 'rejected',
+            submittedAt: '2026-10-03T07:46:00.000Z',
+          },
+          {
+            name: '3月底上线交付承诺申请',
+            topic: 'commitment',
+            status: 'approved',
+            submittedAt: '2026-10-03T08:04:00.000Z',
+          },
+        ],
+        [],
+        '',
+      ),
+    ).toMatchObject({ terms: [{ status: 'approved' }], holdsBack: false });
     // All covered: nothing holds the deal back.
     expect(
       checkTerms(
