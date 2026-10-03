@@ -981,6 +981,14 @@ export default function EntityDetail({
                 editable={editable}
                 title={title}
                 onSave={patch}
+                // Done with a planned activity is its outcome recorded, as
+                // the button does: the AI then follows up with it, where a
+                // bare status change would start before there is one.
+                instead={
+                  currentStatus === 'planned'
+                    ? { completed: () => setRecording(true) }
+                    : undefined
+                }
               />
             </InfoRow>
           )}
@@ -992,8 +1000,14 @@ export default function EntityDetail({
         <InfoGroup title={text('activityGroups.related')}>
           {['leadId', 'accountId', 'opportunityId'].map(row)}
         </InfoGroup>
+        {/* A planned activity has no outcome yet: it is recorded through
+            "Record outcome", which completes it and has the AI follow up,
+            not typed into the field, where it would do neither. */}
         <InfoGroup title={text('activityGroups.content')}>
-          {['description', 'feedback'].map(row)}
+          {(currentStatus === 'planned' && !toText(record.feedback ?? '')
+            ? ['description']
+            : ['description', 'feedback']
+          ).map(row)}
         </InfoGroup>
         <InfoGroup title={text('activityGroups.system')}>
           {time('createdAt')}

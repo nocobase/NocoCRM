@@ -139,6 +139,7 @@ export function StageField({
   editable,
   title,
   onSave,
+  instead = {},
 }: {
   entity: Entity;
   record: CrmRecord;
@@ -146,6 +147,9 @@ export function StageField({
   editable: boolean;
   title: string;
   onSave: (values: Data) => Promise<void>;
+  // A status the page takes over instead of saving it: a planned activity
+  // made completed records its outcome first.
+  instead?: Partial<Record<string, () => void>>;
 }): ReactElement {
   const { text } = useCrmText();
   const { data: meta } = useMetadata();
@@ -269,7 +273,9 @@ export function StageField({
                   key={value}
                   disabled={value === current}
                   onClick={() => {
-                    if (needed) setAsking(value);
+                    const takeOver = instead[value];
+                    if (takeOver) takeOver();
+                    else if (needed) setAsking(value);
                     else void commit({ [field]: value, ...clearedReasons });
                   }}
                 >

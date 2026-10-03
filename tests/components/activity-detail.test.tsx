@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
@@ -190,6 +190,34 @@ describe('the activity page', () => {
     expect(screen.getByRole('button', { name: /记录结果/ })).toBeTruthy();
   });
 
+  // The outcome of a planned activity goes through "Record outcome", which
+  // completes it and has the AI follow up; typed into the field it would
+  // do neither, so the field waits until there is one.
+  it('keeps the outcome field out of a planned activity until it has one', () => {
+    renderPage();
+    expect(screen.queryByText('反馈 / 结果')).toBeNull();
+    cleanup();
+    state.record = { ...planned, feedback: '客户确认了报价' };
+    renderPage();
+    expect(screen.getByText('反馈 / 结果')).toBeTruthy();
+  });
+
+  // Marking it done from the status menu records its outcome, as the
+  // button does, rather than completing it with nothing for the AI to read.
+  it('records the outcome when the status menu marks a planned activity completed', async () => {
+    renderPage();
+    await userEvent.click(screen.getByRole('button', { name: '状态' }));
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: '已完成' }),
+    );
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+    expect(state.api).not.toHaveBeenCalledWith(
+      expect.stringContaining('activities/'),
+      'PATCH',
+      expect.objectContaining({ status: 'completed' }),
+    );
+  });
+
   it('shows the completion time and no outcome button once completed', () => {
     state.record = {
       ...planned,
@@ -199,6 +227,7 @@ describe('the activity page', () => {
     renderPage();
     expect(screen.queryByRole('button', { name: /记录结果/ })).toBeNull();
     expect(screen.getByText('完成时间')).toBeTruthy();
+    expect(screen.getByText('反馈 / 结果')).toBeTruthy();
   });
 
   it('counts attachments and notes but not the timeline, and keeps the tab in the address', async () => {
