@@ -628,9 +628,9 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
     routes.post('/approvals/:id/review', async (c) => {
       const actor = c.get('actor');
       const approval = await service.get(actor, 'approvals', c.req.param('id'));
-      // The approver's, and the applicant's who submitted it; redoing one
-      // in the approver's words (`revise`, `instruction`) theirs alone.
-      if (approval.approverId !== actor.id && approval.ownerId !== actor.id)
+      // The approver's alone, like the review itself (the one submission
+      // starts is requested by the service, not through this route).
+      if (approval.approverId !== actor.id)
         throw new CrmError('forbidden', 403);
       const body = object(await c.req.json().catch(() => ({})));
       const entry = await reviewer()?.request(

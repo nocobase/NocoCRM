@@ -30,8 +30,13 @@ import {
 } from '../components/crm/api.js';
 
 // Handled: accepted or dismissed (a card being redone still waits).
+// Handled: decided on its card, or an approval's review voided because the
+// approval was withdrawn or decided on the approval itself.
 const isDecided = (entry: EvaluationEntry): boolean =>
-  entry.status === 'accepted' || entry.status === 'dismissed';
+  entry.status === 'accepted' ||
+  entry.status === 'dismissed' ||
+  (entry.status === 'superseded' &&
+    Boolean((entry.ai as { approvalOutcome?: string }).approvalOutcome));
 
 // A lead's or a deal's follow-up waiting on its decision, or an approval's
 // review waiting on its approver, with the record it concerns.
@@ -135,6 +140,20 @@ export default function DecisionsPage(): ReactElement {
       : toText((entry.opportunity ?? entry.approval)?.name);
   const kindOf = (entry: EvaluationItem): string =>
     sentence(text(`entity.${entry.entity}`));
+  // What became of an approval's review once handled: approved or rejected
+  // on the card, dismissed, or the approval withdrawn or decided on itself.
+  const approvalOutcomeLabel = (entry: EvaluationItem): string => {
+    const ai = entry.ai as { decision?: string; approvalOutcome?: string };
+    if (entry.status === 'accepted')
+      return text(`approvalReview.statuses.${ai.decision ?? 'approve'}`);
+    if (entry.status === 'dismissed')
+      return text('evaluation.statuses.dismissed');
+    return ai.approvalOutcome === 'withdrawn'
+      ? text('options.withdrawn')
+      : text(
+          `approvalReview.statuses.${ai.approvalOutcome === 'rejected' ? 'reject' : 'approve'}`,
+        );
+  };
   const ownerOf = (entry: EvaluationItem): string =>
     toText(meta?.users.find((u) => u.id === recordOf(entry).ownerId)?.name);
   const when = (at: string): string =>
@@ -278,6 +297,22 @@ export default function DecisionsPage(): ReactElement {
                       )}
                       {entry.ai.result && entry.entity === 'approvals' && (
                         <span className='line-clamp-2 text-xs text-muted-foreground'>
+                          {/* Handled, what became of it first: decided on
+                              the card, dismissed, or the approval withdrawn
+                              or decided on itself. */}
+                          {decided ? (
+                            <>
+                              <Badge
+                                variant={
+                                  entry.status === 'accepted'
+                                    ? 'success'
+                                    : 'muted'
+                                }
+                              >
+                                {approvalOutcomeLabel(entry)}
+                              </Badge>{' '}
+                            </>
+                          ) : null}
                           <Badge variant={decided ? 'muted' : 'ai'}>
                             {text(
                               `approvalReview.recommendations.${

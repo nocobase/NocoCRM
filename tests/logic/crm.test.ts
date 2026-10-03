@@ -88,6 +88,7 @@ import {
   mergeProposal,
 } from '../../server/providers/crm/lead-merge.js';
 import {
+  approvalsSettled,
   followUpAfterActivity,
   organiseFeedback,
   recordOutcome,
@@ -99,6 +100,7 @@ import {
 } from '@nocobase/app-plugin-ai-employee/server';
 import {
   LeadEvaluator,
+  carried,
   contactTime,
   aiStates,
   latestEvaluation,
@@ -4902,6 +4904,18 @@ describe('CRM opportunity follow-up', () => {
       });
       expect(prompts.at(-1)).toContain('技能正文');
       expect(prompts.at(-1)).toContain('一期 8 折');
+      // The approver's alone: the applicant reads no review, neither as the
+      // latest nor in the approval's history, and may not ask for one.
+      expect(await latestReview(service, actor('rep'), first)).toBeNull();
+      const told = async (who: string) =>
+        (await service.historyOf(actor(who), 'approvals', first)).data.some(
+          (event) => event.action === 'ai',
+        );
+      expect(await told('rep')).toBe(false);
+      expect(await told('manager')).toBe(true);
+      expect(
+        (await request(`/approvals/${first}/review`, 'rep', 'POST', {})).status,
+      ).toBe(403);
       // The approver's to decide: in their Waiting on me, not the applicant's.
       expect(
         (await pendingDecisions(service, actor('manager'))).data.some(
@@ -4965,10 +4979,107 @@ describe('CRM opportunity follow-up', () => {
       const second = await submit('全国推广 8 折');
       await service.approvalAction(actor('manager'), second, 'reject', '不批');
       expect(
-        (await latestReview(service, actor('manager'), second))?.status,
-      ).toBe('superseded');
+        await latestReview(service, actor('manager'), second),
+      ).toMatchObject({
+        status: 'superseded',
+        ai: { approvalOutcome: 'rejected', retiredById: 'manager' },
+      });
+      // Withdrawn by the applicant, its review is voided too, says so, and
+      // stays in the approver's Waiting on me among those handled.
+      const fourth = await submit('三期 8 折');
+      await service.approvalAction(actor('rep'), fourth, 'withdraw');
+      const voided = await latestReview(service, actor('manager'), fourth);
+      expect(voided).toMatchObject({
+        status: 'superseded',
+        ai: { approvalOutcome: 'withdrawn', retiredById: 'rep' },
+      });
+      expect(
+        (await pendingDecisions(service, actor('manager'))).data.some(
+          (entry) => entry.id === voided!.id,
+        ),
+      ).toBe(false);
+      expect(
+        (
+          await pendingDecisions(service, actor('manager'), { state: 'all' })
+        ).data.some((entry) => entry.id === voided!.id),
+      ).toBe(true);
     } finally {
       enabled.mockRestore();
+    }
+  });
+
+  // Approvals submitted together follow the deal up once, when the last of
+  // them leaves the queue, carrying each one's outcome; a withdrawal may be
+  // that last, and all withdrawn follows nothing up.
+  it('follows a deal up once the approvals submitted together are settled', async () => {
+    const { opportunity } = await deal('一起提交的审批');
+    const submit = async (name: string) => {
+      const approval = await service.save(actor('rep'), 'approvals', {
+        name,
+        opportunityId: opportunity.id,
+        topic: 'discount',
+        approverId: 'manager',
+      });
+      return service.approvalAction(actor('rep'), approval.id, 'submit');
+    };
+    const decided = vi.fn();
+    service.approvalDecided = decided;
+    try {
+      const a = await submit('折扣');
+      const b = await submit('账期');
+      const c = await submit('交付承诺');
+      const first = await service.approvalAction(
+        actor('manager'),
+        toText(a.id),
+        'approve',
+      );
+      // Two still wait: not yet.
+      expect(await approvalsSettled(service, first)).toBeNull();
+      await service.approvalAction(actor('manager'), toText(b.id), 'reject');
+      const last = await service.approvalAction(
+        actor('rep'),
+        toText(c.id),
+        'withdraw',
+      );
+      // The withdrawal is the last to leave: now, with every outcome.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(decided).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ id: c.id, status: 'withdrawn' }),
+      );
+      expect(
+        (await approvalsSettled(service, last))
+          ?.map((x) => [x.name, x.status])
+          .sort(),
+      ).toEqual(
+        [
+          ['交付承诺', 'withdrawn'],
+          ['折扣', 'approved'],
+          ['账期', 'rejected'],
+        ].sort(),
+      );
+      // The card keeps them through its run, as it keeps what started it.
+      const outcomes = await approvalsSettled(service, last);
+      expect(
+        carried({ trigger: 'approvalDecided', decidedApprovals: outcomes! }),
+      ).toEqual({ trigger: 'approvalDecided', decidedApprovals: outcomes });
+      // Submitted on its own later, an approval is a batch of its own.
+      const later = await submit('源码托管');
+      await service.database
+        .query()
+        .updateTable('crmApprovals')
+        .set({ submittedAt: new Date(Date.now() + 60_000).toISOString() })
+        .where('id', '=', toText(later.id))
+        .execute();
+      const alone = await service.approvalAction(
+        actor('rep'),
+        toText(later.id),
+        'withdraw',
+      );
+      // All of it withdrawn: nothing to follow up.
+      expect(await approvalsSettled(service, alone)).toBeNull();
+    } finally {
+      service.approvalDecided = undefined;
     }
   });
 });
@@ -5216,6 +5327,7 @@ describe('lead signals', () => {
       deal.id,
       undefined,
       'activityDone',
+      undefined,
     );
     expect(leads.request).not.toHaveBeenCalled();
     expect(

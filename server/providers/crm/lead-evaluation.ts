@@ -280,8 +280,10 @@ export async function pendingDecisions(
         'aiStatus',
         'in',
         // Running too: a card being redone stays in its place meanwhile.
+        // A review voided by its approval leaving the queue (withdrawn, or
+        // decided on the approval itself) counts among the handled.
         options.state === 'all'
-          ? ['running', 'pending', 'accepted', 'dismissed']
+          ? ['running', 'pending', 'accepted', 'dismissed', 'superseded']
           : ['running', 'pending'],
       )
       .orderBy('createdAt', 'desc')
@@ -289,6 +291,13 @@ export async function pendingDecisions(
       .execute()
   )
     .map((row) => ({ ...readEntry(row), entity: toText(row.entity) }))
+    // Superseded is listed only for that: a card replaced by a newer one
+    // is not something anyone handled.
+    .filter(
+      (entry) =>
+        entry.status !== 'superseded' ||
+        (entry.entity === 'approvals' && Boolean(entry.ai.approvalOutcome)),
+    )
     // Every one decided stays, however often the record was followed up
     // since; a record has at most one waiting (a newer one supersedes it).
     // Those waiting first, newest first; then the decided, the latest
@@ -296,8 +305,8 @@ export async function pendingDecisions(
     .sort((a, b) =>
       open(a) || open(b)
         ? Number(open(b)) - Number(open(a))
-        : Date.parse(toText(b.ai.decidedAt ?? b.createdAt)) -
-          Date.parse(toText(a.ai.decidedAt ?? a.createdAt)),
+        : Date.parse(toText(b.ai.decidedAt ?? b.ai.retiredAt ?? b.createdAt)) -
+          Date.parse(toText(a.ai.decidedAt ?? a.ai.retiredAt ?? a.createdAt)),
     );
   // What the reader may read and edit, in the scope asked: each list's own
   // filters. Deciding takes leave to edit the record; a decided one only to
@@ -1843,16 +1852,13 @@ export function cleanEnrich(
 
 // What an entry keeps through its run besides its result: for a revision,
 // the card it redoes and the person's instruction; for a follow-up the
-// system started, what started it (`trigger`).
+// system started, what started it (`trigger`, and for a deal's approvals
+// decided, which and how).
+type Carried =
+  'revises' | 'instruction' | 'instructedById' | 'trigger' | 'decidedApprovals';
 export function carried(
-  ai: Pick<
-    EvaluationEntry['ai'],
-    'revises' | 'instruction' | 'instructedById' | 'trigger'
-  >,
-): Pick<
-  EvaluationEntry['ai'],
-  'revises' | 'instruction' | 'instructedById' | 'trigger'
-> {
+  ai: Pick<EvaluationEntry['ai'], Carried>,
+): Pick<EvaluationEntry['ai'], Carried> {
   return {
     ...(ai.revises
       ? {
@@ -1862,6 +1868,9 @@ export function carried(
         }
       : {}),
     ...(ai.trigger ? { trigger: ai.trigger } : {}),
+    ...(ai.decidedApprovals?.length
+      ? { decidedApprovals: ai.decidedApprovals }
+      : {}),
   };
 }
 

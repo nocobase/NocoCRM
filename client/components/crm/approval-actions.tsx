@@ -1,5 +1,5 @@
 import { useState, type ReactElement } from 'react';
-import { Send, ShieldCheck } from 'lucide-react';
+import { Send, ShieldCheck, ShieldX, Trash2, Undo2 } from 'lucide-react';
 import { Button } from '../ui/button.js';
 import { Textarea } from '../ui/textarea.js';
 import {
@@ -89,6 +89,7 @@ export function ApprovalActions({
             variant='outline'
             onClick={() => setConfirmDelete(true)}
           >
+            <Trash2 />
             {text('deleteRecord', { entity: text('entity.approvals') })}
           </Button>
         )}
@@ -104,6 +105,7 @@ export function ApprovalActions({
             variant='outline'
             onClick={() => setDecision('withdraw')}
           >
+            <Undo2 />
             {text('withdraw')}
           </Button>
         )}
@@ -118,6 +120,7 @@ export function ApprovalActions({
               variant='destructive'
               onClick={() => setDecision('reject')}
             >
+              <ShieldX />
               {text('reject')}
             </Button>
           </>

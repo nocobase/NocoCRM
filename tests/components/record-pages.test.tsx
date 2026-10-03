@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
@@ -333,17 +333,22 @@ describe('the approval page', () => {
   });
 
   // The AI's review (approval-review.tsx) replaced the chat briefing: its
-  // status under the buttons, and asking for it while the approval waits.
+  // status under the buttons, and asking for it while the approval waits,
+  // one button whether it is the first review or another.
   it('offers the AI review to the approver while it waits', () => {
     renderPage();
-    expect(screen.queryByRole('button', { name: /辅助审批/ })).toBeNull();
-    expect(screen.getByRole('button', { name: /AI 审批建议/ })).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: /辅助审批/ })).toHaveLength(1);
   });
 
-  it('withholds asking for it from someone neither approver nor applicant', () => {
-    state.userId = 'someone';
-    renderPage();
-    expect(screen.queryByRole('button', { name: /AI 审批建议/ })).toBeNull();
+  // The review is the approver's alone: the applicant, like anyone else,
+  // may not ask for one.
+  it('withholds asking for it from everyone but the approver', () => {
+    for (const userId of ['applicant', 'someone']) {
+      state.userId = userId;
+      renderPage();
+      expect(screen.queryByRole('button', { name: /辅助审批/ })).toBeNull();
+      cleanup();
+    }
   });
 
   it('shows the applicant no marker and the creation time', () => {

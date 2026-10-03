@@ -160,4 +160,41 @@ describe('Waiting on me', () => {
       '/crm/decisions?entry=e2',
     );
   });
+
+  // An approval's review handled says what became of it, as a lead's does:
+  // here the applicant withdrew the approval, which voided the review.
+  it("says an approval's review was withdrawn", async () => {
+    state.api.mockResolvedValue({
+      data: [
+        entry('e1', '周晓'),
+        {
+          id: 'r1',
+          entity: 'approvals',
+          status: 'superseded',
+          createdAt: '2026-10-03T05:00:00.000Z',
+          approval: {
+            id: 'ap-1',
+            name: '源码交付条款',
+            topic: 'contractTerms',
+            status: 'withdrawn',
+            ownerId: 'rep',
+            opportunityId: 'opp-1',
+            opportunity: '老板电器',
+          },
+          ai: {
+            approvalOutcome: 'withdrawn',
+            retiredById: 'rep',
+            retiredAt: '2026-10-03T06:00:00.000Z',
+            result: { recommendation: 'conditional', summary: '改为源码托管' },
+          },
+        },
+      ],
+      total: 2,
+      pending: 1,
+    });
+    renderPage(false);
+    const item = (await screen.findByText('源码交付条款')).closest('button')!;
+    expect(item.textContent).toContain('已撤回');
+    expect(item.textContent).toContain('建议有条件批准');
+  });
 });

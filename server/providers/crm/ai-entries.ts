@@ -152,6 +152,18 @@ export interface EvaluationEntry<V = Verdict> {
     trigger?: string;
     // When a running card's run began; absent while it waits its turn.
     startedAt?: string;
+    // An approval's review voided because the approval left the queue
+    // without it: what became of the approval, by whom and when.
+    approvalOutcome?: 'withdrawn' | 'approved' | 'rejected';
+    retiredAt?: string;
+    retiredById?: string;
+    // A deal's follow-up started by its approvals' decisions: the approvals
+    // submitted together and what became of each.
+    decidedApprovals?: {
+      id: string;
+      name: string;
+      status: string;
+    }[];
   };
 }
 

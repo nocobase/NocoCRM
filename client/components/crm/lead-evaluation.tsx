@@ -159,6 +159,9 @@ export interface EvaluationEntry {
     trigger?: string;
     // When a running follow-up began; absent while it waits its turn.
     startedAt?: string;
+    // A deal's follow-up started by its approvals' decisions: those
+    // submitted together, each with what became of it.
+    decidedApprovals?: { id: string; name: string; status: string }[];
   };
 }
 
@@ -678,9 +681,18 @@ export function VerdictPanel({
       {/* A follow-up the system started says what started it. */}
       {entry.ai.trigger && (
         <p className='text-muted-foreground'>
-          {text(`evaluation.trigger.${entry.ai.trigger}`, {
-            defaultValue: '',
-          })}
+          {entry.ai.decidedApprovals?.length
+            ? text('evaluation.trigger.approvalsDecided', {
+                approvals: entry.ai.decidedApprovals
+                  .map(
+                    (approval) =>
+                      `${approval.name} ${text(`options.${approval.status}`)}`,
+                  )
+                  .join(' · '),
+              })
+            : text(`evaluation.trigger.${entry.ai.trigger}`, {
+                defaultValue: '',
+              })}
         </p>
       )}
       {/* A card redone on someone's word says whose and what. */}

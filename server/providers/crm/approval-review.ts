@@ -775,13 +775,16 @@ export class ApprovalReviewer {
   }
 }
 
-// The newest review of an approval the reader may read, if any.
+// The newest review of an approval, for its approver alone: it reads with
+// the approver's access and leans on their decision, so the applicant and
+// everyone else get none.
 export async function latestReview(
   service: CrmService,
   actor: Actor,
   approvalId: string,
 ): Promise<EvaluationEntry<ApprovalReview> | null> {
-  await service.get(actor, 'approvals', approvalId);
+  const approval = await service.get(actor, 'approvals', approvalId);
+  if (approval.approverId !== actor.id) return null;
   const row = await service.database
     .query()
     .selectFrom('crmHistory')

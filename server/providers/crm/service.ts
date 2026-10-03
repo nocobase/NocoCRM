@@ -716,7 +716,12 @@ export class CrmService {
       action?: string;
     } = {},
   ): Promise<{ data: Row[]; total: number; page: number; pageSize: number }> {
-    await this.get(actor, entity, id);
+    const subject = await this.get(actor, entity, id);
+    // An approval's AI review is its approver's working draft: it reads
+    // with the approver's access (precedents on accounts the applicant may
+    // not see) and leans on a decision not yet made, so no one else reads it.
+    const hideReviews =
+      entity === 'approvals' && subject.approverId !== actor.id;
     const readable = outputFields(
       entity,
       await conditions(actor, entity, 'read'),
@@ -785,9 +790,12 @@ export class CrmService {
           : options.source === 'user'
             ? select.where('source', 'is', null)
             : select;
-      return options.action === 'note'
-        ? sourced.where('action', '=', 'note')
+      const shown = hideReviews
+        ? sourced.where('action', 'not in', ['ai', 'aiRevise'])
         : sourced;
+      return options.action === 'note'
+        ? shown.where('action', '=', 'note')
+        : shown;
     };
     // An activity's edit tells the record only when it changes who has it
     // or when it is (TOLD), and a change of status only to done or called
@@ -1935,21 +1943,39 @@ export class CrmService {
     );
     // Decided or withdrawn, a review still waiting has nothing left to
     // decide (approval-review.ts); a review's own decision marks it after.
+    // It keeps what became of the approval, by whom and when, so the
+    // approver's Waiting on me still shows it, among those handled, rather
+    // than losing it without a word.
     if (status !== 'pending')
-      await tx
-        .updateTable('crmHistory')
-        .set({ aiStatus: 'superseded' })
+      for (const row of await tx
+        .selectFrom('crmHistory')
+        .select(['id', 'ai'])
         .where('entity', '=', 'approvals')
         .where('recordId', '=', id)
         .where('action', '=', 'ai')
         .where('aiStatus', 'in', ['pending', 'running'])
-        .execute();
+        .execute())
+        await tx
+          .updateTable('crmHistory')
+          .set({
+            aiStatus: 'superseded',
+            ai: JSON.stringify({
+              ...((jsonValue(row.ai) ?? {}) as Row),
+              approvalOutcome: status,
+              retiredAt: now,
+              retiredById: actor.id,
+            }),
+          })
+          .where('id', '=', row.id)
+          .execute();
     const changed = await this.get(actor, 'approvals', id, tx);
     // The message goes out through the approval-notification workflow once
     // the change is committed: a submission or withdrawal to the approver,
     // a decision to the applicant.
     this.afterCommit(actor, () => this.notifyApproval(actor, changed));
-    if ((status === 'approved' || status === 'rejected') && !actor.quiet)
+    // A withdrawal counts too: it may be the last of those submitted
+    // together to leave the queue (index.ts follows the deal up then).
+    if (['approved', 'rejected', 'withdrawn'].includes(status) && !actor.quiet)
       this.afterCommit(actor, async () =>
         this.approvalDecided?.(actor, changed),
       );

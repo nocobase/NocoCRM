@@ -55,6 +55,11 @@ export interface ReviewEntry {
     instruction?: string;
     instructedById?: string;
     startedAt?: string;
+    // Voided because the approval left the queue without it: withdrawn,
+    // or decided on the approval itself; by whom and when.
+    approvalOutcome?: 'withdrawn' | 'approved' | 'rejected';
+    retiredAt?: string;
+    retiredById?: string;
   };
 }
 
@@ -180,7 +185,18 @@ export function ReviewPanel({
         )}
         {entry.status === 'superseded' && (
           <span className='text-xs text-muted-foreground'>
-            {text('approvalReview.superseded')}
+            {entry.ai.approvalOutcome
+              ? text(`approvalReview.retired.${entry.ai.approvalOutcome}`, {
+                  name:
+                    meta.users.find((u) => u.id === entry.ai.retiredById)
+                      ?.name ?? '',
+                  time: localDate(
+                    entry.ai.retiredAt,
+                    language,
+                    meta.settings.timeZone,
+                  ),
+                })
+              : text('approvalReview.superseded')}
           </span>
         )}
         {entry.status === 'pending' && review && (
@@ -415,9 +431,10 @@ export function ReviewStatus({
   }, [entry?.status, refresh]);
   if (!meta?.assistant) return null;
   const record = approval?.record;
+  // The review is the approver's alone (the server returns none to anyone
+  // else), and so is asking for one.
   const mayAsk =
-    record?.status === 'pending' &&
-    (record.approverId === meta.userId || record.ownerId === meta.userId);
+    record?.status === 'pending' && record.approverId === meta.userId;
   const review = entry?.ai.result;
   return (
     <div className='flex flex-wrap items-center gap-1'>
@@ -466,7 +483,7 @@ export function ReviewStatus({
           }}
         >
           {busy ? <Spinner /> : <Sparkles />}
-          {text(entry ? 'approvalReview.again' : 'approvalReview.ask')}
+          {text('approvalReview.ask')}
         </Button>
       )}
       <ErrorNotice error={error} />

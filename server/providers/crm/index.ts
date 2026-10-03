@@ -19,7 +19,11 @@ import { scanLeadSignals } from './lead-signals.js';
 import { jobExecutorServiceToken } from '@nocobase/app-server/jobs';
 import type { JobExecutor } from '@nocobase/jobs';
 import { createFollowUpJob, FOLLOW_UP_JOBS } from './follow-up-jobs.js';
-import { followUpAfterActivity, followUpOpportunity } from './feedback.js';
+import {
+  followUpAfterActivity,
+  followUpOpportunity,
+  approvalsSettled,
+} from './feedback.js';
 import { crmActor } from '../../ai/tools/crm-records.js';
 import {
   provisionCrm,
@@ -258,10 +262,14 @@ export default class CrmProvider extends ServiceProvider<Application> {
     // An approval submitted, reviewed by the AI for its approver.
     service.approvalSubmitted = (by, approval) =>
       void reviewer.request(by, toText(approval.id)).catch(() => undefined);
-    // An approval decided, its deal followed up again as its owner, who
-    // acts on the decision.
+    // An approval decided (or withdrawn), its deal followed up again as its
+    // owner, who acts on the decision: once, when the last of the approvals
+    // submitted with it leaves the queue, and only if one of them was
+    // decided rather than all withdrawn.
     service.approvalDecided = (_by, approval) =>
       void (async () => {
+        const together = await approvalsSettled(service, approval);
+        if (!together) return;
         const deal = await service.database
           .query()
           .selectFrom('crmOpportunities')
@@ -280,6 +288,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
           owner,
           toText(deal.id),
           'approvalDecided',
+          together,
         );
       })().catch(() => undefined);
     service.leadCompanyChanged = (by, leadId) =>

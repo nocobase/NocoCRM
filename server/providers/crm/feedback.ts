@@ -15,7 +15,7 @@ import type { Actor } from './authorization.js';
 import type { FollowUpTrigger, LeadEvaluator } from './lead-evaluation.js';
 import type { OpportunityEvaluator } from './opportunity-evaluation.js';
 import { LONG_TEXT_LIMIT } from './limits.js';
-import { CrmError, object, toText } from './schema.js';
+import { CrmError, object, toText, type CrmRecord } from './schema.js';
 import type { CrmService } from './service.js';
 
 // What came of an activity, as a person jotted it down, written up as its
@@ -257,12 +257,60 @@ export async function followUpLead(
 
 // A new follow-up of a deal the person may edit and that is still open;
 // false when there is none to start.
+// The approvals submitted with this one: the deal's approvals sent within
+// seconds of it, as the accept of a follow-up card submits them (or a
+// person in a row). Each with its name and where it stands now.
+const TOGETHER_MS = 10_000;
+export async function submittedTogether(
+  service: CrmService,
+  approval: CrmRecord,
+): Promise<{ id: string; name: string; status: string }[]> {
+  const time = (value: unknown): number =>
+    value ? new Date(value as string).getTime() : NaN;
+  const at = time(approval.submittedAt);
+  const rows = await service.database
+    .query()
+    .selectFrom('crmApprovals')
+    .select(['id', 'name', 'status', 'submittedAt'])
+    .where('opportunityId', '=', toText(approval.opportunityId))
+    .where('status', '!=', 'draft')
+    .execute();
+  return rows
+    .filter(
+      (row) =>
+        toText(row.id) === toText(approval.id) ||
+        Math.abs(time(row.submittedAt) - at) <= TOGETHER_MS,
+    )
+    .map((row) => ({
+      id: toText(row.id),
+      name: toText(row.name),
+      status: toText(row.status),
+    }));
+}
+
+// What the deal's follow-up after a decision carries, once the approvals
+// submitted with this one have all left the queue and one of them was
+// decided rather than withdrawn; null while one still waits, or when all
+// were withdrawn.
+export async function approvalsSettled(
+  service: CrmService,
+  approval: CrmRecord,
+): Promise<{ id: string; name: string; status: string }[] | null> {
+  const together = await submittedTogether(service, approval);
+  return together.some((a) => a.status === 'pending') ||
+    !together.some((a) => ['approved', 'rejected'].includes(a.status))
+    ? null
+    : together;
+}
+
 export async function followUpOpportunity(
   service: CrmService,
   evaluator: OpportunityEvaluator,
   actor: Actor,
   opportunityId: string,
   trigger?: 'activityDone' | 'approvalDecided',
+  // The approvals whose decisions started it, shown on the card.
+  decidedApprovals?: { id: string; name: string; status: string }[],
 ): Promise<boolean> {
   try {
     const opportunity = await service.get(
@@ -275,7 +323,13 @@ export async function followUpOpportunity(
     if (opportunity.stage === 'won' || opportunity.stage === 'lost')
       return false;
     return Boolean(
-      await evaluator.request(actor, opportunityId, undefined, trigger),
+      await evaluator.request(
+        actor,
+        opportunityId,
+        undefined,
+        trigger,
+        decidedApprovals,
+      ),
     );
   } catch {
     return false;

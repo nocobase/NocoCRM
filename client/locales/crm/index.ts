@@ -288,6 +288,10 @@ const wording = {
         'An approval was decided: the AI followed up again.',
         '审批有了结果，AI 继续跟进。',
       ],
+      approvalsDecided: [
+        'Approvals decided ({{approvals}}): the AI followed up again.',
+        '审批有了结果（{{approvals}}），AI 继续跟进。',
+      ],
       merged: [
         'Leads merged: the AI followed up again.',
         '线索已合并，AI 重新跟进。',
@@ -576,6 +580,21 @@ const wording = {
     running: ['The AI is reviewing the request…', 'AI 正在分析这个申请…'],
     failed: ['The AI could not review it', '没能给出审批建议'],
     superseded: ['decided on the approval itself', '已在审批上直接处理'],
+    // Voided because the approval left the queue without the card.
+    retired: {
+      withdrawn: [
+        '{{name}} withdrew the request {{time}}; this review no longer applies',
+        '{{name}} {{time}} 撤回了审批，这条建议已作废',
+      ],
+      approved: [
+        '{{name}} approved it on the request {{time}}; this review no longer applies',
+        '{{name}} {{time}} 在审批上直接批准，这条建议已作废',
+      ],
+      rejected: [
+        '{{name}} rejected it on the request {{time}}; this review no longer applies',
+        '{{name}} {{time}} 在审批上直接驳回，这条建议已作废',
+      ],
+    },
     // What the approver did from the card, in the card's heading.
     statuses: {
       approve: ['Approved', '已批准'],
@@ -596,17 +615,15 @@ const wording = {
     risks: ['Risks', '风险'],
     missing: ['To add', '需补充'],
     comment: ['Decision comment', '审批意见'],
-    revisePlaceholder: [
-      'Tell the AI how to change it, e.g. approve at 85% off, more politely',
-      '告诉 AI 怎么改，比如：按 85 折有条件批准，意见写得委婉些',
-    ],
+    revisePlaceholder: ['Tell the AI what to change', '告诉 AI 怎么改'],
     // The card's accept: what the review recommends, with its comment.
     accept: {
       approve: ['Approve as advised', '按建议批准'],
       reject: ['Reject as advised', '按建议驳回'],
     },
-    ask: ['AI review', 'AI 审批建议'],
-    again: ['Review again', '重新分析'],
+    // Asking for a review, the first or another, as "Follow up" is for a
+    // lead or a deal.
+    ask: ['Review with AI', '辅助审批'],
     applicant: ['Applicant', '申请人'],
   },
   // The conversion dialog's duplicate check, when it found nothing.

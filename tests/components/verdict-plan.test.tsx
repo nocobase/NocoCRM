@@ -528,6 +528,35 @@ describe("a deal's follow-up card", () => {
     );
   });
 
+  // Followed up after its approvals were decided: which, and how.
+  it('names the approvals whose outcomes started it', () => {
+    const entry = deal({});
+    render(
+      <VerdictPanel
+        entity='opportunities'
+        entry={{
+          ...entry,
+          ai: {
+            ...entry.ai,
+            trigger: 'approvalDecided',
+            decidedApprovals: [
+              { id: 'a1', name: '一期 8 折', status: 'approved' },
+              { id: 'a2', name: '源码交付', status: 'rejected' },
+            ],
+          },
+        }}
+        recordId='opp-1'
+        editable
+        onChanged={() => Promise.resolve()}
+      />,
+    );
+    expect(
+      screen.getByText(
+        '审批有了结果（一期 8 折 已通过 · 源码交付 已拒绝），AI 继续跟进。',
+      ),
+    ).toBeTruthy();
+  });
+
   it('pauses with the task to resume it', async () => {
     render(
       <VerdictPanel
