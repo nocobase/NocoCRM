@@ -16,6 +16,9 @@ import { notificationServiceToken } from '@nocobase/app-plugin-notification/serv
 import { workflowServiceToken } from '@nocobase/app-plugin-workflow/server';
 import { schedulerServiceToken } from '@nocobase/app-plugin-scheduler/server/tokens';
 import { scanLeadSignals } from './lead-signals.js';
+import { scanDealSignals } from './deal-signals.js';
+import { pick } from '../../locales/crm-ai/index.js';
+import { scheduleTexts } from '../../locales/crm-ai/schedules.js';
 import { jobExecutorServiceToken } from '@nocobase/app-server/jobs';
 import type { JobExecutor } from '@nocobase/jobs';
 import { createFollowUpJob, FOLLOW_UP_JOBS } from './follow-up-jobs.js';
@@ -164,20 +167,30 @@ export default class CrmProvider extends ServiceProvider<Application> {
     if (this.app.container.has(schedulerServiceToken)) {
       const scheduler = this.app.container.resolve(schedulerServiceToken);
       const service = this.app.container.resolve(crmToken);
+      const settings = await service.settings();
+      // The scheduled tasks page shows these as stored, untranslated: in the
+      // CRM's working language (the AI's), else the application's default.
+      const working =
+        settings.aiLanguage === 'user'
+          ? toText(
+              this.app.config.get<{ defaultLocale?: string }>('i18n')
+                ?.defaultLocale ?? 'en-US',
+            )
+          : settings.aiLanguage;
+      const words = pick(scheduleTexts, working.startsWith('zh'));
+      const timezone = settings.timeZone || 'Asia/Shanghai';
+      const isObject = (config: unknown) =>
+        config !== null && typeof config === 'object' && !Array.isArray(config)
+          ? { valid: true as const }
+          : { valid: false as const, reason: 'config-must-be-an-object' };
       scheduler.registerTarget({
         type: 'app.crm-lead-signals',
-        title: 'Lead signal check',
-        validate: (config) =>
-          config !== null &&
-          typeof config === 'object' &&
-          !Array.isArray(config)
-            ? { valid: true }
-            : { valid: false, reason: 'config-must-be-an-object' },
+        title: words.leadTarget,
+        validate: isObject,
         // Read on the scheduled tasks page in place of the type's name.
         describe: async () => ({
-          targetLabel: 'Lead signal check',
-          description:
-            'The AI follows up leads left uncontacted, gone quiet or due for a nurture review',
+          targetLabel: words.leadTarget,
+          description: words.leadTargetDescription,
           state: 'ready',
         }),
         start: async () => {
@@ -194,14 +207,40 @@ export default class CrmProvider extends ServiceProvider<Application> {
       });
       scheduler.defineSchedule({
         key: 'crm.lead-signals',
-        title: 'Daily lead check',
-        description:
-          'Every day, the open leads are checked: a new lead uncontacted for 2 days, a working one with no activity for 14 days, a nurtured one due for review. The AI follows each up once, and the result waits on its owner.',
-        schedule: {
-          cron: '0 9 * * *',
-          timezone: (await service.settings()).timeZone || 'Asia/Shanghai',
-        },
+        title: words.leadTitle,
+        description: words.leadDescription,
+        schedule: { cron: '0 9 * * *', timezone },
         target: { type: 'app.crm-lead-signals', config: {} },
+      });
+      // The same look over the open deals (deal-signals.ts), at the same
+      // hour.
+      scheduler.registerTarget({
+        type: 'app.crm-deal-signals',
+        title: words.dealTarget,
+        validate: isObject,
+        describe: async () => ({
+          targetLabel: words.dealTarget,
+          description: words.dealTargetDescription,
+          state: 'ready',
+        }),
+        start: async () => {
+          const pass = await scanDealSignals(
+            service,
+            this.app.container.resolve(opportunityEvaluatorToken),
+          );
+          return {
+            state: 'completed',
+            outcome: 'succeeded',
+            result: { checked: pass.checked, started: pass.started },
+          };
+        },
+      });
+      scheduler.defineSchedule({
+        key: 'crm.deal-signals',
+        title: words.dealTitle,
+        description: words.dealDescription,
+        schedule: { cron: '0 9 * * *', timezone },
+        target: { type: 'app.crm-deal-signals', config: {} },
       });
     }
     // The Users page shows and assigns the CRM's roles through this scope.

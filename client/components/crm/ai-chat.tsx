@@ -218,12 +218,13 @@ export function AssistantButton({
       aria-label={label}
       aria-pressed={open}
       title={label}
-      // In the AI's colour, as every AI entry is; deeper while the panel is
-      // open. Merged over the header's shared look, whose ground it replaces.
+      // In the AI's colour, as every AI entry is: its border and icon, on a
+      // pale ground, deeper while the panel is open. Merged over the
+      // header's shared look, whose border and ground it replaces.
       className={cn(
         className,
-        'border-ai bg-ai text-ai-foreground hover:bg-ai/90',
-        open && 'bg-ai/80 shadow-inner',
+        'border-ai bg-ai/10 text-ai hover:bg-ai/15',
+        open && 'bg-ai/20',
       )}
       onClick={() =>
         window.dispatchEvent(new CustomEvent('crm-assistant-toggle'))

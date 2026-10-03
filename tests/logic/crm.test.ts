@@ -123,6 +123,10 @@ import {
   leadSignal,
   scanLeadSignals,
 } from '../../server/providers/crm/lead-signals.js';
+import {
+  dealSignal,
+  scanDealSignals,
+} from '../../server/providers/crm/deal-signals.js';
 import { loggingToken } from '@nocobase/app-server/logging';
 import { JobInterruptedError } from '@nocobase/jobs';
 import { readEntry } from '../../server/providers/crm/ai-entries.js';
@@ -7429,5 +7433,137 @@ describe('the activities a follow-up reads', () => {
     // Both still named, for a reference left in text.
     expect(names[refOf('商务谈判')]).toBe('商务谈判');
     expect(done.id).toBeTruthy();
+  });
+});
+
+describe('opportunity signals', () => {
+  const now = Date.parse('2026-10-10T01:00:00Z');
+  const daysAgo = (days: number) =>
+    new Date(now - days * 86_400_000).toISOString();
+
+  it('tells what should have happened on a deal and has not', () => {
+    const open = { stage: 'proposal', createdAt: daysAgo(30) };
+    // Nothing for fourteen days and nothing planned: gone quiet.
+    expect(
+      dealSignal(open, [{ status: 'completed', startAt: daysAgo(20) }], now),
+    ).toBe('silent');
+    // Something recent, or something planned ahead: nothing.
+    expect(
+      dealSignal(open, [{ status: 'completed', startAt: daysAgo(3) }], now),
+    ).toBe(undefined);
+    expect(
+      dealSignal(open, [{ status: 'planned', startAt: daysAgo(-2) }], now),
+    ).toBe(undefined);
+    // A close date within the week, or past: said before going quiet.
+    expect(dealSignal({ ...open, expectedCloseAt: daysAgo(-5) }, [], now)).toBe(
+      'closeDue',
+    );
+    expect(dealSignal({ ...open, expectedCloseAt: daysAgo(2) }, [], now)).toBe(
+      'closeDue',
+    );
+    expect(
+      dealSignal(
+        { ...open, expectedCloseAt: daysAgo(-30) },
+        [{ status: 'completed', startAt: daysAgo(3) }],
+        now,
+      ),
+    ).toBe(undefined);
+    // Paused: only its resume date counts.
+    expect(
+      dealSignal(
+        { stage: 'paused', createdAt: daysAgo(90), resumeAt: daysAgo(1) },
+        [],
+        now,
+      ),
+    ).toBe('resumeDue');
+    expect(
+      dealSignal(
+        { stage: 'paused', createdAt: daysAgo(90), resumeAt: daysAgo(-10) },
+        [],
+        now,
+      ),
+    ).toBe(undefined);
+    // Closed: nothing.
+    expect(dealSignal({ stage: 'won', createdAt: daysAgo(90) }, [], now)).toBe(
+      undefined,
+    );
+  });
+
+  it('starts a follow-up per signal as the owner, never over a waiting card', async () => {
+    const account = await service.save(actor('rep'), 'accounts', {
+      name: '巡检客户',
+    });
+    const closing = await service.save(actor('rep'), 'opportunities', {
+      name: '快到成交日',
+      accountId: account.id,
+      stage: 'proposal',
+      expectedCloseAt: new Date(Date.now() + 3 * 86_400_000)
+        .toISOString()
+        .slice(0, 10),
+    });
+    const waiting = await service.save(actor('rep'), 'opportunities', {
+      name: '有卡片等着的商机',
+      accountId: account.id,
+      stage: 'proposal',
+      expectedCloseAt: new Date(Date.now() + 3 * 86_400_000)
+        .toISOString()
+        .slice(0, 10),
+    });
+    await database
+      .query()
+      .insertInto('crmHistory')
+      .values({
+        id: 'deal-signal-waiting-card',
+        entity: 'opportunities',
+        recordId: waiting.id,
+        actorId: 'rep',
+        action: 'ai',
+        source: 'ai',
+        aiStatus: 'pending',
+        ai: JSON.stringify({ kind: 'evaluation' }),
+        changes: JSON.stringify({}),
+        createdAt: new Date().toISOString(),
+      })
+      .execute();
+    const requests: { by: string; deal: string; trigger: unknown }[] = [];
+    const evaluator = {
+      available: async () => true,
+      request: async (
+        by: Actor,
+        deal: string,
+        _revise: unknown,
+        trigger: unknown,
+      ) => {
+        requests.push({ by: by.id, deal, trigger });
+        await database
+          .query()
+          .insertInto('crmHistory')
+          .values({
+            id: `deal-signal-${deal}-${requests.length}`,
+            entity: 'opportunities',
+            recordId: deal,
+            actorId: by.id,
+            action: 'ai',
+            source: 'ai',
+            aiStatus: 'dismissed',
+            ai: JSON.stringify({ kind: 'evaluation', trigger }),
+            changes: JSON.stringify({}),
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+        return { id: `deal-signal-${deal}` };
+      },
+    } as unknown as OpportunityEvaluator;
+    await scanDealSignals(service, evaluator, new Date(), 1000);
+    expect(requests).toContainEqual({
+      by: 'rep',
+      deal: closing.id,
+      trigger: 'closeDue',
+    });
+    expect(requests.some((r) => r.deal === waiting.id)).toBe(false);
+    // The same signal does not start again within the week.
+    requests.length = 0;
+    await scanDealSignals(service, evaluator, new Date(), 1000);
+    expect(requests.some((r) => r.deal === closing.id)).toBe(false);
   });
 });

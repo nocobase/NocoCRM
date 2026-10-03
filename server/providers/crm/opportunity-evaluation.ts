@@ -1061,7 +1061,9 @@ export class OpportunityEvaluator {
     revise?: { entryId: unknown; instruction: unknown },
     // What started it, when not a person asking (one of its activities
     // marked done, one of its approvals decided); shown on the card.
-    trigger?: 'activityDone' | 'approvalDecided',
+    // A daily check's signal too (deal-signals.ts).
+    trigger?:
+      'activityDone' | 'approvalDecided' | 'silent' | 'closeDue' | 'resumeDue',
     // The approvals whose decisions started it: those submitted together,
     // each with what became of it.
     decidedApprovals?: { id: string; name: string; status: string }[],

@@ -298,6 +298,14 @@ const wording = {
         'An approval was decided: the AI followed up again.',
         '审批有了结果，AI 继续跟进。',
       ],
+      closeDue: [
+        'The expected close date is near or past: the AI followed it up.',
+        '预计成交日期快到或已过，AI 自动跟进。',
+      ],
+      resumeDue: [
+        'The pause is due to end: the AI followed it up.',
+        '暂停到了预计恢复日期，AI 自动跟进。',
+      ],
       approvalsDecided: [
         'Approvals decided ({{approvals}}): the AI followed up again.',
         '审批有了结果（{{approvals}}），AI 继续跟进。',
