@@ -90,6 +90,25 @@ export interface OpportunityVerdict {
   // Every commercial term in the material, checked by the code against
   // the deal's approvals (opportunity-evaluation.ts, checkTerms).
   terms?: CheckedTerm[];
+  // The customer's people the material shows a part for, matched to the
+  // account's contacts: a role to set or change on the deal, a contact to
+  // add to it, or a person to create as the account's contact and add.
+  contacts?: ProposedContact[];
+}
+
+export interface ProposedContact {
+  name: string;
+  role: string;
+  // The account's contact they are; null for one to create.
+  contactId: string | null;
+  // The contact's name when it differs from how the material writes it.
+  contactName?: string;
+  // Their role on the deal now; null when they are not on it.
+  currentRole: string | null;
+  jobTitle: string | null;
+  phone: string | null;
+  email: string | null;
+  reason: string;
 }
 
 export interface CheckedTerm {
@@ -173,6 +192,9 @@ export interface EvaluationEntry<V = Verdict> {
     // The deal's fields the person kept with an accept (an opportunity's
     // amount or expected close date).
     updatedFields?: string[];
+    // The proposed contacts the person kept, by their place in the card's
+    // list, each with the contact it set on the deal.
+    keptContacts?: { index: number; contactId: string }[];
     // What started a follow-up the system ran on its own (a signal, a
     // changed company, an activity marked done); absent when asked for.
     trigger?: string;

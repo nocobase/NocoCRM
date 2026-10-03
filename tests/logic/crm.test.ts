@@ -4896,6 +4896,115 @@ describe('CRM opportunity follow-up', () => {
     }
   });
 
+  // The customer's people with a part in the deal: a role changed, a
+  // contact of the account added, a person created; written as ticked.
+  it("proposes the customer's people and their parts, and sets the ones kept", async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const { account, opportunity } = await deal('联系人角色');
+      // On the account but not on the deal.
+      const liu = await service.save(actor('rep'), 'contacts', {
+        name: '刘总',
+        accountId: account.id,
+      });
+      const run = following({
+        ...advance,
+        stage: null,
+        recommendation: 'continue',
+        updates: [],
+        approvals: [],
+        people: [
+          // On the deal as decision maker already: left out.
+          {
+            name: '联系人角色 王总',
+            role: 'decisionMaker',
+            jobTitle: null,
+            phone: null,
+            email: null,
+            reason: '拍板（会议）',
+          },
+          {
+            name: '刘总',
+            role: 'decisionMaker',
+            jobTitle: '信息管理部总监',
+            phone: null,
+            email: null,
+            reason: '最终签字人（商务谈判）',
+          },
+          {
+            name: '老陈',
+            role: 'evaluator',
+            jobTitle: 'SAP 负责人',
+            phone: '138 0000 1111',
+            email: null,
+            reason: '负责接口评估（演示）',
+          },
+        ],
+      });
+      await run.evaluator.request(actor('rep'), opportunity.id);
+      await run.evaluator.idle();
+      const card = await latestOpportunityEvaluation(
+        service,
+        actor('rep'),
+        opportunity.id,
+      );
+      expect(card?.ai.result?.contacts).toMatchObject([
+        {
+          name: '刘总',
+          role: 'decisionMaker',
+          contactId: liu.id,
+          currentRole: null,
+        },
+        {
+          name: '老陈',
+          role: 'evaluator',
+          contactId: null,
+          phone: '13800001111',
+          currentRole: null,
+        },
+      ]);
+      // Both kept: 刘总 added, 老陈 created and added.
+      const decided = await run.evaluator.decide(
+        actor('rep'),
+        opportunity.id,
+        card!.id,
+        'accept',
+        [],
+        {},
+        [],
+        [0, 1],
+      );
+      expect(decided.ai.keptContacts).toHaveLength(2);
+      const after = await service.get(
+        actor('rep'),
+        'opportunities',
+        opportunity.id,
+      );
+      const roles = Object.fromEntries(
+        (after.contacts as { contactId: string; role: string }[]).map((c) => [
+          c.contactId,
+          c.role,
+        ]),
+      );
+      expect(roles[toText(liu.id)]).toBe('decisionMaker');
+      const chen = (
+        await service.list(actor('rep'), 'contacts', {
+          accountId: toText(account.id),
+          pageSize: 50,
+        })
+      ).data.find((c) => c.name === '老陈');
+      expect(chen).toMatchObject({
+        jobTitle: 'SAP 负责人',
+        phone: '13800001111',
+      });
+      expect(roles[toText(chen!.id)]).toBe('evaluator');
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+
   // An approval rejected is proposed again only once something has happened
   // since: what was missing supplied (a note, an activity done).
   it('proposes a rejected kind again only after something new', async () => {

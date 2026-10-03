@@ -324,6 +324,9 @@ const wording = {
       // Approvals the AI would request before promising the customer.
       approvals: ['Approvals to request', '建议发起的审批'],
       terms: ['Terms', '条款核对'],
+      contacts: ['Contacts and roles', '联系人和角色'],
+      newContact: ['New contact', '新建联系人'],
+      addContact: ['Add to the opportunity', '加到商机'],
       termStatus: {
         standard: ['Within the standard', '标准内'],
         approved: ['Approved', '已批准'],

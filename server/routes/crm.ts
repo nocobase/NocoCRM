@@ -684,6 +684,7 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           body.fields,
           body.activity,
           body.approvals,
+          body.contacts,
         ),
       });
     });

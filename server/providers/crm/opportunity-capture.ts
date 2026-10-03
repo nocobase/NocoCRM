@@ -51,7 +51,7 @@ const OPEN_STAGES = [
 const BUSINESS_TYPES = definitions.opportunities.fields.find(
   (f) => f.key === 'businessType',
 )!.options!;
-const ROLES = [
+export const ROLES = [
   'decisionMaker',
   'champion',
   'evaluator',

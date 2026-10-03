@@ -141,6 +141,19 @@ export interface DealVerdict {
   // Every commercial term in the material, checked by the server against
   // the deal's approvals: within the standards, approved, awaiting one, or
   // needing one.
+  // The customer's people with a part in the deal: a role to set or change,
+  // a contact to add, or a person to create, each written with the accept.
+  contacts?: {
+    name: string;
+    role: string;
+    contactId: string | null;
+    contactName?: string;
+    currentRole: string | null;
+    jobTitle: string | null;
+    phone: string | null;
+    email: string | null;
+    reason: string;
+  }[];
   terms?: {
     topic: string;
     term: string;
@@ -167,6 +180,7 @@ export interface EvaluationEntry {
     decidedAt?: string;
     enrichedFields?: string[];
     submittedApprovals?: { index: number; id: string }[];
+    keptContacts?: { index: number; contactId: string }[];
     enrichedById?: string;
     enrichedAt?: string;
     // A card redone as a person asked: the card it replaced, what they
@@ -443,6 +457,10 @@ export function VerdictPanel({
   const [approvalPicks, setApprovalPicks] = useState<
     Record<number, { on: boolean; approverId: string }>
   >({});
+  // The proposed contacts left out (all kept to start with).
+  const [contactsOff, setContactsOff] = useState<ReadonlySet<number>>(
+    () => new Set(),
+  );
   // The activity accepting creates, as the person changes it here: only
   // what they changed, over what the verdict proposes.
   const [plan, setPlan] = useState<Partial<Plan>>({});
@@ -485,7 +503,14 @@ export function VerdictPanel({
               activity: existing
                 ? { mode: overdue ? 'report' : 'reschedule', ...plan }
                 : plan,
-              // Only a deal's card proposes approvals.
+              // Only a deal's card proposes contacts and approvals.
+              ...(verdict && isDeal(verdict) && verdict.contacts?.length
+                ? {
+                    contacts: verdict.contacts
+                      .map((_, index) => index)
+                      .filter((index) => !contactsOff.has(index)),
+                  }
+                : {}),
               ...(verdict && isDeal(verdict) && verdict.approvals?.length
                 ? {
                     approvals: verdict.approvals.flatMap((_, index) => {
@@ -773,6 +798,16 @@ export function VerdictPanel({
           be approved shows at a glance. */}
       {verdict && isDeal(verdict) && (verdict.terms?.length ?? 0) > 0 && (
         <DealTerms terms={verdict.terms ?? []} />
+      )}
+      {/* The customer's people and their parts, set with the accept. */}
+      {verdict && isDeal(verdict) && (verdict.contacts?.length ?? 0) > 0 && (
+        <DealContacts
+          entry={entry}
+          contacts={verdict.contacts ?? []}
+          editable={editable && entry.status === 'pending'}
+          off={contactsOff}
+          onToggle={setContactsOff}
+        />
       )}
       {/* Approvals to request first, submitted with the accept. */}
       {verdict && isDeal(verdict) && (verdict.approvals?.length ?? 0) > 0 && (
@@ -2047,6 +2082,94 @@ function VerdictList({
 // The approvals the AI would request before the customer is promised what
 // needs them: each kept to start with and sent to a sales manager, both
 // changeable; submitted with the accept, then marked.
+// The customer's people the follow-up gives a part in the deal: each a role
+// to set or change, a contact to add to the deal, or a person to create as
+// the account's contact, with what shows it; ticked ones are written with
+// the accept.
+function DealContacts({
+  entry,
+  contacts,
+  editable,
+  off,
+  onToggle,
+}: {
+  entry: EvaluationEntry;
+  contacts: NonNullable<DealVerdict['contacts']>;
+  editable: boolean;
+  off: ReadonlySet<number>;
+  onToggle: (off: ReadonlySet<number>) => void;
+}): ReactElement {
+  const { text } = useCrmText();
+  const kept = new Set((entry.ai.keptContacts ?? []).map((k) => k.index));
+  const role = (value: string): string =>
+    text(`options.${value}`, { defaultValue: value });
+  return (
+    <div className='grid gap-1.5 rounded-lg border bg-background/60 p-3'>
+      <p className='font-medium'>{text('evaluation.deal.contacts')}</p>
+      {contacts.map((person, index) => (
+        <label
+          key={`${person.contactId ?? person.name}-${String(index)}`}
+          className='flex items-start gap-2'
+        >
+          {editable ? (
+            <Checkbox
+              className='mt-0.5'
+              aria-label={person.contactName ?? person.name}
+              checked={!off.has(index)}
+              onCheckedChange={(on) => {
+                const next = new Set(off);
+                if (on) next.delete(index);
+                else next.add(index);
+                onToggle(next);
+              }}
+            />
+          ) : kept.has(index) ? (
+            <Check className='mt-0.5 size-4 shrink-0 text-success' />
+          ) : (
+            <span className='size-4 shrink-0' />
+          )}
+          <span className='min-w-0'>
+            <span className='flex flex-wrap items-center gap-x-2 gap-y-1'>
+              <span className='font-medium'>
+                {person.contactName ?? person.name}
+              </span>
+              {!person.contactId ? (
+                <Badge variant='ai'>{text('evaluation.deal.newContact')}</Badge>
+              ) : person.currentRole === null ? (
+                <Badge variant='muted'>
+                  {text('evaluation.deal.addContact')}
+                </Badge>
+              ) : null}
+              <span>
+                {person.currentRole !== null && (
+                  <>
+                    <span className='text-muted-foreground line-through'>
+                      {role(person.currentRole)}
+                    </span>
+                    <span className='mx-1 text-muted-foreground'>→</span>
+                  </>
+                )}
+                <span className='font-medium'>{role(person.role)}</span>
+              </span>
+            </span>
+            {/* What the follow-up knows of a person to create, and why. */}
+            <span className='block text-xs text-muted-foreground'>
+              {[
+                !person.contactId ? person.jobTitle : null,
+                !person.contactId ? person.phone : null,
+                !person.contactId ? person.email : null,
+                person.reason,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </span>
+          </span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
 // The deal's commercial terms, each with where it stands against the
 // approvals: within the standards, approved (by which), awaiting approval,
 // or needing it.

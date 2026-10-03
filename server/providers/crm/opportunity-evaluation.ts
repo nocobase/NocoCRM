@@ -23,6 +23,7 @@ import {
   type EvaluationEntry,
   type CheckedTerm,
   type ProposedApproval,
+  type ProposedContact,
   type OpportunityUpdate,
   type OpportunityVerdict,
 } from './ai-entries.js';
@@ -45,6 +46,8 @@ import { jsonIn } from './lead-capture.js';
 import { JobInterruptedError } from '@nocobase/jobs';
 import { markStarted, within, type FollowUpPayload } from './follow-up-jobs.js';
 import { LONG_TEXT_LIMIT, TEXT_LIMIT } from './limits.js';
+import { ROLES, matchAccount } from './opportunity-capture.js';
+import { normalizePhone } from './phone.js';
 import {
   CrmError,
   currencies,
@@ -395,6 +398,23 @@ function verdictShape(options: { pause: string[]; lost: string[] }) {
       .describe(
         'Every commercial term asked for or agreed in the material: discount, payment terms, contract terms, delivery commitment',
       ),
+    people: z
+      .array(
+        z.object({
+          name: z.string().describe("The person's name, as written"),
+          role: z.enum(ROLES),
+          jobTitle: z.string().nullable(),
+          phone: z.string().nullable(),
+          email: z.string().nullable(),
+          reason: z
+            .string()
+            .describe('What in the material shows this part, with its source'),
+        }),
+      )
+      .default([])
+      .describe(
+        "The customer's people the material shows a part for in this deal",
+      ),
     approvals: z
       .array(
         z.object({
@@ -428,6 +448,75 @@ function verdictShape(options: { pause: string[]; lost: string[] }) {
   });
 }
 type Parsed = z.infer<ReturnType<typeof verdictShape>>;
+
+// The people the model names with a part in the deal, matched to the
+// account's contacts (as the opportunity capture matches them), each kept
+// only when it changes something on the deal: a role to set or change, a
+// contact to add, or, on a deal with an account, a person to create.
+export async function proposedContacts(
+  service: CrmService,
+  actor: Actor,
+  opportunity: CrmRecord,
+  people: readonly {
+    name: string;
+    role: string;
+    jobTitle: string | null;
+    phone: string | null;
+    email: string | null;
+    reason: string;
+  }[],
+): Promise<ProposedContact[]> {
+  const accountId = toText(opportunity.accountId ?? '');
+  const line = (value: string | null): string | null =>
+    toText(value ?? '')
+      .trim()
+      .slice(0, TEXT_LIMIT) || null;
+  const named = people
+    .map((p) => ({
+      name: toText(p.name).trim().slice(0, TEXT_LIMIT),
+      role: p.role,
+      jobTitle: line(p.jobTitle),
+      phone: p.phone ? normalizePhone(toText(p.phone)) || null : null,
+      email: line(p.email),
+      reason: toText(p.reason).trim().slice(0, TEXT_LIMIT),
+    }))
+    .filter((p) => p.name)
+    .slice(0, 8);
+  if (!named.length) return [];
+  const matched = accountId
+    ? (await matchAccount(service, actor, accountId, named)).people
+    : named.map((p) => ({ ...p, contactId: null }));
+  const onDeal = new Map(
+    (Array.isArray(opportunity.contacts) ? opportunity.contacts : []).map(
+      (c) => [toText((c as Row).contactId), toText((c as Row).role)] as const,
+    ),
+  );
+  const out: ProposedContact[] = [];
+  for (const [i, p] of matched.entries()) {
+    const reason = named[i].reason;
+    const contactId = p.contactId ? toText(p.contactId) : null;
+    // A person to create needs the account to belong to.
+    if (!contactId && !accountId) continue;
+    const currentRole = contactId ? (onDeal.get(contactId) ?? null) : null;
+    if (currentRole === p.role) continue;
+    if (out.some((o) => (o.contactId ?? o.name) === (contactId ?? p.name)))
+      continue;
+    out.push({
+      name: p.name,
+      role: p.role,
+      contactId,
+      ...('contactName' in p && p.contactName
+        ? { contactName: toText(p.contactName) }
+        : {}),
+      currentRole,
+      jobTitle: p.jobTitle,
+      phone: p.phone,
+      email: p.email,
+      reason,
+    });
+  }
+  return out;
+}
 
 // A stored time, however the driver returns it, as milliseconds (0 when
 // absent).
@@ -835,6 +924,7 @@ The output format in section six of the skill does not apply here. Return only t
   "lostReason": ${list(options.lost)} | null,
   "revisitInDays": an integer from 1 to 730 | null,
   "changes": ["a change since last time"],
+  "people": [{ "name": "the person's name as written", "role": ${list(ROLES)}, "jobTitle": "their job title" | null, "phone": "their phone" | null, "email": "their email" | null, "reason": "what shows this part (its source)" }] (the customer's people the material shows a part for in this deal: decisionMaker who signs or decides, champion who pushes it inside, evaluator who assesses it technically, influencer, user, blocker who stands against it, other; only where the material shows the part, never a guess; leave out one already on the deal in the same role),
   "approvals": [{ "topic": ${list(APPROVAL_TOPICS)}, "name": "the approval name", "description": "what the customer asks for, what the standard is, why it is worth requesting (the source)" }] (go through every term asked for or agreed in the material, discount, payment terms, contract terms, delivery commitment, and check each against the approval standards: one beyond them and not already pending or approved on these same terms is listed here, even when the customer has agreed to it; while one is listed, the stage cannot be contract),
   "enrich": [{ "field": ${list(ACCOUNT_ENRICH)}, "value": "the value found", "source": "the source URL" | null }]
 }`;
@@ -1538,6 +1628,12 @@ export class OpportunityEvaluator {
         if (!at || (await newsSince(this.service, opportunity, at, '')))
           resubmittable.push(a);
       }
+      const contacts = await proposedContacts(
+        this.service,
+        actor,
+        opportunity,
+        parsed.data.people,
+      ).catch(() => [] as ProposedContact[]);
       const check = checkTerms(
         parsed.data.terms,
         dealApprovals,
@@ -1575,6 +1671,7 @@ export class OpportunityEvaluator {
           enrich,
           approvals: check.approvals,
           terms: check.terms,
+          contacts,
         },
       });
     } catch (error) {
@@ -1614,6 +1711,9 @@ export class OpportunityEvaluator {
     // The proposed approvals the person kept: each by its place in the
     // card's list, with the approver they chose (else a sales manager).
     approvals?: unknown,
+    // The proposed contacts the person kept, by their place in the card's
+    // list; absent, all of them.
+    contacts?: unknown,
   ): Promise<EvaluationEntry<OpportunityVerdict>> {
     if (decision !== 'accept' && decision !== 'dismiss')
       throw new CrmError('invalidInput', 400, 'decision');
@@ -1728,6 +1828,18 @@ export class OpportunityEvaluator {
                 approvals,
               )
             : [];
+        // The people kept: created as the account's contacts where they are
+        // not yet, and set on the deal in their role.
+        const keptContacts =
+          decision === 'accept'
+            ? await this.writeContacts(
+                prepared,
+                query,
+                opportunityId,
+                verdict.contacts ?? [],
+                contacts,
+              )
+            : [];
         // The web findings still ticked, into the account, with the accept.
         const written =
           decision === 'accept' && !entry.ai.enrichedAt
@@ -1752,6 +1864,7 @@ export class OpportunityEvaluator {
           ...(activityId ? { activityId } : {}),
           ...(updatedFields.length ? { updatedFields } : {}),
           ...(submittedApprovals.length ? { submittedApprovals } : {}),
+          ...(keptContacts.length ? { keptContacts } : {}),
           ...(written ?? {}),
         };
         const status: EvaluationEntry['status'] =
@@ -1831,6 +1944,68 @@ export class OpportunityEvaluator {
         return { ...entry, ai };
       },
     );
+  }
+
+  // Sets the people the person kept on the deal in their role: a contact of
+  // the account by its id, a person not yet one created as one first (owned
+  // by the deal's owner). Returns each with its place in the card's list.
+  private async writeContacts(
+    prepared: Actor,
+    query: QueryAdapter,
+    opportunityId: string,
+    proposed: readonly ProposedContact[],
+    kept: unknown,
+  ): Promise<{ index: number; contactId: string }[]> {
+    const indexes = Array.isArray(kept)
+      ? kept.map(Number).filter((i) => Number.isInteger(i))
+      : proposed.map((_, i) => i);
+    if (!indexes.length) return [];
+    const deal = await this.service.get(
+      prepared,
+      'opportunities',
+      opportunityId,
+      query,
+    );
+    const list = (Array.isArray(deal.contacts) ? deal.contacts : []).map(
+      (c) => ({ ...(c as Row) }),
+    );
+    const done: { index: number; contactId: string }[] = [];
+    for (const index of indexes) {
+      const person = proposed[index];
+      if (!person) throw new CrmError('invalidInput', 400, 'contacts');
+      let contactId = person.contactId;
+      if (!contactId) {
+        if (!deal.accountId) continue;
+        const created = await this.service.save(
+          prepared,
+          'contacts',
+          {
+            name: person.name,
+            accountId: deal.accountId,
+            ...(person.jobTitle ? { jobTitle: person.jobTitle } : {}),
+            ...(person.phone ? { phone: person.phone } : {}),
+            ...(person.email ? { email: person.email } : {}),
+            ...(deal.ownerId ? { ownerId: deal.ownerId } : {}),
+          },
+          undefined,
+          query,
+        );
+        contactId = toText(created.id);
+      }
+      const row = list.find((c) => toText(c.contactId) === contactId);
+      if (row) row.role = person.role;
+      else list.push({ contactId, role: person.role });
+      done.push({ index, contactId });
+    }
+    if (done.length)
+      await this.service.save(
+        prepared,
+        'opportunities',
+        { contacts: list },
+        opportunityId,
+        query,
+      );
+    return done;
   }
 
   // Creates the approvals the person kept on the card and submits each to
