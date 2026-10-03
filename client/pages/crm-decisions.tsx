@@ -1,7 +1,8 @@
 import { useState, type ReactElement } from 'react';
+import { useTranslation } from '@nocobase/i18n/client';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowUpRight } from 'lucide-react';
-import { Link } from 'react-router';
+import { ArrowLeft, ArrowUpRight } from 'lucide-react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { Badge } from '../components/ui/badge.js';
 import { Button } from '../components/ui/button.js';
 import { CrmFrame, ErrorNotice, Loading } from '../components/crm/common.js';
@@ -79,8 +80,33 @@ export default function DecisionsPage(): ReactElement {
   const { data: meta } = useMetadata();
   const api = useCrmApi();
   const scopeKey = useCrmScopeKey();
+  const { t } = useTranslation();
   const [scope, setScope] = useState<'mine' | 'team'>('mine');
-  const [chosen, setChosen] = useState<string>();
+  // The entry being read, in the address: a link or a reload opens it, and
+  // on a phone, where the list and the entry take turns, Back returns to
+  // the list.
+  const [params, setParams] = useSearchParams();
+  const chosen = params.get('entry') ?? undefined;
+  const location = useLocation();
+  const navigate = useNavigate();
+  const choose = (id: string, opened: boolean): void => {
+    const next = new URLSearchParams(params);
+    next.set('entry', id);
+    // Opening one from the list is a step Back undoes; a card redone in
+    // place, or a pick beside the list on a wide screen, replaces it.
+    setParams(next, { replace: !opened, state: { fromList: opened } });
+  };
+  const backToList = (): void => {
+    if ((location.state as { fromList?: boolean } | null)?.fromList) {
+      void navigate(-1);
+      return;
+    }
+    const next = new URLSearchParams(params);
+    next.delete('entry');
+    setParams(next, { replace: true });
+  };
+  // Narrow, the entry replaces the list while one is open.
+  const reading = chosen !== undefined;
   // Those waiting and, after them, those already decided.
   const path = `decisions?scope=${scope}&state=all&pageSize=100`;
   const query = useQuery({
@@ -156,8 +182,12 @@ export default function DecisionsPage(): ReactElement {
         // Container query: the AI panel narrows this area, not the viewport.
         <div className='@container min-h-0 flex-1 pb-6'>
           <div className='grid h-full overflow-y-auto rounded-xl border bg-card scroll-quiet @3xl:grid-cols-[22rem_minmax(0,1fr)] @3xl:grid-rows-[minmax(0,1fr)] @3xl:overflow-hidden'>
+            {/* Side by side the list and the entry; narrow, one at a time:
+                the list, then the entry opened from it. */}
             <ul
-              className='border-b scroll-quiet @3xl:overflow-y-auto @3xl:border-r @3xl:border-b-0'
+              className={`scroll-quiet @3xl:block @3xl:overflow-y-auto @3xl:border-r ${
+                reading ? 'hidden' : ''
+              }`}
               onScroll={revealScrollbar}
             >
               {/* Nothing waiting, but decided ones below: say so first. */}
@@ -173,6 +203,9 @@ export default function DecisionsPage(): ReactElement {
               ) : null}
               {items.map((entry, index) => {
                 const selected = entry.id === current.id;
+                // Shown beside the list, the first stands open before any
+                // pick; narrow, nothing is open until one is picked.
+                const shownBeside = selected && !reading;
                 const decided = isDecided(entry);
                 // A heading before those waiting and before the decided.
                 const heading =
@@ -191,14 +224,23 @@ export default function DecisionsPage(): ReactElement {
                     <button
                       type='button'
                       aria-current={selected}
-                      onClick={() => setChosen(entry.id)}
+                      onClick={() =>
+                        choose(
+                          entry.id,
+                          !window.matchMedia('(min-width: 48rem)').matches,
+                        )
+                      }
                       className={`grid w-full gap-1 px-4 py-3 text-left text-sm transition-colors hover:bg-muted/50 ${
-                        selected
-                          ? 'bg-muted shadow-[inset_2px_0_0_var(--ai)]'
-                          : ''
+                        shownBeside
+                          ? '@3xl:bg-muted @3xl:shadow-[inset_2px_0_0_var(--ai)]'
+                          : selected
+                            ? 'bg-muted shadow-[inset_2px_0_0_var(--ai)]'
+                            : ''
                       }`}
                     >
-                      <span className='flex items-center justify-between gap-2'>
+                      {/* Narrow, the time goes under the name, which would
+                          otherwise be cut to a few characters. */}
+                      <span className='flex flex-col gap-0.5 @md:flex-row @md:items-center @md:justify-between @md:gap-2'>
                         {/* The record's type first, in plain muted text as
                             on the right, so the verdict is the one tag. */}
                         <span className='flex min-w-0 items-center gap-2'>
@@ -275,12 +317,23 @@ export default function DecisionsPage(): ReactElement {
               })}
             </ul>
             <section
-              className='min-w-0 p-6 scroll-quiet @3xl:overflow-y-auto'
+              className={`min-w-0 p-4 scroll-quiet @md:p-6 @3xl:block @3xl:overflow-y-auto ${
+                reading ? '' : 'hidden'
+              }`}
               onScroll={revealScrollbar}
             >
+              {/* Narrow, the way back to the list. */}
+              <button
+                type='button'
+                onClick={backToList}
+                className='mb-4 inline-flex w-fit items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground @3xl:hidden'
+              >
+                <ArrowLeft className='size-4' />
+                {t('navigation.back')}
+              </button>
               <EvaluationDetail
                 entry={current}
-                onRevised={(next) => setChosen(next.id)}
+                onRevised={(next) => choose(next.id, false)}
                 name={nameOf(current)}
                 kind={kindOf(current)}
                 owner={ownerOf(current)}
