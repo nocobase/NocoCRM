@@ -108,6 +108,11 @@ import { InlineField } from '../components/crm/inline.js';
 import { AskAIButton } from '../components/crm/ask-ai.js';
 import { ConvertDialog } from '../components/crm/conversion.js';
 import { LeadDuplicates } from '../components/crm/lead-merge.js';
+import {
+  ReviewFeedEntry,
+  ReviewPanel,
+  type ReviewEntry,
+} from '../components/crm/approval-review.js';
 
 const drawerEntities: Entity[] = [
   'leads',
@@ -2018,7 +2023,16 @@ export function HistoryFeed({
                   const note = event.action === 'note';
                   const pending =
                     ai && followed && event.aiStatus === 'pending';
-                  const open = pending || focus === key || opened.has(key);
+                  // An approval's AI review for its approver
+                  // (approval-review.tsx): open while it waits, as a
+                  // follow-up card is.
+                  const review = ai && entity === 'approvals';
+                  const reviewWaiting = review && event.aiStatus === 'pending';
+                  const open =
+                    pending ||
+                    reviewWaiting ||
+                    focus === key ||
+                    opened.has(key);
                   // Files added or removed show the attachments' clip.
                   // An entry of one of the record's activities: planned,
                   // done or called off, or moved.
@@ -2107,10 +2121,16 @@ export function HistoryFeed({
                                     // suggestion was given.
                                     text(
                                       event.aiStatus === 'running'
-                                        ? 'feed.evaluating'
+                                        ? review
+                                          ? 'feed.reviewing'
+                                          : 'feed.evaluating'
                                         : event.aiStatus === 'failed'
-                                          ? 'feed.evaluationFailed'
-                                          : 'feed.evaluated',
+                                          ? review
+                                            ? 'feed.reviewFailed'
+                                            : 'feed.evaluationFailed'
+                                          : review
+                                            ? 'feed.reviewed'
+                                            : 'feed.evaluated',
                                     )
                                   : filesOnly(event)
                                     ? ''
@@ -2144,6 +2164,8 @@ export function HistoryFeed({
                             ) : null}
                             {ai && event.aiStatus === 'running' ? (
                               <Spinner className='size-3.5 shrink-0 text-ai' />
+                            ) : review && event.aiStatus !== 'failed' ? (
+                              <ReviewFeedEntry entry={event} />
                             ) : ai &&
                               !pending &&
                               event.aiStatus !== 'failed' ? (
@@ -2232,20 +2254,25 @@ export function HistoryFeed({
                             ) : null}
                             {/* An evaluation opens into its record (not
                                 while it runs: there is nothing to open). */}
-                            {ai && !pending && event.aiStatus !== 'running' && (
-                              <Button
-                                size='icon-xs'
-                                variant='outline'
-                                className='rounded-full'
-                                aria-expanded={open}
-                                aria-label={text(open ? 'collapse' : 'expand')}
-                                onClick={() => toggle(key)}
-                              >
-                                <ChevronDown
-                                  className={`transition-transform ${open ? 'rotate-180' : ''}`}
-                                />
-                              </Button>
-                            )}
+                            {ai &&
+                              !pending &&
+                              !reviewWaiting &&
+                              event.aiStatus !== 'running' && (
+                                <Button
+                                  size='icon-xs'
+                                  variant='outline'
+                                  className='rounded-full'
+                                  aria-expanded={open}
+                                  aria-label={text(
+                                    open ? 'collapse' : 'expand',
+                                  )}
+                                  onClick={() => toggle(key)}
+                                >
+                                  <ChevronDown
+                                    className={`transition-transform ${open ? 'rotate-180' : ''}`}
+                                  />
+                                </Button>
+                              )}
                           </span>
                           <time
                             dateTime={toText(event.createdAt)}
@@ -2258,7 +2285,24 @@ export function HistoryFeed({
                         </div>
                         {/* A waiting verdict is handled here, open; any other
                             evaluation is its record, when opened. */}
-                        {pending ? (
+                        {review && open && event.aiStatus !== 'running' ? (
+                          <div className='mt-1'>
+                            <ReviewPanel
+                              entry={
+                                {
+                                  id: key,
+                                  recordId: id,
+                                  status: toText(event.aiStatus),
+                                  createdAt: toText(event.createdAt),
+                                  ai: event.ai,
+                                } as ReviewEntry
+                              }
+                              approvalId={id}
+                              approvalName={recordName ?? ''}
+                              onChanged={refresh}
+                            />
+                          </div>
+                        ) : pending ? (
                           <div className='mt-1'>
                             <VerdictPanel
                               entry={

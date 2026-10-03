@@ -86,6 +86,7 @@ import {
   EvaluateButton,
   EvaluationStatus,
 } from '../components/crm/lead-evaluation.js';
+import { ReviewStatus } from '../components/crm/approval-review.js';
 import { Choice, RecordForm } from '../components/crm/form.js';
 import { StageField } from '../components/crm/reasons.js';
 import { ApprovalActions } from '../components/crm/approval-actions.js';
@@ -1197,21 +1198,19 @@ export default function EntityDetail({
       <>
         <ApprovalActions approval={record} names={names} />
         {askAI}
-        {/* The approver's briefing before deciding. It analyses only — the
-            decision stays with the buttons before it. */}
-        {meta.assistant && detail.permissions.approve && (
-          <Button
-            size='sm'
-            variant='ghost'
-            className='text-ai hover:text-ai'
-            onClick={() => shortcut('assistApproval')}
-          >
-            <Sparkles />
-            {text('assistApproval')}
-          </Button>
-        )}
         {moreMenu}
       </>,
+      // Under them, the AI's review for the approver (approval-review.tsx),
+      // which opens it in the timeline, and asking for another; it replaced
+      // the "Help me review" chat shortcut. It advises only — the decision
+      // stays with the approver.
+      <ReviewStatus
+        approvalId={id}
+        onOpen={(entryId) => {
+          setFocus({ id: entryId, at: Date.now() });
+          setTab('historyTab');
+        }}
+      />,
     ),
     <>
       <InfoGroup title={text('approvalGroups.general')}>

@@ -82,6 +82,16 @@ export interface OpportunityVerdict {
   // What the web says about the deal's account, for its fields, when the
   // follow-up looked the company up (opportunity-evaluation.ts).
   enrich?: Enrichment[];
+  // The approvals to request before the customer is promised what needs
+  // them (a discount over 10%, longer payment terms, changed contract
+  // terms, a committed delivery date), submitted with the accept.
+  approvals?: ProposedApproval[];
+}
+
+export interface ProposedApproval {
+  topic: string;
+  name: string;
+  description: string;
 }
 
 export interface OpportunityUpdate {
@@ -125,6 +135,13 @@ export interface EvaluationEntry<V = Verdict> {
     instructedById?: string;
     // The web findings the person chose to write into the lead.
     enrichedFields?: string[];
+    // A deal's: the approvals its accept submitted, each by its place in
+    // the card's list.
+    submittedApprovals?: { index: number; id: string }[];
+    // An approval's review (approval-review.ts): what its approver decided
+    // from the card, and the comment sent with the decision.
+    decision?: 'approve' | 'reject';
+    comment?: string;
     enrichedById?: string;
     enrichedAt?: string;
     // The deal's fields the person kept with an accept (an opportunity's

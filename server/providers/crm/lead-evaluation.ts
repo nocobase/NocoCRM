@@ -238,7 +238,7 @@ export async function pendingDecisions(
       .query()
       .selectFrom('crmHistory')
       .selectAll()
-      .where('entity', 'in', ['leads', 'opportunities'])
+      .where('entity', 'in', ['leads', 'opportunities', 'approvals'])
       .where('action', '=', 'ai')
       .where(
         'aiStatus',
@@ -318,6 +318,44 @@ export async function pendingDecisions(
         ).titles,
       );
   }
+  // An approval's review is its approver's alone: waiting while the
+  // approval is, decided once they decided it.
+  const approvals = new Map<string, CrmRecord>();
+  const approvalIds = [
+    ...new Set(
+      entries
+        .filter((entry) => entry.entity === 'approvals')
+        .map((entry) => entry.recordId),
+    ),
+  ];
+  if (approvalIds.length)
+    for (const record of (
+      await service.list(actor, 'approvals', {
+        ids: approvalIds.join(','),
+        approverId: actor.id,
+        pageSize: 1000,
+      })
+    ).data) {
+      approvals.set(toText(record.id), record);
+      readable.set(`approvals:${toText(record.id)}`, record);
+      if (record.status === 'pending')
+        editable.add(`approvals:${toText(record.id)}`);
+    }
+  const dealNames =
+    approvals.size > 0
+      ? (
+          await resolveTitles(
+            service,
+            actor,
+            {},
+            {
+              opportunities: [...approvals.values()].map((a) =>
+                toText(a.opportunityId),
+              ),
+            },
+          )
+        ).titles
+      : {};
   const waiting = entries
     .filter((entry) => {
       const key = `${entry.entity}:${entry.recordId}`;
@@ -325,6 +363,19 @@ export async function pendingDecisions(
     })
     .map((entry) => {
       const record = readable.get(`${entry.entity}:${entry.recordId}`)!;
+      if (entry.entity === 'approvals')
+        return {
+          ...entry,
+          approval: {
+            id: record.id,
+            name: record.name,
+            topic: record.topic,
+            status: record.status,
+            ownerId: record.ownerId ?? null,
+            opportunityId: record.opportunityId,
+            opportunity: dealNames[toText(record.opportunityId)] ?? null,
+          },
+        };
       return entry.entity === 'leads'
         ? {
             ...entry,

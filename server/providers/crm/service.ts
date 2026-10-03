@@ -379,6 +379,12 @@ export class CrmService {
   // record up themselves; and a lead's company or website changed by a
   // person, which has the AI look the company up again.
   activityCompleted?: (by: Actor, activity: CrmRecord) => void;
+  // An approval approved or rejected: its deal is followed up again, so the
+  // AI reads the decision (CrmProvider).
+  approvalDecided?: (by: Actor, approval: CrmRecord) => void;
+  // An approval submitted: the AI reviews it for its approver
+  // (approval-review.ts, set by CrmProvider).
+  approvalSubmitted?: (by: Actor, approval: CrmRecord) => void;
   leadCompanyChanged?: (by: Actor, leadId: string) => void;
   // Set by CrmProvider: the settings were saved (the assistant's prompt
   // follows the AI language setting).
@@ -1914,11 +1920,30 @@ export class CrmService {
       record.status,
       status,
     );
+    // Decided or withdrawn, a review still waiting has nothing left to
+    // decide (approval-review.ts); a review's own decision marks it after.
+    if (status !== 'pending')
+      await tx
+        .updateTable('crmHistory')
+        .set({ aiStatus: 'superseded' })
+        .where('entity', '=', 'approvals')
+        .where('recordId', '=', id)
+        .where('action', '=', 'ai')
+        .where('aiStatus', 'in', ['pending', 'running'])
+        .execute();
     const changed = await this.get(actor, 'approvals', id, tx);
     // The message goes out through the approval-notification workflow once
     // the change is committed: a submission or withdrawal to the approver,
     // a decision to the applicant.
     this.afterCommit(actor, () => this.notifyApproval(actor, changed));
+    if (status === 'approved' || status === 'rejected')
+      this.afterCommit(actor, async () =>
+        this.approvalDecided?.(actor, changed),
+      );
+    if (status === 'pending')
+      this.afterCommit(actor, async () =>
+        this.approvalSubmitted?.(actor, changed),
+      );
     return changed;
   }
   // Runs work once the current transaction has committed; a caller that

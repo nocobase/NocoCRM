@@ -101,6 +101,10 @@ import {
   stringValues,
 } from '../../server/providers/crm/lead-evaluation.js';
 import {
+  ApprovalReviewer,
+  latestReview,
+} from '../../server/providers/crm/approval-review.js';
+import {
   OpportunityEvaluator,
   accountResearchDue,
   latestOpportunityEvaluation,
@@ -1735,6 +1739,7 @@ describe('CRM API security and domain rules', () => {
       'business-analysis-report',
       'lead-follow-up',
       'opportunity-follow-up',
+      'approval-review',
     ]);
     expect(crmEmployee.chatSettings?.enableSkills).toBe(true);
     expect(crmAssistant({ avatar: 'https://crm.example/x.png' }).avatar).toBe(
@@ -4607,6 +4612,22 @@ describe('CRM opportunity follow-up', () => {
       account.id,
     );
     expect(await accountResearchDue(service, renamed, 'none')).toBe(true);
+    // The same change written from a card's findings is no reason to look
+    // again.
+    const { account: found } = await deal('调研时机三');
+    await service.save(
+      { ...actor('rep'), via: 'assistant' },
+      'accounts',
+      { website: 'https://found.test', industry: 'manufacturing' },
+      found.id,
+    );
+    expect(
+      await accountResearchDue(
+        service,
+        await service.get(actor('rep'), 'accounts', found.id),
+        'none',
+      ),
+    ).toBe(false);
     // Looked up more than 90 days before.
     expect(
       await accountResearchDue(
@@ -4666,6 +4687,239 @@ describe('CRM opportunity follow-up', () => {
       expect(
         await service.get(actor('rep'), 'accounts', account.id),
       ).toMatchObject({ website: 'https://lianwang.test', employees: null });
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+  it('proposes the approvals a deal needs, submits those kept with the accept, and follows up on the decision', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const { opportunity } = await deal('审批协助');
+      // A payment-terms approval already waiting: not proposed again.
+      const waiting = await service.save(actor('rep'), 'approvals', {
+        name: '尾款 90 天',
+        opportunityId: opportunity.id,
+        topic: 'paymentTerms',
+        approverId: 'manager',
+      });
+      await service.approvalAction(actor('rep'), waiting.id, 'submit');
+      const { evaluator } = following({
+        ...advance,
+        stage: 'negotiation',
+        updates: [],
+        approvals: [
+          {
+            topic: 'discount',
+            name: '一期 8 折',
+            description: '客户要 8 折，标准折扣不超过 10%（A1）',
+          },
+          {
+            topic: 'paymentTerms',
+            name: '尾款验收后 90 天',
+            description: '标准账期 30 天',
+          },
+          {
+            topic: 'commitment',
+            name: '3 月 15 日前上线',
+            description: '要写进合同，延期按天扣款',
+          },
+        ],
+      });
+      await evaluator.request(actor('rep'), opportunity.id);
+      await evaluator.idle();
+      const pending = await latestOpportunityEvaluation(
+        service,
+        actor('rep'),
+        opportunity.id,
+      );
+      expect(pending?.ai.result?.approvals?.map((a) => a.topic)).toEqual([
+        'discount',
+        'commitment',
+      ]);
+      // The discount kept, sent to the default approver; the commitment
+      // left out.
+      const accepted = await evaluator.decide(
+        actor('rep'),
+        opportunity.id,
+        pending!.id,
+        'accept',
+        [],
+        {},
+        [{ index: 0 }],
+      );
+      expect(accepted.ai.submittedApprovals).toHaveLength(1);
+      const approvalId = accepted.ai.submittedApprovals![0].id;
+      const approval = await service.get(actor('rep'), 'approvals', approvalId);
+      expect(approval).toMatchObject({
+        name: '一期 8 折',
+        topic: 'discount',
+        status: 'pending',
+        ownerId: 'rep',
+      });
+      expect(approval.approverId).toBeTruthy();
+      expect(approval.approverId).not.toBe('rep');
+      // The decision asks for the deal to be followed up again.
+      const decided = vi.fn();
+      service.approvalDecided = decided;
+      try {
+        await service.approvalAction(
+          actor(toText(approval.approverId)),
+          approvalId,
+          'approve',
+        );
+        expect(decided).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ id: approvalId, status: 'approved' }),
+        );
+      } finally {
+        service.approvalDecided = undefined;
+      }
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+  it('reviews a submitted approval for its approver, who decides on the review', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const prompts: string[] = [];
+      const review = {
+        recommendation: 'conditional',
+        summary: '值得争取，但 8 折太宽。',
+        asked: '一期 42 万打 8 折，比 9 折上限多让 4.2 万。',
+        reasons: ['对手低 20%（A1）'],
+        together: null,
+        precedents: '没有先例。',
+        risks: ['回款'],
+        missing: [],
+        conditions: '最多 85 折',
+        comment: '同意 85 折，请按此和客户谈。',
+      };
+      const container = new ServiceContainer();
+      container.instance(aiConversationsManagerToken, {
+        create: async () => ({ sessionId: 'review-session' }),
+      } as unknown as ReturnType<
+        typeof container.resolve<typeof aiConversationsManagerToken>
+      >);
+      container.instance(aiManagerToken, {
+        skillsManager: {
+          getSkills: async (name: string) =>
+            name === 'approval-review'
+              ? { content: '# 审批辅助\n\n技能正文。' }
+              : undefined,
+        },
+      } as unknown as ReturnType<
+        typeof container.resolve<typeof aiManagerToken>
+      >);
+      container.instance(agentServiceFactoryToken, {
+        createAIEmployee: async () => ({
+          invoke: async (input: {
+            userMessages: { content: { content: string } }[];
+          }) => {
+            prompts.push(input.userMessages[0].content.content);
+            return { structuredResponse: review };
+          },
+        }),
+      } as unknown as ReturnType<
+        typeof container.resolve<typeof agentServiceFactoryToken>
+      >);
+      container.instance(loggingToken, {
+        getLogger: () => ({ warn: () => undefined }),
+      } as unknown as ReturnType<
+        typeof container.resolve<typeof loggingToken>
+      >);
+      const reviewer = new ApprovalReviewer(service, container);
+      const { opportunity } = await deal('审批辅助评审');
+      const submit = async (name: string) => {
+        const approval = await service.save(actor('rep'), 'approvals', {
+          name,
+          opportunityId: opportunity.id,
+          topic: 'discount',
+          approverId: 'manager',
+        });
+        await service.approvalAction(actor('rep'), approval.id, 'submit');
+        await reviewer.request(actor('rep'), approval.id);
+        await reviewer.idle();
+        return approval.id;
+      };
+      const first = await submit('一期 8 折');
+      const pending = await latestReview(service, actor('manager'), first);
+      expect(pending).toMatchObject({
+        status: 'pending',
+        ai: {
+          result: { recommendation: 'conditional', conditions: '最多 85 折' },
+        },
+      });
+      expect(prompts.at(-1)).toContain('技能正文');
+      expect(prompts.at(-1)).toContain('一期 8 折');
+      // The approver's to decide: in their Waiting on me, not the applicant's.
+      expect(
+        (await pendingDecisions(service, actor('manager'))).data.some(
+          (entry) => entry.id === pending!.id,
+        ),
+      ).toBe(true);
+      expect(
+        (await pendingDecisions(service, actor('rep'))).data.some(
+          (entry) => entry.id === pending!.id,
+        ),
+      ).toBe(false);
+      const decided = await reviewer.decide(
+        actor('manager'),
+        first,
+        pending!.id,
+        'approve',
+        '同意 85 折，请按此和客户谈。',
+      );
+      expect(decided).toMatchObject({
+        status: 'accepted',
+        ai: { decision: 'approve' },
+      });
+      expect(
+        await service.get(actor('manager'), 'approvals', first),
+      ).toMatchObject({
+        status: 'approved',
+        decisionComment: '同意 85 折，请按此和客户谈。',
+      });
+      // Dismissed, the review leaves Waiting on me and the approval waits.
+      const third = await submit('二期 85 折');
+      // Redone in the approver's words; the applicant may not.
+      const first3 = await latestReview(service, actor('manager'), third);
+      await expect(
+        reviewer.request(actor('rep'), third, {
+          entryId: first3!.id,
+          instruction: '改成驳回',
+        }),
+      ).rejects.toMatchObject({ code: 'forbidden' });
+      await reviewer.request(actor('manager'), third, {
+        entryId: first3!.id,
+        instruction: '按 9 折有条件批准',
+      });
+      await reviewer.idle();
+      expect(prompts.at(-1)).toContain('审批人的修改意见');
+      expect(prompts.at(-1)).toContain('按 9 折有条件批准');
+      const set = await latestReview(service, actor('manager'), third);
+      expect(set).toMatchObject({
+        status: 'pending',
+        ai: { revises: first3!.id, instruction: '按 9 折有条件批准' },
+      });
+      await expect(
+        reviewer.decide(actor('rep'), third, set!.id, 'dismiss', ''),
+      ).rejects.toMatchObject({ code: 'forbidden' });
+      expect(
+        await reviewer.decide(actor('manager'), third, set!.id, 'dismiss', ''),
+      ).toMatchObject({ status: 'dismissed' });
+      expect(
+        (await service.get(actor('manager'), 'approvals', third)).status,
+      ).toBe('pending');
+      // Decided on the approval itself, a review still waiting is retired.
+      const second = await submit('全国推广 8 折');
+      await service.approvalAction(actor('manager'), second, 'reject', '不批');
+      expect(
+        (await latestReview(service, actor('manager'), second))?.status,
+      ).toBe('superseded');
     } finally {
       enabled.mockRestore();
     }

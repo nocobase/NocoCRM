@@ -11,6 +11,10 @@ import {
   type EvaluationEntry,
 } from '../components/crm/lead-evaluation.js';
 import { recordTitle } from '../components/crm/lookups.js';
+import {
+  ReviewPanel,
+  type ReviewEntry,
+} from '../components/crm/approval-review.js';
 import { revealScrollbar } from '../components/crm/scrollbar.js';
 import {
   localDate,
@@ -28,10 +32,20 @@ import {
 const isDecided = (entry: EvaluationEntry): boolean =>
   entry.status === 'accepted' || entry.status === 'dismissed';
 
-// A lead's or a deal's follow-up waiting on its decision, with the record
-// it concerns.
+// A lead's or a deal's follow-up waiting on its decision, or an approval's
+// review waiting on its approver, with the record it concerns.
 interface EvaluationItem extends EvaluationEntry {
-  entity: 'leads' | 'opportunities';
+  entity: 'leads' | 'opportunities' | 'approvals';
+  approval?: {
+    id: string;
+    name: string;
+    topic: string;
+    status: string;
+    // The applicant.
+    ownerId: string | null;
+    opportunityId: string;
+    opportunity: string | null;
+  };
   lead?: {
     id: string;
     name: string;
@@ -52,7 +66,7 @@ interface EvaluationItem extends EvaluationEntry {
 const recordOf = (
   entry: EvaluationItem,
 ): { id: string; name: string; ownerId: string | null } =>
-  (entry.lead ?? entry.opportunity)!;
+  (entry.lead ?? entry.opportunity ?? entry.approval)!;
 
 // What waits on the reader (server/providers/crm/lead-evaluation.ts,
 // pendingDecisions): the AI's follow-ups of leads and deals. The reader's
@@ -92,7 +106,7 @@ export default function DecisionsPage(): ReactElement {
   const nameOf = (entry: EvaluationItem): string =>
     entry.lead
       ? recordTitle('leads', entry.lead as unknown as CrmRecord)
-      : toText(entry.opportunity?.name);
+      : toText((entry.opportunity ?? entry.approval)?.name);
   const kindOf = (entry: EvaluationItem): string =>
     sentence(text(`entity.${entry.entity}`));
   const ownerOf = (entry: EvaluationItem): string =>
@@ -217,7 +231,23 @@ export default function DecisionsPage(): ReactElement {
                           )}
                         </span>
                       )}
-                      {entry.ai.result && (
+                      {entry.ai.result && entry.entity === 'approvals' && (
+                        <span className='line-clamp-2 text-xs text-muted-foreground'>
+                          <Badge variant={decided ? 'muted' : 'ai'}>
+                            {text(
+                              `approvalReview.recommendations.${
+                                (
+                                  entry.ai.result as unknown as {
+                                    recommendation: string;
+                                  }
+                                ).recommendation
+                              }`,
+                            )}
+                          </Badge>{' '}
+                          {entry.ai.result.summary}
+                        </span>
+                      )}
+                      {entry.ai.result && entry.entity !== 'approvals' && (
                         <span className='line-clamp-2 text-xs text-muted-foreground'>
                           {decided ? (
                             <>
@@ -333,6 +363,47 @@ function EvaluationDetail({
 }): ReactElement {
   const { text } = useCrmText();
   const refresh = useRefresh();
+  // An approval's review: decided here by its approver.
+  if (entry.entity === 'approvals' && entry.approval)
+    return (
+      <>
+        <DetailHeading
+          name={name}
+          kind={kind}
+          facts={[
+            ['fields.opportunityId', toText(entry.approval.opportunity)],
+            ['fields.topic', toText(text(`options.${entry.approval.topic}`))],
+            ['approvalReview.applicant', owner],
+            ['decisions.evaluatedAt', when(entry.createdAt)],
+          ]}
+          action={
+            <Button
+              size='sm'
+              variant='outline'
+              nativeButton={false}
+              render={
+                <Link
+                  to={`/crm/approvals/${entry.approval.id}/history?focus=${entry.id}`}
+                />
+              }
+            >
+              <ArrowUpRight />
+              {text('decisions.openRecord')}
+            </Button>
+          }
+        />
+        <ReviewPanel
+          key={entry.id}
+          entry={entry as unknown as ReviewEntry}
+          approvalId={entry.approval.id}
+          approvalName={name}
+          onRevised={(next) => onRevised(next as unknown as EvaluationEntry)}
+          onChanged={async () => {
+            await refresh();
+          }}
+        />
+      </>
+    );
   return (
     <>
       <DetailHeading
@@ -369,7 +440,8 @@ function EvaluationDetail({
       />
       <VerdictPanel
         key={entry.id}
-        entity={entry.entity}
+        // Past the approvals' branch above: a lead's or a deal's.
+        entity={entry.entity as 'leads' | 'opportunities'}
         entry={entry}
         recordId={recordOf(entry).id}
         recordName={name}

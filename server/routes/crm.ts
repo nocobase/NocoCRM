@@ -33,6 +33,10 @@ import {
 } from '../providers/crm/opportunity-evaluation.js';
 import { screenProposal } from '../ai/screen.js';
 import {
+  approvalReviewerToken,
+  latestReview,
+} from '../providers/crm/approval-review.js';
+import {
   capability,
   conditions,
   outputFields,
@@ -605,6 +609,49 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
       if (!entry) throw new CrmError('assistantUnavailable', 409);
       return c.json({ data: entry }, 201);
     });
+    // An approval's AI review for its approver (approval-review.ts): the
+    // newest, asking for another while it is pending, and deciding on it.
+    const reviewer = () =>
+      app.container.has(approvalReviewerToken)
+        ? app.container.resolve(approvalReviewerToken)
+        : undefined;
+    routes.get('/approvals/:id/review', async (c) =>
+      c.json({
+        data: await latestReview(service, c.get('actor'), c.req.param('id')),
+      }),
+    );
+    routes.post('/approvals/:id/review', async (c) => {
+      const actor = c.get('actor');
+      const approval = await service.get(actor, 'approvals', c.req.param('id'));
+      // The approver's, and the applicant's who submitted it; redoing one
+      // in the approver's words (`revise`, `instruction`) theirs alone.
+      if (approval.approverId !== actor.id && approval.ownerId !== actor.id)
+        throw new CrmError('forbidden', 403);
+      const body = object(await c.req.json().catch(() => ({})));
+      const entry = await reviewer()?.request(
+        actor,
+        c.req.param('id'),
+        body.revise
+          ? { entryId: body.revise, instruction: body.instruction }
+          : undefined,
+      );
+      if (!entry) throw new CrmError('assistantUnavailable', 409);
+      return c.json({ data: entry }, 201);
+    });
+    routes.post('/approvals/:id/review/:entryId', async (c) => {
+      const run = reviewer();
+      if (!run) throw new CrmError('assistantUnavailable', 409);
+      const body = object(await c.req.json());
+      return c.json({
+        data: await run.decide(
+          c.get('actor'),
+          c.req.param('id'),
+          c.req.param('entryId'),
+          toText(body.decision) as 'approve',
+          body.comment,
+        ),
+      });
+    });
     // The web findings on a deal's account the person picked, into the
     // account.
     routes.post('/opportunities/:id/evaluation/:entryId/enrich', async (c) => {
@@ -631,6 +678,7 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           toText(body.decision) as 'accept',
           body.fields,
           body.activity,
+          body.approvals,
         ),
       });
     });

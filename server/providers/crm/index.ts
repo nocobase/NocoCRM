@@ -19,7 +19,8 @@ import { scanLeadSignals } from './lead-signals.js';
 import { jobExecutorServiceToken } from '@nocobase/app-server/jobs';
 import type { JobExecutor } from '@nocobase/jobs';
 import { createFollowUpJob, FOLLOW_UP_JOBS } from './follow-up-jobs.js';
-import { followUpAfterActivity } from './feedback.js';
+import { followUpAfterActivity, followUpOpportunity } from './feedback.js';
+import { crmActor } from '../../ai/tools/crm-records.js';
 import {
   provisionCrm,
   registerCrmResources,
@@ -34,6 +35,7 @@ import {
   opportunityEvaluatorToken,
 } from './opportunity-evaluation.js';
 import { createCrmUserRoleScope } from './user-roles.js';
+import { ApprovalReviewer, approvalReviewerToken } from './approval-review.js';
 import { CrmAiResources } from '../../ai/index.js';
 import {
   LOGO_AVATAR_PATH,
@@ -103,6 +105,16 @@ export default class CrmProvider extends ServiceProvider<Application> {
       opportunityEvaluatorToken,
       () =>
         new OpportunityEvaluator(
+          this.app.container.resolve(crmToken),
+          this.app.container,
+        ),
+    );
+    // Approval requests reviewed by the AI for their approvers
+    // (approval-review.ts).
+    this.app.container.singleton(
+      approvalReviewerToken,
+      () =>
+        new ApprovalReviewer(
           this.app.container.resolve(crmToken),
           this.app.container,
         ),
@@ -204,6 +216,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
     this.app.container.resolve(crmToken).leadCreated = (by, leadId) =>
       void evaluator.request(by, leadId).catch(() => undefined);
     const deals = this.app.container.resolve(opportunityEvaluatorToken);
+    const reviewer = this.app.container.resolve(approvalReviewerToken);
     const service = this.app.container.resolve(crmToken);
     // The follow-ups run as tasks of the jobs service (follow-up-jobs.ts):
     // kept across a restart, as many at once as `crmFollowUps` allows.
@@ -214,7 +227,9 @@ export default class CrmProvider extends ServiceProvider<Application> {
       const FollowUpJob = createFollowUpJob((payload, signal) =>
         payload.entity === 'opportunities'
           ? deals.runEntry(payload.entryId, payload.language, signal)
-          : evaluator.runEntry(payload.entryId, payload.language, signal),
+          : payload.entity === 'approvals'
+            ? reviewer.runEntry(payload.entryId, payload.language, signal)
+            : evaluator.runEntry(payload.entryId, payload.language, signal),
       );
       executor.registerJob(FollowUpJob);
       await executor.setup();
@@ -226,6 +241,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
       };
       evaluator.useJobs(dispatch);
       deals.useJobs(dispatch);
+      reviewer.useJobs(dispatch);
     }
     service.opportunityOpened = (by, id) =>
       void deals.request(by, id).catch(() => undefined);
@@ -238,6 +254,33 @@ export default class CrmProvider extends ServiceProvider<Application> {
         by,
         activity,
       ).catch(() => undefined);
+    // An approval submitted, reviewed by the AI for its approver.
+    service.approvalSubmitted = (by, approval) =>
+      void reviewer.request(by, toText(approval.id)).catch(() => undefined);
+    // An approval decided, its deal followed up again as its owner, who
+    // acts on the decision.
+    service.approvalDecided = (_by, approval) =>
+      void (async () => {
+        const deal = await service.database
+          .query()
+          .selectFrom('crmOpportunities')
+          .select(['id', 'ownerId'])
+          .where('id', '=', toText(approval.opportunityId))
+          .executeTakeFirst();
+        if (!deal?.ownerId) return;
+        const ownerId = toText(deal.ownerId);
+        const owner = crmActor(service.authz, {
+          id: ownerId,
+          locale: await service.localeOf(ownerId),
+        });
+        await followUpOpportunity(
+          service,
+          deals,
+          owner,
+          toText(deal.id),
+          'approvalDecided',
+        );
+      })().catch(() => undefined);
     service.leadCompanyChanged = (by, leadId) =>
       void evaluator
         .request(by, leadId, undefined, 'companyChanged')

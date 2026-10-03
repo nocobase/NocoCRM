@@ -23,6 +23,14 @@ import { Textarea } from '../ui/textarea.js';
 import { Spinner } from '../ui/spinner.js';
 import { ErrorNotice, LongText, RecordLink, Value } from './common.js';
 import { ConvertDialog } from './conversion.js';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog.js';
 import { OutcomeBox } from './outcome.js';
 import { Choice } from './form.js';
 import { Input } from '../ui/input.js';
@@ -116,6 +124,8 @@ export interface DealVerdict {
   changes: string[];
   // What the web says about the deal's account, for its fields.
   enrich?: Verdict['enrich'];
+  // Approvals to request before promising the customer what needs them.
+  approvals?: { topic: string; name: string; description: string }[];
 }
 export type AnyVerdict = Verdict | DealVerdict;
 const isDeal = (verdict: AnyVerdict): verdict is DealVerdict =>
@@ -135,6 +145,7 @@ export interface EvaluationEntry {
     decidedById?: string;
     decidedAt?: string;
     enrichedFields?: string[];
+    submittedApprovals?: { index: number; id: string }[];
     enrichedById?: string;
     enrichedAt?: string;
     // A card redone as a person asked: the card it replaced, what they
@@ -375,6 +386,8 @@ export function VerdictPanel({
   // Converting is the person's own, in the conversion dialog with the
   // proposed opportunity; accepting is recorded once it is done.
   const [converting, setConverting] = useState(false);
+  // Accepting a deal's card that submits approvals asks first.
+  const [confirmingApprovals, setConfirmingApprovals] = useState(false);
   // What the person wants changed on the card, for the AI to redo it.
   const [instruction, setInstruction] = useState('');
   // The web findings ticked, all to start with: written on their own with
@@ -399,6 +412,11 @@ export function VerdictPanel({
     (field) => !(entry.ai.enrichedAt && found.has(field)),
   );
   const base = `${entity}/${recordId}/evaluation`;
+  // The proposed approvals kept, all to start with, each with its approver
+  // (a sales manager by default), submitted with the accept.
+  const [approvalPicks, setApprovalPicks] = useState<
+    Record<number, { on: boolean; approverId: string }>
+  >({});
   // The activity accepting creates, as the person changes it here: only
   // what they changed, over what the verdict proposes.
   const [plan, setPlan] = useState<Partial<Plan>>({});
@@ -441,6 +459,23 @@ export function VerdictPanel({
               activity: existing
                 ? { mode: overdue ? 'report' : 'reschedule', ...plan }
                 : plan,
+              // Only a deal's card proposes approvals.
+              ...(verdict && isDeal(verdict) && verdict.approvals?.length
+                ? {
+                    approvals: verdict.approvals.flatMap((_, index) => {
+                      const pick = approvalPicks[index];
+                      if (pick && !pick.on) return [];
+                      return [
+                        {
+                          index,
+                          ...(pick?.approverId
+                            ? { approverId: pick.approverId }
+                            : {}),
+                        },
+                      ];
+                    }),
+                  }
+                : {}),
             }
           : {}),
       }),
@@ -489,6 +524,24 @@ export function VerdictPanel({
     existing && verdict && !reporting
       ? carriedChanges(existing, verdict, plan, overdue).none
       : false;
+  // The approvals the accept would submit, as ticked, each with its
+  // approver (a sales manager other than the reader by default).
+  const approvers = meta.users.filter(
+    (u) => !u.disabled && u.canApprove && u.id !== meta.userId,
+  );
+  const submitting = (
+    verdict && isDeal(verdict) ? (verdict.approvals ?? []) : []
+  ).flatMap((approval, index) => {
+    const pick = approvalPicks[index];
+    if (pick && !pick.on) return [];
+    const approverId = pick?.approverId || approvers[0]?.id || '';
+    return [
+      {
+        ...approval,
+        approver: meta.users.find((u) => u.id === approverId)?.name ?? '—',
+      },
+    ];
+  });
   const decider = meta.users.find((u) => u.id === entry.ai.decidedById)?.name;
   const instructor = meta.users.find(
     (u) => u.id === entry.ai.instructedById,
@@ -583,9 +636,11 @@ export function VerdictPanel({
                     Boolean(busy) || (reporting && !toText(plan.outcome).trim())
                   }
                   onClick={() =>
-                    void (verdict.recommendation === 'convert'
-                      ? convert()
-                      : decide('accept'))
+                    verdict.recommendation === 'convert'
+                      ? void convert()
+                      : submitting.length
+                        ? setConfirmingApprovals(true)
+                        : void decide('accept')
                   }
                 >
                   {busy === 'accept' && <Spinner />}
@@ -674,6 +729,16 @@ export function VerdictPanel({
           editable={editable && entry.status === 'pending'}
           picked={picked}
           onPick={setPicked}
+        />
+      )}
+      {/* Approvals to request first, submitted with the accept. */}
+      {verdict && isDeal(verdict) && (verdict.approvals?.length ?? 0) > 0 && (
+        <ProposedApprovals
+          entry={entry}
+          approvals={verdict.approvals ?? []}
+          editable={editable && entry.status === 'pending'}
+          picks={approvalPicks}
+          onPick={setApprovalPicks}
         />
       )}
       {/* What accepting will create, laid out and changeable. */}
@@ -774,6 +839,66 @@ export function VerdictPanel({
           }
         />
       )}
+      {/* Submitting approvals notifies their approvers: said and confirmed
+          before the accept goes. */}
+      <Dialog
+        open={confirmingApprovals}
+        onOpenChange={(open) => {
+          if (!open && busy !== 'accept') setConfirmingApprovals(false);
+        }}
+      >
+        <DialogContent className='sm:max-w-lg'>
+          <DialogHeader>
+            <DialogTitle>
+              {text('evaluation.deal.confirmTitle', {
+                count: submitting.length,
+              })}
+            </DialogTitle>
+            <DialogDescription>
+              {text('evaluation.deal.confirmHint')}
+            </DialogDescription>
+          </DialogHeader>
+          <ul className='grid gap-2 text-sm'>
+            {submitting.map((approval) => (
+              <li
+                key={`${approval.topic}-${approval.name}`}
+                className='flex items-center gap-2'
+              >
+                <Badge variant='warning'>
+                  {text(`options.${approval.topic}`, {
+                    defaultValue: approval.topic,
+                  })}
+                </Badge>
+                <span className='min-w-0 flex-1 truncate'>{approval.name}</span>
+                <span className='shrink-0 text-muted-foreground'>
+                  {text('fields.approverId')}
+                  {language.startsWith('zh') ? '：' : ': '}
+                  {approval.approver}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <DialogFooter>
+            <Button
+              variant='outline'
+              disabled={busy === 'accept'}
+              onClick={() => setConfirmingApprovals(false)}
+            >
+              {text('cancel')}
+            </Button>
+            <Button
+              className='bg-ai text-ai-foreground hover:bg-ai/90'
+              disabled={busy === 'accept'}
+              onClick={() =>
+                void decide('accept').then(() => setConfirmingApprovals(false))
+              }
+            >
+              {busy === 'accept' && <Spinner />}
+              {text('evaluation.deal.confirmSubmit')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
@@ -1702,7 +1827,9 @@ function ConversionPlan({
 
 // A labelled row of the verdict's list: the label, in the reader's
 // punctuation, and its value.
-function Row({
+// A card's row, label and value (also the approval review's,
+// approval-review.tsx, so every AI card reads alike).
+export function Row({
   label,
   children,
 }: {
@@ -1858,6 +1985,118 @@ function VerdictList({
         </>
       )}
     </dl>
+  );
+}
+
+// The approvals the AI would request before the customer is promised what
+// needs them: each kept to start with and sent to a sales manager, both
+// changeable; submitted with the accept, then marked.
+function ProposedApprovals({
+  entry,
+  approvals,
+  editable,
+  picks,
+  onPick,
+}: {
+  entry: EvaluationEntry;
+  approvals: NonNullable<DealVerdict['approvals']>;
+  editable: boolean;
+  picks: Record<number, { on: boolean; approverId: string }>;
+  onPick: (picks: Record<number, { on: boolean; approverId: string }>) => void;
+}): ReactElement | null {
+  const { data: meta } = useMetadata();
+  const { text } = useCrmText();
+  if (!meta) return null;
+  const approvers = meta.users.filter(
+    (u) => !u.disabled && u.canApprove && u.id !== meta.userId,
+  );
+  const submitted = new Map(
+    (entry.ai.submittedApprovals ?? []).map((s) => [s.index, s.id]),
+  );
+  const pick = (index: number) => ({
+    on: picks[index]?.on ?? true,
+    approverId: picks[index]?.approverId || (approvers[0]?.id ?? ''),
+  });
+  return (
+    <div className='grid gap-2 rounded-lg border bg-background/60 p-3'>
+      <p className='font-medium'>
+        {text('evaluation.deal.approvals')}
+        {editable && (
+          <span className='ml-2 text-xs font-normal text-muted-foreground'>
+            {text('evaluation.deal.approvalsHint')}
+          </span>
+        )}
+      </p>
+      {approvals.map((approval, index) => {
+        const current = pick(index);
+        const id = submitted.get(index);
+        return (
+          <div
+            key={`${approval.topic}-${approval.name}`}
+            className='flex items-start gap-2'
+          >
+            {editable ? (
+              <Checkbox
+                className='mt-0.5'
+                aria-label={approval.name}
+                checked={current.on}
+                onCheckedChange={(value) =>
+                  onPick({
+                    ...picks,
+                    [index]: { ...current, on: value === true },
+                  })
+                }
+              />
+            ) : id ? (
+              <Check className='mt-0.5 size-4 shrink-0 text-success' />
+            ) : (
+              <span className='size-4 shrink-0' />
+            )}
+            <div className='grid min-w-0 flex-1 gap-1'>
+              <div className='flex flex-wrap items-center gap-x-2 gap-y-1'>
+                <Badge variant='warning'>
+                  {text(`options.${approval.topic}`, {
+                    defaultValue: approval.topic,
+                  })}
+                </Badge>
+                {id ? (
+                  <RecordLink
+                    entity='approvals'
+                    record={{ id, name: approval.name }}
+                  />
+                ) : (
+                  <span className='font-medium'>{approval.name}</span>
+                )}
+                {editable && current.on && (
+                  <span className='ml-auto flex shrink-0 items-center gap-1 text-xs whitespace-nowrap text-muted-foreground'>
+                    {text('fields.approverId')}
+                    <Choice
+                      value={current.approverId}
+                      onChange={(value) =>
+                        onPick({
+                          ...picks,
+                          [index]: { ...current, approverId: value },
+                        })
+                      }
+                      choices={approvers.map((u) => ({
+                        value: u.id,
+                        label: u.name,
+                      }))}
+                      label={text('fields.approverId')}
+                      variant='inline'
+                      compact
+                    />
+                  </span>
+                )}
+              </div>
+              <p className='text-xs whitespace-pre-wrap text-muted-foreground'>
+                {approval.description}
+              </p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

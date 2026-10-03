@@ -150,6 +150,10 @@ const wording = {
     addedFiles: ['added', '添加了附件'],
     removedFiles: ['removed', '删除了附件'],
     evaluated: ['recommended a follow-up', '给出了跟进建议'],
+    // An approval's review for its approver.
+    reviewed: ['reviewed the request', '给出了审批建议'],
+    reviewing: ['is reviewing the request…', '正在分析这个申请…'],
+    reviewFailed: ['could not review the request', '没能给出审批建议'],
     evaluating: ['is preparing a follow-up…', '正在准备跟进建议…'],
     evaluationFailed: ['could not finish a follow-up', '没能给出跟进建议'],
     fieldCount: ['{{count}} fields', '{{count}} 个字段'],
@@ -280,6 +284,10 @@ const wording = {
         'An activity was done: the AI followed up again.',
         '活动已完成，AI 继续跟进。',
       ],
+      approvalDecided: [
+        'An approval was decided: the AI followed up again.',
+        '审批有了结果，AI 继续跟进。',
+      ],
       merged: [
         'Leads merged: the AI followed up again.',
         '线索已合并，AI 重新跟进。',
@@ -288,6 +296,18 @@ const wording = {
     // An opportunity's follow-up (opportunity-evaluation.ts): its
     // recommendations, how likely it is to close, and what accepting does.
     deal: {
+      // Approvals the AI would request before promising the customer.
+      approvals: ['Approvals to request', '建议发起的审批'],
+      approvalsHint: [
+        'submitted to the approver with the accept',
+        '采纳时提交给审批人',
+      ],
+      confirmTitle: ['Submit {{count}} approvals?', '提交 {{count}} 个审批？'],
+      confirmHint: [
+        'Accepting applies the recommendation and submits these approvals; each approver is notified. Promise the customer none of these terms before they are approved.',
+        '采纳会执行这条建议，并提交下面的审批，审批人会收到通知。审批通过前，不要向客户答应这些条件。',
+      ],
+      confirmSubmit: ['Accept and submit', '采纳并提交审批'],
       advance: ['Advance', '推进'],
       advanceTo: ['Advance to {{stage}}', '推进到{{stage}}'],
       continue: ['Keep at it', '继续推进'],
@@ -549,6 +569,46 @@ const wording = {
     followUp: ['AI follows up the merged lead', '合并后 AI 重新跟进'],
     confirm: ['Merge', '合并'],
   },
+  // The AI's review of an approval request for its approver
+  // (approval-review.tsx).
+  approvalReview: {
+    title: ['AI review', 'AI 审批建议'],
+    running: ['The AI is reviewing the request…', 'AI 正在分析这个申请…'],
+    failed: ['The AI could not review it', '没能给出审批建议'],
+    superseded: ['decided on the approval itself', '已在审批上直接处理'],
+    // What the approver did from the card, in the card's heading.
+    statuses: {
+      approve: ['Approved', '已批准'],
+      reject: ['Rejected', '已驳回'],
+    },
+    recommendations: {
+      approve: ['Approve', '建议批准'],
+      conditional: ['Approve on conditions', '建议有条件批准'],
+      reject: ['Reject', '建议驳回'],
+      needMore: ['Ask for more', '建议补充信息'],
+    },
+    summary: ['Why', '理由'],
+    asked: ['Asked vs standard', '申请与标准'],
+    conditions: ['Conditions', '批准条件'],
+    reasons: ['Grounds', '依据'],
+    together: ['Taken together', '合在一起看'],
+    precedents: ['Earlier requests', '以往同类'],
+    risks: ['Risks', '风险'],
+    missing: ['To add', '需补充'],
+    comment: ['Decision comment', '审批意见'],
+    revisePlaceholder: [
+      'Tell the AI how to change it, e.g. approve at 85% off, more politely',
+      '告诉 AI 怎么改，比如：按 85 折有条件批准，意见写得委婉些',
+    ],
+    // The card's accept: what the review recommends, with its comment.
+    accept: {
+      approve: ['Approve as advised', '按建议批准'],
+      reject: ['Reject as advised', '按建议驳回'],
+    },
+    ask: ['AI review', 'AI 审批建议'],
+    again: ['Review again', '重新分析'],
+    applicant: ['Applicant', '申请人'],
+  },
   // The conversion dialog's duplicate check, when it found nothing.
   noDuplicateAccounts: [
     'Checked: no possible duplicate account',
@@ -773,8 +833,8 @@ const wording = {
   skillsPage: {
     title: ['Sales skills', '销售技能'],
     description: [
-      'How the AI works on leads. The built-in method ships with NocoCRM and changes with it; add your company’s own practice below and the AI follows both.',
-      'AI 处理线索时遵循的做法。内置做法随 NocoCRM 升级；在下面补充本公司的做法，AI 会一并遵守。',
+      'How the AI works on leads, opportunities and approvals. The built-in method ships with NocoCRM and changes with it; add your company’s own practice below and the AI follows both.',
+      'AI 跟进线索、推进商机和辅助审批时遵循的做法。内置做法随 NocoCRM 升级；在下面补充本公司的做法，AI 会一并遵守。',
     ],
     builtIn: ['Built in', '内置'],
     showMethod: ['Show the built-in method', '查看内置做法'],
@@ -873,7 +933,6 @@ const wording = {
   researchCompany: ['Research company', '调研公司'],
   findOpportunities: ['Find opportunities', '发现销售机会'],
   analyzeOpportunity: ['Analyze', '分析商机'],
-  assistApproval: ['Help me review', '辅助审批'],
   noRecords: ['None yet', '暂无'],
   showing: ['Showing', '当前显示'],
   metricNotes: {
@@ -1043,10 +1102,6 @@ const wording = {
     analyzeOpportunity: [
       'Analyze this opportunity and say how to advance it: whether the stage matches the evidence recorded, who the decision makers are and whether they are engaged, the risks, and whether the expected close date is realistic; then, per the business instructions, what evidence the next stage needs and what is missing, and the concrete next activity — propose that activity, and an approval if the recorded terms require one.',
       '分析这个商机并给出推进建议：当前阶段和已记录证据是否匹配、决策人是谁以及是否已接触、风险、预计成交日是否现实；然后按业务指导说明下一阶段需要什么证据、现在缺什么，给出具体的下一个活动并提出该活动；如果已记录的条件需要审批，也一并提出。',
-    ],
-    assistApproval: [
-      'Help me review this request: first state what is asked (topic, the discount / payment terms / clauses involved, amount); then where the opportunity stands (stage, amount, expected close date, decision makers, recent activities and feedback) and this account’s earlier approvals; check it against the approval rules in the business instructions, point out risks and what the applicant should add; and end with your recommendation — approve, reject, or needs more — with reasons. Do not propose any action.',
-      '帮我审这条申请：先说明申请的内容（事项、涉及的折扣/账期/条款、金额），再看所属商机的现状（阶段、金额、预计成交日、决策人、最近活动和反馈），以及这个客户此前的审批记录；对照业务指导里的审批规则，指出风险和需要申请人补充的信息，最后给出你的建议（同意 / 拒绝 / 需补充）及理由。不要提出任何动作。',
     ],
     accounts: [
       'Summarize this account and suggest opportunities to deepen the relationship.',

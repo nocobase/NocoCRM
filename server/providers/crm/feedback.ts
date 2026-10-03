@@ -256,7 +256,7 @@ export async function followUpOpportunity(
   evaluator: OpportunityEvaluator,
   actor: Actor,
   opportunityId: string,
-  trigger?: 'activityDone',
+  trigger?: 'activityDone' | 'approvalDecided',
 ): Promise<boolean> {
   try {
     const opportunity = await service.get(

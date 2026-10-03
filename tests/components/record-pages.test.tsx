@@ -313,15 +313,18 @@ describe('the approval page', () => {
     expect(screen.queryByText('审批意见')).toBeNull();
   });
 
-  it('offers the review briefing only to whoever may approve', () => {
-    renderPage();
-    expect(screen.getByRole('button', { name: /辅助审批/ })).toBeTruthy();
-  });
-
-  it('withholds the review briefing without approval permission', () => {
-    state.canApprove = false;
+  // The AI's review (approval-review.tsx) replaced the chat briefing: its
+  // status under the buttons, and asking for it while the approval waits.
+  it('offers the AI review to the approver while it waits', () => {
     renderPage();
     expect(screen.queryByRole('button', { name: /辅助审批/ })).toBeNull();
+    expect(screen.getByRole('button', { name: /AI 审批建议/ })).toBeTruthy();
+  });
+
+  it('withholds asking for it from someone neither approver nor applicant', () => {
+    state.userId = 'someone';
+    renderPage();
+    expect(screen.queryByRole('button', { name: /AI 审批建议/ })).toBeNull();
   });
 
   it('shows the applicant no marker and the creation time', () => {

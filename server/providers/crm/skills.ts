@@ -19,7 +19,9 @@ import { encodeRow, jsonValue } from './values.js';
 // follows up a lead — where it stands, what to recommend and what to do
 // next, from its first evaluation on (the former lead evaluation and lead
 // follow-up skills, merged) — and how it moves an opportunity through the
-// sales stages (opportunity-follow-up, opportunity-evaluation.ts). The files
+// sales stages (opportunity-follow-up, opportunity-evaluation.ts), and how it
+// helps an approver weigh a request (approval-review, approval-review.ts).
+// The files
 // ship with the source and change with it. Everyone reads them on the Sales
 // skills page of the main menu, and whoever holds the sales capability
 // manageSkills (sales managers and administrators by default) adds the
@@ -31,7 +33,11 @@ import { encodeRow, jsonValue } from './values.js';
 // keeps skills in memory, registered from the files at boot, so the composed
 // skill is registered again at start and after every save; a restart
 // rebuilds it from the file and the stored notes.
-export const CRM_SKILLS = ['lead-follow-up', 'opportunity-follow-up'] as const;
+export const CRM_SKILLS = [
+  'lead-follow-up',
+  'opportunity-follow-up',
+  'approval-review',
+] as const;
 export type CrmSkillName = (typeof CRM_SKILLS)[number];
 
 const NOTES_ID = 'skill-notes';
