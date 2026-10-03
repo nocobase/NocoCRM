@@ -5209,7 +5209,21 @@ describe('demo dataset', () => {
       present: false,
       records: 0,
     });
-    const populated = await request('/demo/populate', 'admin', 'POST', {});
+    // Its approvals, submitted and decided, start no AI run.
+    const submitted = vi.fn();
+    const decided = vi.fn();
+    service.approvalSubmitted = submitted;
+    service.approvalDecided = decided;
+    let populated: Response;
+    try {
+      populated = await request('/demo/populate', 'admin', 'POST', {});
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    } finally {
+      service.approvalSubmitted = undefined;
+      service.approvalDecided = undefined;
+    }
+    expect(submitted).not.toHaveBeenCalled();
+    expect(decided).not.toHaveBeenCalled();
     expect(populated.status).toBe(200);
     const status = (await populated.json()).data;
     expect(status.present).toBe(true);

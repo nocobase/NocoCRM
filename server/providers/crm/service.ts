@@ -1936,11 +1936,11 @@ export class CrmService {
     // the change is committed: a submission or withdrawal to the approver,
     // a decision to the applicant.
     this.afterCommit(actor, () => this.notifyApproval(actor, changed));
-    if (status === 'approved' || status === 'rejected')
+    if ((status === 'approved' || status === 'rejected') && !actor.quiet)
       this.afterCommit(actor, async () =>
         this.approvalDecided?.(actor, changed),
       );
-    if (status === 'pending')
+    if (status === 'pending' && !actor.quiet)
       this.afterCommit(actor, async () =>
         this.approvalSubmitted?.(actor, changed),
       );

@@ -1279,8 +1279,9 @@ export async function populateDemo(
     service.mutate(who, async (prepared, q) => {
       const save = saver(prepared, q);
       const record = await save('approvals', input, day);
+      // Demo data starts no AI review (Actor.quiet).
       await service.approvalAction(
-        prepared,
+        { ...prepared, quiet: true },
         toText(record.id),
         'submit',
         '',
@@ -1320,7 +1321,7 @@ export async function populateDemo(
   );
   await service.mutate(managerActor, async (prepared, q) => {
     await service.approvalAction(
-      prepared,
+      { ...prepared, quiet: true },
       toText(paymentTerms.id),
       'approve',
       '同意 60 天账期，请在合同中注明首期发票金额。',

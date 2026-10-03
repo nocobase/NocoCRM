@@ -59,6 +59,10 @@ export interface Actor {
   // organised by the AI from pasted text and checked by this user (the
   // capture review): the history records it as such.
   via?: 'assistant' | 'capture';
+  // Starts no AI run (an approval's review, a deal's follow-up after a
+  // decision): the demo dataset, which would otherwise run the model for
+  // each record it builds.
+  quiet?: boolean;
 }
 export { roles, roleKey, roleOf, ROOT_SET } from './roles.js';
 export function registerCrmResources(authz: AppAuthorization): void {
