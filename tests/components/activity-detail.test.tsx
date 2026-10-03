@@ -166,10 +166,9 @@ beforeEach(() => {
 describe('the activity page', () => {
   it('heads the page with the name and groups the particulars', () => {
     renderPage();
-    // Drawn in the band and, for the stacked layout, atop the column; CSS
-    // shows one of them, jsdom keeps both.
-    for (const heading of screen.getAllByRole('heading', { level: 1 }))
-      expect(heading.textContent).toContain('新域零售 培训计划沟通');
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toContain(
+      '新域零售 培训计划沟通',
+    );
     // No generic header line with the record's id.
     expect(screen.queryByText(/ID: act-1/)).toBeNull();
     for (const group of ['概况', '参与人', '关联', '内容', '系统'])
@@ -232,13 +231,9 @@ describe('the activity page', () => {
 
   it('counts attachments and notes but not the timeline, and keeps the tab in the address', async () => {
     renderPage();
-    const tabs = screen.getAllByRole('tab', { name: /动态/ });
-    // Side by side and stacked, the bar is drawn twice; neither counts.
-    for (const tab of tabs) expect(tab.textContent).toBe('动态');
-    expect(screen.getAllByRole('tab', { name: /备注/ })[0].textContent).toBe(
-      '备注2',
-    );
-    await userEvent.click(screen.getAllByRole('tab', { name: /附件/ })[0]);
+    expect(screen.getByRole('tab', { name: /动态/ }).textContent).toBe('动态');
+    expect(screen.getByRole('tab', { name: /备注/ }).textContent).toBe('备注2');
+    await userEvent.click(screen.getByRole('tab', { name: /附件/ }));
     expect(screen.getByTestId('where').textContent).toBe(
       '/crm/activities/act-1/attachments',
     );

@@ -424,60 +424,62 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       </AfterSlash>
     </div>
   );
-  // Everything the reader can do with the lead, together under its name:
+  // Everything the reader can do with the lead, right of its heading:
   // converting it, the assistant, asking the AI to follow it up, and the
-  // rarer deleting in "More"; under them, where the AI's latest follow-up
-  // stands, which opens it in the timeline. The tab band keeps only tabs.
+  // rarer deleting in "More" (opening to the right edge's left).
   const leadActions = (
-    <div className='flex flex-col items-start gap-2'>
-      <div className='flex flex-wrap items-center gap-2'>
-        {editable && (
-          <Button size='sm' onClick={() => setConvert(true)}>
-            <ArrowRightLeft />
-            {text('convert')}
-          </Button>
-        )}
-        <AskAIButton entity='leads' recordId={id} name={contextName} />
-        {meta.assistant && !converted && editable && (
-          <EvaluateButton recordId={id} onError={setError} />
-        )}
-        {detail.permissions.delete && (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              aria-label={text('moreActions')}
-              className={buttonVariants({
-                size: 'icon-sm',
-                variant: 'outline',
-              })}
+    <>
+      {editable && (
+        <Button size='sm' onClick={() => setConvert(true)}>
+          <ArrowRightLeft />
+          {text('convert')}
+        </Button>
+      )}
+      <AskAIButton entity='leads' recordId={id} name={contextName} />
+      {meta.assistant && !converted && editable && (
+        <EvaluateButton recordId={id} onError={setError} />
+      )}
+      {detail.permissions.delete && (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            aria-label={text('moreActions')}
+            className={buttonVariants({
+              size: 'icon-sm',
+              variant: 'outline',
+            })}
+          >
+            <Ellipsis />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align='end'>
+            <DropdownMenuItem
+              variant='destructive'
+              onClick={() => setConfirmDelete(true)}
             >
-              <Ellipsis />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align='start'>
-              <DropdownMenuItem
-                variant='destructive'
-                onClick={() => setConfirmDelete(true)}
-              >
-                <Trash2 />
-                {text('deleteRecord', { entity: text('entity.leads') })}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      </div>
-      <EvaluationStatus
-        recordId={id}
-        onOpen={(entryId) => {
-          setFocus({ id: entryId, at: Date.now() });
-          setTab('historyTab');
-        }}
-      />
-    </div>
+              <Trash2 />
+              {text('deleteRecord', { entity: text('entity.leads') })}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </>
+  );
+  // Under the heading, where the AI's latest follow-up stands, which opens
+  // it in the timeline.
+  const leadStatus = (
+    <EvaluationStatus
+      recordId={id}
+      onOpen={(entryId) => {
+        setFocus({ id: entryId, at: Date.now() });
+        setTab('historyTab');
+      }}
+    />
   );
   return (
     <DetailColumns
       entity='leads'
       heading={heading}
       actions={leadActions}
+      status={leadStatus}
       tabBar={tabBar}
       notice={<ErrorNotice error={error ?? loadError} />}
       left={
@@ -785,6 +787,7 @@ export function DetailColumns({
   entity,
   heading,
   actions,
+  status,
   tabBar,
   notice,
   left,
@@ -794,7 +797,10 @@ export function DetailColumns({
   // The kind of record, named over the heading on a phone.
   entity: Entity;
   heading: ReactNode;
+  // Everything the reader can do with the record, right of the heading.
   actions: ReactNode;
+  // Where the AI's latest work on the record stands, under the heading.
+  status?: ReactNode;
   tabBar: ReactNode;
   notice: ReactNode;
   left: ReactNode;
@@ -807,9 +813,9 @@ export function DetailColumns({
   const inDrawer = useRecordDrawer()?.inDrawer ?? false;
   return (
     <CrmFrame
-      // The page is the window's height and its two columns scroll each on
-      // their own, the rule between them running to the bottom. It has no
-      // header: the heading and the actions sit in the columns.
+      // The page is the window's height; side by side its two columns scroll
+      // each on their own below the header, the rule between them running to
+      // the bottom. CrmFrame draws no header: the record's own is below.
       fill
     >
       {notice}
@@ -817,75 +823,68 @@ export function DetailColumns({
           area without changing the viewport, and a viewport breakpoint would
           keep both columns in a box too small for them. */}
       <div className='@container min-h-0 flex-1'>
-        {/* The particulars in a narrow column on the left, the timeline and
-            the other tabs taking the rest, the way record pages commonly lay
-            them out. Stacked, the particulars come first (a phone number
-            before the history). */}
-        {/* Side by side each column scrolls by itself below the band, the
-            rule between them running to the bottom; stacked, they scroll
-            together. Their bars show only while they scroll. */}
-        {/* Stacked too, the page is white (the card colour) out to the
-            screen's edges, as the columns are side by side: the block reaches
-            past the frame's padding and the scrolling area gives it back. */}
+        {/* White (the card colour) out to the screen's edges, stacked or side
+            by side: the block reaches past the frame's padding and the parts
+            inside give it back. */}
         <div
           className={`flex h-full flex-col @3xl:-mx-4 md:@3xl:-mx-8 ${
             inDrawer ? '' : '-mx-4 bg-card md:-mx-8'
           }`}
         >
-          {/* Side by side, both columns are white (the card colour) out to
-            the page's edges: the block reaches past the frame's padding (the
-            -mx), which the columns' own padding gives back, the left track
-            widened by the same amount. A column's own negative margin would
-            be clipped by the scrolling grid. The rule between them is their
-            only divide. */}
-          {/* Side by side, a band across both columns carries the heading
-            over the particulars and the tabs over the rest, one rule under
-            both; the rule between the columns runs through it. */}
-          {/* The rule is each cell's own, under the heading and under the
-              tabs. */}
-          <div className='hidden @3xl:grid @3xl:grid-cols-[22rem_minmax(0,1fr)] md:@3xl:grid-cols-[23rem_minmax(0,1fr)]'>
-            <div className='flex items-center border-b bg-card pr-6 pl-4 md:pl-6'>
-              {heading}
-            </div>
-            {/* Only the tabs: a page with more than fit (the opportunity's
-                six) wraps them. The record's actions sit under its name. */}
-            <div className='flex flex-wrap items-center border-b border-l bg-card pt-2 pr-4 pl-6 md:pr-8'>
-              {tabBar}
-            </div>
-          </div>
+          {/* Stacked, the header, the particulars and the tabs scroll as one;
+              side by side, the header stays and each column scrolls. */}
           <div
-            className={`grid min-h-0 flex-1 items-start gap-6 overflow-y-auto pb-24 ${
+            className={`flex min-h-0 flex-1 flex-col overflow-y-auto pb-24 @3xl:overflow-hidden @3xl:pb-0 scroll-quiet ${
               inDrawer ? '' : 'px-4 md:px-8 @3xl:px-0'
-            } @3xl:grid-cols-[22rem_minmax(0,1fr)] @3xl:grid-rows-[minmax(0,1fr)] md:@3xl:grid-cols-[23rem_minmax(0,1fr)] @3xl:items-stretch @3xl:gap-0 @3xl:overflow-hidden @3xl:pb-0 scroll-quiet`}
+            }`}
             onScroll={revealScrollbar}
           >
-            {/* Neither column is a card: the particulars stand on the page as
-              grouped fields, and the tabs take the rest beyond a rule, as
-              record pages commonly lay them out. */}
-            <section
-              className='min-w-0 pt-5 @3xl:overflow-y-auto @3xl:bg-card @3xl:pt-4 @3xl:pr-6 @3xl:pb-8 @3xl:pl-4 scroll-quiet'
-              onScroll={revealScrollbar}
-            >
-              {/* Stacked, the way back and the kind of record, then the
-                  heading. */}
+            {/* The record's header, across both columns: the heading with
+                the actions at its right (below it when there is no room),
+                the AI's latest suggestion under it. */}
+            <header className='pt-5 @3xl:border-b @3xl:pt-4 @3xl:pr-4 @3xl:pb-3 @3xl:pl-4 md:@3xl:pr-8 md:@3xl:pl-6'>
               <DetailBack entity={entity} />
-              <div className='mb-3 @3xl:hidden'>{heading}</div>
-              {actions && <div className='mb-4'>{actions}</div>}
-              {left}
-            </section>
-            {/* Stacked, the tab bar's own rule is the divide: no rule above
-                it as well. */}
-            <section
-              className='min-w-0 pt-6 @3xl:overflow-y-auto @3xl:border-l @3xl:bg-card @3xl:pt-4 @3xl:pr-4 @3xl:pb-24 @3xl:pl-6 md:@3xl:pr-8 scroll-quiet'
-              onScroll={revealScrollbar}
-            >
-              {/* Stacked, the tabs lead their content, staying in place as
-                it scrolls; side by side they are in the band above. */}
-              <div className='sticky top-0 z-10 mb-4 flex flex-wrap items-center justify-between gap-2 border-b bg-card @3xl:hidden'>
-                {tabBar}
+              <div className='flex flex-wrap items-start justify-between gap-x-6 gap-y-2'>
+                <div className='min-w-0 flex-1 basis-full @3xl:basis-80'>
+                  {heading}
+                </div>
+                {actions ? (
+                  <div className='flex flex-wrap items-center gap-2 empty:hidden @3xl:pt-1'>
+                    {actions}
+                  </div>
+                ) : null}
               </div>
-              {right}
-            </section>
+              {/* Empty when the status draws nothing (no AI work yet). */}
+              {status ? (
+                <div className='mt-2 empty:hidden'>{status}</div>
+              ) : null}
+            </header>
+            <div className='grid gap-6 pt-5 @3xl:min-h-0 @3xl:flex-1 @3xl:grid-cols-[22rem_minmax(0,1fr)] @3xl:grid-rows-[minmax(0,1fr)] @3xl:gap-0 @3xl:pt-0 md:@3xl:grid-cols-[23rem_minmax(0,1fr)]'>
+              {/* The particulars in a narrow column on the left, the timeline
+                  and the other tabs taking the rest, the way record pages
+                  commonly lay them out. Stacked, the particulars come first
+                  (a phone number before the history). */}
+              <section
+                className='min-w-0 @3xl:overflow-y-auto @3xl:pt-4 @3xl:pr-6 @3xl:pb-8 @3xl:pl-4 md:@3xl:pl-6 scroll-quiet'
+                onScroll={revealScrollbar}
+              >
+                {left}
+              </section>
+              {/* The tabs head the right column: stacked, they stay in view as
+                  the page scrolls; side by side, their content scrolls below
+                  them. Their own rule is the divide. */}
+              <section className='flex min-w-0 flex-col @3xl:min-h-0 @3xl:border-l'>
+                <div className='sticky top-0 z-10 mb-4 flex flex-wrap items-center border-b bg-card @3xl:static @3xl:mb-0 @3xl:pt-2 @3xl:pr-4 @3xl:pl-6 md:@3xl:pr-8'>
+                  {tabBar}
+                </div>
+                <div
+                  className='min-w-0 @3xl:min-h-0 @3xl:flex-1 @3xl:overflow-y-auto @3xl:pt-4 @3xl:pr-4 @3xl:pb-24 @3xl:pl-6 md:@3xl:pr-8 scroll-quiet'
+                  onScroll={revealScrollbar}
+                >
+                  {right}
+                </div>
+              </section>
+            </div>
           </div>
         </div>
       </div>

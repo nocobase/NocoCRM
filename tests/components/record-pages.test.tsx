@@ -217,7 +217,7 @@ describe('the account page', () => {
     for (const name of ['动态', '活动', '联系人', '商机', '附件', '备注'])
       expect(
         screen.getAllByRole('tab', { name: new RegExp(name) }),
-      ).toHaveLength(2);
+      ).toHaveLength(1);
   });
 });
 
@@ -299,7 +299,7 @@ describe('the contact page', () => {
     for (const group of ['概况', '联系方式', '系统'])
       expect(screen.getByRole('heading', { name: group })).toBeTruthy();
     expect(screen.queryByRole('tab', { name: /附件/ })).toBeNull();
-    expect(screen.getAllByRole('tab', { name: /商机/ })).toHaveLength(2);
+    expect(screen.getAllByRole('tab', { name: /商机/ })).toHaveLength(1);
   });
 });
 

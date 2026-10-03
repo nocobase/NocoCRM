@@ -767,9 +767,9 @@ export default function EntityDetail({
       )}
     </>
   );
-  // Every object's page is laid out as the lead's (DetailColumns): no
-  // header, the record's heading in a band over its particulars in groups,
-  // every action under the heading, the tabs alone on the right.
+  // Every object's page is laid out as the lead's (DetailColumns): the
+  // record's heading across the page with its actions at the right, its
+  // particulars in groups on the left, the tabs atop the right column.
   const row = (key: string): ReactElement => (
     <InfoRow key={key} label={text(fieldLabelKey(entity, key))}>
       {inline(key)}
@@ -891,7 +891,7 @@ export default function EntityDetail({
       >
         <Ellipsis />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align='start'>
+      <DropdownMenuContent align='end'>
         <DropdownMenuItem
           variant='destructive'
           onClick={() => setConfirmDelete(true)}
@@ -902,14 +902,13 @@ export default function EntityDetail({
       </DropdownMenuContent>
     </DropdownMenu>
   ) : null;
-  // The buttons on one line, wrapping; under them, where the AI's latest
-  // work on the record stands, when it has any.
-  const actionsOf = (buttons: ReactNode, status?: ReactNode): ReactElement => (
-    <div className='flex flex-col items-start gap-2'>
-      <div className='flex flex-wrap items-center gap-2'>{buttons}</div>
-      {status}
-    </div>
-  );
+  // The buttons, right of the heading; where the AI's latest work on the
+  // record stands, under it, when it has any.
+  type Actions = { buttons: ReactNode; status?: ReactNode };
+  const actionsOf = (buttons: ReactNode, status?: ReactNode): Actions => ({
+    buttons,
+    status,
+  });
   const tabIcons: Record<string, LucideIcon> = {
     historyTab: History,
     activities: CalendarDays,
@@ -935,13 +934,14 @@ export default function EntityDetail({
   );
   const page = (
     heading: ReactNode,
-    actions: ReactNode,
+    actions: Actions,
     left: ReactNode,
   ): ReactElement => (
     <DetailColumns
       entity={entity}
       heading={heading}
-      actions={actions}
+      actions={actions.buttons}
+      status={actions.status}
       tabBar={tabBar}
       notice={<ErrorNotice error={error ?? loadError} />}
       left={left}

@@ -242,7 +242,7 @@ describe('the opportunity page', () => {
     for (const name of ['动态', '活动', '联系人', '审批', '附件', '备注'])
       expect(
         screen.getAllByRole('tab', { name: new RegExp(name) }),
-      ).toHaveLength(2);
+      ).toHaveLength(1);
     for (const tab of screen.getAllByRole('tab', { name: /动态/ }))
       expect(tab.textContent).toBe('动态');
     await userEvent.click(screen.getAllByRole('tab', { name: /联系人/ })[0]);
@@ -251,14 +251,14 @@ describe('the opportunity page', () => {
     );
   });
 
-  it('keeps asking the AI to follow up among the actions under the name, not in the tab band', () => {
+  it('keeps asking the AI to follow up among the actions beside the heading, not in the tab bar', () => {
     renderPage();
     const followUp = screen.getByRole('button', { name: /跟进/ });
     expect(followUp.closest('[role="tablist"]')).toBeNull();
-    // The left column, the section that also holds the particulars' groups.
-    const column = followUp.closest('section') as HTMLElement;
-    expect(within(column).getByRole('heading', { name: '概况' })).toBeTruthy();
-    expect(within(column).queryByRole('tab')).toBeNull();
+    // The record's header, which holds the heading and no tabs.
+    const header = followUp.closest('header') as HTMLElement;
+    expect(within(header).getByRole('heading', { level: 1 })).toBeTruthy();
+    expect(within(header).queryByRole('tab')).toBeNull();
   });
 
   it('offers no follow-up on a won deal', () => {
