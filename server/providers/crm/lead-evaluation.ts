@@ -458,7 +458,7 @@ export async function pendingDecisions(
 export async function aiStates(
   service: CrmService,
   ids: readonly string[],
-  entity: 'leads' | 'opportunities' = 'leads',
+  entity: 'leads' | 'opportunities' | 'approvals' = 'leads',
 ): Promise<Record<string, 'running' | 'pending'>> {
   if (!ids.length) return {};
   const rows = await service.database

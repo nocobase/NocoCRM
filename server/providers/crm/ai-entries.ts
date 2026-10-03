@@ -96,9 +96,10 @@ export interface CheckedTerm {
   // The term as agreed or asked, e.g. "balance 60 days after acceptance".
   term: string;
   // standard: within the standards; approved or pending: an approval of
-  // the deal covers it; needed: beyond them, nothing covering it.
-  status: 'standard' | 'approved' | 'pending' | 'needed';
-  // The covering approval's name, for approved and pending.
+  // the deal covers it; rejected: the approval asked for it was rejected;
+  // needed: beyond them, never asked for.
+  status: 'standard' | 'approved' | 'pending' | 'rejected' | 'needed';
+  // The approval's name, for approved, pending and rejected.
   approval?: string;
 }
 

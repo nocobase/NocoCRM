@@ -325,6 +325,9 @@ function EntityList({
     queryKey: [...scopeKey, path],
     queryFn: () => api<ListData>(path),
     enabled: Boolean(definition),
+    // While the AI works on a row here, look again every few seconds.
+    refetchInterval: (q) =>
+      Object.values(q.state.data?.ai ?? {}).includes('running') ? 5000 : false,
   });
   // The calendar reads one month from the server, by when activities
   // happen, with the same filters as the list. The range is widened by a
@@ -859,18 +862,27 @@ function EntityList({
                           key={key}
                         >
                           {key === 'name' ? (
-                            <RecordLink
-                              entity={entity}
-                              record={{
-                                id: record.id,
-                                // A contact's account is its own column
-                                // here, so the link is the bare name.
-                                name:
-                                  entity === 'contacts'
-                                    ? toText(record.name)
-                                    : recordTitle(entity, record, lookup),
-                              }}
-                            />
+                            <span className='flex min-w-0 flex-col items-start gap-1'>
+                              <RecordLink
+                                entity={entity}
+                                record={{
+                                  id: record.id,
+                                  // A contact's account is its own column
+                                  // here, so the link is the bare name.
+                                  name:
+                                    entity === 'contacts'
+                                      ? toText(record.name)
+                                      : recordTitle(entity, record, lookup),
+                                }}
+                              />
+                              {/* Under the name: the AI at work on the
+                                  row, or its suggestion waiting, as on
+                                  the board. */}
+                              <AiRowMark
+                                state={query.data.ai?.[toText(record.id)]}
+                                review={entity === 'approvals'}
+                              />
+                            </span>
                           ) : key === 'opportunityAmount' ? (
                             (() => {
                               const deal = opportunityOf(record);
@@ -1600,5 +1612,36 @@ function BoardColumn({
         )}
       </div>
     </section>
+  );
+}
+
+// The AI's state on a list row: following the record up (or, on an
+// approval, writing its review), or its suggestion waiting.
+function AiRowMark({
+  state,
+  review,
+}: {
+  state: 'running' | 'pending' | undefined;
+  review: boolean;
+}): ReactElement | null {
+  const { text } = useCrmText();
+  if (!state) return null;
+  return (
+    <Badge variant='ai' className='shrink-0 gap-1'>
+      {state === 'running' ? (
+        <Spinner className='size-3' />
+      ) : (
+        <Sparkles className='size-3' />
+      )}
+      {text(
+        review
+          ? state === 'running'
+            ? 'approvalReview.onRow.running'
+            : 'approvalReview.onRow.pending'
+          : state === 'running'
+            ? 'evaluation.onCard.running'
+            : 'evaluation.onCard.pending',
+      )}
+    </Badge>
   );
 }

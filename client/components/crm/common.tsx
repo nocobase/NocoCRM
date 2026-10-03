@@ -309,12 +309,24 @@ export function RecordLink({
 }: {
   entity: Entity;
   record: { id: string; name: string };
-  lines?: 1 | 2;
+  // 'all': the whole name, wrapping over as many lines as it takes (a
+  // record's particulars, where nothing sits beside it).
+  lines?: 1 | 2 | 'all';
 }): ReactElement {
   const link = useRecordLink(entity, toText(record.id));
   const arrow = (
     <ArrowUpRight className='inline size-3 shrink-0 text-muted-foreground' />
   );
+  if (lines === 'all')
+    return (
+      <Link
+        className='font-medium break-words hover:text-primary hover:underline'
+        {...link}
+      >
+        {record.name}{' '}
+        <ArrowUpRight className='inline size-3 align-baseline text-muted-foreground' />
+      </Link>
+    );
   return lines === 1 ? (
     <Link
       className='inline-flex max-w-full min-w-0 items-center gap-1 font-medium hover:text-primary hover:underline'
@@ -382,10 +394,14 @@ export function Value({
   lookup = {},
   bare = false,
   plain = false,
+  wrap = false,
 }: {
   field: Field | { key: string; type?: string; relation?: string };
   record: CrmRecord;
   lookup?: Record<string, string>;
+  // A related record's whole name over several lines if need be, where the
+  // value has a row of its own (a record's particulars), not cut to one.
+  wrap?: boolean;
   // An amount without its currency sign, where the currency is shown beside it.
   bare?: boolean;
   // A status or stage as its label only, where a badge would be noise — the
@@ -499,6 +515,7 @@ export function Value({
   if (field.type === 'relation' && field.relation && field.relation !== 'users')
     return (
       <RecordLink
+        lines={wrap ? 'all' : 1}
         entity={field.relation as Entity}
         record={{
           id: toText(value),

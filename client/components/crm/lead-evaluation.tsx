@@ -133,7 +133,7 @@ export interface DealVerdict {
   terms?: {
     topic: string;
     term: string;
-    status: 'standard' | 'approved' | 'pending' | 'needed';
+    status: 'standard' | 'approved' | 'pending' | 'rejected' | 'needed';
     approval?: string;
   }[];
 }
@@ -2034,6 +2034,7 @@ function DealTerms({
     standard: 'muted',
     approved: 'success',
     pending: 'info',
+    rejected: 'warning',
     needed: 'warning',
   } as const;
   return (

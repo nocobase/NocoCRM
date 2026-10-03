@@ -4742,10 +4742,75 @@ describe('CRM opportunity follow-up', () => {
       enabled.mockRestore();
     }
   });
+  // An amount a person accepted stands: the next follow-up suggesting
+  // another with nothing new since is not offered, and is once there is.
+  it('keeps an accepted amount unless something has happened since', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const { opportunity } = await deal('采纳过的金额');
+      const verdict = (value: string) => ({
+        ...advance,
+        stage: null,
+        recommendation: 'continue',
+        updates: [{ field: 'amount', value, reason: '85 折已批' }],
+        approvals: [],
+      });
+      const first = following(verdict('42500'));
+      await first.evaluator.request(actor('rep'), opportunity.id);
+      await first.evaluator.idle();
+      const card = await latestOpportunityEvaluation(
+        service,
+        actor('rep'),
+        opportunity.id,
+      );
+      await first.evaluator.decide(
+        actor('rep'),
+        opportunity.id,
+        card!.id,
+        'accept',
+        ['amount'],
+      );
+      expect(
+        Number(
+          (await service.get(actor('rep'), 'opportunities', opportunity.id))
+            .amount,
+        ),
+      ).toBe(42500);
+      const again = async () => {
+        const run = following(verdict('35700'));
+        await run.evaluator.request(actor('rep'), opportunity.id);
+        await run.evaluator.idle();
+        return (
+          await latestOpportunityEvaluation(
+            service,
+            actor('rep'),
+            opportunity.id,
+          )
+        )?.ai.result?.updates;
+      };
+      // The same facts read again: not offered.
+      expect(await again()).toEqual([]);
+      // A note since: offered.
+      await service.addNote(
+        actor('rep'),
+        'opportunities',
+        toText(opportunity.id),
+        '客户确认一期金额按 35.7 万签',
+      );
+      expect((await again())?.map((u) => u.value)).toEqual(['35700']);
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+
   // The terms the model lists are checked by the code: an approval it names
   // covers a term only when that approval is approved (or pending); one it
-  // names that was rejected or withdrawn leaves the term needing approval,
-  // and an approval is proposed for it.
+  // names that was rejected marks the term rejected, which holds the deal
+  // back without a resubmission on the spot; a term never asked for (or
+  // named after a withdrawn one) needs approval, and one is proposed for it
+  // when the model proposed none of its kind.
   it("checks every term against the deal's approvals itself", () => {
     const dealApprovals = [
       { name: '一期8折优惠申请', topic: 'discount', status: 'approved' },
@@ -4774,6 +4839,12 @@ describe('CRM opportunity follow-up', () => {
           approval: null,
         },
         {
+          topic: 'commitment',
+          term: '3 月底上线',
+          beyondStandard: true,
+          approval: null,
+        },
+        {
           topic: 'other',
           term: '合同用我方模板',
           beyondStandard: false,
@@ -4792,18 +4863,21 @@ describe('CRM opportunity follow-up', () => {
     );
     expect(terms.map((t) => t.status)).toEqual([
       'approved',
+      'rejected',
       'needed',
       'needed',
       'standard',
     ]);
     expect(terms[0].approval).toBe('一期8折优惠申请');
-    // The model's own for the contract terms, one added for the payment.
+    expect(terms[1].approval).toBe('3-3-4付款账期申请');
+    // The model's own for the contract terms, one added for the commitment
+    // never asked for, none for the rejected payment terms.
     expect(approvals).toEqual([
       expect.objectContaining({ topic: 'contractTerms', name: '源码托管条款' }),
       {
-        topic: 'paymentTerms',
-        name: '4-3-3，尾款验收后 60 天',
-        description: '4-3-3，尾款验收后 60 天。超出审批标准。',
+        topic: 'commitment',
+        name: '3 月底上线',
+        description: '3 月底上线。超出审批标准。',
       },
     ]);
     expect(holdsBack).toBe(true);
@@ -4858,7 +4932,8 @@ describe('CRM opportunity follow-up', () => {
         approvals: [expect.objectContaining({ topic: 'paymentTerms' })],
       });
       // As on 老板电器: the model lists no approval and names a rejected
-      // one as covering the payment terms; the code proposes one anyway.
+      // one as covering the payment terms; the code does not take it as
+      // covered, and still keeps the deal short of the contract.
       const rejected = await service.save(actor('rep'), 'approvals', {
         name: '尾款 90 天',
         opportunityId: opportunity.id,
@@ -4895,13 +4970,14 @@ describe('CRM opportunity follow-up', () => {
       expect(checked?.ai.result).toMatchObject({
         recommendation: 'continue',
         stage: null,
-        terms: [{ term: '尾款验收后 60 天', status: 'needed' }],
-        approvals: [
-          expect.objectContaining({
-            topic: 'paymentTerms',
-            name: '尾款验收后 60 天',
-          }),
+        terms: [
+          {
+            term: '尾款验收后 60 天',
+            status: 'rejected',
+            approval: '尾款 90 天',
+          },
         ],
+        approvals: [],
       });
     } finally {
       enabled.mockRestore();

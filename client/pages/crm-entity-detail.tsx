@@ -815,10 +815,11 @@ export default function EntityDetail({
   const convertedRow =
     convertedFrom.length > 0 ? (
       <InfoRow key='convertedFrom' label={text('convertedFrom')}>
-        <div className='flex min-w-0 flex-wrap gap-x-3 gap-y-1 px-2 py-1.5'>
+        <div className='flex min-w-0 flex-col gap-1 px-2 py-1.5'>
           {convertedFrom.map((lead) => (
             <RecordLink
               key={lead.id}
+              lines='all'
               entity='leads'
               record={{ id: lead.id, name: recordTitle('leads', lead, names) }}
             />

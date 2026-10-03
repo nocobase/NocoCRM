@@ -317,6 +317,7 @@ const wording = {
         standard: ['Within the standard', '标准内'],
         approved: ['Approved', '已批准'],
         pending: ['Awaiting approval', '审批中'],
+        rejected: ['Rejected', '已驳回'],
         needed: ['Needs approval', '需审批'],
       },
       approvalsHint: [
@@ -633,6 +634,11 @@ const wording = {
     missing: ['To add', '需补充'],
     comment: ['Decision comment', '审批意见'],
     revisePlaceholder: ['Tell the AI what to change', '告诉 AI 怎么改'],
+    // On an approval's row in the list, for its approver.
+    onRow: {
+      running: ['AI reviewing', 'AI 生成建议中'],
+      pending: ['AI suggestion', 'AI 建议待处理'],
+    },
     // The card's accept: what the review recommends, with its comment.
     accept: {
       approve: ['Approve as advised', '按建议批准'],

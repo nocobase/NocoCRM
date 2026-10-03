@@ -550,6 +550,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                       <div className='px-2 py-1.5'>
                         {record[key] ? (
                           <RecordLink
+                            lines='all'
                             entity={e}
                             record={{
                               id: toText(record[key]),

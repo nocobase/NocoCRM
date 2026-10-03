@@ -199,6 +199,7 @@ export function InlineField({
           lookup={lookup}
           bare={bare}
           plain={plain}
+          wrap
         />
       </div>
     );
@@ -243,6 +244,7 @@ export function InlineField({
           lookup={lookup}
           bare={bare}
           plain={plain}
+          wrap={!titled}
         />
         {error ? (
           <span className='mt-1 block text-xs text-destructive'>{error}</span>

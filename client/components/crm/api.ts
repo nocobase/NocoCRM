@@ -60,7 +60,8 @@ export interface ListData extends Titled {
   total: number;
   page: number;
   pageSize: number;
-  // Leads only: those the AI is evaluating, or has a verdict waiting on.
+  // Leads and deals the AI is following up or has a verdict waiting on;
+  // approvals whose review is being written or waits, for their approver.
   ai?: Record<string, 'running' | 'pending'>;
 }
 export interface Detail extends Titled {

@@ -942,7 +942,8 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           [entity]: result.data,
         })),
         // Leads and deals the AI is following up or has a verdict waiting
-        // on.
+        // on; approvals whose review is being written or waits, for their
+        // approver alone, whose review it is.
         ...(entity === 'leads' || entity === 'opportunities'
           ? {
               ai: await aiStates(
@@ -951,7 +952,17 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
                 entity,
               ),
             }
-          : {}),
+          : entity === 'approvals'
+            ? {
+                ai: await aiStates(
+                  service,
+                  result.data
+                    .filter((record) => record.approverId === c.get('actor').id)
+                    .map((record) => toText(record.id)),
+                  'approvals',
+                ),
+              }
+            : {}),
       });
     });
     routes.post('/:entity', async (c) => {
