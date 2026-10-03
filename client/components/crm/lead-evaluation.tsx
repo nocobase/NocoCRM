@@ -550,12 +550,13 @@ export function VerdictPanel({
     <section
       // Waiting, it carries the AI's tint; decided, the same card on a
       // neutral ground.
-      className={`grid grid-cols-[minmax(0,1fr)] gap-2 rounded-xl border p-4 text-sm ${
+      className={`@container grid grid-cols-[minmax(0,1fr)] gap-2 rounded-xl border p-4 text-sm ${
         entry.status === 'pending' ? 'border-ai/30 bg-ai/5' : 'bg-muted/40'
       }`}
     >
       {/* The heading, with asking and deciding at its top right; on a card
-          too narrow for both, they move below as one group, still right. */}
+          too narrow for both (a phone), they take a row of their own under
+          it, from the left, rather than hang at the right of a second row. */}
       <div className='flex flex-wrap items-center gap-2'>
         <Sparkles className='size-4 shrink-0 text-ai' />
         {heading ?? (
@@ -583,13 +584,15 @@ export function VerdictPanel({
         )}
         {/* Asking about it and the decision, at the card's top right. */}
         {entry.status === 'pending' && verdict && (
-          <span className='ml-auto flex shrink-0 items-center gap-2'>
+          <span className='flex w-full flex-wrap items-center gap-2 @lg:ml-auto @lg:w-auto @lg:shrink-0'>
             {/* A background on hover, not an underline, tinted with the
                 AI's colour so it shows on the card's own tint. */}
             <Button
               size='sm'
               variant='ghost'
-              className='text-ai hover:bg-ai/10 hover:text-ai'
+              // On a narrow card the decision leads its row, lined up with
+              // the text; asking about it follows.
+              className='order-last text-ai hover:bg-ai/10 hover:text-ai @lg:order-none'
               onClick={() =>
                 window.dispatchEvent(
                   new CustomEvent('crm-assistant', {

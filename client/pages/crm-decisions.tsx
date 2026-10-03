@@ -181,7 +181,10 @@ export default function DecisionsPage(): ReactElement {
       ) : (
         // Container query: the AI panel narrows this area, not the viewport.
         <div className='@container min-h-0 flex-1 pb-6'>
-          <div className='grid h-full overflow-y-auto rounded-xl border bg-card scroll-quiet @3xl:grid-cols-[22rem_minmax(0,1fr)] @3xl:grid-rows-[minmax(0,1fr)] @3xl:overflow-hidden'>
+          {/* Side by side, the list and the entry share a card; narrow,
+              they stand on the page, so the entry's own card and the plan
+              inside it are the only frames and keep the width. */}
+          <div className='grid h-full overflow-y-auto scroll-quiet @3xl:grid-cols-[22rem_minmax(0,1fr)] @3xl:grid-rows-[minmax(0,1fr)] @3xl:overflow-hidden @3xl:rounded-xl @3xl:border @3xl:bg-card'>
             {/* Side by side the list and the entry; narrow, one at a time:
                 the list, then the entry opened from it. */}
             <ul
@@ -317,20 +320,28 @@ export default function DecisionsPage(): ReactElement {
               })}
             </ul>
             <section
-              className={`min-w-0 p-4 scroll-quiet @md:p-6 @3xl:block @3xl:overflow-y-auto ${
+              className={`min-w-0 scroll-quiet @3xl:block @3xl:overflow-y-auto @3xl:p-6 ${
                 reading ? '' : 'hidden'
               }`}
               onScroll={revealScrollbar}
             >
               {/* Narrow, the way back to the list. */}
-              <button
-                type='button'
-                onClick={backToList}
-                className='mb-4 inline-flex w-fit items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground @3xl:hidden'
-              >
-                <ArrowLeft className='size-4' />
-                {t('navigation.back')}
-              </button>
+              {/* Narrow, the way back to the list and the kind of record, as
+                  over a record's own page. */}
+              <div className='mb-2 flex items-center gap-2 text-sm text-muted-foreground @3xl:hidden'>
+                <button
+                  type='button'
+                  onClick={backToList}
+                  className='inline-flex items-center gap-1 transition-colors hover:text-foreground'
+                >
+                  <ArrowLeft className='size-4' />
+                  {t('navigation.back')}
+                </button>
+                <span aria-hidden className='text-muted-foreground/60'>
+                  ·
+                </span>
+                <span>{kindOf(current)}</span>
+              </div>
               <EvaluationDetail
                 entry={current}
                 onRevised={(next) => choose(next.id, false)}
@@ -364,27 +375,42 @@ function DetailHeading({
   const colon = language.startsWith('zh') ? '：' : ':';
   return (
     <div className='mb-5 flex items-start justify-between gap-4 border-b pb-4'>
-      <div className='grid min-w-0 gap-1'>
-        <h2 className='truncate font-heading text-xl leading-tight font-semibold'>
+      {/* Takes the width the action leaves, so the facts wrap only when
+          that is full, not at the name's width. */}
+      <div className='grid min-w-0 flex-1 gap-1'>
+        {/* Narrow, a long name wraps; beside the list it is cut. */}
+        <h2 className='font-heading text-xl leading-tight font-semibold break-words @3xl:truncate'>
           {name}
         </h2>
-        {/* Labelled as the evaluation card's rows are. */}
-        <dl className='mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm'>
+        {/* Labelled as the evaluation card's rows are. Beside the list, one
+            line of facts; narrow, a row each, labels and values in two
+            columns (the record's type is then over the heading, by Back). */}
+        <dl className='mt-1 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm @3xl:flex @3xl:flex-wrap @3xl:items-center'>
           {/* The record's type leads the line, unlabelled. */}
-          {kind ? <dd className='text-muted-foreground'>{kind}</dd> : null}
+          {kind ? (
+            <dd className='hidden text-muted-foreground @3xl:block'>{kind}</dd>
+          ) : null}
           {facts
             .filter(([, value]) => value)
             .map(([label, value], index) => (
-              <div key={label} className='flex min-w-0 items-center gap-3'>
+              <div
+                key={label}
+                className='contents @3xl:flex @3xl:min-w-0 @3xl:items-center @3xl:gap-3'
+              >
                 {kind || index > 0 ? (
-                  <span aria-hidden className='h-3 w-px bg-border' />
+                  // Narrow, the facts wrap and a rule would start a line;
+                  // their labels set them apart.
+                  <span
+                    aria-hidden
+                    className='hidden h-3 w-px bg-border @3xl:block'
+                  />
                 ) : null}
-                <div className='flex min-w-0 gap-1'>
+                <div className='contents @3xl:flex @3xl:min-w-0 @3xl:gap-1'>
                   <dt className='shrink-0 text-muted-foreground'>
                     {text(label)}
                     {colon}
                   </dt>
-                  <dd className='max-w-72 min-w-0 truncate tabular-nums'>
+                  <dd className='min-w-0 truncate tabular-nums @3xl:max-w-72'>
                     {value}
                   </dd>
                 </div>

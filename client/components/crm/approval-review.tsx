@@ -147,11 +147,12 @@ export function ReviewPanel({
     <section
       // Waiting, it carries the AI's tint; decided, the same card on a
       // neutral ground, as every AI card.
-      className={`grid grid-cols-[minmax(0,1fr)] gap-2 rounded-xl border p-4 text-sm ${
+      className={`@container grid grid-cols-[minmax(0,1fr)] gap-2 rounded-xl border p-4 text-sm ${
         entry.status === 'pending' ? 'border-ai/30 bg-ai/5' : 'bg-muted/40'
       }`}
     >
-      {/* The heading, with asking and deciding at its top right. */}
+      {/* The heading, with asking and deciding at its top right; on a card
+          too narrow for both, they take a row of their own, from the left. */}
       <div className='flex flex-wrap items-center gap-2'>
         <Sparkles className='size-4 shrink-0 text-ai' />
         <span className='shrink-0 font-medium'>
@@ -183,11 +184,13 @@ export function ReviewPanel({
           </span>
         )}
         {entry.status === 'pending' && review && (
-          <span className='ml-auto flex shrink-0 flex-wrap items-center gap-2'>
+          <span className='flex w-full flex-wrap items-center gap-2 @lg:ml-auto @lg:w-auto @lg:shrink-0'>
             <Button
               size='sm'
               variant='ghost'
-              className='text-ai hover:bg-ai/10 hover:text-ai'
+              // On a narrow card the decision leads its row, lined up with
+              // the text; asking about it follows.
+              className='order-last text-ai hover:bg-ai/10 hover:text-ai @lg:order-none'
               onClick={() =>
                 window.dispatchEvent(
                   new CustomEvent('crm-assistant', {
