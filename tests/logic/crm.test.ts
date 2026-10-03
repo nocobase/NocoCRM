@@ -14,6 +14,8 @@ import {
   type CrmRecord,
 } from '../../server/providers/crm/schema.js';
 import geographyMigration from '../../database/main/migrations/202609100001_crm_geography_codes.js';
+import phoneMigration from '../../database/main/migrations/202610030001_crm_phone_numbers.js';
+import { normalizePhone } from '../../server/providers/crm/phone.js';
 import legacyTimestampsMigration from '../../database/main/migrations/202609200001_legacy_epoch_timestamps.js';
 // @vitest-environment node
 import sqlite from '@nocobase/db-sqlite';
@@ -5799,6 +5801,7 @@ it('reverses the CRM migration on a real SQLite database', async () => {
     expect((await migrator.latest()).executed).toEqual([
       '202610020001_crm_activities_no_show_cancelled',
       '202610020002_crm_activities_end_optional',
+      '202610030001_crm_phone_numbers',
     ]);
     // An activity may now have no end.
     await isolated
@@ -5839,6 +5842,7 @@ it('reverses the CRM migration on a real SQLite database', async () => {
     // Each run is a batch: the last one first, then the thirty before it.
     // Rolled back, an activity without an end takes its start.
     expect((await migrator.rollback()).rolledBack).toEqual([
+      '202610030001_crm_phone_numbers',
       '202610020002_crm_activities_end_optional',
       '202610020001_crm_activities_no_show_cancelled',
     ]);
@@ -6588,5 +6592,72 @@ describe('duplicate leads and their merge', () => {
       ).status,
     ).toBe(400);
     expect(await service.get(actor('other'), 'leads', theirs.id)).toBeTruthy();
+  });
+});
+
+describe('phone numbers', () => {
+  it('keeps a number one way however it was written', () => {
+    for (const [written, kept] of [
+      ['138 0000 5217', '13800005217'],
+      ['+86 138-0145-3665', '13801453665'],
+      ['008613801433591', '13801433591'],
+      ['0571 8888 8888', '0571-88888888'],
+      ['(010) 1234-5678', '010-12345678'],
+      ['+86 571 8888 8888', '0571-88888888'],
+      ['+1 415 555 0134', '+14155550134'],
+      ['0571-88888888转8021', '0571-88888888-8021'],
+      ['400-800-1234', '4008001234'],
+      ['见名片', '见名片'],
+    ])
+      expect(normalizePhone(written)).toBe(kept);
+    // Kept as kept: normalising again changes nothing.
+    for (const kept of ['13800005217', '0571-88888888-8021', '+14155550134'])
+      expect(normalizePhone(kept)).toBe(kept);
+  });
+
+  it("saves a lead's number so, and finds it however it is typed", async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: '号码规范',
+      company: '号码规范公司',
+      phone: '+86 139-1234-0099',
+      source: 'website',
+    });
+    expect(lead.phone).toBe('13912340099');
+    const found = await service.list(actor('rep'), 'leads', {
+      search: '139 1234 0099',
+    });
+    expect(found.data.map((l) => l.id)).toContain(lead.id);
+  });
+
+  it('migrates the numbers already kept', async () => {
+    const query = service.database.query();
+    await query
+      .updateTable('crmContacts')
+      .set({ phone: '138 0000 7788' })
+      .where(
+        'id',
+        '=',
+        (
+          await service.save(actor('rep'), 'contacts', {
+            name: '迁移号码',
+            accountId: (
+              await service.save(actor('rep'), 'accounts', {
+                name: '迁移号码客户',
+              })
+            ).id,
+          })
+        ).id,
+      )
+      .execute();
+    await phoneMigration.up({
+      query,
+      builder: service.database.builder(),
+    } as never);
+    const row = await query
+      .selectFrom('crmContacts')
+      .select('phone')
+      .where('name', '=', '迁移号码')
+      .executeTakeFirst();
+    expect(row?.phone).toBe('13800007788');
   });
 });

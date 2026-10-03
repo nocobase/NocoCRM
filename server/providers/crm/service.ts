@@ -1,3 +1,4 @@
+import { normalizePhone } from './phone.js';
 import { LIST_LIMIT, LONG_TEXT_LIMIT, lengthLimit } from './limits.js';
 import type { WorkflowServiceContract } from '@nocobase/app-plugin-workflow/server';
 import { decodeRow, encodeRow, jsonValue } from './values.js';
@@ -492,15 +493,22 @@ export class CrmService {
     if (options.from) select = select.where('createdAt', '>=', options.from);
     if (options.to) select = select.where('createdAt', '<=', options.to);
     if (options.search) {
+      const term = toText(options.search.slice(0, 200));
       const searchFields = ['name', 'company', 'email', 'phone'].filter((f) =>
         fields.includes(f),
       );
+      // A number typed as people write it (138 0000 5217, +86 …) finds the
+      // number as it is kept.
+      const phone = /^[\d\s+().-]{5,}$/.test(term.trim())
+        ? normalizePhone(term)
+        : '';
       select = select.where((eb) =>
-        eb.or(
-          searchFields.map((f) =>
-            eb(f, 'like', `%${toText(options.search!.slice(0, 200))}%`),
-          ),
-        ),
+        eb.or([
+          ...searchFields.map((f) => eb(f, 'like', `%${term}%`)),
+          ...(phone && phone !== term && searchFields.includes('phone')
+            ? [eb('phone', 'like', `%${phone}%`)]
+            : []),
+        ]),
       );
     }
     return { select, fields };
@@ -1160,7 +1168,8 @@ export class CrmService {
     for (const field of definitions[entity].fields) {
       let value = input[field.key];
       if (typeof value === 'string') {
-        value = value.trim();
+        // A phone number as the CRM keeps it, however typed (phone.ts).
+        value = field.key === 'phone' ? normalizePhone(value) : value.trim();
         input[field.key] = value || null;
       }
       if (

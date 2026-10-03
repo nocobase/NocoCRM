@@ -9,6 +9,7 @@ import type { ServiceResolver } from '@nocobase/service-provider';
 import { z } from 'zod';
 import { CRM_ASSISTANT } from '../../ai/employees/crm-assistant.js';
 import { structuredRunModel } from './ai-model.js';
+import { normalizePhone } from './phone.js';
 import { findDuplicates, type FoundDuplicate } from './lead-merge.js';
 import { capability, conditions, type Actor } from './authorization.js';
 import {
@@ -217,7 +218,9 @@ function clean(
 ): Row {
   const input: Row = {};
   for (const key of TEXT_FIELDS) {
-    const value = toText(fields[key] ?? '').trim();
+    const raw = toText(fields[key] ?? '');
+    // The number as it will be kept, so the review shows it so (phone.ts).
+    const value = key === 'phone' ? normalizePhone(raw) : raw.trim();
     if (value) input[key] = value.slice(0, TEXT_LIMIT);
   }
   for (const key of LONG_FIELDS) {
