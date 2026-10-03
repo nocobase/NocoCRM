@@ -36,9 +36,9 @@ const notify = (key: string, title: string, description: string) =>
   });
 
 const workflow: WorkflowSourceAst = defineWorkflow({
-  title: '记录变更通知',
+  title: 'Record change notifications',
   description:
-    '记录更换负责人时通知新负责人；活动的内部参与人被邀请、移除、改期或活动取消时通知参与人。管理员可以在参数里关闭通知。',
+    "Notifies the new owner when a record changes hands, and an activity's internal participants when they are invited or removed, or the activity is rescheduled or cancelled. Administrators can switch notifications off in the parameters.",
   inputSchema: {
     type: 'object',
     required: ['entity', 'recordId', 'recipientId', 'actorId', 'event', 'at'],
@@ -68,46 +68,50 @@ const workflow: WorkflowSourceAst = defineWorkflow({
   parameters: {
     notify: {
       type: 'boolean',
-      title: '发送通知',
-      description: '关闭后，负责人变更和活动参与人变动都不再发站内通知。',
+      title: 'Send notifications',
+      description:
+        "When off, no in-app notification is sent for a change of owner or of an activity's participants.",
       default: true,
     },
   },
   nodes: [
     ConditionInstruction.create({
       key: 'shouldNotify',
-      title: '是否开启通知',
-      description: '由管理员参数决定是否发送任何记录变更通知。',
+      title: 'Notifications on?',
+      description:
+        'Whether to send any record change notification, as the administrator parameter says.',
       config: { module: './server/notify-enabled' },
     }).branch({
       yes: [],
       no: [
         TerminateInstruction.create({
           key: 'skipNotification',
-          title: '无需通知',
-          description: '通知已关闭：本次运行不发消息，正常结束。',
+          title: 'No notification',
+          description:
+            'Notifications are off: this run sends nothing and ends normally.',
           config: { outcome: 'success' },
         }),
       ],
     }),
     ConditionInstruction.create({
       key: 'handoff',
-      title: '是否为负责人变更',
-      description: '负责人变更通知新负责人；其余事件通知活动参与人。',
+      title: 'A change of owner?',
+      description:
+        "A change of owner goes to the new owner; every other event goes to the activity's participants.",
       config: { module: './server/is-handoff' },
     }).branch({
       yes: [
         notify(
           'notifyOwner',
-          '通知新负责人',
-          '通过 CRM 通知队列给新负责人发送「已分配给你」。',
+          'Tell the new owner',
+          'Sends the new owner "Assigned to you" through the CRM notification queue.',
         ),
       ],
       no: [
         notify(
           'notifyParticipant',
-          '通知活动参与人',
-          '通过 CRM 通知队列给参与人发送邀请、移除、改期或取消消息。',
+          "Tell the activity's participants",
+          'Sends the participants an invitation, removal, rescheduling or cancellation message through the CRM notification queue.',
         ),
       ],
     }),

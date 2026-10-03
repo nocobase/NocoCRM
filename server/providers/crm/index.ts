@@ -162,7 +162,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
       const service = this.app.container.resolve(crmToken);
       scheduler.registerTarget({
         type: 'app.crm-lead-signals',
-        title: '线索信号巡检',
+        title: 'Lead signal check',
         validate: (config) =>
           config !== null &&
           typeof config === 'object' &&
@@ -171,8 +171,9 @@ export default class CrmProvider extends ServiceProvider<Application> {
             : { valid: false, reason: 'config-must-be-an-object' },
         // Read on the scheduled tasks page in place of the type's name.
         describe: async () => ({
-          targetLabel: '线索信号巡检',
-          description: 'AI 自动跟进新线索未联系、线索沉默、培育复查到期的线索',
+          targetLabel: 'Lead signal check',
+          description:
+            'The AI follows up leads left uncontacted, gone quiet or due for a nurture review',
           state: 'ready',
         }),
         start: async () => {
@@ -189,9 +190,9 @@ export default class CrmProvider extends ServiceProvider<Application> {
       });
       scheduler.defineSchedule({
         key: 'crm.lead-signals',
-        title: '线索每日巡检',
+        title: 'Daily lead check',
         description:
-          '每天检查进行中的线索：新线索 2 天没联系、跟进中 14 天没有活动、培育复查到期的，由 AI 自动跟进一次，进负责人的待我处理。',
+          'Every day, the open leads are checked: a new lead uncontacted for 2 days, a working one with no activity for 14 days, a nurtured one due for review. The AI follows each up once, and the result waits on its owner.',
         schedule: {
           cron: '0 9 * * *',
           timezone: (await service.settings()).timeZone || 'Asia/Shanghai',

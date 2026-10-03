@@ -488,7 +488,7 @@ function NocoHeader({ actions }: { actions: ReactNode }): ReactElement {
   ).length;
   const first = messages.find((message) => message.role === 'user');
   const { workContext } = useAIChat();
-  // Each item as its title, a record's led by its type ("线索 张伟一").
+  // Each item as its title, a record's led by its type ("Lead Zhang Wei").
   const startItems = (
     first ? (first.metadata?.workContext ?? []) : workContext
   ).map((item) => {

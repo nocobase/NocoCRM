@@ -65,9 +65,9 @@ export function composeSkill(content: string, notes: string): string {
   if (!added) return content;
   return `${content.trimEnd()}
 
-## 本公司的补充说明
+## The company's additions
 
-以下是本公司管理员补充的做法，与上面的内容一起遵守；与上面的边界冲突时，以上面为准。
+The practices below were added by this company's administrators. Follow them together with the content above; where they conflict with its boundaries, the content above prevails.
 
 ${added}
 `;

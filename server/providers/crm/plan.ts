@@ -1,8 +1,10 @@
 // The description of the activity a follow-up's accept creates or carries
 // on: what to prepare, what to ask and the email draft, as Markdown under
-// headings in the reader's language. No imports, so the browser bundle
-// takes it too: the card shows, and lets the person change, exactly what
-// will be saved.
+// headings in the reader's language. It imports only the headings' import-
+// free translations, so the browser bundle takes it too: the card shows,
+// and lets the person change, exactly what will be saved.
+
+import { planHeadings as HEADINGS } from '../../locales/crm-ai/index.js';
 
 type Planned = {
   prep?: string[];
@@ -11,11 +13,6 @@ type Planned = {
 };
 
 // The parts, by kind, each under its heading (either language).
-const HEADINGS = {
-  prep: ['准备要点', 'To prepare'],
-  questions: ['要问的问题', 'To ask'],
-  email: ['邮件草稿', 'Email draft'],
-} as const;
 export type PlanPart = keyof typeof HEADINGS;
 type Part = PlanPart;
 

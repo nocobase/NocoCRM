@@ -232,7 +232,7 @@ export function crmPermissionSet(role: string) {
     throw new Error('The administrator is the root set, not a CRM set.');
   const manager = role === 'sales-manager';
   let set = definePermissionSet(roleKey(role)).title(
-    manager ? 'Sales manager / 销售经理' : 'Salesperson / 销售人员',
+    crm(manager ? 'authz.roles.salesManager' : 'authz.roles.salesRepresentative'),
   );
   for (const page of crmPages) set = set.grant(pageGrant(page.name));
   for (const entity of entities)

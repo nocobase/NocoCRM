@@ -87,7 +87,7 @@ export function crmWriteTools(
             title: {
               type: 'string',
               description:
-                'What this creates, in the user\'s language, e.g. "创建线索：嘉禾食品 周明".',
+                'What this creates, in the user\'s language, e.g. "Create lead: Jiahe Foods, Zhou Ming".',
             },
             input: inputProperty,
             assumptions: {

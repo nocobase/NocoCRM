@@ -1228,7 +1228,7 @@ export class CrmService {
       if (field.type === 'subdivision' && !unchanged) {
         const country = toText(input.country ?? previous?.country);
         if (!isSubdivision(country, toText(value))) {
-          // A name ("江西省", "Jiangxi") is taken for its code.
+          // A name (in either language, "Jiangxi") is taken for its code.
           const code = subdivisionCode(country, toText(value));
           if (!code) throw new CrmError('invalidInput', 400, field.key);
           input[field.key] = code;

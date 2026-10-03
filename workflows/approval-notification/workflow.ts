@@ -39,9 +39,9 @@ const notify = (
   });
 
 const workflow: WorkflowSourceAst = defineWorkflow({
-  title: '审批通知',
+  title: 'Approval notifications',
   description:
-    '审批提交或撤回时通知审批人，通过或驳回时通知申请人；管理员可以在参数里关闭通知。',
+    'Notifies the approver when a request is submitted or withdrawn, and the applicant when it is approved or rejected. Administrators can switch notifications off in the parameters.',
   inputSchema: {
     type: 'object',
     required: ['approvalId', 'event', 'recipientId', 'actorId', 'at'],
@@ -62,55 +62,59 @@ const workflow: WorkflowSourceAst = defineWorkflow({
   parameters: {
     notify: {
       type: 'boolean',
-      title: '发送通知',
-      description: '关闭后，审批的提交、撤回、通过、驳回都不再发站内通知。',
+      title: 'Send notifications',
+      description:
+        'When off, no in-app notification is sent when a request is submitted, withdrawn, approved or rejected.',
       default: true,
     },
   },
   nodes: [
     ConditionInstruction.create({
       key: 'shouldNotify',
-      title: '是否开启通知',
-      description: '由管理员参数决定是否发送任何审批通知。',
+      title: 'Notifications on?',
+      description:
+        'Whether to send any approval notification, as the administrator parameter says.',
       config: { module: './server/notify-enabled' },
     }).branch({
       yes: [],
       no: [
         TerminateInstruction.create({
           key: 'skipNotification',
-          title: '无需通知',
-          description: '通知已关闭：本次运行不发消息，正常结束。',
+          title: 'No notification',
+          description:
+            'Notifications are off: this run sends nothing and ends normally.',
           config: { outcome: 'success' },
         }),
       ],
     }),
     ConditionInstruction.create({
       key: 'decided',
-      title: '是否为审批结果',
-      description: '通过和驳回是结果，通知申请人；提交和撤回通知审批人。',
+      title: 'A decision?',
+      description:
+        'Approval and rejection are decisions, sent to the applicant; submission and withdrawal go to the approver.',
       config: { module: './server/is-decision' },
     }).branch({
       yes: [
         ConditionInstruction.create({
           key: 'approved',
-          title: '是否通过',
-          description: '按审批人的决定分支。',
+          title: 'Approved?',
+          description: "Branches on the approver's decision.",
           config: { module: './server/is-approved' },
         }).branch({
           yes: [
             notify(
               'notifyApproved',
-              '通知申请人已通过',
+              'Tell the applicant it was approved',
               'approved',
-              '通过 CRM 通知队列给申请人发送「审批已通过」。',
+              'Sends the applicant "Request approved" through the CRM notification queue.',
             ),
           ],
           no: [
             notify(
               'notifyRejected',
-              '通知申请人已驳回',
+              'Tell the applicant it was rejected',
               'rejected',
-              '通过 CRM 通知队列给申请人发送「审批已拒绝」。',
+              'Sends the applicant "Request rejected" through the CRM notification queue.',
             ),
           ],
         }),
@@ -118,24 +122,25 @@ const workflow: WorkflowSourceAst = defineWorkflow({
       no: [
         ConditionInstruction.create({
           key: 'submitted',
-          title: '是否为提交',
-          description: '提交通知审批人有新申请，撤回通知审批人不必再处理。',
+          title: 'A submission?',
+          description:
+            'A submission tells the approver of a new request; a withdrawal tells them it no longer needs a decision.',
           config: { module: './server/is-submitted' },
         }).branch({
           yes: [
             notify(
               'notifySubmitted',
-              '通知审批人有新申请',
+              'Tell the approver of a new request',
               'pending',
-              '通过 CRM 通知队列给审批人发送「待审批申请」。',
+              'Sends the approver "Approval requested" through the CRM notification queue.',
             ),
           ],
           no: [
             notify(
               'notifyWithdrawn',
-              '通知审批人申请已撤回',
+              'Tell the approver it was withdrawn',
               'withdrawn',
-              '通过 CRM 通知队列给审批人发送「审批已撤回」。',
+              'Sends the approver "Request withdrawn" through the CRM notification queue.',
             ),
           ],
         }),

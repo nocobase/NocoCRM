@@ -741,6 +741,12 @@ const wording = {
     group: ['CRM', 'CRM'],
     capabilities: ['CRM capabilities', 'CRM 能力'],
     sales: ['Sales capabilities', '销售能力'],
+    // The two sales permission sets (an existing set keeps its stored
+    // title; provisioning never rewrites one).
+    roles: {
+      salesManager: ['Sales manager', '销售经理'],
+      salesRepresentative: ['Salesperson', '销售人员'],
+    },
     actions: {
       view: ['View', '查看'],
       create: ['Create', '新建'],

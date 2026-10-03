@@ -12,9 +12,9 @@ import {
 // its start and the recipient, so a later scan of the same activity starts
 // nothing new; the workflow is the only sender.
 const workflow: WorkflowSourceAst = defineWorkflow({
-  title: '活动开始提醒',
+  title: 'Activity reminder',
   description:
-    '活动即将开始时，提醒负责人和内部参与人；提前多久由系统设置里的「活动提醒」决定。管理员可以在参数里关闭提醒。',
+    'Reminds the owner and the internal participants that an activity is about to start; how far ahead follows the "Activity reminder" system setting. Administrators can switch reminders off in the parameters.',
   inputSchema: {
     type: 'object',
     required: ['activityId', 'recipientId', 'startAt'],
@@ -28,32 +28,36 @@ const workflow: WorkflowSourceAst = defineWorkflow({
   parameters: {
     notify: {
       type: 'boolean',
-      title: '发送提醒',
-      description: '关闭后，活动开始前不再发站内提醒。',
+      title: 'Send reminders',
+      description:
+        'When off, no in-app reminder is sent before an activity starts.',
       default: true,
     },
   },
   nodes: [
     ConditionInstruction.create({
       key: 'shouldNotify',
-      title: '是否开启提醒',
-      description: '由管理员参数决定是否发送活动提醒。',
+      title: 'Reminders on?',
+      description:
+        'Whether to send activity reminders, as the administrator parameter says.',
       config: { module: './server/notify-enabled' },
     }).branch({
       yes: [],
       no: [
         TerminateInstruction.create({
           key: 'skipReminder',
-          title: '无需提醒',
-          description: '提醒已关闭：本次运行不发消息，正常结束。',
+          title: 'No reminder',
+          description:
+            'Reminders are off: this run sends nothing and ends normally.',
           config: { outcome: 'success' },
         }),
       ],
     }),
     RunInstruction.create({
       key: 'remind',
-      title: '发送活动提醒',
-      description: '通过 CRM 通知队列给收件人发送「活动即将开始」。',
+      title: 'Send the activity reminder',
+      description:
+        'Sends the recipient "Upcoming activity" through the CRM notification queue.',
       config: {
         module: './server/remind',
         args: {

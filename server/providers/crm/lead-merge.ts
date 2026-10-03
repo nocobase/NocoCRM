@@ -8,6 +8,15 @@ import type { Row } from '@nocobase/db';
 import type { ServiceResolver } from '@nocobase/service-provider';
 import { z } from 'zod';
 import { CRM_ASSISTANT } from '../../ai/employees/crm-assistant.js';
+import { lang, pick } from '../../locales/crm-ai/index.js';
+import {
+  companySuffixes,
+  createdOn,
+  leadSummary,
+  mergeLabels,
+  mergeTitle,
+  nameLine,
+} from '../../locales/crm-ai/lead-merge.js';
 import { structuredRunModel } from './ai-model.js';
 import { compileFilter, conditions, type Actor } from './authorization.js';
 import { jsonIn } from './lead-capture.js';
@@ -91,15 +100,31 @@ const bare = (value: unknown): string =>
   toText(value ?? '')
     .toLowerCase()
     .replace(/[\s\p{P}\p{S}]/gu, '');
+// The words at the end of a company's name that only say what kind of
+// company it is: the Chinese ones (from the locale file), then the English.
+const COMPANY_SUFFIX = new RegExp(
+  `(${[
+    ...companySuffixes,
+    'incorporated',
+    'corporation',
+    'company',
+    'limited',
+    'gmbh',
+    'corp',
+    'inc',
+    'llc',
+    'ltd',
+    'co',
+  ].join('|')})$`,
+  'u',
+);
 // A company's name without the words that only say what kind of company it
-// is, so "远航物流" and "远航物流有限公司" are one.
+// is, so a name and the same name followed by "Co., Ltd." (in Chinese or
+// English) are one.
 function companyKey(value: unknown): string {
   let key = bare(value);
   for (;;) {
-    const next = key.replace(
-      /(股份有限公司|有限责任公司|有限公司|集团|公司|incorporated|corporation|company|limited|gmbh|corp|inc|llc|ltd|co)$/u,
-      '',
-    );
+    const next = key.replace(COMPANY_SUFFIX, '');
     if (next === key) return key;
     key = next;
   }
@@ -185,7 +210,7 @@ export async function leadDuplicates(
 
 // Two companies as one: the same name once the kind of company is left
 // off, or, for a name of four characters or more, one inside the other
-// ("丰味食品" in "丰味食品集团").
+// (a name inside the same name followed by a word such as "Group").
 function sameCompany(a: unknown, b: unknown): boolean {
   const [x, y] = [companyKey(a), companyKey(b)].sort(
     (p, q) => p.length - q.length,
@@ -519,32 +544,28 @@ export async function mergeProposal(
   // How the reason names each lead to the person, who sees no A or B: by
   // the day it was created, the one on the page and the other where both
   // were created the same day, and the unsaved one as what was organised.
-  const dated = (s: MergeSide): string => {
-    const [, month, date] = day(s.lead.createdAt).split('-');
-    return zh
-      ? `${Number(month)} 月 ${Number(date)} 日创建的那条`
-      : `the lead created on ${day(s.lead.createdAt)}`;
-  };
+  const t = pick(mergeLabels, zh);
+  const dated = (s: MergeSide): string =>
+    createdOn(day(s.lead.createdAt))[lang(zh)];
   const label = (s: MergeSide): string =>
     s.lead.id === UNSAVED
-      ? zh
-        ? '新整理的内容'
-        : 'the newly organised lead'
+      ? t.unsaved
       : dated(a) === dated(b)
         ? s === a
-          ? zh
-            ? '本页这条'
-            : 'this lead'
-          : zh
-            ? '另一条'
-            : 'the other lead'
+          ? t.thisLead
+          : t.otherLead
         : dated(s);
   const describe = (s: MergeSide): string =>
     [
-      `称呼：${label(s)}`,
+      nameLine(label(s))[lang(zh)],
       s.lead.id === UNSAVED
-        ? '刚由 AI 从销售粘贴的文字整理出来，还没有保存成线索，没有活动和备注'
-        : `创建于 ${day(s.lead.createdAt)}，更新于 ${day(s.lead.updatedAt)}；活动 ${s.activities} 条，备注 ${s.notes} 条`,
+        ? t.unsavedSummary
+        : leadSummary(
+            day(s.lead.createdAt),
+            day(s.lead.updatedAt),
+            s.activities,
+            s.notes,
+          )[lang(zh)],
       ...groups.flatMap((group) =>
         group.map((key) => {
           const value = s.lead[key];
@@ -552,7 +573,7 @@ export async function mergeProposal(
             key === 'ownerId'
               ? toText(users.find((u) => u.id === value)?.name ?? '')
               : toText(value ?? '');
-          return `- ${key}: ${shown.replace(/\s+/g, ' ').slice(0, 1500) || '（空）'}`;
+          return `- ${key}: ${shown.replace(/\s+/g, ' ').slice(0, 1500) || '(empty)'}`;
         }),
       ),
     ].join('\n');
@@ -569,7 +590,7 @@ export async function mergeProposal(
       .create({
         userId: actor.id,
         aiEmployee: { username: CRM_ASSISTANT },
-        title: '合并重复线索',
+        title: mergeTitle[lang(zh)],
         from: 'sub-agent',
         options: { skillSettings },
       });
@@ -690,26 +711,27 @@ function mergePrompt(
   only: 'A' | 'B' | null,
   zh: boolean,
 ): string {
-  return `两条线索很可能是同一个询盘，要合并成一条。请给出合并方案：保留哪一条（keep），以及下面每个有差异的字段取哪一条的值（pick）。
-要求：
-- 保留历史更多（活动、备注更多）、跟进更深入的那条；差不多时保留较早创建的。${only ? `\n- 只能保留 ${only}。` : ''}
-- 每个字段：取更完整、更具体、更新的值（例如完整的公司全称胜过简称，更晚确认的电话胜过旧号码）；空值永远不选。
-- 姓名、公司名只是写法不同（错别字、同音字、简繁、大小写）时取保留那条的写法：跟进多的那条经过联系核实，新录入的更可能是笔误；只有另一条明显更完整（如公司全称）才取它，并在 why 里说明。
-- message（原始询盘）和 companyDescription 两边都有且内容不同时选 both，两段都保留；内容重复时选更完整的一条。
-- country 代表整组地址（国家、省份、城市、详细地址），一起取同一条。
-- ownerId 取更早、跟进更多的那位负责人，除非另一条明显是正在跟进的人。
-- source（来源）记的是线索最初从哪个渠道来，用于统计各渠道的效果：取较早创建那条的来源，不因为后来又从别的渠道出现而改。
-- 只为下面列出的字段作答：${fields.join('、')}。
-- reason 用一句话说保留哪条、为什么；why 只在取舍不明显时写一句，否则为 null。
-- 看的人看不到 A、B 这两个代号：reason 和 why 里用每条线索的「称呼」指代，不写 A、B。
-- 「新整理的内容」还没有保存成线索：不要说它创建于哪天，也不要拿它没有活动当理由；它要并入已有线索，保留的一定是已有那条，reason 说明它与已有线索是同一个询盘即可。
-- 取值用自然的说法（跟进中、展会、食品饮料），不写 working、exhibition 这类代码或字段名。
-- 用${zh ? '中文' : '英文'}写 reason 和 why。
+  const t = pick(mergeLabels, zh);
+  return `The two leads are very likely the same enquiry and are to be merged into one. Give a merge plan: which lead to keep (keep), and for each differing field below, which lead's value to take (pick).
+Rules:
+- Keep the one with more history (more activities and notes) and the further follow-up; when they are about even, keep the one created earlier.${only ? `\n- Only ${only} may be kept.` : ''}
+- For each field: take the more complete, more specific, more recent value (for example, a company's full name beats a short name, and a phone number confirmed later beats an old number); never pick an empty value.
+- When a person's or company's name differs only in how it is written (a typo, a homophone, simplified or traditional characters, letter case), take the kept lead's spelling: the lead followed up more has been checked through contact, and the newly entered one is more likely a slip; take the other only when it is clearly more complete (such as a company's full name), and explain it in why.
+- message (the original enquiry) and companyDescription: when both leads have one and they differ, pick both, keeping both texts; when they repeat each other, pick the more complete one.
+- country stands for the whole address group (country, state or province, city, street address), all taken from the same lead.
+- ownerId: take the owner who came earlier and has followed up more, unless the other lead's owner is clearly the one following it up now.
+- source records the channel the lead first came from, used to measure each channel's results: take the source of the lead created earlier, and do not change it because the lead later turned up through another channel.
+- Answer only for the fields listed here: ${fields.join(', ')}.
+- reason says in one sentence which lead to keep and why; why is one sentence only where the choice is not obvious, otherwise null.
+- The reader cannot see the code names A and B: in reason and why, refer to each lead by its "${t.callIt}", never as A or B.
+- "${t.unsaved}" is not yet saved as a lead: do not say on which day it was created, and do not give its having no activities as a reason; it is to be merged into the existing lead, so the one kept is always the existing lead, and reason need only say that it is the same enquiry as the existing lead.
+- Write values in natural words (in progress, trade show, food and beverage), not codes or field names such as working or exhibition.
+- Write reason and why in ${zh ? 'Chinese' : 'English'}.
 
-# 线索 A
+# Lead A
 ${a}
 
-# 线索 B
+# Lead B
 ${b}`;
 }
 

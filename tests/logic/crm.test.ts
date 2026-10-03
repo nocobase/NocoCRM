@@ -1755,7 +1755,7 @@ describe('CRM API security and domain rules', () => {
     // for another, or the user's own.
     expect(
       crmAssistant({ avatar: 'x', language: 'zh-CN' }).systemPrompt,
-    ).toContain('Write everything in Chinese (简体中文)');
+    ).toContain('Write everything in Simplified Chinese');
     expect(
       crmAssistant({ avatar: 'x', language: 'en-US' }).systemPrompt,
     ).toContain('unless the user asks you to use another language');
@@ -2466,7 +2466,7 @@ describe('CRM skills', () => {
     // … and the AI loads both, the notes after the method.
     const composed = registered.get('lead-follow-up')!.content;
     expect(composed.startsWith(shipped.content)).toBe(true);
-    expect(composed).toContain('## 本公司的补充说明');
+    expect(composed).toContain("## The company's additions");
     expect(composed).toContain('政府和国企客户一律评为 A 级。');
     expect(composed).toBe(
       composeSkill(shipped.content, '政府和国企客户一律评为 A 级。'),
@@ -3058,7 +3058,7 @@ describe('CRM lead evaluation', () => {
       // The skill and the lead are in what the AI was given.
       // First the web research on the company, then the verdict from the
       // skill, the lead and what was found.
-      expect(prompts[0]).toContain('先联网调查这条线索里的公司');
+      expect(prompts[0]).toContain('First research the company in this lead');
       expect(prompts[0]).toContain('评估精工');
       expect(prompts[1]).toContain('技能正文');
       expect(prompts[1]).toContain('评估精工');
@@ -3291,7 +3291,7 @@ describe('CRM lead evaluation', () => {
       await again.evaluator.request(actor('rep'), lead.id);
       await again.evaluator.idle();
       expect(again.prompts).toHaveLength(1);
-      expect(again.prompts[0]).toContain('上一次跟进建议');
+      expect(again.prompts[0]).toContain('# Previous follow-up recommendation');
       expect(again.prompts[0]).toContain(follow.summary);
       // Accepting a conversion waits for the person's own conversion.
       const convert = evaluating({
@@ -3431,7 +3431,7 @@ describe('CRM lead evaluation', () => {
       await second.evaluator.idle();
       // One turn, no web search; the card and the words in the prompt.
       expect(second.prompts).toHaveLength(1);
-      expect(second.prompts[0]).toContain('要修改的建议');
+      expect(second.prompts[0]).toContain('# Recommendation to revise');
       expect(second.prompts[0]).toContain('要不马上发个邮件吧');
       const feed = (await service.historyOf(actor('rep'), 'leads', lead.id))
         .data;
@@ -3543,7 +3543,7 @@ describe('CRM lead evaluation', () => {
       const asked = run.prompts.at(-1)!;
       expect(asked).toContain('"ref": "A1"');
       expect(asked).toContain('"overdue": false');
-      expect(asked).toContain('怎么对待线索的活动');
+      expect(asked).toContain("How to treat the lead's activities");
       const card = await latestEvaluation(service, actor('rep'), lead.id);
       expect(card?.ai.result?.nextStep).toMatchObject({
         activityId: planned.id,
@@ -3761,7 +3761,7 @@ describe('CRM lead evaluation', () => {
       await evaluator.idle();
       // Asked once more for the structure before giving up.
       expect(prompts).toHaveLength(3);
-      expect(prompts[2]).toContain('只返回要求的那个 JSON 对象');
+      expect(prompts[2]).toContain('return only the required JSON object');
       expect(
         await latestEvaluation(service, actor('rep'), lead.id),
       ).toMatchObject({ status: 'failed', ai: { error: 'unreadable' } });
@@ -3789,8 +3789,8 @@ describe('CRM lead evaluation', () => {
         [lead.id]: 'running',
       });
       await evaluator.idle();
-      expect(prompts[0]).toContain('用中文写');
-      expect(prompts[1]).toContain('用中文写 summary');
+      expect(prompts[0]).toContain('Then write, in Chinese');
+      expect(prompts[1]).toContain('email in Chinese.');
       expect(await aiStates(service, [lead.id])).toEqual({
         [lead.id]: 'pending',
       });
@@ -3859,11 +3859,11 @@ describe('CRM lead evaluation', () => {
       await evaluator.request(actor('rep'), lead.id);
       await evaluator.idle();
       // The search is allowed; the CRM tools are not needed.
-      expect(prompts[0]).toContain('用 subAgentWebSearch 查');
-      expect(prompts[1]).toContain('# 联网调查的结果');
-      expect(prompts[1]).toContain('# 团队的备注');
+      expect(prompts[0]).toContain('Use subAgentWebSearch to look up');
+      expect(prompts[1]).toContain('# Web research results');
+      expect(prompts[1]).toContain("# The team's notes");
       expect(prompts[1]).toContain('已在用 SAP，只做对接');
-      expect(prompts[1]).toContain('# 线索的活动');
+      expect(prompts[1]).toContain("# The lead's activities");
       expect(prompts[1]).toContain('30 万预算只含软件，实施另算');
       const entry = await latestEvaluation(service, actor('rep'), lead.id);
       expect(entry!.ai.result!.enrich).toEqual([
@@ -4024,7 +4024,7 @@ describe('CRM lead evaluation', () => {
       );
       await changed.evaluator.idle();
       expect(changed.prompts).toHaveLength(2);
-      expect(changed.prompts[0]).toContain('先联网调查');
+      expect(changed.prompts[0]).toContain('First research');
     } finally {
       enabled.mockRestore();
     }
@@ -4146,7 +4146,7 @@ describe('CRM lead evaluation', () => {
       await named.evaluator.request(actor('rep'), lead.id);
       await named.evaluator.idle();
       // Offered the people it may give the step to, by name.
-      expect(named.prompts.at(-1)).toContain('可选负责人');
+      expect(named.prompts.at(-1)).toContain('# Available owners');
       const card = await latestEvaluation(service, actor('rep'), lead.id);
       expect(card?.ai.result).toMatchObject({
         reasons: ['收购到配送跟踪是主要需求（「需求确认电话」反馈）'],
@@ -4287,8 +4287,10 @@ describe('CRM opportunity follow-up', () => {
       // The skill, the deal, its people and what came of its activities.
       // The account holds nothing about the company: it is looked up
       // first, then the follow-up reads that research.
-      expect(prompts[0]).toContain('先联网调查这个商机的客户公司');
-      expect(prompts.at(-1)).toContain('对客户公司的联网调查');
+      expect(prompts[0]).toContain(
+        "First look up this opportunity's account company",
+      );
+      expect(prompts.at(-1)).toContain("Web research on the account's company");
       expect(prompts.at(-1)).toContain('技能正文');
       expect(prompts.at(-1)).toContain('跟进报工系统');
       expect(prompts.at(-1)).toContain('决策');
@@ -4900,7 +4902,7 @@ describe('CRM opportunity follow-up', () => {
         instruction: '按 9 折有条件批准',
       });
       await reviewer.idle();
-      expect(prompts.at(-1)).toContain('审批人的修改意见');
+      expect(prompts.at(-1)).toContain("The approver's revision instructions");
       expect(prompts.at(-1)).toContain('按 9 折有条件批准');
       const set = await latestReview(service, actor('manager'), third);
       expect(set).toMatchObject({
