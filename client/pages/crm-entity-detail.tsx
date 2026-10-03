@@ -23,7 +23,6 @@ import {
   History,
   Paperclip,
   Plus,
-  Sparkles,
   Star,
   StickyNote,
   Target,
@@ -105,12 +104,6 @@ import {
 } from './crm-detail.js';
 import { UploadZone } from '../components/crm/attachments.js';
 import { RecordOutcomeDialog } from '../components/crm/outcome.js';
-
-// Which shortcuts a detail page offers the assistant, per the specification.
-// Each is a complete instruction sent as soon as it is clicked.
-const shortcuts: Partial<Record<Entity, readonly string[]>> = {
-  accounts: ['summarizeAccount', 'researchCompany', 'findOpportunities'],
-};
 
 // The account a contact or a deal belongs to, in the title line.
 function AccountCrumb({
@@ -196,8 +189,8 @@ export default function EntityDetail({
   }>();
   const [moving, setMoving] = useState(false);
   const [busy, setBusy] = useState(false);
-  // The record's title, for "Ask AI" and the shortcuts, which start the
-  // assistant's conversation from it.
+  // The record's title, for "Ask AI", which starts the assistant's
+  // conversation from it.
   const contextName = detail
     ? recordTitle(entity, detail.record, detail.titles)
     : undefined;
@@ -383,23 +376,6 @@ export default function EntityDetail({
         : entity === 'opportunities'
           ? { accountId: record.accountId, opportunityId: id }
           : {};
-  const shortcut = (key: string): void => {
-    window.dispatchEvent(
-      new CustomEvent('crm-assistant', {
-        detail: {
-          prompt: text(`prompts.${key}`),
-          entity,
-          recordId: id,
-          name: contextName,
-          // Each a complete instruction, sent at once.
-          send: true,
-          // Background research is the one shortcut that looks outside the
-          // CRM, so it alone turns on the model's web search.
-          webSearch: key === 'researchCompany',
-        },
-      }),
-    );
-  };
   // What the active tab shows, in the right column.
   const tabContent = (
     <>
@@ -868,21 +844,6 @@ export default function EntityDetail({
   const askAI = (
     <AskAIButton entity={entity} recordId={id} name={contextName} />
   );
-  // The object's AI shortcuts, each a complete instruction sent at once.
-  const aiShortcuts = meta.assistant
-    ? (shortcuts[entity] ?? []).map((key) => (
-        <Button
-          key={key}
-          size='sm'
-          variant='ghost'
-          className='text-ai hover:text-ai'
-          onClick={() => shortcut(key)}
-        >
-          <Sparkles />
-          {text(key)}
-        </Button>
-      ))
-    : null;
   // The rarer deleting, last, in a "More" menu.
   const moreMenu = detail.permissions.delete ? (
     <DropdownMenu>
@@ -892,7 +853,8 @@ export default function EntityDetail({
       >
         <Ellipsis />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align='end'>
+      {/* As wide as its longest item: the trigger is a small icon. */}
+      <DropdownMenuContent align='end' className='w-max'>
         <DropdownMenuItem
           variant='destructive'
           onClick={() => setConfirmDelete(true)}
@@ -1026,7 +988,6 @@ export default function EntityDetail({
       actionsOf(
         <>
           {askAI}
-          {aiShortcuts}
           {editable && !closedDeal && (
             <EvaluateButton
               entity='opportunities'
@@ -1113,7 +1074,6 @@ export default function EntityDetail({
       actionsOf(
         <>
           {askAI}
-          {aiShortcuts}
           {moreMenu}
         </>,
       ),

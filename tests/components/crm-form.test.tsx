@@ -172,6 +172,20 @@ describe('CRM forms and file interchange', () => {
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
+  it("puts a contact's yes / no fields side by side in one cell", () => {
+    render(<RecordForm entity='contacts' onClose={vi.fn()} />);
+    const employed = screen.getByRole('checkbox', { name: /^Employed/ });
+    const primary = screen.getByRole('checkbox', { name: /^Primary contact/ });
+    // The grid's cell that holds the box.
+    const cell = (box: HTMLElement): Element | null => {
+      let node: Element | null = box;
+      while (node && !node.parentElement?.classList.contains('grid'))
+        node = node.parentElement;
+      return node;
+    };
+    expect(cell(employed)).not.toBeNull();
+    expect(cell(employed)).toBe(cell(primary));
+  });
   it('keeps a lead activity linked and hides account and external participants', () => {
     render(
       <RecordForm

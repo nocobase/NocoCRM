@@ -151,10 +151,10 @@ export default function DashboardPage(): ReactElement {
   const funnel = rows(data?.funnel);
   const maxCount = Math.max(1, ...funnel.map((r) => Number(r.count)));
   const timeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
-  const ask = (key: 'planToday' | 'analyzeSales'): void => {
+  const analyzeSales = (): void => {
     window.dispatchEvent(
       new CustomEvent('crm-assistant', {
-        detail: { prompt: text(`prompts.${key}`), send: true },
+        detail: { prompt: text('prompts.analyzeSales'), send: true },
       }),
     );
   };
@@ -267,24 +267,14 @@ export default function DashboardPage(): ReactElement {
         actions={
           <>
             {meta?.assistant && (
-              <>
-                <Button
-                  variant='ghost'
-                  className='text-ai hover:text-ai'
-                  onClick={() => ask('planToday')}
-                >
-                  <Sparkles />
-                  {text('planToday')}
-                </Button>
-                <Button
-                  variant='ghost'
-                  className='text-ai hover:text-ai'
-                  onClick={() => ask('analyzeSales')}
-                >
-                  <Sparkles />
-                  {text('analyzeSales')}
-                </Button>
-              </>
+              <Button
+                variant='ghost'
+                className='text-ai hover:text-ai'
+                onClick={analyzeSales}
+              >
+                <Sparkles />
+                {text('analyzeSales')}
+              </Button>
             )}
           </>
         }

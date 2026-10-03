@@ -452,7 +452,8 @@ function LeadDetail({ id }: { id: string }): ReactElement {
           >
             <Ellipsis />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align='end'>
+          {/* As wide as its longest item: the trigger is a small icon. */}
+          <DropdownMenuContent align='end' className='w-max'>
             <DropdownMenuItem
               variant='destructive'
               onClick={() => setConfirmDelete(true)}

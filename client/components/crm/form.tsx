@@ -9,6 +9,7 @@ import { FileDropZone, FileLinks } from './attachments.js';
 import { editsAll, fieldLabelKey, toText } from './api.js';
 import { CountryChoice, SubdivisionChoice } from './geography.js';
 import {
+  Fragment,
   useEffect,
   useEffectEvent,
   useRef,
@@ -899,6 +900,22 @@ export function RecordForm({
                     )}
                 </div>
               );
+            // The yes / no fields share one cell, in the place of the first,
+            // side by side: each alone took a cell, and a row ended half
+            // empty with one box on the next.
+            const flags = fields.filter(
+              (f) => f.type === 'boolean' && !tucked(f),
+            );
+            if (field.type === 'boolean') {
+              if (field !== flags[0]) return null;
+              return (
+                <div key={field.key} className='flex flex-wrap gap-x-6'>
+                  {flags.map((f) => (
+                    <Fragment key={f.key}>{block(f)}</Fragment>
+                  ))}
+                </div>
+              );
+            }
             if (pairedCurrency)
               return <div key={field.key}>{block(field, pairedCurrency)}</div>;
             if (pairedName)

@@ -208,12 +208,15 @@ describe('the account page', () => {
     expect(within(company).getByRole('link', { name: /张伟/ })).toBeTruthy();
   });
 
-  it('offers the AI shortcuts under the name and keeps the tab band to tabs', () => {
+  it('offers Ask AI as its one AI action, outside the tab band', () => {
     renderPage();
-    for (const name of ['总结客户', '调研公司', '发现销售机会']) {
-      const button = screen.getByRole('button', { name: new RegExp(name) });
-      expect(button.closest('[role="tablist"]')).toBeNull();
-    }
+    const askAI = screen.getByRole('button', { name: /问 AI/ });
+    expect(askAI.closest('[role="tablist"]')).toBeNull();
+    // The former canned shortcuts are asked through Ask AI instead.
+    for (const name of ['总结客户', '调研公司', '发现销售机会'])
+      expect(
+        screen.queryByRole('button', { name: new RegExp(name) }),
+      ).toBeNull();
     for (const name of ['动态', '活动', '联系人', '商机', '附件', '备注'])
       expect(
         screen.getAllByRole('tab', { name: new RegExp(name) }),
@@ -221,7 +224,7 @@ describe('the account page', () => {
   });
 });
 
-describe('the account page shortcuts and reason', () => {
+describe("the account page's churn reason", () => {
   beforeEach(() => {
     state.entity = 'accounts';
     state.record = {
@@ -239,22 +242,6 @@ describe('the account page shortcuts and reason', () => {
   it("keeps a churned account's reason editable as its own row", () => {
     renderPage();
     expect(screen.getByRole('button', { name: '流失原因' })).toBeTruthy();
-  });
-
-  it('researches the company with web search on', async () => {
-    const sent: CustomEvent[] = [];
-    const listen = (event: Event): void => {
-      sent.push(event as CustomEvent);
-    };
-    window.addEventListener('crm-assistant', listen);
-    renderPage();
-    await userEvent.click(screen.getByRole('button', { name: /调研公司/ }));
-    window.removeEventListener('crm-assistant', listen);
-    expect(sent.at(-1)?.detail).toMatchObject({
-      entity: 'accounts',
-      recordId: 'rec-1',
-      webSearch: true,
-    });
   });
 });
 

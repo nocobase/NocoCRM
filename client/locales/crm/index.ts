@@ -711,7 +711,6 @@ const wording = {
   overall: ['Sales performance', '销售表现'],
   leadConversionRate: ['Lead conversion rate', '线索转化率'],
   teamSection: ['Team', '团队'],
-  planToday: ['Plan my day', '安排今日工作'],
   analyzeSales: ['Analyze sales', '分析销售情况'],
   scopeMine: ['Mine', '我负责的'],
   scopeTeam: ['Team', '团队'],
@@ -997,7 +996,6 @@ const wording = {
   owner: ['Owner', '负责人'],
   newActivity: ['Schedule activity', '安排活动'],
   newApproval: ['Request approval', '申请审批'],
-  planFollowUps: ['Plan follow-ups', '安排跟进'],
   linkExisting: ['Link existing', '关联已有'],
   conversionImpactShort: [
     'The lead becomes read-only; its activities move to the account.',
@@ -1008,9 +1006,6 @@ const wording = {
     'On conversion the lead becomes read-only, {{activities}} linked activities move to the account, and the contact and opportunity are attached to it.',
     '转化后线索永久只读；{{activities}} 条关联活动将挂到客户下；联系人和商机归属该客户。',
   ],
-  summarizeAccount: ['Summarize account', '总结客户'],
-  researchCompany: ['Research company', '调研公司'],
-  findOpportunities: ['Find opportunities', '发现销售机会'],
   noRecords: ['None yet', '暂无'],
   showing: ['Showing', '当前显示'],
   metricNotes: {
@@ -1147,35 +1142,9 @@ const wording = {
   fewerFields: ['Fewer fields', '收起'],
   showLess: ['Show less', '收起'],
   prompts: {
-    planToday: [
-      "Plan my day: look at today's and overdue activities, the approvals waiting for me, and the leads, accounts and opportunities needing attention. Say what to do first and why, and create or reschedule activities for the three most urgent items.",
-      '安排我今天的工作：看今日和逾期的活动、待我审批的申请、需要关注的线索/客户/商机，说明先做什么、为什么，并为最紧急的三项创建或改期活动。',
-    ],
     analyzeSales: [
-      'Analyze the sales situation: the funnel by stage, this month against the pipeline, where deals are stuck, and the three most useful next actions. Look up anything the preview does not show rather than guessing.',
-      '分析销售情况：各阶段商机分布、本月进展与在手商机、卡在哪里、最有价值的三项下一步行动。预览里没有的记录要查了再说，不要猜。',
-    ],
-    planFollowUps: {
-      accounts: [
-        'Review the accounts not contacted for a long time and those with no open opportunity. Rank them by value and risk, say who to contact this week and why, and create one activity for each of the three most important.',
-        '看一遍长期未联系和没有进行中商机的客户，按价值和风险排序，说明本周先联系谁、为什么，并为最重要的三个各创建一条活动。',
-      ],
-      opportunities: [
-        'Review the opportunities closing soon and those past their expected close date. Say which to push first and what the next step is for each, and create one activity for each of the three most urgent.',
-        '看一遍即将到期和已逾期的商机，说明先推进哪几个、各自的下一步是什么，并为最紧急的三个各创建一条活动。',
-      ],
-    },
-    summarizeAccount: [
-      'Summarize this account: who we know there, the state of its opportunities, what the recent activities say, and what is unresolved. Keep it short and end with the single most useful next action.',
-      '总结这个客户：我们认识哪些人、商机现状、最近活动说了什么、还有什么没解决。简短，最后给出最有价值的一个下一步。',
-    ],
-    researchCompany: [
-      'Search the web for this company (official site, what it does, size, recent news) and write a company introduction of at most 300 words, with sources. Then propose one update to this record: the company introduction, plus any other field the search settles or contradicts (such as website, industry, region, employees, address — only fields this record itself has). Fill the region (country, state, city) with the company’s registered or head-office location; when it has several sites, use the registered one. Change a field only on a reliable source; a value the search points to but cannot fully confirm (a website with several candidate domains, an employee count from a single source) still goes on the card, with the candidates and the doubt listed under the assumptions, so the user decides; when the search finds nothing at all, say so instead of guessing.',
-      '联网搜索这家公司（官网、主营业务、规模、近况），写一段不超过 300 字的公司介绍并注明来源；然后提出一个更新这条记录的动作：「公司介绍」字段，以及搜索能确定或与现有记录不符的其他字段（如网站、行业、地区、员工数量、详细地址，只限这条记录本身有的字段）。地区（国家、省、市）按公司注册地或总部所在地填写，有多个基地时以注册地为准。来源可靠的字段直接改；搜到了但没能完全核实的值（比如官网有几个候选域名、员工人数只有单一来源）也放进卡片，在「待核实的推测」里列出候选和疑点，由用户决定；完全搜不到就明说，不要编造。',
-    ],
-    findOpportunities: [
-      'Look for sales opportunities at this account: needs mentioned in activity feedback that no opportunity covers, expansion signals, renewals due. For each, say what evidence supports it and propose creating the opportunity or the activity to confirm it.',
-      '在这个客户里找销售机会：活动反馈里提到但没有对应商机的需求、扩张信号、到期续约。每条说明依据，并提出创建商机或用于确认的活动。',
+      'Analyze the sales situation and build it as a report, with charts: the funnel by stage, this month against the pipeline, where deals are stuck, and the three most useful next actions. Look up anything the preview does not show rather than guessing.',
+      '分析销售情况，生成一份带图表的报告：各阶段商机分布、本月进展与在手商机、卡在哪里、最有价值的三项下一步行动。预览里没有的记录要查了再说，不要猜。',
     ],
     accounts: [
       'Summarize this account and suggest opportunities to deepen the relationship.',
@@ -1250,7 +1219,7 @@ const wording = {
     id: ['Record ID', '记录 ID'],
     name: ['Name', '名称'],
     leadName: ['Name', '姓名'],
-    accountDescription: ['Introduction', '公司介绍'],
+    accountDescription: ['Introduction', '介绍'],
     companyDescription: ['Introduction', '公司介绍'],
     activityName: ['Subject', '活动主题'],
     approvalSubject: ['Subject', '审批主题'],
