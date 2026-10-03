@@ -339,8 +339,8 @@ function containsSelection(
 }
 
 interface NavigationLinkProps {
-  // A count beside the label (navigation-badges.ts); a dot on the icon when
-  // the sidebar shows icons only.
+  // A count beside the label (navigation-badges.ts); on the icon's corner
+  // when the sidebar shows icons only.
   readonly badge?: number;
   readonly collapsed: boolean;
   readonly icon: ReactNode;
@@ -380,7 +380,11 @@ function NavigationLink({
         <span className='relative flex shrink-0'>
           <NavigationIcon>{icon}</NavigationIcon>
           {badge > 0 && collapsed && (
-            <span className='absolute -top-1 -right-1 hidden size-2 rounded-full bg-ai md:block' />
+            // Deliberately fixed and smaller than the theme's text-xs: the
+            // count has to fit on a 16px icon's corner.
+            <span className='absolute -top-2 -right-2.5 hidden h-4 min-w-4 rounded-full bg-ai px-1 text-center text-[10px] leading-4 font-medium text-ai-foreground tabular-nums md:block'>
+              {badge > 99 ? '99+' : badge}
+            </span>
           )}
         </span>
       ) : null}
