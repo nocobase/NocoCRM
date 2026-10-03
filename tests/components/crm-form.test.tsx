@@ -157,6 +157,21 @@ describe('CRM forms and file interchange', () => {
     expect(onClose).toHaveBeenCalled();
     expect(onSaved).toHaveBeenCalledWith({ id: 'saved', name: 'Ada' });
   });
+  it("asks an opportunity's amount as one field, its currency leading the number", () => {
+    render(<RecordForm entity='opportunities' onClose={vi.fn()} />);
+    const amount = screen.getByLabelText('Amount');
+    const currency = screen.getByRole('combobox', { name: 'Currency' });
+    // One label, Amount; the currency sits in the same block, before it.
+    expect(
+      screen.queryByText('Currency', { selector: 'label span' }),
+    ).toBeNull();
+    const block = amount.closest('.space-y-1\\.5') as HTMLElement;
+    expect(block.contains(currency)).toBe(true);
+    expect(
+      currency.compareDocumentPosition(amount) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
   it('keeps a lead activity linked and hides account and external participants', () => {
     render(
       <RecordForm

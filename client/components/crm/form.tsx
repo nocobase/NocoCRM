@@ -567,6 +567,8 @@ export function RecordForm({
           value={toText(value ?? '')}
           onChange={(v) => set(field.key, v || null)}
           choices={choices(field)}
+          // A currency stands inside its amount's field, as wide as its code.
+          compact={field.key === 'currency'}
           disabled={
             (field.key === 'ownerId' && !meta?.assign) ||
             (!id &&
@@ -805,8 +807,8 @@ export function RecordForm({
               entity === 'activities' && field.key === 'type'
                 ? fields.find((f) => f.key === 'name')
                 : undefined;
-            // An opportunity's amount and currency are one thing: the
-            // number, then a narrow currency picker beside it.
+            // An opportunity's amount and currency are one thing: one
+            // field labelled Amount, the currency picker leading the number.
             const pairedCurrency =
               entity === 'opportunities' && field.key === 'amount'
                 ? fields.find((f) => f.key === 'currency')
@@ -823,7 +825,7 @@ export function RecordForm({
               fields.some((f) => f.key === 'type')
             )
               return null;
-            const block = (f: Field): ReactElement =>
+            const block = (f: Field, lead?: Field): ReactElement =>
               f.type === 'boolean' ? (
                 // A yes / no reads as "[x] Employed": the box leads and
                 // the text is the label, dropped to the input line so it
@@ -840,7 +842,8 @@ export function RecordForm({
               ) : (
                 <div
                   className={
-                    unfilled.includes(f.key)
+                    unfilled.includes(f.key) ||
+                    (lead && unfilled.includes(lead.key))
                       ? '-m-1.5 space-y-1.5 rounded-lg bg-warning/10 p-1.5 ring-1 ring-warning/40 dark:bg-warning/20'
                       : 'space-y-1.5'
                   }
@@ -857,18 +860,27 @@ export function RecordForm({
                         <span className='ml-1 text-destructive'>*</span>
                       )}
                     </span>
-                    {review?.includes(f.key) && (
+                    {(review?.includes(f.key) ||
+                      (lead && review?.includes(lead.key))) && (
                       <Badge variant='warning'>
                         {text('leadCapture.check')}
                       </Badge>
                     )}
-                    {changed?.includes(f.key) && (
+                    {(changed?.includes(f.key) ||
+                      (lead && changed?.includes(lead.key))) && (
                       <Badge variant='ai'>
                         {text('leadCapture.aiChanged')}
                       </Badge>
                     )}
                   </label>
-                  {fieldInput(f)}
+                  {lead ? (
+                    <div className='flex gap-2'>
+                      <div className='shrink-0'>{fieldInput(lead)}</div>
+                      <div className='min-w-0 flex-1'>{fieldInput(f)}</div>
+                    </div>
+                  ) : (
+                    fieldInput(f)
+                  )}
                   {f.type === 'relation' &&
                     Boolean(input[f.key]) &&
                     names[toText(input[f.key])] && (
@@ -879,15 +891,7 @@ export function RecordForm({
                 </div>
               );
             if (pairedCurrency)
-              return (
-                <div
-                  key={field.key}
-                  className='grid gap-x-4 gap-y-3 sm:grid-cols-[7rem_minmax(0,1fr)]'
-                >
-                  {block(pairedCurrency)}
-                  {block(field)}
-                </div>
-              );
+              return <div key={field.key}>{block(field, pairedCurrency)}</div>;
             if (pairedName)
               return (
                 <div
