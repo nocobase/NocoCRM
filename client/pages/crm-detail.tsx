@@ -1,9 +1,11 @@
 import { fieldLabelKey, linkOf, toText } from '../components/crm/api.js';
 import { markdownLine } from '../components/crm/line-breaks.js';
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
+import { useTranslation } from '@nocobase/i18n/client';
 import {
   Link,
   Outlet,
+  useLocation,
   useNavigate,
   useParams,
   useSearchParams,
@@ -19,6 +21,7 @@ import {
   type RecordDrawerApi,
 } from '../components/crm/record-drawer.js';
 import {
+  ArrowLeft,
   ArrowRightLeft,
   ArrowUpRight,
   Merge,
@@ -63,6 +66,7 @@ import {
   useCrmText,
   useMetadata,
   useRefresh,
+  sentence,
   localDate,
   localTime,
   rows,
@@ -474,6 +478,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   );
   return (
     <DetailColumns
+      entity='leads'
       heading={heading}
       actions={leadActions}
       tabBar={tabBar}
@@ -780,6 +785,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
 // band over its particulars on the left and the tabs in the same band over
 // the rest. The lead and the activity pages share it.
 export function DetailColumns({
+  entity,
   heading,
   actions,
   tabBar,
@@ -788,6 +794,8 @@ export function DetailColumns({
   right,
   children,
 }: {
+  // The kind of record, named over the heading on a phone.
+  entity: Entity;
   heading: ReactNode;
   actions: ReactNode;
   tabBar: ReactNode;
@@ -849,7 +857,9 @@ export function DetailColumns({
               className='min-w-0 pt-5 @3xl:overflow-y-auto @3xl:bg-card @3xl:pt-4 @3xl:pr-6 @3xl:pb-8 @3xl:pl-4 scroll-quiet'
               onScroll={revealScrollbar}
             >
-              {/* Stacked, the heading leads the page from here. */}
+              {/* Stacked, the way back and the kind of record, then the
+                  heading. */}
+              <DetailBack entity={entity} />
               <div className='mb-3 @3xl:hidden'>{heading}</div>
               {actions && <div className='mb-4'>{actions}</div>}
               {left}
@@ -872,6 +882,39 @@ export function DetailColumns({
       </div>
       {children}
     </CrmFrame>
+  );
+}
+
+// Over a stacked record page (a phone, a narrow window): the way back to the
+// page before, and what kind of record this is. Back is the browser's, so it
+// returns wherever the reader came from; opened from a link, with nothing
+// before it in this tab, it goes to the object's list instead. The drawer has
+// its own bar with the kind and a close button, so it shows none.
+function DetailBack({ entity }: { entity: Entity }): ReactElement | null {
+  const { t } = useTranslation();
+  const { text } = useCrmText();
+  const navigate = useNavigate();
+  const location = useLocation();
+  if (useRecordDrawer()?.inDrawer) return null;
+  return (
+    <div className='mb-2 flex items-center gap-2 text-sm text-muted-foreground @3xl:hidden'>
+      <button
+        type='button'
+        onClick={() =>
+          location.key === 'default'
+            ? void navigate(`/crm/${toText(entity)}`)
+            : void navigate(-1)
+        }
+        className='inline-flex items-center gap-1 transition-colors hover:text-foreground'
+      >
+        <ArrowLeft className='size-4' />
+        {t('navigation.back')}
+      </button>
+      <span aria-hidden className='text-muted-foreground/60'>
+        ·
+      </span>
+      <span>{sentence(text(`entity.${toText(entity)}`))}</span>
+    </div>
   );
 }
 

@@ -138,6 +138,7 @@ function renderPage(path = `/crm/${state.entity}/rec-1`): void {
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
+          <Route path='/crm/:entity' element={<Where />} />
           <Route
             path='/crm/:entity/:id/*'
             element={
@@ -254,6 +255,24 @@ describe('the account page shortcuts and reason', () => {
       recordId: 'rec-1',
       webSearch: true,
     });
+  });
+});
+
+describe('the way back on a phone', () => {
+  beforeEach(() => {
+    state.entity = 'contacts';
+    state.record = { id: 'rec-1', name: '周晓', ownerId: 'rep', ...stamps };
+    state.related = { opportunities: [] };
+  });
+
+  it('names the kind of record and, opened from a link, goes back to its list', async () => {
+    renderPage();
+    const back = screen.getByRole('button', {
+      name: /返回|navigation.back|Back/,
+    });
+    expect(back.parentElement?.textContent).toContain('联系人');
+    await userEvent.click(back);
+    expect(screen.getByTestId('where').textContent).toBe('/crm/contacts');
   });
 });
 

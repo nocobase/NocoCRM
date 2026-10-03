@@ -928,6 +928,7 @@ export default function EntityDetail({
     left: ReactNode,
   ): ReactElement => (
     <DetailColumns
+      entity={entity}
       heading={heading}
       actions={actions}
       tabBar={tabBar}
