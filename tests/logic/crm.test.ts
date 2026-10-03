@@ -4742,6 +4742,79 @@ describe('CRM opportunity follow-up', () => {
       enabled.mockRestore();
     }
   });
+  // An approval rejected is proposed again only once something has happened
+  // since: what was missing supplied (a note, an activity done).
+  it('proposes a rejected kind again only after something new', async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const { opportunity } = await deal('驳回后重提');
+      const rejected = await service.save(actor('rep'), 'approvals', {
+        name: '3 月底上线',
+        opportunityId: opportunity.id,
+        topic: 'commitment',
+        approverId: 'manager',
+      });
+      await service.approvalAction(actor('rep'), rejected.id, 'submit');
+      await service.approvalAction(
+        actor('manager'),
+        toText(rejected.id),
+        'reject',
+        '请补充实施里程碑',
+      );
+      const proposed = async () => {
+        const run = following({
+          ...advance,
+          stage: null,
+          recommendation: 'continue',
+          updates: [],
+          terms: [
+            {
+              topic: 'commitment',
+              term: '3 月底上线',
+              beyondStandard: true,
+              approval: null,
+            },
+          ],
+          approvals: [
+            {
+              topic: 'commitment',
+              name: '3 月底上线重新申请',
+              description: '补充里程碑后重新提交',
+            },
+          ],
+        });
+        await run.evaluator.request(actor('rep'), opportunity.id);
+        await run.evaluator.idle();
+        return (
+          await latestOpportunityEvaluation(
+            service,
+            actor('rep'),
+            opportunity.id,
+          )
+        )?.ai.result;
+      };
+      // Nothing since the rejection: not proposed, the term rejected.
+      expect(await proposed()).toMatchObject({
+        approvals: [],
+        terms: [{ status: 'rejected', approval: '3 月底上线' }],
+      });
+      // The milestones written down since: proposed.
+      await service.addNote(
+        actor('rep'),
+        'opportunities',
+        toText(opportunity.id),
+        '实施里程碑：11 月需求、1 月上线测试、3 月底华东上线',
+      );
+      expect((await proposed())?.approvals?.map((a) => a.name)).toEqual([
+        '3 月底上线重新申请',
+      ]);
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+
   // An amount a person accepted stands: the next follow-up suggesting
   // another with nothing new since is not offered, and is once there is.
   it('keeps an accepted amount unless something has happened since', async () => {
@@ -4881,6 +4954,37 @@ describe('CRM opportunity follow-up', () => {
       },
     ]);
     expect(holdsBack).toBe(true);
+    // Left unlinked, a term of a kind whose latest approval was rejected
+    // reads as rejected, not as never asked for.
+    expect(
+      checkTerms(
+        [
+          {
+            topic: 'commitment',
+            term: '3 月底上线',
+            beyondStandard: true,
+            approval: null,
+          },
+        ],
+        [
+          {
+            name: '3月底上线交付承诺申请',
+            topic: 'commitment',
+            status: 'rejected',
+            submittedAt: '2026-10-03T07:46:00.000Z',
+          },
+        ],
+        [],
+        '',
+      ).terms,
+    ).toEqual([
+      {
+        topic: 'commitment',
+        term: '3 月底上线',
+        status: 'rejected',
+        approval: '3月底上线交付承诺申请',
+      },
+    ]);
     // All covered: nothing holds the deal back.
     expect(
       checkTerms(

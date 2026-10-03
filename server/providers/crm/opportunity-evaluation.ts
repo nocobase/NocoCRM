@@ -367,7 +367,7 @@ function verdictShape(options: { pause: string[]; lost: string[] }) {
           term: z
             .string()
             .describe(
-              'The term as asked for or agreed, e.g. "balance 60 days after acceptance"',
+              'The term as asked for or agreed, in the words of the material, e.g. "balance 60 days after acceptance"; the condition alone, with no amounts worked out from it',
             ),
           beyondStandard: z
             .boolean()
@@ -418,6 +418,11 @@ function verdictShape(options: { pause: string[]; lost: string[] }) {
 }
 type Parsed = z.infer<ReturnType<typeof verdictShape>>;
 
+// A stored time, however the driver returns it, as milliseconds (0 when
+// absent).
+const instant = (value: unknown): number =>
+  value ? new Date(value as string).getTime() || 0 : 0;
+
 // The commercial terms the model listed, checked against the deal's
 // approvals by the code rather than taken on the model's word: a term
 // beyond the standards is covered only by an approval it names that is
@@ -457,7 +462,17 @@ export function checkTerms(
     .map((t) => {
       if (!t.beyondStandard)
         return { topic: t.topic, term: t.term, status: 'standard' as const };
-      const approval = named(t.approval);
+      // Named, or else the latest of its kind when that one was rejected:
+      // a model that leaves the link out does not make a rejected term
+      // look as if it had never been asked for.
+      const latestOfKind = dealApprovals
+        .filter((a) => toText(a.topic) === t.topic)
+        .sort((a, b) => instant(b.submittedAt) - instant(a.submittedAt))[0];
+      const approval =
+        named(t.approval) ??
+        (toText(latestOfKind?.status) === 'rejected'
+          ? latestOfKind
+          : undefined);
       const status = toText(approval?.status);
       // A rejected one stays rejected: what to do about it (supply what
       // was missing, change the terms) is the model's to propose, not a
@@ -787,7 +802,7 @@ function output(options: { pause: string[]; lost: string[] }): string {
   return `# Output
 The output format in section six of the skill does not apply here. Return only the one JSON object below, with no Markdown and no other text:
 {
-  "terms": [{ "topic": ${list(APPROVAL_TOPICS)}, "term": "the term as asked for or agreed", "beyondStandard": true | false, "approval": "the name of the approval under Approvals that covers exactly this term" | null }] (write this first: every term asked for or agreed in the material, discount, payment terms, contract terms, delivery commitment, the latest version of each; an approval covers a term only when it was for these same terms, whatever its outcome),
+  "terms": [{ "topic": ${list(APPROVAL_TOPICS)}, "term": "the condition as asked for or agreed, alone, with no amounts worked out from it", "beyondStandard": true | false, "approval": "the name of the approval under Approvals that covers exactly this term" | null }] (write this first: every term asked for or agreed in the material, discount, payment terms, contract terms, delivery commitment, the latest version of each; an approval covers a term only when it was for these same terms, whatever its outcome),
   "recommendation": "advance" | "continue" | "pause" | "lose",
   "confidence": "high" | "medium" | "low" | null,
   "stage": ${list(MOVABLE)} | null,
@@ -1465,10 +1480,39 @@ export class OpportunityEvaluator {
         }))
         .filter((a) => a.name)
         .slice(0, 4);
+      // A kind whose latest approval was rejected is proposed again only
+      // once something has happened since (an activity done, a note): what
+      // was missing supplied, or the terms changed; not on the same facts.
+      // The deal's approvals with their full times, for the checks (the
+      // model reads them by day).
+      const dealApprovals = await this.service.database
+        .query()
+        .selectFrom('crmApprovals')
+        .select(['name', 'topic', 'status', 'submittedAt', 'decidedAt'])
+        .where('opportunityId', '=', opportunityId)
+        .where('status', '!=', 'draft')
+        .execute();
+      const rejectedAt = new Map<string, string>();
+      for (const a of dealApprovals
+        .slice()
+        .sort((x, y) => instant(y.submittedAt) - instant(x.submittedAt)))
+        if (!rejectedAt.has(toText(a.topic)))
+          rejectedAt.set(
+            toText(a.topic),
+            toText(a.status) === 'rejected' && a.decidedAt
+              ? new Date(instant(a.decidedAt)).toISOString()
+              : '',
+          );
+      const resubmittable: ProposedApproval[] = [];
+      for (const a of proposedApprovals) {
+        const at = rejectedAt.get(a.topic);
+        if (!at || (await newsSince(this.service, opportunity, at, '')))
+          resubmittable.push(a);
+      }
       const check = checkTerms(
         parsed.data.terms,
-        context.approvals as Row[],
-        proposedApprovals,
+        dealApprovals,
+        resubmittable,
         pick(dealWords, writeIn.startsWith('zh')).termNeedsApproval,
       );
       // Terms still to be approved keep the deal short of the contract: an
