@@ -1485,6 +1485,45 @@ describe('CRM API security and domain rules', () => {
       400,
     );
   });
+  it('lists activities starting at the same time with the one created later first', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Tie lead',
+      source: 'website',
+    });
+    const save = (name: string, startAt: string) =>
+      service.save(actor('rep'), 'activities', {
+        name,
+        type: 'call',
+        leadId: lead.id,
+        startAt,
+        endAt: startAt,
+      });
+    const earlier = await save('Tie earlier', '2026-11-02T02:00:00Z');
+    const first = await save('Tie first created', '2026-11-03T02:00:00Z');
+    const second = await save('Tie second created', '2026-11-03T02:00:00Z');
+    // Created a minute apart, whatever the clock's resolution.
+    for (const [record, minutesAgo] of [
+      [earlier, 3],
+      [first, 2],
+      [second, 1],
+    ] as const)
+      await database
+        .query()
+        .updateTable('crmActivities')
+        .set({
+          createdAt: new Date(Date.now() - minutesAgo * 60_000).toISOString(),
+        })
+        .where('id', '=', record.id)
+        .execute();
+    expect(
+      (
+        await service.list(actor('rep'), 'activities', {
+          leadId: lead.id,
+          sort: '-startAt',
+        })
+      ).data.map((activity) => activity.name),
+    ).toEqual(['Tie second created', 'Tie first created', 'Tie earlier']);
+  });
   it('computes statistics with real money, dates, status history, pagination and contact links', async () => {
     const account = await service.save(actor('rep'), 'accounts', {
       name: 'Statistics account',

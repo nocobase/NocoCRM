@@ -587,8 +587,12 @@ export class CrmService {
           pageSize,
         };
       }
-      const records = await select
-        .orderBy(sortField, direction)
+      // On a tie (two activities starting at the same time), the one
+      // created later comes first; the id only keeps the order stable.
+      let ordered = select.orderBy(sortField, direction);
+      if (sortField !== 'createdAt')
+        ordered = ordered.orderBy('createdAt', 'desc');
+      const records = await ordered
         .orderBy('id', 'asc')
         .limit(pageSize)
         .offset((page - 1) * pageSize)
