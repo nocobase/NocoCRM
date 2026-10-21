@@ -131,6 +131,7 @@ import {
   configureAssistant,
 } from '../../server/providers/crm-agents/assistant.js';
 import { adoptLegacyConversations } from '../../server/providers/crm-agents/legacy-conversations.js';
+import { namePlaceholderModel } from '../../server/providers/crm-agents/placeholder-model.js';
 import { provisionSkills } from '../../server/providers/crm-agents/library.js';
 import {
   adoptLegacyWorkAgents,
@@ -12392,6 +12393,69 @@ describe("The assistant's conversations on the Agents plugin", () => {
       model: { modelService: 'qwen', model: 'max' },
     });
     expect(names.signals?.name).toBe('Company research');
+  });
+
+  it("names the configured model on the assistant's conversations that name none, so they can be read", async () => {
+    const query = database.query();
+    const ids = ['no-model', 'with-model', 'other-chat', 'later'];
+    await query.deleteFrom('agConversations').where('id', 'in', ids).execute();
+    const native = JSON.stringify({ onlineAgent: { version: 1 } });
+    const row = (
+      id: string,
+      metadata: string | null,
+      model: string | null,
+    ) => ({
+      id,
+      userId: 'rep',
+      source: 'crm',
+      agentId: '0',
+      mode: null,
+      modelService: model ? 'qwen' : null,
+      model,
+      metadata,
+      createdAt: '2026-10-21T09:00:00.000Z',
+    });
+    await query
+      .insertInto('agConversations')
+      .values([
+        row('no-model', native, null),
+        row('with-model', native, 'max'),
+        row('other-chat', null, null),
+        row('later', native, null),
+      ])
+      .execute();
+    const app = {
+      config: {
+        get: () => ({
+          deepseek: { enabledModels: [{ value: 'deepseek-flash' }] },
+        }),
+      },
+    } as unknown as Parameters<typeof namePlaceholderModel>[0];
+    // The import names only the conversations it made.
+    await namePlaceholderModel(app, query, ['no-model']);
+    const read = async () =>
+      Object.fromEntries(
+        (
+          await query
+            .selectFrom('agConversations')
+            .select(['id', 'modelService', 'model'])
+            .where('id', 'in', ids)
+            .execute()
+        ).map((found) => [found.id, `${found.modelService}/${found.model}`]),
+      );
+    expect(await read()).toMatchObject({
+      'no-model': 'deepseek/deepseek-flash',
+      later: 'null/null',
+    });
+    // At start, every one of the assistant's that names none.
+    await namePlaceholderModel(app, query);
+    expect(await read()).toEqual({
+      'no-model': 'deepseek/deepseek-flash',
+      'with-model': 'qwen/max',
+      'other-chat': 'null/null',
+      later: 'deepseek/deepseek-flash',
+    });
+    await query.deleteFrom('agConversations').where('id', 'in', ids).execute();
   });
 
   it('carries the conversations with the earlier assistant over to it once, in place', async () => {

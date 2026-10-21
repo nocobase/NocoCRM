@@ -21,6 +21,7 @@ import { crmConversationRules } from './rules.js';
 import { databaseManagerToken } from '@nocobase/db';
 import type { CrmSettings } from '../crm/schema.js';
 import { provisionModelServices } from './model-services.js';
+import { namePlaceholderModel } from './placeholder-model.js';
 import { AGENT_ACTIONS, agentActionOptions } from './actions.js';
 import { crmActionGate, crmAgentsAccess } from './gate.js';
 import { assistantInstructions } from './preset.js';
@@ -132,6 +133,16 @@ export default class CrmAgentsProvider extends ServiceProvider<Application> {
         .getLogger('crm-agents')
         .warn({ error }, 'conversations not carried over');
     });
+    // The demo's conversations imported where no model was set up, which
+    // the plugin will not read while they name none (placeholder-model.ts).
+    await namePlaceholderModel(this.app, service.database.query()).catch(
+      (error: unknown) => {
+        this.app.container
+          .resolve(loggingToken)
+          .getLogger('crm-agents')
+          .warn({ error }, 'conversations without a model not named one');
+      },
+    );
     // The discovered agents made before these defaults get them too.
     await agents.agents.applyDefaults().catch(() => 0);
   }

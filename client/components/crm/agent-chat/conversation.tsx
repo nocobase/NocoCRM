@@ -437,7 +437,8 @@ export function Conversation({
           // it, so its scrollbar stands clear of the messages.
           className='relative -mr-3 h-full overflow-x-hidden overflow-y-auto py-4 pr-3'
         >
-          {loading || (conversationId && !messages.loaded) ? (
+          {loading ||
+          (conversationId && !messages.loaded && !messages.error) ? (
             <div className='flex flex-col gap-4' role='status'>
               <span className='sr-only'>{text('loading')}</span>
               <Skeleton className='ml-auto h-10 w-2/3 rounded-xl' />

@@ -16,6 +16,7 @@ import {
   assistantActor,
 } from '../providers/crm-agents/assistant.js';
 import { jsonValue } from '../providers/crm/values.js';
+import { namePlaceholderModel } from '../providers/crm-agents/placeholder-model.js';
 import {
   DEMO_MAIL_NAME,
   DEMO_MAIL_SECRET,
@@ -274,6 +275,9 @@ export function demoServices(app: Application): {
             })
             .where('id', '=', conversationId)
             .execute();
+          // Without a model service the conversation names none, which the
+          // plugin will not read (placeholder-model.ts).
+          await namePlaceholderModel(app, query, [conversationId]);
           return conversationId;
         },
         async remove(ids) {
