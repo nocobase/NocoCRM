@@ -65,6 +65,7 @@ import {
   CRM_SOURCE,
   modelKey,
   useAgentModels,
+  useAgentReadiness,
   useChatModelChoices,
   useCrmSubmit,
 } from './ask.js';
@@ -107,6 +108,10 @@ export function Conversation({
   const { text } = useCrmText();
   const agentText = useAgentText();
   const detail = useConversation(conversationId);
+  // The assistant itself unavailable (no model set up, an external demo's
+  // case) says so in every conversation, as the ask boxes do: a
+  // conversation's own availability does not tell.
+  const readiness = useAgentReadiness();
   const conversation = detail.data;
   const messages = useConversationMessages(conversationId);
   const stream = useChatStream(conversationId);
@@ -269,7 +274,10 @@ export function Conversation({
   const offline =
     availability && !availability.online && availability.reason
       ? toText(text(`agentChat.offline.${availability.reason}`))
-      : null;
+      : // The readiness above, when the assistant itself is unavailable.
+        readiness.state === 'unavailable'
+        ? readiness.reason
+        : null;
   const archived = Boolean(conversation?.archivedAt);
   const loading = conversationId ? detail.isLoading : false;
 

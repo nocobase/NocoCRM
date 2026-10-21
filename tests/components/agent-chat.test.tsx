@@ -483,4 +483,22 @@ describe('the agent conversations', () => {
     expect(screen.getByRole('button', { name: '发送' })).toBeDisabled();
     expect(screen.getByText('还没有配置 AI 模型')).toBeTruthy();
   });
+
+  it('keeps Send off in a conversation under way while the assistant has no model', async () => {
+    // The conversation reads as online; the assistant does not.
+    state.agents = [
+      {
+        ...agent,
+        availability: { online: false, reason: 'noModel', onlineRunners: 0 },
+      },
+    ];
+    state.open = [conversation('c1', '顺丰这条线索怎么跟')];
+    renderAt('/agent-chat/c1');
+    await userEvent.type(
+      await screen.findByRole('textbox', { name: '问任何问题…' }),
+      'hi',
+    );
+    expect(screen.getByRole('button', { name: '发送' })).toBeDisabled();
+    expect(screen.getByText('还没有配置 AI 模型')).toBeTruthy();
+  });
 });
