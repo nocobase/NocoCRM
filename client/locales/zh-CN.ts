@@ -29,6 +29,7 @@ const zhCN: AppResource = {
   'navigation.brandApps': 'NocoBase 应用',
   app: { ...systemZhCN.app, title: 'NocoCRM' },
   flowDiagram: {
+    ...systemZhCN.flowDiagram,
     empty: '没有可显示的状态。',
     loading: '正在排布流程图…',
     failed: '无法排布这个流程图。',

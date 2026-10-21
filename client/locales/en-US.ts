@@ -39,6 +39,7 @@ const enUS = {
   // The UI Library's flow diagram (client/components/flow-diagram.tsx), which
   // the approval process page draws with.
   flowDiagram: {
+    ...systemEnUS.flowDiagram,
     empty: 'No states to display.',
     loading: 'Laying out the diagram…',
     failed: 'Unable to lay out this diagram.',
