@@ -347,6 +347,8 @@ describe('the assistant dock', () => {
       '/whatsapp/connection',
       '/agent-chat',
       '/agent-chat/c1',
+      '/settings/users',
+      '/foundation',
     ]) {
       const page = renderDock(path);
       expect(screen.queryByRole('textbox')).toBeNull();

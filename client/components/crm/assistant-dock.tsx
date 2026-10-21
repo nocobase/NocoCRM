@@ -38,7 +38,9 @@ import { useCurrentRecord, type CurrentRecord } from './current-record.js';
 // with fixed panes whose bottom (pagination, keyboard hints, the open
 // conversation's last messages) it would cover; the agents' conversations, which have a composer
 // of their own; and the Settings pages (users, permission sets, API keys,
-// scheduled tasks), whose tables and sticky save bar it would cover.
+// scheduled tasks), whose tables and sticky save bar it would cover, and
+// App foundation (the Foundation plugin's page), a Settings page of its
+// own, which keeps no room at its bottom for it.
 function hiddenOn(pathname: string): boolean {
   return (
     pathname === '/' ||
@@ -50,7 +52,8 @@ function hiddenOn(pathname: string): boolean {
     // The agents' conversations have a composer of their own.
     pathname === '/agent-chat' ||
     pathname.startsWith('/agent-chat/') ||
-    pathname.startsWith('/settings/')
+    pathname.startsWith('/settings/') ||
+    pathname === '/foundation'
   );
 }
 
