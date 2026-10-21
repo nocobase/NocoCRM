@@ -21,8 +21,9 @@ import { z } from 'zod';
 // - Qwen through DashScope's own API, which cites the pages it read as
 //   [ref_n] and returns them numbered. @temporary(nocobase-official) The
 //   Agents plugin's Alibaba provider drops DashScope's `enable_search`, so
-//   this calls DashScope with the key of the configured Qwen service
-//   (`ai.llmServices`, DASHSCOPE_API_KEY).
+//   this calls DashScope with the key of a Qwen service config.yml declares
+//   under `ai.llmServices` (provider `dashscope`; the defaults declare
+//   DeepSeek alone since 2026-10-21).
 // - DeepSeek through the gateway, given a search tool of the CRM's own that
 //   asks DeepSeek's Search API with the key of the configured DeepSeek
 //   service (DEEPSEEK_API_KEY); its models have no search of their own on
