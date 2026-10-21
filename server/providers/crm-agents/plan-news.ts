@@ -1,14 +1,17 @@
 import type { Agents } from '@nocobase/app-plugin-agents/server/tokens';
+import type { AssistantWake } from './assistant.js';
 import type { PlanOutcome } from '../crm/plans/engine.js';
 import { toText } from '../crm/schema.js';
 import type { CrmService } from '../crm/service.js';
 
 // How a plan's decision reaches the conversation it came from: a notice the
-// person sees in the conversation, and an input that wakes the agent with
-// what became of its plan, so it can carry on or propose again.
+// person sees in the conversation, and what became of the plan told to the
+// agent (an input that wakes a runner agent, the CRM's news for the
+// assistant, `wake`), so it can carry on or propose again.
 export function deliverPlanOutcome(
   agents: Agents,
   service: CrmService,
+  wake?: AssistantWake,
 ): (outcome: PlanOutcome) => Promise<void> {
   return async ({ plan, decision }) => {
     const conversationId = plan.conversationId;
@@ -46,5 +49,6 @@ export function deliverPlanOutcome(
         },
       }),
     );
+    wake?.(conversationId, text);
   };
 }

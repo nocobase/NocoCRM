@@ -18,35 +18,35 @@ import { languageModelOf, type ModelCall } from '../setup/model-fake.js';
 
 type Call = ModelCall;
 
+// A chat service of the catalog, offering `models`.
+const service = (name: string, provider: string, models: string[]) => ({
+  name,
+  title: name,
+  provider,
+  models: models.map((value) => ({
+    value,
+    label: value,
+    kind: 'chat',
+    dimensions: null,
+  })),
+});
+
 const gatewayWith = (
   options: {
-    defaultAgentId?: string | null;
-    agent?: Record<string, unknown>;
+    services?: ReturnType<typeof service>[];
     replies?: string[];
-    defaultModel?: unknown;
   } = {},
 ) => {
   const calls: Call[] = [];
   const replies = [...(options.replies ?? [])];
   const container = new ServiceContainer();
   container.instance(agentsToken, {
-    chat: {
-      settings: async () => ({
-        defaultAgentId: options.defaultAgentId ?? null,
-      }),
-    },
-    agents: {
-      get: async () =>
-        options.agent ?? Promise.reject(new Error('no such agent')),
-    },
-    online: {
+    models: {
       gateway: {
         catalog: async () => ({
-          services: [],
-          defaultModel:
-            options.defaultModel === undefined
-              ? { modelService: 'qwen', model: 'qwen-max' }
-              : options.defaultModel,
+          services: options.services ?? [
+            service('qwen', 'alibaba', ['qwen-max']),
+          ],
         }),
         languageModel: async (model: unknown) =>
           languageModelOf(model, async (call) => {
@@ -59,38 +59,56 @@ const gatewayWith = (
   return { container, calls };
 };
 
+// The work agents' settings as `crmSettings` keeps them.
+const storedSettings = (
+  container: ServiceContainer,
+  works: Record<string, unknown>,
+) =>
+  container.instance(databaseManagerToken, {
+    query: () => {
+      const chain = {
+        selectFrom: () => chain,
+        select: () => chain,
+        where: () => chain,
+        executeTakeFirst: async () => ({
+          value: JSON.stringify({ version: 1, works, adopted: true }),
+        }),
+      };
+      return chain;
+    },
+  } as unknown as ReturnType<
+    typeof container.resolve<typeof databaseManagerToken>
+  >);
+
 describe("the CRM's model", () => {
-  it("answers with the default agent's first model, else the system default", async () => {
-    const agent = {
-      archivedAt: null,
-      modelEntries: [
-        { modelService: 'openai', model: 'gpt' },
-        { modelService: 'qwen', model: 'qwen-max' },
-      ],
-    };
+  it("answers with DeepSeek's fast model when it is offered, else the first chat model, the company research's among those that search", async () => {
+    const services = [
+      service('qwen', 'alibaba', ['qwen-max']),
+      service('deepseek', 'deepseek', ['deepseek-pro', 'deepseek-flash']),
+    ];
     expect(
-      await crmModel(
-        gatewayWith({ defaultAgentId: 'a1', agent }).container,
-        'leads',
-      ),
-    ).toEqual({ modelService: 'openai', model: 'gpt' });
-    // An archived default agent, or none, leaves the system default.
-    expect(
-      await crmModel(
-        gatewayWith({
-          defaultAgentId: 'a1',
-          agent: { ...agent, archivedAt: '2026-10-01T00:00:00Z' },
-        }).container,
-        'leads',
-      ),
-    ).toEqual({ modelService: 'qwen', model: 'qwen-max' });
+      await crmModel(gatewayWith({ services }).container, 'leads'),
+    ).toEqual({ modelService: 'deepseek', model: 'deepseek-flash' });
     expect(await crmModel(gatewayWith().container, 'leads')).toEqual({
       modelService: 'qwen',
       model: 'qwen-max',
     });
+    // The company research searches the web with its model: one whose
+    // provider can.
+    expect(
+      await crmModel(
+        gatewayWith({
+          services: [
+            service('local', 'ollama', ['llama']),
+            service('qwen', 'alibaba', ['qwen-max']),
+          ],
+        }).container,
+        'signals',
+      ),
+    ).toEqual({ modelService: 'qwen', model: 'qwen-max' });
     // No model anywhere, or no Agents plugin: the AI is off.
     expect(
-      await crmModel(gatewayWith({ defaultModel: null }).container, 'leads'),
+      await crmModel(gatewayWith({ services: [] }).container, 'leads'),
     ).toBeNull();
     expect(await crmModel(new ServiceContainer(), 'leads')).toBeNull();
   });
@@ -136,59 +154,25 @@ describe("the CRM's model", () => {
     ).toBeNull();
   });
 
-  it("follows its work's agent: its first model, its instructions first in the system prompt; else the Background AI before it; else the assistant's model", async () => {
+  it("follows its work's setup: the model chosen while a service offers it, its instructions first in the system prompt; else the defaults", async () => {
+    const services = [
+      service('qwen', 'alibaba', ['qwen-max']),
+      service('openai', 'openai', ['mini']),
+    ];
     const { container, calls } = gatewayWith({
-      defaultAgentId: 'chat',
-      replies: ['ok', 'ok', 'ok'],
+      services,
+      replies: ['ok', 'ok'],
     });
-    const agents = container.resolve(agentsToken) as unknown as {
-      agents: Record<string, unknown>;
-    };
-    const own = {
-      archivedAt: null as string | null,
-      instructions: 'Follow leads up.',
-      modelEntries: [{ modelService: 'openai', model: 'mini' }],
-    };
-    const background = {
-      archivedAt: null as string | null,
-      instructions: 'Work for the CRM.',
-      modelEntries: [{ modelService: 'deepseek', model: 'flash' }],
-    };
-    agents.agents = {
-      get: async (id: string) =>
-        id === 'lead-agent'
-          ? own
-          : id === 'bg'
-            ? background
-            : {
-                archivedAt: null,
-                instructions: 'Chat instructions.',
-                modelEntries: [{ modelService: 'qwen', model: 'max' }],
-              },
-    };
-    // The markers: the work agents' (the leads' alone here) and the
-    // Background AI's.
-    let id = '';
-    const chain = {
-      selectFrom: () => chain,
-      select: () => chain,
-      where: (_column: string, _op: string, value: string) => {
-        id = value;
-        return chain;
+    storedSettings(container, {
+      leads: {
+        model: { modelService: 'openai', model: 'mini' },
+        instructions: 'Follow leads up.',
       },
-      executeTakeFirst: async () => ({
-        value: JSON.stringify(
-          id === 'agents-work-v1'
-            ? { version: 1, agentIds: { leads: 'lead-agent' } }
-            : { version: 1, agentId: 'bg' },
-        ),
-      }),
-    };
-    container.instance(databaseManagerToken, {
-      query: () => chain,
-    } as unknown as ReturnType<
-      typeof container.resolve<typeof databaseManagerToken>
-    >);
+      opportunities: {
+        model: { modelService: 'gone', model: 'old' },
+        instructions: null,
+      },
+    });
     const session = await openSession(container, {
       timeZone: 'UTC',
       guidance: '# Company',
@@ -196,32 +180,26 @@ describe("the CRM's model", () => {
     });
     await session!.ask('Hello');
     expect(calls[0].model).toEqual({ modelService: 'openai', model: 'mini' });
-    // The agent's instructions, then how to settle what the material leaves
+    // The work's instructions, then how to settle what the material leaves
     // open, then the guidance.
     expect(calls[0].system).toMatch(
       /UTC\)\.\n\nFollow leads up\.\n\nDecide once and move on:\n[^]*\n\n# Company$/u,
     );
-    expect(calls[0].system).not.toContain('Chat instructions.');
-    // A work without its own agent yet follows the Background AI.
+    // A model no service offers any more: the default, with the shipped
+    // instructions.
     expect(await crmModel(container, 'opportunities')).toEqual({
-      modelService: 'deepseek',
-      model: 'flash',
-    });
-    // Both archived: the assistant's model, without those instructions.
-    own.archivedAt = '2026-10-15T00:00:00Z';
-    background.archivedAt = '2026-10-15T00:00:00Z';
-    expect(await crmModel(container, 'leads')).toEqual({
       modelService: 'qwen',
-      model: 'max',
+      model: 'qwen-max',
     });
     const again = await openSession(container, {
       timeZone: 'UTC',
       guidance: '# Company',
-      work: 'leads',
+      work: 'opportunities',
     });
     await again!.ask('Hello');
-    expect(calls[1].system).not.toContain('Follow leads up.');
-    expect(calls[1].system).not.toContain('Work for the CRM.');
+    expect(calls[1].system).toContain(
+      "You do one part of the CRM's work: following opportunities up",
+    );
   });
 
   it('has no session without a model, and reads a refused key as the AI unavailable', async () => {
@@ -271,13 +249,10 @@ describe('a background turn', () => {
     const calls: ModelCall[] = [];
     const container = new ServiceContainer();
     container.instance(agentsToken, {
-      chat: { settings: async () => ({ defaultAgentId: null }) },
-      agents: { get: async () => Promise.reject(new Error('none')) },
-      online: {
+      models: {
         gateway: {
           catalog: async () => ({
-            services: [],
-            defaultModel: { modelService: 'qwen', model: 'qwen-flash' },
+            services: [service('qwen', 'alibaba', ['qwen-flash'])],
           }),
           languageModel: async (model: unknown) =>
             languageModelOf(model, async (call) => {

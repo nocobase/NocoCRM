@@ -328,6 +328,20 @@ export const crmViVN: CrmWording = {
     model: 'Mô hình: {{model}}',
     defaultModel: 'Mô hình: mặc định',
     setUpAgent: 'Đặt mô hình và hướng dẫn',
+    setup: {
+      title: 'Thiết lập {{name}}',
+      description: 'Mô hình mà agent này dùng và chỉ dẫn mở đầu mỗi lần chạy.',
+      model: 'Mô hình',
+      defaultModel: 'Mặc định ({{model}})',
+      modelHint:
+        'Mô hình suy luận dài khiến mỗi lần chạy chậm; mô hình nhanh là đủ.',
+      modelHintSignals:
+        'Nó tìm kiếm trên web bằng mô hình này: hãy chọn mô hình của nhà cung cấp có thể tìm kiếm (DeepSeek, Qwen, OpenAI, Anthropic, Google).',
+      instructions: 'Chỉ dẫn',
+      instructionsHint:
+        'Viết bằng tiếng Anh như các prompt khác của CRM; agent viết bằng ngôn ngữ làm việc của AI.',
+      restore: 'Khôi phục mặc định',
+    },
     byAgent:
       'Do {{agent}} thực hiện. Agent chỉ đề xuất: người phụ trách quyết định trong hộp thư đến có chấp nhận hay không.',
     byAgentTasks:
@@ -1475,8 +1489,8 @@ export const crmViVN: CrmWording = {
     nothingOpen: 'Chọn một hội thoại hoặc bắt đầu hội thoại mới',
     noAgent: 'Chưa có Agent',
     noAgentDescription:
-      'Tạo một Agent từ mẫu Trợ lý CRM trong Cài đặt → Đội ngũ Agent.',
-    manageAgents: 'Quản lý Agent',
+      'Hãy thiết lập dịch vụ mô hình tại Đội agent → Mô hình.',
+    manageAgents: 'Thiết lập mô hình',
     agent: 'Agent',
     placeholder: 'Hỏi Agent…',
     send: 'Gửi',
@@ -1514,12 +1528,18 @@ export const crmViVN: CrmWording = {
     notFound: 'Hội thoại này không tồn tại.',
     backToList: 'Quay lại danh sách hội thoại',
     retry: 'Thử lại',
+    outcome: {
+      failed: 'Câu trả lời chưa hoàn tất.',
+      cancelled: 'Câu trả lời đã bị dừng.',
+      interrupted: 'Câu trả lời bị gián đoạn.',
+    },
     offline: {
       agentMissing: 'Agent này không còn tồn tại',
       agentArchived: 'Agent này đã được lưu trữ',
       forbidden: 'Bạn không được phép dùng Agent này',
       noRunner: 'Hiện không có Runner nào có thể chạy nó cho bạn',
       modelUnavailable: 'Chưa thiết lập mô hình AI nào',
+      noModel: 'Chưa thiết lập mô hình AI nào',
     },
   },
   plans: {
@@ -2104,6 +2124,7 @@ export const crmViVN: CrmWording = {
         'crm-agent-chat': 'Hội thoại với Agent',
         'crm-record': 'Trang bản ghi',
         'crm-decisions': 'Đề xuất AI',
+        agents: 'Agent của runner',
         scheduler: {
           schedules: 'Tác vụ định kỳ',
         },

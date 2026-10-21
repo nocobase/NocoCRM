@@ -1,11 +1,4 @@
 import { Button } from '#components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '#components/ui/select';
 import { Skeleton } from '#components/ui/skeleton';
 import { Spinner } from '#components/ui/spinner';
 import {
@@ -14,27 +7,28 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '#components/ui/dropdown-menu';
-import { useTranslation } from '@nocobase/i18n/client';
 import {
   AgentAvatar,
-  liveStepsView,
-  newConversationAgent,
-  noticeText,
+  appUIMessageText,
+  chatIsRunning,
   timelineOrder,
   useAgentText,
+  useChatApi,
+  useChatStream,
   useConversation,
   useConversationActions,
   useConversationMessages,
-  useLiveRunEvents,
   useSendMessage,
+  type AppUIMessage,
   type NewsNotice,
+  type StepLine,
 } from '@nocobase/app-plugin-agents/client/chat';
 import type {
   ChatAgent,
   ChatAvailability,
   ConversationDetail,
-  ConversationMessage,
 } from '@nocobase/app-plugin-agents/shared/conversations';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Archive,
   ArchiveRestore,
@@ -66,18 +60,27 @@ import { Markdown } from '../markdown.js';
 import { PlanCard } from '../plan-card.js';
 import { SuggestionCard } from './suggestion-card.js';
 import { usePlans } from '../plans.js';
-import { CRM_SOURCE, modelKey, useAgentModels } from './ask.js';
+import {
+  ASSISTANT_AGENT_ID,
+  CRM_SOURCE,
+  modelKey,
+  useAgentModels,
+  useChatModelChoices,
+  useCrmSubmit,
+} from './ask.js';
 import { Composer } from './composer.js';
+import { isNews } from './news.js';
 import { StartingPoint } from './starting-point.js';
-import { stepWords } from './step-text.js';
+import { liveStep, stepWords } from './step-text.js';
 import { DEFAULT_TIME_ZONE } from '../../../../server/providers/crm/zone-time.js';
 
-// One conversation with an agent, or a new one (`conversationId` null): its
-// messages, the notices of what happened meanwhile, the plans the agent
-// proposed in it, placed by time, the line of what its run is doing, and the
-// composer. The data are the Agents plugin's headless chat.
-
-const AGENTS_NS = '@nocobase/app-plugin-agents';
+// One conversation with the assistant, or a new one (`conversationId`
+// null): its messages, the notices of what happened meanwhile, the plans it
+// proposed in it, placed by time, the line of what it is doing, and the
+// composer. The data are the Agents plugin's headless chat: SDK UI messages
+// whose ordered parts are the reply's text, its tool calls (the `crm` tool's
+// command lines, which only the live line words) and notices. A message the
+// CRM sent it as news (news.ts) is not shown; the notice beside it is.
 
 export function Conversation({
   conversationId,
@@ -98,40 +101,34 @@ export function Conversation({
   onBack?: () => void;
   // In the assistant's panel, whose own header names the conversation and
   // holds its actions: no header of its own for one under way, nor for a
-  // new one when there is only the one agent to talk to.
+  // new one.
   inPanel?: boolean;
 }): ReactElement {
   const { text } = useCrmText();
-  const { t: agentsT } = useTranslation(AGENTS_NS);
   const agentText = useAgentText();
   const detail = useConversation(conversationId);
   const conversation = detail.data;
-  const messages = useConversationMessages(
-    conversationId,
-    Boolean(conversation?.run),
-  );
+  const messages = useConversationMessages(conversationId);
+  const stream = useChatStream(conversationId);
   const actions = useConversationActions();
-  const [picked, setPicked] = useState<string | null>(null);
-  // The agent a new conversation goes to; when none can answer, the one
-  // picked or the first, so the reason it cannot is shown.
-  const agent = conversationId
-    ? null
-    : (newConversationAgent(agents, picked) ??
-      agents.find((item) => item.id === picked) ??
-      agents[0] ??
-      null);
+  // The assistant a new conversation goes to.
+  const agent = conversationId ? null : (agents[0] ?? null);
   // A new conversation answers with the model picked for it.
   const models = useAgentModels(agent);
-  const send = useSendMessage({
+  const sendInConversation = useSendMessage({
     conversationId,
-    agentId: agent?.id ?? null,
+    agentId: ASSISTANT_AGENT_ID,
     source: CRM_SOURCE,
-    model: models.model
-      ? { modelService: models.model.modelService, model: models.model.model }
-      : null,
     dispatch: messages.dispatch,
     onCreated,
   });
+  const submit = useCrmSubmit();
+  // A new conversation's first question, shown while the conversation is
+  // created; it then opens (onCreated), the question in it.
+  const [starting, setStarting] = useState<{
+    content: string;
+    failed: boolean;
+  } | null>(null);
   const plans = usePlans(
     conversationId ? { conversationId } : {},
     Boolean(conversationId),
@@ -139,8 +136,8 @@ export function Conversation({
   // A new conversation has none: the disabled query would still answer
   // with whatever the cache holds under the unfiltered key.
   const shownPlans = conversationId ? (plans.data ?? []) : [];
-  // The agent's messages may follow a plan it proposed: look again as they
-  // arrive.
+  // The assistant's messages may follow a plan it proposed: look again as
+  // they arrive.
   const refetchPlans = plans.refetch;
   useEffect(() => {
     if (conversationId && messages.lastSeq) void refetchPlans();
@@ -152,16 +149,43 @@ export function Conversation({
       markRead(conversationId);
   }, [conversationId, conversation, markRead]);
 
+  const running =
+    chatIsRunning(conversation ?? null) ||
+    stream?.status === 'submitted' ||
+    stream?.status === 'streaming';
+
   // The view stays at the latest message as new ones arrive, unless the
   // reader scrolled up, who is offered the way back.
   const scrollRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(true);
-  const items = messages.items.length + messages.pending.length;
+  const last = messages.items.at(-1);
+  const growth = `${String(messages.items.length)}:${String(
+    messages.pending.length,
+  )}:${last ? appUIMessageText(last).length : 0}:${String(
+    last?.parts.length ?? 0,
+  )}`;
   const planCount = shownPlans.length;
   useLayoutEffect(() => {
     const box = scrollRef.current;
     if (box && atBottom) box.scrollTop = box.scrollHeight;
-  }, [items, planCount, atBottom, conversation?.run]);
+  }, [growth, planCount, atBottom, running, starting]);
+  // What grows after it is drawn (a plan's card, a table, a reply being
+  // written) keeps the view at the latest while the reader is there.
+  const contentRef = useRef<HTMLDivElement>(null);
+  const atBottomRef = useRef(atBottom);
+  useEffect(() => {
+    atBottomRef.current = atBottom;
+  }, [atBottom]);
+  useEffect(() => {
+    const box = scrollRef.current;
+    const content = contentRef.current;
+    if (!box || !content || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => {
+      if (atBottomRef.current) box.scrollTop = box.scrollHeight;
+    });
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [detail.isLoading, messages.loaded]);
   const toLatest = (): void => {
     const box = scrollRef.current;
     if (box) box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
@@ -203,38 +227,48 @@ export function Conversation({
     );
   }
 
-  const agentName = (id: string): string =>
-    agents.find((item) => item.id === id)?.name ?? text('agentChat.agent');
   const newsText = (notice: NewsNotice): string | null =>
     notice.type === 'planDecided'
-      ? text(`plans.news.${toText(notice.params?.decision)}`, {
-          title: notice.title,
-        })
-      : notice.type === 'aiWork'
-        ? text(`aiWork.news.${toText(notice.params?.outcome)}`, {
+      ? toText(
+          text(`plans.news.${toText(notice.params?.decision)}`, {
             title: notice.title,
-            agent: text(
-              `agentWork.names.${
-                notice.params?.entity === 'companies'
-                  ? 'signals'
-                  : toText(notice.params?.entity)
-              }`,
-            ),
-          })
+          }),
+        )
+      : notice.type === 'aiWork'
+        ? toText(
+            text(`aiWork.news.${toText(notice.params?.outcome)}`, {
+              title: notice.title,
+              agent: text(
+                `agentWork.names.${
+                  notice.params?.entity === 'companies'
+                    ? 'signals'
+                    : toText(notice.params?.entity)
+                }`,
+              ),
+            }),
+          )
         : null;
-  const shownAgent = conversation?.agent ?? agent;
-  const name = shownAgent
-    ? (agentText.name(shownAgent) ?? text('agentChat.agent'))
+  // How a notice reads: the CRM's news in its words, an answer that did not
+  // finish as such, anything else by its title.
+  const noticeLine = (notice: NewsNotice): string | null => {
+    const news = newsText(notice);
+    if (news) return news;
+    if (notice.type === 'completed') return null;
+    if (['failed', 'cancelled', 'interrupted'].includes(notice.type))
+      return toText(text(`agentChat.outcome.${notice.type}`));
+    return notice.title || null;
+  };
+  const listed = agents[0];
+  const name = listed
+    ? (agentText.name(listed) ?? text('agentChat.agent'))
     : text('agentChat.agent');
-  // What the agent does, under the title, as its own list describes it.
-  const listed = agents.find((item) => item.id === shownAgent?.id);
+  // What the assistant does, under the title, as its own list describes it.
   const description = listed ? agentText.description(listed) : null;
   const availability: ChatAvailability | null =
-    conversation?.availability ??
-    (agent && !agent.fallbackAgentId ? agent.availability : null);
+    conversation?.availability ?? agent?.availability ?? null;
   const offline =
     availability && !availability.online && availability.reason
-      ? text(`agentChat.offline.${availability.reason}`)
+      ? toText(text(`agentChat.offline.${availability.reason}`))
       : null;
   const archived = Boolean(conversation?.archivedAt);
   const loading = conversationId ? detail.isLoading : false;
@@ -248,28 +282,21 @@ export function Conversation({
     seenEntries.add(card.entryId);
     firstCards.add(message.id);
   }
+  const shown = messages.items.filter((message) => !isNews(message));
   const timeline = timelineOrder([
-    ...messages.items.map((message) => ({
+    ...shown.map((message) => ({
       key: message.id,
-      at: message.createdAt,
+      at: message.metadata?.createdAt ?? new Date().toISOString(),
       rank: 0,
+      ...(message.metadata?.seq === undefined
+        ? {}
+        : { seq: message.metadata.seq }),
       node: (
         <>
-          <MessageRow
-            message={message}
-            notice={(item) =>
-              noticeText(
-                agentsT,
-                item.metadata.notice,
-                item.content.content,
-                agentName,
-                newsText,
-              )
-            }
-          />
+          <MessageRow message={message} notice={noticeLine} />
           {/* An AI agent's suggestion, as its card: decided here as in
               the inbox. */}
-          {suggestionOf(message) && firstCards.has(message.id) ? (
+          {firstCards.has(message.id) ? (
             <div className='mt-2'>
               <SuggestionCard {...suggestionOf(message)!} />
             </div>
@@ -299,10 +326,13 @@ export function Conversation({
                   size='xs'
                   className='h-auto p-0'
                   onClick={() =>
-                    void send({
+                    void sendInConversation({
                       content: message.content,
                       context: message.context,
                       clientId: message.clientId,
+                      ...(message.attachments
+                        ? { attachments: message.attachments }
+                        : {}),
                     })
                   }
                 >
@@ -319,16 +349,20 @@ export function Conversation({
       ),
     })),
   ]);
+  // The first question's page context: what the conversation started from.
+  const firstQuestion = messages.items.find(
+    (message) => message.role === 'user' && !isNews(message),
+  );
 
   return (
     <section
-      aria-label={conversation?.title ?? text('agentChat.new')}
+      aria-label={conversation?.title ?? toText(text('agentChat.new'))}
       className='flex min-h-0 flex-1 flex-col'
     >
       {/* Who answers and what the conversation is: its avatar, its title
-          over the agent's name and description, and its actions behind the
-          "…" menu. */}
-      {inPanel && (conversationId || agents.length <= 1) ? null : (
+          over the assistant's name and description, and its actions behind
+          the "…" menu. */}
+      {inPanel ? null : (
         <div className='flex min-h-14 items-center gap-3 border-b border-border pb-3'>
           {conversationId ? (
             loading ? (
@@ -352,7 +386,7 @@ export function Conversation({
                           variant='ghost'
                           size='icon-sm'
                           className='shrink-0'
-                          aria-label={text('agentChat.actions')}
+                          aria-label={toText(text('agentChat.actions'))}
                         />
                       }
                     >
@@ -377,11 +411,10 @@ export function Conversation({
               </>
             )
           ) : (
-            <AgentPicker
-              agents={agents}
-              value={agent?.id ?? null}
-              onChange={setPicked}
-            />
+            <span className='flex items-center gap-2 text-sm font-medium'>
+              <AgentAvatar name={name} size='sm' className='rounded-full' />
+              {name}
+            </span>
           )}
         </div>
       )}
@@ -412,7 +445,7 @@ export function Conversation({
               <Skeleton className='ml-auto h-10 w-1/2 rounded-xl' />
             </div>
           ) : (
-            <div className='flex flex-col gap-4'>
+            <div ref={contentRef} className='flex flex-col gap-4'>
               <AutoLoadMore
                 hasMore={messages.hasMore}
                 loading={messages.loadingOlder}
@@ -420,12 +453,7 @@ export function Conversation({
               />
               {/* What it started from, atop the thread once its first
                   message is read. */}
-              <StartingPoint
-                context={
-                  messages.items.find((message) => message.seq === 1)
-                    ?.workContext
-                }
-              />
+              <StartingPoint context={firstQuestion?.metadata?.context} />
               {messages.error ? (
                 <div className='flex flex-col items-start gap-2'>
                   <ErrorNotice error={messages.error} />
@@ -441,8 +469,28 @@ export function Conversation({
               {timeline.map((entry) => (
                 <div key={entry.key}>{entry.node}</div>
               ))}
-              {conversation?.run ? (
-                <LiveLine runId={conversation.run.id} agentName={name} />
+              {starting ? (
+                <UserBubble
+                  content={starting.content}
+                  footer={
+                    <span
+                      className={`text-xs ${
+                        starting.failed
+                          ? 'text-destructive'
+                          : 'text-muted-foreground'
+                      }`}
+                    >
+                      {text(
+                        starting.failed
+                          ? 'agentChat.notSent'
+                          : 'agentChat.sending',
+                      )}
+                    </span>
+                  }
+                />
+              ) : null}
+              {running ? (
+                <LiveLine step={liveStep(last)} agentName={name} />
               ) : null}
             </div>
           )}
@@ -482,109 +530,98 @@ export function Conversation({
             {text('agentChat.restore')}
           </Button>
         </div>
+      ) : conversationId ? (
+        <ConversationComposer
+          conversationId={conversationId}
+          disabled={loading}
+          reason={offline}
+          onSend={(message) => void sendInConversation(message)}
+        />
       ) : (
         <Composer
-          disabled={loading || (!conversationId && !agent)}
+          disabled={!agent || Boolean(starting && !starting.failed)}
           reason={offline}
-          // A new conversation picks the model it starts on; one under way
-          // may switch, from its next reply, among its agent's models.
-          {...(conversationId
-            ? conversation && (conversation.models?.length ?? 0) > 1
-              ? {
-                  models: conversation.models,
-                  model:
-                    conversation.models.find(
-                      (item) =>
-                        conversation.model &&
-                        modelKey(item) === modelKey(conversation.model),
-                    ) ?? conversation.models[0],
-                  onModel: (key: string) => {
-                    const picked = conversation.models.find(
-                      (item) => modelKey(item) === key,
-                    );
-                    if (picked)
-                      actions.chooseModel.mutate({
-                        id: conversationId,
-                        model: {
-                          modelService: picked.modelService,
-                          model: picked.model,
-                        },
-                      });
-                  },
-                }
-              : {}
-            : {
-                models: models.models,
-                model: models.model,
-                onModel: models.select,
-              })}
-          onSend={({ content, context, attachments }) =>
-            void send({ content, context, attachments })
-          }
+          // A new conversation picks the model it starts on.
+          models={models.models}
+          {...(models.model ? { model: models.model } : {})}
+          onModel={models.select}
+          onSend={({ content, context, attachments }) => {
+            setStarting({ content, failed: false });
+            const taken = submit({
+              content,
+              context,
+              attachments,
+              conversationId: null,
+              source: CRM_SOURCE,
+              ...(models.model ? { model: models.model } : {}),
+              created: (created) => {
+                setStarting(null);
+                onCreated(created);
+              },
+              failed: () => setStarting({ content, failed: true }),
+            });
+            if (!taken) setStarting({ content, failed: true });
+          }}
         />
       )}
     </section>
   );
 }
 
-function AgentPicker({
-  agents,
-  value,
-  onChange,
+// The composer of a conversation under way, whose model picker switches
+// the model it answers with from its next reply, among those the
+// conversation was created with.
+function ConversationComposer({
+  conversationId,
+  disabled,
+  reason,
+  onSend,
 }: {
-  agents: readonly ChatAgent[];
-  value: string | null;
-  onChange: (id: string) => void;
+  conversationId: string;
+  disabled: boolean;
+  reason: string | null;
+  onSend: Parameters<typeof Composer>[0]['onSend'];
 }): ReactElement {
-  const { text } = useCrmText();
-  const agentText = useAgentText();
-  const nameOf = (agent: ChatAgent): string =>
-    agentText.name(agent) || text('agentChat.agent');
-  const usable = (agent: ChatAgent): boolean =>
-    agent.availability.online || Boolean(agent.fallbackAgentId);
-  const current = agents.find((agent) => agent.id === value);
-  if (agents.length === 1 && current)
-    return (
-      <span className='flex items-center gap-2 text-sm font-medium'>
-        <AgentAvatar
-          name={nameOf(current)}
-          size='sm'
-          className='rounded-full'
-        />
-        {nameOf(current)}
-      </span>
-    );
+  const api = useChatApi();
+  const queryClient = useQueryClient();
+  const choices = useChatModelChoices();
+  const key = ['crm', 'agent-chat', 'config', conversationId];
+  const config = useQuery({
+    queryKey: key,
+    queryFn: () => api.configuration(conversationId),
+    staleTime: 30_000,
+  });
+  const offered = new Set(config.data?.model ?? []);
+  const models = choices.filter((choice) => offered.has(modelKey(choice)));
+  const selected = config.data?.selectedModel;
+  const model =
+    (selected &&
+      models.find((choice) => modelKey(choice) === modelKey(selected))) ||
+    models[0];
   return (
-    <Select
-      value={value ?? ''}
-      onValueChange={(next) => {
-        if (typeof next === 'string' && next) onChange(next);
-      }}
-    >
-      <SelectTrigger
-        size='sm'
-        className='min-w-48'
-        aria-label={text('agentChat.agent')}
-      >
-        <SelectValue>
-          {current ? nameOf(current) : text('agentChat.agent')}
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent className='w-auto max-w-[min(var(--container-sm),var(--available-width))] min-w-(--anchor-width) [&_[data-slot=select-item]>:first-child]:whitespace-normal'>
-        {agents.map((agent) => (
-          <SelectItem key={agent.id} value={agent.id} disabled={!usable(agent)}>
-            <span className='flex flex-col'>
-              <span>{nameOf(agent)}</span>
-              {!usable(agent) && agent.availability.reason ? (
-                <span className='text-xs text-muted-foreground'>
-                  {text(`agentChat.offline.${agent.availability.reason}`)}
-                </span>
-              ) : null}
-            </span>
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <Composer
+      disabled={disabled}
+      reason={reason}
+      {...(models.length > 1 && model
+        ? {
+            models,
+            model,
+            onModel: (next: string) => {
+              const picked = models.find((choice) => modelKey(choice) === next);
+              if (!picked) return;
+              void api
+                .configure(
+                  conversationId,
+                  {},
+                  { modelService: picked.modelService, model: picked.model },
+                )
+                .then((snapshot) => queryClient.setQueryData(key, snapshot))
+                .catch(() => undefined);
+            },
+          }
+        : {})}
+      onSend={onSend}
+    />
   );
 }
 
@@ -592,23 +629,35 @@ function MessageRow({
   message,
   notice,
 }: {
-  message: ConversationMessage;
-  notice: (message: ConversationMessage) => string;
+  message: AppUIMessage;
+  notice: (notice: NewsNotice) => string | null;
 }): ReactElement | null {
+  const at = message.metadata?.createdAt;
+  const lines = message.parts.flatMap((part) => {
+    if (part.type !== 'data-notice') return [];
+    const line = notice(part.data);
+    return line ? [{ key: part.id ?? line, line }] : [];
+  });
+  const notices = lines.map(({ key, line }) => (
+    <p
+      key={key}
+      className='flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground'
+    >
+      <Info className='size-3.5 shrink-0' aria-hidden />
+      {line}
+    </p>
+  ));
   if (message.role === 'user')
-    return (
-      <UserBubble content={message.content.content} at={message.createdAt} />
-    );
-  if (message.role === 'system')
-    return (
-      <p className='flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground'>
-        <Info className='size-3.5 shrink-0' aria-hidden />
-        {notice(message)}
-      </p>
-    );
-  if (!message.content.content.trim()) return null;
+    return <UserBubble content={appUIMessageText(message)} at={at} />;
+  if (message.role === 'system') return notices.length ? <>{notices}</> : null;
+  const content = message.parts
+    .flatMap((part) => (part.type === 'text' ? [part.text] : []))
+    .join('\n\n');
   return (
-    <AgentReply content={message.content.content} at={message.createdAt} />
+    <>
+      {content.trim() ? <AgentReply content={content} at={at} /> : null}
+      {notices}
+    </>
   );
 }
 
@@ -620,14 +669,14 @@ export function AgentReply({
   at,
 }: {
   content: string;
-  at: string;
+  at?: string;
 }): ReactElement {
   return (
     <div className='group/message grid min-w-0 gap-0.5'>
       <div className='min-w-0 text-sm leading-6 [&_li]:my-1 [&_ol]:my-2 [&_p]:my-2 [&_ul]:my-2'>
         <Markdown>{content}</Markdown>
       </div>
-      <SentAt at={at} content={content} />
+      {at ? <SentAt at={at} content={content} /> : null}
     </div>
   );
 }
@@ -681,7 +730,7 @@ function UserBubble({
 }: {
   content: string;
   // When it was sent; a message still being sent has none yet.
-  at?: string;
+  at?: string | undefined;
   footer?: ReactNode;
 }): ReactElement {
   const { text } = useCrmText();
@@ -696,20 +745,18 @@ function UserBubble({
   );
 }
 
-// What the agent's run is doing now, summed up in one line.
+// What the assistant is doing now, summed up in one line.
 export function LiveLine({
-  runId,
+  step,
   agentName,
 }: {
-  runId: string;
+  step: StepLine;
   agentName: string;
 }): ReactElement {
   const { text } = useCrmText();
-  const events = useLiveRunEvents(runId);
-  const view = liveStepsView(events);
   // In the person's words (step-text.ts), never the command line.
-  const words = stepWords(view.line);
-  const step = toText(
+  const words = stepWords(step);
+  const line = toText(
     text(`agentChat.step.${words.key}`, {
       ...words.values,
       ...(words.values?.object
@@ -723,7 +770,7 @@ export function LiveLine({
       className='flex items-center gap-2 text-sm text-muted-foreground'
     >
       <Spinner />
-      {text('agentChat.working', { agent: agentName, step })}
+      {text('agentChat.working', { agent: agentName, step: line })}
     </p>
   );
 }
@@ -732,29 +779,30 @@ export function LiveLine({
 // ai-work-news.ts), when it is a card to show: a lead's, a deal's, an
 // approval's or a task's, ready or shown; a failure or a company's signals
 // are their line alone.
-function suggestionOf(message: ConversationMessage): {
+function suggestionOf(message: AppUIMessage): {
   entity: 'leads' | 'opportunities' | 'approvals' | 'tasks';
   recordId: string;
   entryId: string;
 } | null {
   if (message.role !== 'system') return null;
-  const notice = message.metadata.notice as
-    (Partial<NewsNotice> & { code?: string }) | undefined;
-  if (notice?.code !== 'news' || notice.type !== 'aiWork') return null;
-  const params = notice.params ?? {};
-  const entity = toText(params.entity);
-  const recordId = toText(params.recordId);
-  const entryId = toText(params.entryId);
-  if (
-    !['leads', 'opportunities', 'approvals', 'tasks'].includes(entity) ||
-    !recordId ||
-    !entryId ||
-    params.outcome === 'failed'
-  )
-    return null;
-  return {
-    entity: entity as 'leads' | 'opportunities' | 'approvals' | 'tasks',
-    recordId,
-    entryId,
-  };
+  for (const part of message.parts) {
+    if (part.type !== 'data-notice' || part.data.type !== 'aiWork') continue;
+    const params = part.data.params ?? {};
+    const entity = toText(params.entity);
+    const recordId = toText(params.recordId);
+    const entryId = toText(params.entryId);
+    if (
+      !['leads', 'opportunities', 'approvals', 'tasks'].includes(entity) ||
+      !recordId ||
+      !entryId ||
+      params.outcome === 'failed'
+    )
+      continue;
+    return {
+      entity: entity as 'leads' | 'opportunities' | 'approvals' | 'tasks',
+      recordId,
+      entryId,
+    };
+  }
+  return null;
 }

@@ -317,6 +317,19 @@ export const crmZhTW: CrmWording = {
     model: '模型：{{model}}',
     defaultModel: '模型：系統預設模型',
     setUpAgent: '設定模型和指令',
+    setup: {
+      title: '設定 {{name}}',
+      description: '這個 Agent 使用的模型，以及它每次執行開頭的指令。',
+      model: '模型',
+      defaultModel: '預設（{{model}}）',
+      modelHint: '推理很長的模型會讓每次執行變慢，用快速模型即可。',
+      modelHintSignals:
+        '它用這個模型上網搜尋：請選擇能搜尋的服務商的模型（DeepSeek、通義千問、OpenAI、Anthropic、Google）。',
+      instructions: '指令',
+      instructionsHint:
+        '用英文書寫，與 CRM 的其他提示詞一致；Agent 以 AI 工作語言輸出。',
+      restore: '恢復預設',
+    },
     byAgent:
       '由 {{agent}} 執行；它只提出建議，由負責人在收件匣裡決定是否採納。',
     byAgentTasks:
@@ -1402,9 +1415,8 @@ export const crmZhTW: CrmWording = {
       '問 Agent 關於你的記錄的問題，它提出的變更由你確認後執行。',
     nothingOpen: '選擇一個對話，或新增一個',
     noAgent: '還沒有 Agent',
-    noAgentDescription:
-      '在 設定 → Agent 團隊 裡用「CRM 助理」預設範本新增一個。',
-    manageAgents: '管理 Agent',
+    noAgentDescription: '在 Agent 團隊 → 模型 裡設定模型服務。',
+    manageAgents: '設定模型',
     agent: 'Agent',
     placeholder: '問問 Agent…',
     send: '傳送',
@@ -1442,12 +1454,18 @@ export const crmZhTW: CrmWording = {
     notFound: '這個對話不存在。',
     backToList: '返回對話清單',
     retry: '重試',
+    outcome: {
+      failed: '回答沒有完成。',
+      cancelled: '已停止回答。',
+      interrupted: '回答被中斷。',
+    },
     offline: {
       agentMissing: '這個 Agent 已不存在',
       agentArchived: '這個 Agent 已封存',
       forbidden: '你不能使用這個 Agent',
       noRunner: '目前沒有能為你執行它的 Runner',
       modelUnavailable: '尚未設定 AI 模型',
+      noModel: '尚未設定 AI 模型',
     },
   },
   plans: {
@@ -2002,6 +2020,7 @@ export const crmZhTW: CrmWording = {
         'crm-agent-chat': 'Agent 對話',
         'crm-record': '記錄詳情頁',
         'crm-decisions': 'AI 建議',
+        agents: 'Runner Agent',
         scheduler: {
           schedules: '排程任務',
         },

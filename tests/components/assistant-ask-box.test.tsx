@@ -48,7 +48,7 @@ const { AssistantAskBox } =
 function asked(): Record<string, unknown>[] {
   return chatFake.sent.map((message, index) => ({
     text: message.content,
-    model: chatFake.created[index]?.model,
+    model: chatFake.created[index]?.selectedModel,
     files: message.attachmentIds ?? [],
   }));
 }

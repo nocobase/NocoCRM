@@ -11,7 +11,10 @@ import type {
   DemoMailboxes,
 } from '../providers/crm/demo.js';
 import { crmToken } from '../providers/crm/index.js';
-import { ASSISTANT_MARKER } from '../providers/crm-agents/assistant.js';
+import {
+  ASSISTANT_SCOPE,
+  assistantActor,
+} from '../providers/crm-agents/assistant.js';
 import { jsonValue } from '../providers/crm/values.js';
 import {
   DEMO_MAIL_NAME,
@@ -180,69 +183,79 @@ export function demoServices(app: Application): {
     },
   };
   // The importer's finished conversations with the CRM's assistant
-  // (crm-agents/assistant.ts): the plugin makes the conversation, the messages
-  // are written into its table as its store writes them, since a
-  // conversation can only grow by a run of its agent and the demo runs no
-  // model. @temporary(nocobase-official): until the plugin can import a
-  // finished conversation. None without the plugin or before the assistant
-  // exists.
+  // (crm-agents/assistant.ts): the plugin makes the conversation, a native
+  // chat of the assistant's scope, and the messages are written into its
+  // table as its store writes them, since a conversation can only grow by
+  // the model answering and the demo runs no model.
+  // @temporary(nocobase-official): until the plugin can import a finished
+  // conversation. None without the plugin.
   const demoChats: DemoChats | undefined = app.container.has(agentsToken)
     ? {
         async create(userId, chat) {
-          const database = app.container.resolve(crmToken).database;
-          const query = database.query();
-          const marker = await query
-            .selectFrom('crmSettings')
-            .select('value')
-            .where('id', '=', ASSISTANT_MARKER)
-            .executeTakeFirst();
-          const agentId = toText(
-            (jsonValue(marker?.value) as { agentId?: unknown } | null)
-              ?.agentId ?? '',
-          );
-          if (!agentId) return undefined;
-          const conversation = await app.container
+          const service = app.container.resolve(crmToken);
+          const query = service.database.query();
+          const session = await app.container
             .resolve(agentsToken)
-            .conversations.create(userId, {
-              agentId,
+            .onlineAgent.realtime(assistantActor(service, userId), {
+              scope: [ASSISTANT_SCOPE],
               title: chat.title,
               source: 'crm',
             });
+          const conversationId = session.sessionId;
           const first = chat.messages[0]?.at ?? new Date().toISOString();
           const last = chat.messages.at(-1)?.at ?? first;
-          for (const [index, message] of chat.messages.entries())
+          for (const [index, message] of chat.messages.entries()) {
+            const id = randomUUID();
+            // The first question carries the record it was asked from,
+            // resolved as the plugin stores a page context.
+            const context =
+              index === 0 && chat.context
+                ? {
+                    route: chat.context.path,
+                    items: [
+                      {
+                        kind: chat.context.kind,
+                        id: chat.context.id,
+                        title: chat.context.title,
+                        key: null,
+                        url: `${toText(app.publicBasePath)}${chat.context.path}`,
+                      },
+                    ],
+                    dropped: 0,
+                  }
+                : null;
+            const original = {
+              id,
+              role: message.role,
+              metadata: {
+                conversationId,
+                createdAt: message.at,
+                revision: 1,
+                seq: index + 1,
+                ...(context ? { context } : {}),
+              },
+              parts: [
+                message.role === 'assistant'
+                  ? { type: 'text', text: message.text, state: 'done' }
+                  : { type: 'text', text: message.text },
+              ],
+            };
             await query
               .insertInto('agConversationMessages')
               .values({
-                id: randomUUID(),
-                conversationId: conversation.id,
+                id,
+                conversationId,
                 seq: index + 1,
                 role: message.role,
                 content: JSON.stringify({
                   type: 'text',
                   content: message.text,
+                  original,
                 }),
                 searchText: message.text,
                 toolCalls: null,
                 attachments: null,
-                // The first question carries the record it was asked
-                // from, resolved as the plugin stores a page context.
-                workContext:
-                  index === 0 && chat.context
-                    ? JSON.stringify({
-                        route: chat.context.path,
-                        items: [
-                          {
-                            kind: chat.context.kind,
-                            id: chat.context.id,
-                            title: chat.context.title,
-                            key: null,
-                            url: `${toText(app.publicBasePath)}${chat.context.path}`,
-                          },
-                        ],
-                        dropped: 0,
-                      })
-                    : null,
+                workContext: context ? JSON.stringify(context) : null,
                 metadata: JSON.stringify({}),
                 runId: null,
                 runEventSeq: null,
@@ -250,6 +263,7 @@ export function demoServices(app: Application): {
                 updatedAt: message.at,
               })
               .execute();
+          }
           await query
             .updateTable('agConversations')
             .set({
@@ -258,9 +272,9 @@ export function demoServices(app: Application): {
               createdAt: first,
               updatedAt: last,
             })
-            .where('id', '=', conversation.id)
+            .where('id', '=', conversationId)
             .execute();
-          return conversation.id;
+          return conversationId;
         },
         async remove(ids) {
           if (!ids.length) return;

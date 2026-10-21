@@ -10,6 +10,10 @@ const esES: AppResource = {
   'auth.passwordResetSuccess':
     'Se ha restablecido tu contraseña. Inicia sesión con la nueva contraseña.',
   'auth.requestNewResetLink': 'Solicitar un nuevo enlace de restablecimiento',
+  'auth.preparingSession': 'Preparando tu sesión…',
+  'auth.connectionFailed': 'No se pudo conectar',
+  'auth.connectionFailedDescription':
+    'No se pudo preparar la conexión en tiempo real. Vuelve a intentarlo para entrar en la aplicación o cierra la sesión.',
   'deviceApproval.title': 'Autorizar un dispositivo',
   'deviceApproval.description':
     'Una línea de comandos u otro dispositivo ha solicitado iniciar sesión en tu nombre. Apruébalo solo si has iniciado tú mismo el inicio de sesión.',

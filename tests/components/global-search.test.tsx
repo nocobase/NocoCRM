@@ -143,8 +143,14 @@ describe('the global search', () => {
       {
         id: 'm1',
         role: 'assistant',
-        content: { content: 'Orbit has two open leads.' },
-        createdAt: '2026-10-12T08:00:00.000Z',
+        metadata: {
+          conversationId: 'c1',
+          createdAt: '2026-10-12T08:00:00.000Z',
+          revision: 1,
+        },
+        parts: [
+          { type: 'text', text: 'Orbit has two open leads.', state: 'done' },
+        ],
       },
     ];
     // cmdk measures its list and scrolls the selection into view.
@@ -236,8 +242,9 @@ describe('the global search', () => {
     // which keeps it.
     await waitFor(() => expect(chatFake.sent).toHaveLength(1));
     expect(chatFake.created[0]).toMatchObject({
-      agentId: 'noco',
+      agentId: 'online',
       source: 'crm-search',
+      config: { scope: ['crm'] },
     });
     expect(chatFake.sent[0]).toMatchObject({ content: 'orbit' });
     expect(screen.getByRole('dialog')).toBeTruthy();

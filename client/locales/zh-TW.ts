@@ -9,6 +9,10 @@ import { crmZhTW } from './crm/zh-TW.js';
 const zhTW: AppResource = {
   'auth.passwordResetSuccess': '密碼已重設，請用新密碼登入。',
   'auth.requestNewResetLink': '重新申請重設連結',
+  'auth.preparingSession': '正在準備登入工作階段…',
+  'auth.connectionFailed': '連線失敗',
+  'auth.connectionFailedDescription':
+    '即時連線暫時無法準備就緒。請重試後進入應用程式，或登出。',
   'deviceApproval.title': '授權裝置',
   'deviceApproval.description':
     '一個命令列或其他裝置要求以你的身分登入。只有在登入是你自己發起的時候才批准。',

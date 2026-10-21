@@ -73,7 +73,7 @@ function asked(): Record<string, unknown>[] {
       { items: { kind: string; id: string }[] } | undefined;
     return {
       text: message.content,
-      model: chatFake.created[index]?.model,
+      model: chatFake.created[index]?.selectedModel,
       items: (context?.items ?? []).map((item) => `${item.kind}:${item.id}`),
       files: message.attachmentIds ?? [],
     };

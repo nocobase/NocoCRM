@@ -10,6 +10,10 @@ const viVN: AppResource = {
   'auth.passwordResetSuccess':
     'Mật khẩu của bạn đã được đặt lại. Hãy đăng nhập bằng mật khẩu mới.',
   'auth.requestNewResetLink': 'Yêu cầu liên kết đặt lại mới',
+  'auth.preparingSession': 'Đang chuẩn bị phiên của bạn…',
+  'auth.connectionFailed': 'Không thể kết nối',
+  'auth.connectionFailedDescription':
+    'Không thể chuẩn bị kết nối thời gian thực. Hãy thử lại để vào ứng dụng hoặc đăng xuất.',
   'deviceApproval.title': 'Cấp quyền cho thiết bị',
   'deviceApproval.description':
     'Một dòng lệnh hoặc thiết bị khác đang yêu cầu đăng nhập bằng tài khoản của bạn. Chỉ chấp thuận nếu chính bạn đã bắt đầu đăng nhập.',

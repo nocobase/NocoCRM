@@ -2,7 +2,6 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Agents } from '@nocobase/app-plugin-agents/server/tokens';
 import type { DatabaseManager } from '@nocobase/db';
-import { ASSISTANT_MARKER } from './assistant.js';
 import { METHOD_SKILLS } from './skill.js';
 
 // @temporary(nocobase-official): an application cannot ship skills into the
@@ -13,7 +12,8 @@ import { METHOD_SKILLS } from './skill.js';
 // The CRM's method skills (ai/skills: lead follow-up, opportunity follow-up,
 // approval review, task preparation) as skills of the library, where people
 // read and edit them on Settings → Agent team → Skills: each is added once,
-// from its SKILL.md as shipped, and attached to the assistant; the marker
+// from its SKILL.md as shipped (the assistant reads them with its
+// `crm_skill` tool, assistant.ts); the marker
 // keeps their ids, so a skill an administrator edited, detached or deleted
 // stays as they left it, and a later SKILL.md shipped with the code does not
 // replace the library's. The background runs read the library's current
@@ -72,25 +72,6 @@ export async function provisionSkills(
     added[slug] = (await agents.skills.create(null, { content })).id;
   }
   if (!Object.keys(added).length) return;
-  // Attached to the assistant, beside what it already has.
-  const assistant = await query
-    .selectFrom('crmSettings')
-    .select('value')
-    .where('id', '=', ASSISTANT_MARKER)
-    .executeTakeFirst();
-  const agentId = agentIdOf(assistant?.value);
-  // The company signals' method is not the chat's: it cannot search.
-  const forChat = Object.entries(added)
-    .filter(([slug]) => slug !== 'company-signals')
-    .map(([, id]) => id);
-  if (agentId && forChat.length) {
-    const target = { scope: 'agent', scopeId: agentId };
-    const attached = await agents.skills.attached(target).catch(() => null);
-    if (attached)
-      await agents.skills.attach(target, [
-        ...new Set([...attached, ...forChat]),
-      ]);
-  }
   await query
     .updateTable('crmSettings')
     .set({
@@ -114,14 +95,5 @@ function skillIdsOf(value: unknown): Record<string, string> {
       : {};
   } catch {
     return {};
-  }
-}
-
-function agentIdOf(value: unknown): string | null {
-  try {
-    const id = (JSON.parse(String(value)) as { agentId?: unknown }).agentId;
-    return typeof id === 'string' && id ? id : null;
-  } catch {
-    return null;
   }
 }

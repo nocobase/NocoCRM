@@ -141,3 +141,22 @@ export const GRANTABLE = new Set(
     .filter((option) => option.grantable !== false)
     .map((option) => option.key),
 );
+
+// The actions the CRM's agents start from, the assistant people talk to
+// (assistant.ts) and every agent discovered from runners (index.ts): view,
+// create and edit on each object, search, colleagues, comments, plans and
+// setting the AI agents to work on a record (deleting and deciding
+// approvals are never granted). What a call may do is these within what the
+// person who asked holds (gate.ts).
+export const AGENT_ACTIONS: readonly string[] = [
+  ...entities.flatMap((entity) => [
+    recordAction(entity, 'view'),
+    recordAction(entity, 'create'),
+    recordAction(entity, 'edit'),
+  ]),
+  SEARCH_ACTION,
+  COLLEAGUES_ACTION,
+  COMMENT_ACTION,
+  PLAN_ACTION,
+  AI_WORK_ACTION,
+];

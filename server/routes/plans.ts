@@ -2,6 +2,11 @@ import {
   agentsToken,
   runIdentityOf,
 } from '@nocobase/app-plugin-agents/server/tokens';
+import {
+  ASSISTANT_ID,
+  ASSISTANT_NAME,
+  assistantIdentityOf,
+} from '../providers/crm-agents/assistant.js';
 import type { Application } from '@nocobase/app-server/application';
 import {
   apiErrorResponse,
@@ -65,13 +70,21 @@ export function registerPlanRoutes(
     async (c) => {
       const actor = c.get('actor');
       const run = runIdentityOf(c.get('auth'));
+      const assistant = assistantIdentityOf(c.get('auth'));
       let source: PlanSource = {
         agentId: null,
         agentName: null,
         runId: null,
         conversationId: null,
       };
-      if (run?.run && app.container.has(agentsToken)) {
+      if (assistant)
+        source = {
+          agentId: ASSISTANT_ID,
+          agentName: ASSISTANT_NAME,
+          runId: null,
+          conversationId: assistant.conversationId || null,
+        };
+      else if (run?.run && app.container.has(agentsToken)) {
         const agents = app.container.resolve(agentsToken);
         const record = run.run.run;
         // A consulted agent's plan is confirmed where the asking run works.

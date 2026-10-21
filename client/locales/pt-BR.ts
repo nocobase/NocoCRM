@@ -10,6 +10,10 @@ const ptBR: AppResource = {
   'auth.passwordResetSuccess':
     'Sua senha foi redefinida. Entre com a nova senha.',
   'auth.requestNewResetLink': 'Solicitar um novo link de redefinição',
+  'auth.preparingSession': 'Preparando sua sessão…',
+  'auth.connectionFailed': 'Não foi possível conectar',
+  'auth.connectionFailedDescription':
+    'Não foi possível preparar a conexão em tempo real. Tente novamente para entrar no aplicativo ou saia.',
   'deviceApproval.title': 'Autorizar um dispositivo',
   'deviceApproval.description':
     'Uma linha de comando ou outro dispositivo pediu para entrar com a sua conta. Aprove somente se você mesmo iniciou o acesso.',

@@ -489,6 +489,30 @@ const wording = {
     model: ['Model: {{model}}', '模型：{{model}}'],
     defaultModel: ['Model: the default', '模型：系统默认模型'],
     setUpAgent: ['Set its model and instructions', '设置模型和指令'],
+    // Setting up a work agent's model and instructions (work-agent-setup.tsx).
+    setup: {
+      title: ['Set up {{name}}', '设置 {{name}}'],
+      description: [
+        'The model this agent asks and the instructions every run opens with.',
+        '这个 Agent 使用的模型，以及它每次运行开头的指令。',
+      ],
+      model: ['Model', '模型'],
+      defaultModel: ['Default ({{model}})', '默认（{{model}}）'],
+      modelHint: [
+        'A model that reasons at length makes every run slow; a fast one is enough.',
+        '推理很长的模型会让每次运行变慢，用快速模型即可。',
+      ],
+      modelHintSignals: [
+        'It searches the web with this model: choose one whose provider can search (DeepSeek, Qwen, OpenAI, Anthropic, Google).',
+        '它用这个模型联网搜索：请选择能搜索的服务商的模型（DeepSeek、通义千问、OpenAI、Anthropic、Google）。',
+      ],
+      instructions: ['Instructions', '指令'],
+      instructionsHint: [
+        'In English, as the CRM’s other prompts are; the agent writes in the AI working language.',
+        '用英文书写，与 CRM 的其他提示词一致；Agent 用 AI 工作语言输出。',
+      ],
+      restore: ['Restore the default', '恢复默认'],
+    },
     // Who runs it and who decides, naming its agent.
     byAgent: [
       'Run by {{agent}}. It only suggests: the owner decides in the inbox whether to accept.',
@@ -2312,10 +2336,10 @@ const wording = {
     ],
     noAgent: ['No agent yet', '还没有 Agent'],
     noAgentDescription: [
-      'Create one from the CRM assistant preset in Settings → Agent team.',
-      '在 设置 → Agent 团队 里用“CRM 助手”预设新建一个。',
+      'Set up a model service on Agent team → Models.',
+      '在 Agent 团队 → 模型 里配置模型服务。',
     ],
-    manageAgents: ['Manage agents', '管理 Agent'],
+    manageAgents: ['Set up models', '配置模型'],
     agent: ['Agent', 'Agent'],
     placeholder: ['Ask the agent…', '问问 Agent…'],
     send: ['Send', '发送'],
@@ -2362,6 +2386,12 @@ const wording = {
     backToList: ['Back to the conversations', '返回对话列表'],
     retry: ['Retry', '重试'],
     // Why an agent cannot answer now (the plugin's offline reasons).
+    // How an answer that did not finish reads.
+    outcome: {
+      failed: ['The answer did not finish.', '回答没有完成。'],
+      cancelled: ['The answer was stopped.', '已停止回答。'],
+      interrupted: ['The answer was interrupted.', '回答被中断。'],
+    },
     offline: {
       agentMissing: ['This agent no longer exists', '这个 Agent 已不存在'],
       agentArchived: ['This agent is archived', '这个 Agent 已归档'],
@@ -2371,6 +2401,7 @@ const wording = {
         '现在没有能为你运行它的 Runner',
       ],
       modelUnavailable: ['No AI model is set up yet', '还没有配置 AI 模型'],
+      noModel: ['No AI model is set up yet', '还没有配置 AI 模型'],
     },
   },
   // The plans an agent proposes, decided by the person they were proposed to.

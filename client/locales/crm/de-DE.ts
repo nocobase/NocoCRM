@@ -335,6 +335,21 @@ export const crmDeDE: CrmWording = {
     model: 'Modell: {{model}}',
     defaultModel: 'Modell: Standard',
     setUpAgent: 'Modell und Anweisungen festlegen',
+    setup: {
+      title: '{{name}} einrichten',
+      description:
+        'Das Modell, das dieser Agent fragt, und die Anweisungen, mit denen jeder Lauf beginnt.',
+      model: 'Modell',
+      defaultModel: 'Standard ({{model}})',
+      modelHint:
+        'Ein Modell, das lange nachdenkt, macht jeden Lauf langsam; ein schnelles genügt.',
+      modelHintSignals:
+        'Mit diesem Modell sucht er im Web: Wählen Sie eines, dessen Anbieter suchen kann (DeepSeek, Qwen, OpenAI, Anthropic, Google).',
+      instructions: 'Anweisungen',
+      instructionsHint:
+        'Auf Englisch, wie die übrigen Prompts des CRM; der Agent schreibt in der KI-Arbeitssprache.',
+      restore: 'Standard wiederherstellen',
+    },
     byAgent:
       'Ausgeführt von {{agent}}. Es macht nur Vorschläge: Der Verantwortliche entscheidet im Posteingang, ob er sie annimmt.',
     byAgentTasks:
@@ -1505,8 +1520,8 @@ export const crmDeDE: CrmWording = {
     nothingOpen: 'Wählen Sie eine Unterhaltung aus oder beginnen Sie eine neue',
     noAgent: 'Noch kein Agent',
     noAgentDescription:
-      'Erstellen Sie einen aus der Vorlage „CRM-Assistent“ unter Einstellungen → Agent-Team.',
-    manageAgents: 'Agents verwalten',
+      'Richten Sie unter Agent-Team → Modelle einen Modelldienst ein.',
+    manageAgents: 'Modelle einrichten',
     agent: 'Agent',
     placeholder: 'Fragen Sie den Agent…',
     send: 'Senden',
@@ -1544,12 +1559,18 @@ export const crmDeDE: CrmWording = {
     notFound: 'Diese Unterhaltung existiert nicht.',
     backToList: 'Zurück zu den Unterhaltungen',
     retry: 'Erneut versuchen',
+    outcome: {
+      failed: 'Die Antwort wurde nicht fertig.',
+      cancelled: 'Die Antwort wurde angehalten.',
+      interrupted: 'Die Antwort wurde unterbrochen.',
+    },
     offline: {
       agentMissing: 'Diesen Agent gibt es nicht mehr',
       agentArchived: 'Dieser Agent ist archiviert',
       forbidden: 'Sie dürfen diesen Agent nicht verwenden',
       noRunner: 'Derzeit kann ihn kein Runner für Sie ausführen',
       modelUnavailable: 'Es ist noch kein KI-Modell eingerichtet',
+      noModel: 'Es ist noch kein KI-Modell eingerichtet',
     },
   },
   plans: {
@@ -2143,6 +2164,7 @@ export const crmDeDE: CrmWording = {
         'crm-agent-chat': 'Agent-Unterhaltungen',
         'crm-record': 'Datensatzseiten',
         'crm-decisions': 'KI-Vorschläge',
+        agents: 'Runner-Agents',
         scheduler: {
           schedules: 'Geplante Aufgaben',
         },

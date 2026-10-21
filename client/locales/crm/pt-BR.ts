@@ -330,6 +330,21 @@ export const crmPtBR: CrmWording = {
     model: 'Modelo: {{model}}',
     defaultModel: 'Modelo: o padrão',
     setUpAgent: 'Definir o modelo e as instruções',
+    setup: {
+      title: 'Configurar {{name}}',
+      description:
+        'O modelo que este agente consulta e as instruções com que cada execução começa.',
+      model: 'Modelo',
+      defaultModel: 'Padrão ({{model}})',
+      modelHint:
+        'Um modelo que raciocina demais deixa cada execução lenta; um rápido é suficiente.',
+      modelHintSignals:
+        'Ele pesquisa na web com este modelo: escolha um cujo provedor saiba pesquisar (DeepSeek, Qwen, OpenAI, Anthropic, Google).',
+      instructions: 'Instruções',
+      instructionsHint:
+        'Em inglês, como os demais prompts do CRM; o agente escreve no idioma de trabalho da IA.',
+      restore: 'Restaurar o padrão',
+    },
     byAgent:
       'Executado por {{agent}}. Ele apenas sugere: o responsável decide na caixa de entrada se aceita.',
     byAgentTasks:
@@ -1484,8 +1499,8 @@ export const crmPtBR: CrmWording = {
     nothingOpen: 'Escolha uma conversa ou inicie uma nova',
     noAgent: 'Nenhum Agent ainda',
     noAgentDescription:
-      'Crie um a partir da predefinição Assistente de CRM em Configurações → Equipe de Agents.',
-    manageAgents: 'Gerenciar Agents',
+      'Configure um serviço de modelos em Equipe de agentes → Modelos.',
+    manageAgents: 'Configurar modelos',
     agent: 'Agent',
     placeholder: 'Pergunte ao Agent…',
     send: 'Enviar',
@@ -1523,12 +1538,18 @@ export const crmPtBR: CrmWording = {
     notFound: 'Esta conversa não existe.',
     backToList: 'Voltar às conversas',
     retry: 'Tentar novamente',
+    outcome: {
+      failed: 'A resposta não terminou.',
+      cancelled: 'A resposta foi interrompida.',
+      interrupted: 'A resposta foi interrompida.',
+    },
     offline: {
       agentMissing: 'Este Agent não existe mais',
       agentArchived: 'Este Agent está arquivado',
       forbidden: 'Você não pode usar este Agent',
       noRunner: 'Nenhum Runner pode executá-lo para você agora',
       modelUnavailable: 'Nenhum modelo de IA está configurado ainda',
+      noModel: 'Nenhum modelo de IA configurado ainda',
     },
   },
   plans: {
@@ -2113,6 +2134,7 @@ export const crmPtBR: CrmWording = {
         'crm-agent-chat': 'Conversas com Agents',
         'crm-record': 'Páginas de registros',
         'crm-decisions': 'Sugestões da IA',
+        agents: 'Agentes de runners',
         scheduler: {
           schedules: 'Tarefas agendadas',
         },

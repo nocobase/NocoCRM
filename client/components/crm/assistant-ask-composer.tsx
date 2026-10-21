@@ -6,7 +6,7 @@ import {
   type ReactElement,
   type RefObject,
 } from 'react';
-import type { ChatModelChoice } from '@nocobase/app-plugin-agents/shared/conversations';
+import type { ModelChoice } from './agent-chat/ask.js';
 import { modelKey } from './agent-chat/ask.js';
 import { FileChip } from './agent-chat/composer.js';
 import {
@@ -69,7 +69,7 @@ export function AskComposer({
   const { files, model } = draft;
   // The models by service, as the select groups them.
   const groups = [...draft.models].reduce<
-    { key: string; label: string; models: ChatModelChoice[] }[]
+    { key: string; label: string; models: ModelChoice[] }[]
   >((list, item) => {
     const group = list.find((entry) => entry.key === item.modelService);
     if (group) group.models.push(item);

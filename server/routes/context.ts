@@ -34,6 +34,12 @@ import {
   PLAN_ACTION,
 } from '../providers/crm-agents/actions.js';
 import { watchAiWork } from '../providers/crm/ai-watches.js';
+import { crmToken } from '../providers/crm/index.js';
+import {
+  ASSISTANT_SCHEME,
+  assistantActions,
+  assistantIdentityOf,
+} from '../providers/crm-agents/assistant.js';
 
 // What every CRM route shares: the signed-in user as the services' actor,
 // and the CRM's errors in the standard body.
@@ -43,13 +49,15 @@ export type CrmEnv = {
     AuthorizationEnv['Variables'] & { actor: Actor };
 };
 
-// The credentials a route a run may call accepts: a person's session or API
-// key, and an agent's run token (the Agents plugin). Every such route names
-// its business action in `cliRoute({ action })`.
+// The credentials a route an agent may call accepts: a person's session or
+// API key, a runner agent's run token (the Agents plugin), and the
+// credential of a command the assistant runs (crm-agents/assistant.ts).
+// Every such route names its business action in `cliRoute({ action })`.
 export const RUN_SECURITY: OpenAPIV3_1.SecurityRequirementObject[] = [
   { cookieAuth: [] },
   { apiKeyAuth: [] },
   { runToken: [] },
+  { [ASSISTANT_SCHEME]: [] },
 ];
 
 // What a route an agent's run may call declares: the credentials above and
@@ -91,12 +99,19 @@ export function crmGuard(app: Application) {
   // work suggests waits for the person.
   const run: MiddlewareHandler<CrmEnv> = async (c, next) => {
     const identity = runIdentityOf(c.get('auth'));
-    if (!identity) return next();
+    const assistant = assistantIdentityOf(c.get('auth'));
+    if (!identity && !assistant) return next();
     const action = declaredRouteActionOf(c);
-    const allowed =
-      action && app.container.has(agentsToken)
-        ? await app.container.resolve(agentsToken).gate.allowed(identity)
-        : new Set<string>();
+    const allowed = !action
+      ? new Set<string>()
+      : assistant
+        ? await assistantActions(
+            app.container.resolve(crmToken),
+            assistant.userId,
+          )
+        : identity && app.container.has(agentsToken)
+          ? await app.container.resolve(agentsToken).gate.allowed(identity)
+          : new Set<string>();
     if (!action || !allowed.has(action))
       throw new ApiError({
         status: 'PERMISSION_DENIED',
@@ -159,12 +174,15 @@ export function aiWorkers(app: Application) {
   };
 }
 
-// The conversation a request comes from, when an agent's run makes it: the
-// one its outcome goes back to (a consulted agent's, the asking one's).
+// The conversation a request comes from, when an agent makes it: the
+// assistant's, or the one a runner agent's run's outcome goes back to (a
+// consulted agent's, the asking one's).
 export async function runConversationOf(
   app: Application,
   auth: AuthEnv['Variables']['auth'],
 ): Promise<string | null> {
+  const assistant = assistantIdentityOf(auth);
+  if (assistant) return assistant.conversationId || null;
   const run = runIdentityOf(auth);
   if (!run?.run || !app.container.has(agentsToken)) return null;
   const agents = app.container.resolve(agentsToken);

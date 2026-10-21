@@ -2,11 +2,11 @@ import { Button } from '#components/ui/button';
 import { Skeleton } from '#components/ui/skeleton';
 import {
   AgentAvatar,
-  useAgentText,
+  appUIMessageText,
+  type AppUIMessage,
   type ConversationListPages,
 } from '@nocobase/app-plugin-agents/client/chat';
 import { useQuery, type UseInfiniteQueryResult } from '@tanstack/react-query';
-import type { ConversationMessage } from '@nocobase/app-plugin-agents/shared/conversations';
 import {
   useEffect,
   useState,
@@ -19,7 +19,8 @@ import { relativeTime, toText, useCrmApi, useCrmText } from '../api.js';
 import { markdownLine } from '../line-breaks.js';
 import { AutoLoadMore } from '../auto-load.js';
 import { ErrorNotice } from '../common.js';
-import { listedConversations } from './ask.js';
+import { isNews } from './news.js';
+import { listedConversations, useAssistantName } from './ask.js';
 
 // The reader's conversations with the agents, last message first: the side
 // list of the page (frontend standard §3.5), each row its conversation's
@@ -46,7 +47,7 @@ export function ConversationList({
   onOpen?: (id: string) => void;
 }): ReactElement {
   const { text, language } = useCrmText();
-  const agentText = useAgentText();
+  const assistantName = useAssistantName();
   // The list stays on the page: its times move on with the clock.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -103,8 +104,7 @@ export function ConversationList({
               const title = conversation.title || text('agentChat.untitled');
               const unread = !conversation.read;
               const current = conversation.id === openId;
-              const agent =
-                agentText.name(conversation.agent) ?? text('agentChat.agent');
+              const agent = assistantName;
               return (
                 <li key={conversation.id}>
                   <RowTarget
@@ -149,7 +149,7 @@ export function ConversationList({
                             // starts or ends (a reply streamed into its
                             // message keeps the message's time), and when the
                             // conversation changes.
-                            at={`${conversation.lastMessageAt}|${conversation.updatedAt}|${conversation.run?.id ?? ''}`}
+                            at={`${conversation.lastMessageAt}|${conversation.updatedAt}|${conversation.execution?.status ?? ''}`}
                             agent={agent}
                           />
                         </span>
@@ -233,17 +233,20 @@ export function LastMessage({
   const api = useCrmApi();
   const { data } = useQuery({
     queryKey: ['crm', 'agent-chat', 'last-message', id, at],
+    // The newest few: the last may be a notice, or the CRM's news to the
+    // assistant (news.ts), neither of which a row previews.
     queryFn: async () =>
       (
-        await api<{ data: readonly ConversationMessage[] }>(
-          `agents/conversations/${encodeURIComponent(id)}/messages?pageSize=1`,
+        await api<{ data: readonly AppUIMessage[] }>(
+          `agents/conversations/${encodeURIComponent(id)}/messages?pageSize=5`,
         )
-      ).data.at(-1) ?? null,
+      ).data.findLast(
+        (message) => message.role !== 'system' && !isNews(message),
+      ) ?? null,
     staleTime: Infinity,
   });
   const { text } = useCrmText();
-  const line =
-    data && data.role !== 'system' ? markdownLine(data.content.content) : '';
+  const line = data ? markdownLine(appUIMessageText(data)) : '';
   if (!line) return null;
   // The person's own last message is said to be theirs.
   return (

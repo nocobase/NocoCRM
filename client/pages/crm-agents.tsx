@@ -53,6 +53,7 @@ import {
 import { AgentSentence } from '../components/crm/work-agent.js';
 import { useAgentText } from '@nocobase/app-plugin-agents/client/chat';
 import { useWorkAgentNames } from '../components/crm/work-agent-name.js';
+import { WorkAgentSetup } from '../components/crm/work-agent-setup.js';
 import { DEFAULT_TIME_ZONE } from '../../server/providers/crm/zone-time.js';
 import {
   useSchedulesKey,
@@ -211,9 +212,9 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
     resource: { type: 'page', id: 'skills' },
     action: 'access',
   });
-  // Its agent, whose model and instructions the work follows, opened on the
-  // Agents plugin's page for whoever may open it.
-  const agentId = meta?.workAgents?.[agent];
+  // Its agent's model and instructions, which the work follows, set up by
+  // whoever manages the settings (work-agent-setup.tsx).
+  const [settingUp, setSettingUp] = useState(false);
   const agentName = useWorkAgentNames()(agent);
   const agentText = useAgentText();
   const own = meta?.workAgentNames?.[agent];
@@ -227,10 +228,6 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
         descriptionText: own.descriptionText ?? null,
       })) ||
     text(`agentWork.${agent}`);
-  const { can: canAgents } = useCan({
-    resource: { type: 'page', id: 'agents' },
-    action: 'access',
-  });
   const zone = meta?.settings.timeZone ?? DEFAULT_TIME_ZONE;
   const { can: canSchedules } = useCan({
     resource: { type: 'page', id: 'scheduler.schedules' },
@@ -382,15 +379,21 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
                 )}
               </p>
             </div>
-            {agentId && agentName && canAgents ? (
+            {agentName && admin ? (
               <Button
                 variant='outline'
                 size='sm'
-                render={<Link to={`/agents/${encodeURIComponent(agentId)}`} />}
-                nativeButton={false}
+                onClick={() => setSettingUp(true)}
               >
                 {text('agents.setUpAgent')}
               </Button>
+            ) : null}
+            {settingUp && agentName ? (
+              <WorkAgentSetup
+                agent={agent}
+                name={agentName}
+                onClose={() => setSettingUp(false)}
+              />
             ) : null}
           </CardContent>
         </Card>

@@ -22,7 +22,6 @@ import {
   type ChatContextItem,
 } from '@nocobase/app-plugin-agents/client/chat';
 import type {
-  ChatModelChoice,
   MessageAttachment,
   PageContext,
 } from '@nocobase/app-plugin-agents/shared/conversations';
@@ -37,7 +36,13 @@ import {
 import { useIsMobile } from '../../../hooks/use-mobile.js';
 import { toText, useCrmText } from '../api.js';
 import { useCurrentRecord } from '../current-record.js';
-import { contextOf, modelKey, useAskFiles, type AskFile } from './ask.js';
+import {
+  contextOf,
+  modelKey,
+  useAskFiles,
+  type AskFile,
+  type ModelChoice,
+} from './ask.js';
 
 // The draft last put in a composer, so a composer mounted later (another
 // conversation) does not take it again.
@@ -69,8 +74,8 @@ export function Composer({
   reason: string | null;
   // The model it answers with: a new conversation's choice, or the one a
   // conversation under way switches to from its next reply.
-  models?: readonly ChatModelChoice[];
-  model?: ChatModelChoice;
+  models?: readonly ModelChoice[];
+  model?: ModelChoice;
   onModel?: (key: string) => void;
   onSend: (message: ComposerSend) => void;
 }): ReactElement {

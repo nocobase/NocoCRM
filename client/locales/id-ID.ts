@@ -10,6 +10,10 @@ const idID: AppResource = {
   'auth.passwordResetSuccess':
     'Kata sandi Anda telah diatur ulang. Masuk dengan kata sandi baru Anda.',
   'auth.requestNewResetLink': 'Minta tautan atur ulang baru',
+  'auth.preparingSession': 'Menyiapkan sesi Anda…',
+  'auth.connectionFailed': 'Tidak dapat terhubung',
+  'auth.connectionFailedDescription':
+    'Koneksi waktu nyata tidak dapat disiapkan. Coba lagi untuk masuk ke aplikasi, atau keluar.',
   'deviceApproval.title': 'Otorisasi perangkat',
   'deviceApproval.description':
     'Baris perintah atau perangkat lain meminta untuk masuk sebagai Anda. Setujui hanya jika Anda sendiri yang memulai proses masuk ini.',

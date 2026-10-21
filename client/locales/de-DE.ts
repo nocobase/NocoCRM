@@ -10,6 +10,10 @@ const deDE: AppResource = {
   'auth.passwordResetSuccess':
     'Ihr Passwort wurde zurückgesetzt. Melden Sie sich mit Ihrem neuen Passwort an.',
   'auth.requestNewResetLink': 'Neuen Link zum Zurücksetzen anfordern',
+  'auth.preparingSession': 'Ihre Sitzung wird vorbereitet…',
+  'auth.connectionFailed': 'Verbindung nicht möglich',
+  'auth.connectionFailedDescription':
+    'Die Echtzeitverbindung konnte nicht hergestellt werden. Versuchen Sie es erneut, um die Anwendung zu öffnen, oder melden Sie sich ab.',
   'deviceApproval.title': 'Gerät autorisieren',
   'deviceApproval.description':
     'Eine Befehlszeile oder ein anderes Gerät möchte sich in Ihrem Namen anmelden. Genehmigen Sie dies nur, wenn Sie die Anmeldung selbst gestartet haben.',

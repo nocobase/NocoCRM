@@ -138,7 +138,7 @@ function SearchPanel({ search }: { search: GlobalSearch }): ReactElement {
     const question = typed;
     setAnswer({ question, id: null });
     answers
-      .start(question, readiness.agent)
+      .start(question)
       .then((id) => {
         pendingRef.current = id;
         setAnswer((current) =>

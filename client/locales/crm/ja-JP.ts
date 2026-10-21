@@ -326,6 +326,21 @@ export const crmJaJP: CrmWording = {
     model: 'モデル：{{model}}',
     defaultModel: 'モデル：デフォルト',
     setUpAgent: 'モデルと指示を設定',
+    setup: {
+      title: '{{name}} の設定',
+      description:
+        'このエージェントが使うモデルと、毎回の実行の冒頭に置く指示です。',
+      model: 'モデル',
+      defaultModel: '既定（{{model}}）',
+      modelHint:
+        '長く推論するモデルは毎回の実行が遅くなります。高速なモデルで十分です。',
+      modelHintSignals:
+        'このモデルでウェブを検索します。検索できるプロバイダーのモデルを選んでください（DeepSeek、Qwen、OpenAI、Anthropic、Google）。',
+      instructions: '指示',
+      instructionsHint:
+        'CRM のほかのプロンプトと同じく英語で書きます。エージェントは AI の作業言語で出力します。',
+      restore: '既定に戻す',
+    },
     byAgent:
       '{{agent}} が実行します。提案のみを行い、採用するかどうかは担当者が受信トレイで判断します。',
     byAgentTasks:
@@ -1466,8 +1481,8 @@ export const crmJaJP: CrmWording = {
     nothingOpen: '会話を選択するか、新しく開始してください',
     noAgent: 'Agent がまだありません',
     noAgentDescription:
-      '設定 → Agent チームで、「CRM アシスタント」プリセットから作成してください。',
-    manageAgents: 'Agent を管理',
+      'エージェントチーム → モデルでモデルサービスを設定してください。',
+    manageAgents: 'モデルを設定',
     agent: 'Agent',
     placeholder: 'Agent に質問…',
     send: '送信',
@@ -1505,12 +1520,18 @@ export const crmJaJP: CrmWording = {
     notFound: 'この会話は存在しません。',
     backToList: '会話一覧に戻る',
     retry: '再試行',
+    outcome: {
+      failed: '回答が完了しませんでした。',
+      cancelled: '回答を停止しました。',
+      interrupted: '回答が中断されました。',
+    },
     offline: {
       agentMissing: 'この Agent はもう存在しません',
       agentArchived: 'この Agent はアーカイブされています',
       forbidden: 'この Agent を使用する権限がありません',
       noRunner: '現在、実行できる Runner がありません',
       modelUnavailable: 'AI モデルがまだ設定されていません',
+      noModel: 'AI モデルがまだ設定されていません',
     },
   },
   plans: {
@@ -2094,6 +2115,7 @@ export const crmJaJP: CrmWording = {
         'crm-agent-chat': 'Agent との会話',
         'crm-record': 'レコードページ',
         'crm-decisions': 'AI 提案',
+        agents: 'Runner エージェント',
         scheduler: {
           schedules: 'スケジュールタスク',
         },

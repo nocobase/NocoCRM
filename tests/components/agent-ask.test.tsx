@@ -4,9 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { crmEn } from '../../client/locales/crm/index.js';
 
 // Asking the assistant from outside its panel: a card's Discuss pins the record and
-// the card in a new conversation without sending; a question whose
-// conversation was created but whose message did not go opens it with the
-// text in the composer.
+// the card in a new conversation without sending; a question starts a
+// conversation of the CRM's scope and opens the panel on it, and one whose
+// conversation could not be started says so and opens nothing.
 
 function english(key: string): string {
   let value: unknown = crmEn;
@@ -54,7 +54,7 @@ function Ask({ text }: { text: string }) {
           text,
           agent: AI_AGENT as never,
           items: [recordPin('leads', 'l1', 'Tang Rui')],
-        })
+        }).catch(() => undefined)
       }
     >
       ask
@@ -101,9 +101,11 @@ describe('asking the assistant from outside its panel', () => {
     render(<Ask text='Who decides?' />);
     await user.click(screen.getByRole('button', { name: 'ask' }));
     await waitFor(() => expect(chatFake.sent).toHaveLength(1));
+    // The assistant: the plugin's native chat with the CRM's scope.
     expect(chatFake.created[0]).toMatchObject({
-      agentId: 'noco',
+      agentId: 'online',
       source: 'crm',
+      config: { scope: ['crm'] },
     });
     expect(chatFake.sent[0]).toMatchObject({
       conversationId: 'c1',
@@ -113,19 +115,17 @@ describe('asking the assistant from outside its panel', () => {
     expect(chatFake.opened).toEqual([{ conversationId: 'c1', view: 'chat' }]);
   });
 
-  it('opens a conversation whose question did not go with the text in its composer', async () => {
+  it('says so when the conversation could not be started, and opens nothing', async () => {
     const user = userEvent.setup();
     chatFake.sendFails = true;
     render(<Ask text='Who decides?' />);
     await user.click(screen.getByRole('button', { name: 'ask' }));
     await waitFor(() =>
-      expect(chatFake.opened).toEqual([
-        { conversationId: 'c1', view: 'chat', draft: 'Who decides?' },
+      expect(toasts).toEqual([
+        { type: 'error', title: english('agentPanel.sendFailed') },
       ]),
     );
-    expect(toasts).toEqual([
-      { type: 'error', title: english('agentPanel.sendFailed') },
-    ]);
+    expect(chatFake.opened).toEqual([]);
   });
 
   it('opens a new conversation for a Discuss with nothing to pin', async () => {

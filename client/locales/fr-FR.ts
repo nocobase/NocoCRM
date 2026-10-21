@@ -10,6 +10,10 @@ const frFR: AppResource = {
   'auth.passwordResetSuccess':
     'Votre mot de passe a été réinitialisé. Connectez-vous avec votre nouveau mot de passe.',
   'auth.requestNewResetLink': 'Demander un nouveau lien de réinitialisation',
+  'auth.preparingSession': 'Préparation de votre session…',
+  'auth.connectionFailed': 'Connexion impossible',
+  'auth.connectionFailedDescription':
+    'La connexion en temps réel n’a pas pu être établie. Réessayez pour accéder à l’application, ou déconnectez-vous.',
   'deviceApproval.title': 'Autoriser un appareil',
   'deviceApproval.description':
     "Une ligne de commande ou un autre appareil demande à se connecter en votre nom. N'approuvez que si vous avez vous-même lancé la connexion.",

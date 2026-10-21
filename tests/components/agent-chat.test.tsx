@@ -15,9 +15,9 @@ import {
   defaultSettings,
 } from '../../server/providers/crm/schema.js';
 
-// The conversations with the Agents plugin's agents: the list beside the one
-// open, a new one with its agent, the composer's keys, and the plans the
-// agent proposed placed among its messages.
+// The conversations with the assistant (the Agents plugin's native chat with
+// the CRM's scope): the list beside the one open, a new one, the composer's
+// keys, and the plans the assistant proposed placed among its messages.
 
 const state = vi.hoisted(() => ({
   api: vi.fn(),
@@ -54,6 +54,10 @@ vi.mock('@nocobase/app-plugin-agents/client/chat', async (importOriginal) => {
     useChatPanel: fake.useChatPanel,
     useChatSources: fake.useChatSources,
     useChatAttachments: fake.useChatAttachments,
+    useChatApi: fake.useChatApi,
+    useChatController: fake.useChatController,
+    useChatModels: fake.useChatModels,
+    useChatStream: fake.useChatStream,
     ChatProvider: ({ children }: { children: ReactNode }) => children,
     useChatAgents: () => ({
       data: state.agents,
@@ -93,7 +97,6 @@ vi.mock('@nocobase/app-plugin-agents/client/chat', async (importOriginal) => {
       archive: { mutate: state.archive, isPending: false },
       markRead: vi.fn(),
     }),
-    useLiveRunEvents: () => [],
     AgentAvatar: () => <span />,
   };
 });
@@ -151,16 +154,17 @@ const { default: AgentChatPage } =
   await import('../../client/pages/crm-agent-chat/index.js');
 
 const agent = {
-  id: 'a1',
-  name: 'AI',
+  id: 'online',
+  name: 'Online agent',
   description: null,
   nameText: null,
   descriptionText: null,
   avatar: null,
-  type: 'online',
-  models: [],
-  availability: { online: true, reason: null, onlineRunners: 1 },
-  fallbackAgentId: null,
+  runnerNames: [],
+  personalOnly: false,
+  isSystemDefault: true,
+  isMyDefault: false,
+  availability: { online: true, reason: null, onlineRunners: 0 },
 };
 const conversation = (id: string, title: string) => ({
   id,
@@ -170,8 +174,8 @@ const conversation = (id: string, title: string) => ({
   source: 'crm',
   mode: 'online',
   agent: {
-    id: 'a1',
-    name: 'AI',
+    id: 'online',
+    name: 'Online agent',
     nameText: null,
     avatar: null,
     archived: false,
@@ -184,7 +188,9 @@ const conversation = (id: string, title: string) => ({
   createdAt: '2026-10-10T07:00:00.000Z',
   updatedAt: '2026-10-10T08:00:00.000Z',
   run: null,
+  execution: { status: 'idle' },
 });
+// A saved message as the plugin's chat answers it: an SDK UI message.
 const message = (
   seq: number,
   role: 'user' | 'assistant',
@@ -192,16 +198,13 @@ const message = (
   at: string,
 ) => ({
   id: `m${seq}`,
-  conversationId: 'c1',
-  seq,
   role,
-  content: { type: 'text', content },
-  toolCalls: null,
-  attachments: null,
-  workContext: null,
-  metadata: {},
-  runId: null,
-  createdAt: at,
+  metadata: { conversationId: 'c1', createdAt: at, revision: 1, seq },
+  parts: [
+    role === 'assistant'
+      ? { type: 'text', text: content, state: 'done' }
+      : { type: 'text', text: content },
+  ],
 });
 
 function Where(): ReactElement {
@@ -334,8 +337,8 @@ describe('the agent conversations', () => {
         status: 'pending',
         revision: 1,
         proposerUserId: 'root',
-        agentId: 'a1',
-        agentName: 'AI',
+        agentId: 'crm-assistant',
+        agentName: 'Sales Expert',
         runId: 'r1',
         conversationId: 'c1',
         deciderUserId: null,
@@ -415,8 +418,8 @@ describe('the agent conversations', () => {
         status: 'pending',
         revision: 1,
         proposerUserId: 'root',
-        agentId: 'a1',
-        agentName: 'AI',
+        agentId: 'crm-assistant',
+        agentName: 'Sales Expert',
         runId: 'r1',
         conversationId: 'c9',
         deciderUserId: null,
@@ -450,14 +453,14 @@ describe('the agent conversations', () => {
     expect(screen.queryByText('别处的计划')).toBeNull();
   });
 
-  it('asks for an agent first when there is none', () => {
+  it('points to the models when the assistant is not there', () => {
     state.agents = [];
     state.open = [conversation('c1', '展会线索')];
     renderAt('/agent-chat/new');
     expect(screen.getByText('还没有 Agent')).toBeTruthy();
-    expect(screen.getByRole('button', { name: '管理 Agent' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: '配置模型' })).toHaveAttribute(
       'href',
-      '/agents',
+      '/models',
     );
   });
 
@@ -467,7 +470,7 @@ describe('the agent conversations', () => {
         ...agent,
         availability: {
           online: false,
-          reason: 'modelUnavailable',
+          reason: 'noModel',
           onlineRunners: 0,
         },
       },

@@ -2,7 +2,7 @@ import {
   CHAT_PANEL_ATTRIBUTE,
   useChatPanel,
 } from '@nocobase/app-plugin-agents/client/chat';
-import type { ChatModelChoice } from '@nocobase/app-plugin-agents/shared/conversations';
+import type { ModelChoice } from './agent-chat/ask.js';
 import { useEffect, useRef, useState } from 'react';
 import {
   recordPin,
@@ -77,8 +77,8 @@ export interface AskDraft {
   value: string;
   setValue: (value: string) => void;
   files: ReturnType<typeof useAskFiles>;
-  models: readonly ChatModelChoice[];
-  model: ChatModelChoice | undefined;
+  models: readonly ModelChoice[];
+  model: ModelChoice | undefined;
   selectModel: (key: string) => void;
   canSend: boolean;
   sending: boolean;

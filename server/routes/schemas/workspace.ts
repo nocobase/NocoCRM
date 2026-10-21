@@ -116,14 +116,6 @@ export const Workspace = z
       description: "Whether the CRM's AI employee is switched on.",
     }),
     agents: AgentSwitchesSchema,
-    backgroundAgent: z.string().nullable().meta({
-      description:
-        "The id of the agent the CRM's background work once ran on (the Background AI, archived once the work agents replace it), which the chat leaves out of its agents; null when there is none.",
-    }),
-    workAgents: z.record(z.string(), z.string()).meta({
-      description:
-        "The ids of the CRM's work agents, by work (leads, opportunities, approvals, tasks, signals): each configures its work, and the chat leaves them out of its agents.",
-    }),
     workAgentNames: z
       .record(
         z.string(),
@@ -141,7 +133,7 @@ export const Workspace = z
       )
       .meta({
         description:
-          "The CRM's work agents not archived, by work: the name and description as written and the references translating them, and the model it asks first (null when it lists none), which the CRM names wherever that work is done.",
+          "The CRM's work agents, by work: the name and description as written and the references translating them, and the model it asks (null while there is no chat model), which the CRM names wherever that work is done.",
       }),
     methodSkills: z.record(z.string(), z.string()).meta({
       description:
@@ -458,6 +450,40 @@ export const DecisionsMeta = z.object({
 export const AgentParams = z.object({
   agent: z.enum(['leads', 'opportunities', 'approvals', 'tasks', 'signals']),
 });
+const ModelRefSchema = z.object({
+  modelService: z.string().min(1).max(200),
+  model: z.string().min(1).max(200),
+});
+// How a work agent is set up (work-agents.ts): the model it asks and its
+// instructions.
+export const WorkAgentSetupInput = z.object({
+  model: ModelRefSchema.nullable().meta({
+    description: 'The model the work asks; null for the default.',
+  }),
+  instructions: z.string().max(20_000).nullable().meta({
+    description:
+      'The instructions every run opens with; null or blank for the shipped ones.',
+  }),
+});
+export const WorkAgentSetup = z
+  .object({
+    model: ModelRefSchema.nullable().meta({
+      description: 'The model an administrator chose; null for the default.',
+    }),
+    effectiveModel: ModelRefSchema.nullable().meta({
+      description:
+        'The model the work asks now: the chosen one while an enabled service offers it, else the default; null while there is no chat model.',
+    }),
+    instructions: z.string().meta({
+      description: 'The instructions every run opens with now.',
+    }),
+    defaultInstructions: z.string(),
+    custom: z.boolean().meta({
+      description: "Whether the instructions are an administrator's own.",
+    }),
+  })
+  .meta({ ref: 'CrmWorkAgentSetup' });
+
 export const AgentQuery = z.object({
   ...PageQuery.shape,
   trigger: z.string().optional(),

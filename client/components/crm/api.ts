@@ -56,12 +56,9 @@ export interface Metadata {
   // Whether the CRM's AI employee is switched on (its Enabled switch on the
   // AI Employee plugin's settings page): every assistant entry follows it.
   assistant: boolean;
-  // The agent the background work runs on, left out of the chat's agents.
-  backgroundAgent?: string | null;
-  // The CRM's work agents' ids, by work (crm-agents/work-agents.ts).
-  workAgents?: Record<string, string>;
-  // Their names as written and the references translating them, by work,
-  // for those not archived: the dialogs doing that work name it.
+  // The CRM's work agents' names as written and the references translating
+  // them, by work (crm-agents/work-agents.ts): the dialogs doing that work
+  // name it.
   workAgentNames?: Record<
     string,
     {
@@ -69,7 +66,7 @@ export interface Metadata {
       nameText: { key: string; ns: string } | null;
       description?: string | null;
       descriptionText?: { key: string; ns: string } | null;
-      // The model it asks first; null when it lists none.
+      // The model it asks; null while there is no chat model.
       model?: { modelService: string; model: string } | null;
     }
   >;

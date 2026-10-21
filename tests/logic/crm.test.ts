@@ -127,21 +127,16 @@ import { registerContextKinds } from '../../server/providers/crm-agents/context.
 import { defaultSettings } from '../../server/providers/crm/schema.js';
 import { crmConversationRules } from '../../server/providers/crm-agents/rules.js';
 import {
-  nameAssistant,
-  provisionAssistant,
-  refreshAssistantInstructions,
+  ASSISTANT_SCOPE,
+  configureAssistant,
 } from '../../server/providers/crm-agents/assistant.js';
-import {
-  CRM_ASSISTANT_INSTRUCTIONS,
-  PREVIOUS_ASSISTANT_INSTRUCTIONS,
-} from '../../server/providers/crm-agents/preset.js';
+import { adoptLegacyConversations } from '../../server/providers/crm-agents/legacy-conversations.js';
 import { provisionSkills } from '../../server/providers/crm-agents/library.js';
 import {
-  nameWorkAgents,
-  provisionWorkAgents,
-  renameWorkAgents,
-  retireBackgroundAgent,
-  workAgentIds,
+  adoptLegacyWorkAgents,
+  workAgentNames,
+  workAgentSettings,
+  workInstructions,
 } from '../../server/providers/crm-agents/work-agents.js';
 import {
   findApiDocumentSchemaProblems,
@@ -372,15 +367,35 @@ beforeAll(async () => {
     c.primary('id');
     c.string('userId');
     c.string('source');
+    // Its binding to the plugin's chat, and the model it answers with.
+    c.string('agentId').nullable();
+    c.string('mode').nullable();
+    c.string('modelService').nullable();
+    c.string('model').nullable();
+    c.json('metadata').nullable();
     c.datetimeTz('createdAt').nullable();
   });
   await database.builder().createCollection('agConversationMessages', (c) => {
     c.string('id');
     c.primary('id');
     c.string('conversationId');
+    c.integer('seq').nullable();
     // The notices a conversation shows (the AI's work told into it).
     c.string('role').nullable();
+    c.json('content').nullable();
+    c.json('workContext').nullable();
     c.json('metadata').nullable();
+    c.datetimeTz('createdAt').nullable();
+  });
+  // The agents an earlier release of the Agents plugin kept, which the
+  // CRM's work agents were.
+  await database.builder().createCollection('agAgents', (c) => {
+    c.string('id');
+    c.primary('id');
+    c.text('instructions').nullable();
+    c.json('modelEntries').nullable();
+    c.datetimeTz('archivedAt').nullable();
+    c.datetimeTz('deletedAt').nullable();
   });
   await database.builder().createCollection('user', (c) => {
     c.string('id');
@@ -460,33 +475,46 @@ beforeAll(async () => {
     // An agent's run acting for the user, configured with the actions the
     // header lists (as the Agents plugin's run credential carries it).
     const runActions = c.req.header('x-test-run-actions');
+    // The credential of a command the assistant runs in a conversation.
+    const assistant = c.req.header('x-test-assistant');
     c.set(
       'auth',
-      runActions === undefined
-        ? { user: { id } }
-        : {
+      assistant !== undefined
+        ? {
             user: { id },
             credential: {
-              type: 'run',
-              data: {
-                run: {
+              type: 'crm-assistant',
+              id: assistant,
+              userId: id,
+              scheme: 'crmAssistantToken',
+              data: { conversationId: assistant },
+            },
+          }
+        : runActions === undefined
+          ? { user: { id } }
+          : {
+              user: { id },
+              credential: {
+                type: 'run',
+                data: {
                   run: {
-                    id: 'run-1',
-                    actorUserId: id,
-                    subjectKind: 'conversation',
-                    subjectId: 'conversation-1',
-                    threadScope: 'main',
-                    parentRunId: null,
+                    run: {
+                      id: 'run-1',
+                      actorUserId: id,
+                      subjectKind: 'conversation',
+                      subjectId: 'conversation-1',
+                      threadScope: 'main',
+                      parentRunId: null,
+                    },
                   },
-                },
-                agent: {
-                  id: 'agent-1',
-                  name: 'AI',
-                  actions: runActions.split(',').filter(Boolean),
+                  agent: {
+                    id: 'agent-1',
+                    name: 'AI',
+                    actions: runActions.split(',').filter(Boolean),
+                  },
                 },
               },
             },
-          },
     );
     await next();
   };
@@ -11530,6 +11558,63 @@ describe('agents and plans', () => {
     expect((await late.json()).error.reason).toBe('PLAN_DECIDED');
   });
 
+  it('lets the assistant read as the person and turns its writes into plans in its conversation', async () => {
+    const asAssistant = (
+      path: string,
+      method = 'GET',
+      body?: unknown,
+      user = 'rep',
+    ): Promise<Response> =>
+      router.request(path, {
+        method,
+        headers: {
+          'x-test-user': user,
+          'x-test-assistant': 'conversation-a',
+          'Content-Type': 'application/json',
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+    // Reading what the person may read.
+    expect((await asAssistant('/leads')).status).toBe(200);
+    // A change is refused with the way to propose it.
+    const created = await asAssistant('/leads', 'POST', {
+      name: 'Proposed lead',
+      source: 'website',
+    });
+    expect(created.status).toBe(400);
+    expect((await created.json()).error).toMatchObject({
+      reason: 'PLAN_REQUIRED',
+    });
+    // Deleting is never the assistant's.
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Kept lead',
+      source: 'website',
+    });
+    const removed = await asAssistant(`/leads/${lead.id}`, 'DELETE');
+    expect(removed.status).toBe(403);
+    expect((await removed.json()).error).toMatchObject({
+      reason: 'ACTION_NOT_ALLOWED',
+    });
+    // A plan it proposes waits for the person, in its conversation, as
+    // Sales Expert's.
+    const proposed = await asAssistant('/plans', 'POST', {
+      title: 'Comment on the lead',
+      steps: [
+        {
+          op: 'comment.create',
+          params: { entity: 'leads', id: lead.id, text: 'Called them.' },
+        },
+      ],
+    });
+    expect(proposed.status).toBe(201);
+    expect((await proposed.json()).data).toMatchObject({
+      status: 'pending',
+      agentId: 'crm-assistant',
+      agentName: 'Sales Expert',
+      conversationId: 'conversation-a',
+    });
+  });
+
   it("lets a run set the CRM's agents to work directly and tells its conversation what they came to", async () => {
     const lead = await service.save(actor('rep'), 'leads', {
       name: 'Asked by the agent',
@@ -12094,462 +12179,402 @@ describe("The assistant's conversations on the Agents plugin", () => {
     }
   });
 
-  it('creates the assistant once, with the enabled chat models (DeepSeek first), as the default chat agent only when none is set', async () => {
-    const created: Record<string, unknown>[] = [];
-    let settings = { defaultAgentId: null as string | null };
-    const fakeAgents = {
-      online: {
-        services: {
-          list: () =>
-            Promise.resolve([
-              {
-                name: 'qwen',
-                provider: 'alibaba',
-                enabled: true,
-                models: [
-                  { value: 'max', kind: 'chat' },
-                  { value: 'embed', kind: 'embedding' },
-                ],
-              },
-              {
-                name: 'off',
-                provider: 'openai',
-                enabled: false,
-                models: [{ value: 'x', kind: 'chat' }],
-              },
-              {
-                name: 'deepseek',
-                provider: 'deepseek',
-                enabled: true,
-                models: [{ value: 'chat', kind: 'chat' }],
-              },
-            ]),
+  it("gives the assistant's conversations the CRM's prompt, its tools and every chat model, DeepSeek's first", async () => {
+    const scopes = new Map<string, (context: unknown) => unknown>();
+    const tools = new Map<string, unknown>();
+    const resolvers: unknown[] = [];
+    const container = new ServiceContainer();
+    container.instance(authenticationToken, {
+      addCredentialResolver: (resolver: unknown) => {
+        resolvers.push(resolver);
+        return () => undefined;
+      },
+    } as never);
+    const fakeOnline = {
+      onlineAgent: {
+        configurator: {
+          registerTool: (name: string, options: unknown) =>
+            tools.set(name, options),
+          registerOnlineAgentScope: (
+            name: string,
+            provider: (context: unknown) => unknown,
+          ) => scopes.set(name, provider),
         },
       },
-      agents: {
-        create: (_by: string, input: Record<string, unknown>) => {
-          created.push(input);
-          return Promise.resolve({ id: `agent-${String(created.length)}` });
-        },
-      },
-      chat: {
-        settings: () => Promise.resolve(settings),
-        updateSettings: (_by: string, patch: { defaultAgentId: string }) => {
-          settings = { ...settings, ...patch };
-          return Promise.resolve(settings);
+      models: {
+        gateway: {
+          catalog: () =>
+            Promise.resolve({
+              services: [
+                {
+                  name: 'qwen',
+                  title: 'Qwen',
+                  provider: 'alibaba',
+                  models: [
+                    { value: 'max', kind: 'chat' },
+                    { value: 'embed', kind: 'embedding' },
+                  ],
+                },
+                {
+                  name: 'deepseek',
+                  title: 'DeepSeek',
+                  provider: 'deepseek',
+                  models: [{ value: 'flash', kind: 'chat' }],
+                },
+              ],
+            }),
         },
       },
     } as never;
-    await database
-      .query()
-      .deleteFrom('crmSettings')
-      .where('id', '=', 'agents-noco-v1')
-      .execute();
-    await provisionAssistant(fakeAgents, database, ['crm.leads/view']);
-    await provisionAssistant(fakeAgents, database, ['crm.leads/view']);
-    // Once, whatever happens to it afterwards.
-    expect(created).toHaveLength(1);
-    expect(created[0]).toMatchObject({
-      name: 'Sales Expert',
-      type: 'online',
-      access: 'everyone',
-      actions: ['crm.leads/view'],
-      // The enabled services' chat models only, DeepSeek's first.
-      modelEntries: [
-        { modelService: 'deepseek', model: 'chat' },
-        { modelService: 'qwen', model: 'max' },
-      ],
-    });
-    expect(settings.defaultAgentId).toBe('agent-1');
-    const marker = await database
-      .query()
-      .selectFrom('crmSettings')
-      .select('value')
-      .where('id', '=', 'agents-noco-v1')
-      .executeTakeFirst();
-    expect(JSON.parse(toText(marker?.value))).toEqual({
-      version: 1,
-      agentId: 'agent-1',
-    });
-  });
-
-  it('moves the assistant to the current instructions unless an administrator changed them', async () => {
-    const stored: Record<string, { instructions: string; revision: number }> = {
-      untouched: {
-        instructions: PREVIOUS_ASSISTANT_INSTRUCTIONS[0],
-        revision: 3,
-      },
-      edited: { instructions: 'Our own words.', revision: 1 },
+    configureAssistant(
+      { container, publicBasePath: '/main' } as never,
+      fakeOnline,
+      service,
+      () => ({ ...defaultSettings, timeZone: 'Asia/Shanghai' }),
+    );
+    expect([...tools.keys()]).toEqual(['crm', 'crm_skill']);
+    expect(resolvers).toHaveLength(1);
+    const scope = (await scopes.get(ASSISTANT_SCOPE)?.({
+      user: { id: 'rep' },
+    })) as {
+      agentId: string;
+      tool: string[];
+      model: string[];
+      systemPromptTemplate: string;
     };
-    const updates: { id: string; patch: Record<string, unknown> }[] = [];
-    const fakeAgents = {
-      agents: {
-        get: (id: string) => Promise.resolve({ id, ...stored[id] }),
-        update: (id: string, _by: null, patch: Record<string, unknown>) => {
-          updates.push({ id, patch });
-          return Promise.resolve({ id });
-        },
-      },
-    } as never;
-    const query = database.query();
-    const marker = await query
-      .selectFrom('crmSettings')
-      .select('value')
-      .where('id', '=', 'agents-noco-v1')
-      .executeTakeFirst();
-    const point = (agentId: string) =>
-      query
-        .updateTable('crmSettings')
-        .set({ value: JSON.stringify({ version: 1, agentId }) })
-        .where('id', '=', 'agents-noco-v1')
-        .execute();
-    try {
-      await point('untouched');
-      await refreshAssistantInstructions(fakeAgents, database);
-      await point('edited');
-      await refreshAssistantInstructions(fakeAgents, database);
-    } finally {
-      await query
-        .updateTable('crmSettings')
-        .set({ value: marker?.value })
-        .where('id', '=', 'agents-noco-v1')
-        .execute();
-    }
-    expect(updates).toEqual([
-      {
-        id: 'untouched',
-        patch: {
-          instructions: CRM_ASSISTANT_INSTRUCTIONS,
-          expectedRevision: 3,
-        },
-      },
-    ]);
+    expect(scope).toMatchObject({
+      agentId: 'online',
+      tool: ['crm', 'crm_skill'],
+      model: ['deepseek/flash', 'qwen/max'],
+    });
+    const prompt = scope.systemPromptTemplate;
+    // Who it works for, how it reaches the CRM, how changes are proposed,
+    // and the time where the CRM works.
+    expect(prompt).toContain('You work for rep:');
+    expect(prompt).toContain('Find things with the `crm` tool');
+    expect(prompt).toContain(
+      "run `crm plan create` with the plan as the command's `body`",
+    );
+    expect(prompt).toContain('<crm-news>');
+    expect(prompt).toContain('Asia/Shanghai');
+    expect(prompt).not.toContain('--file /tmp/plan.json');
   });
 
-  it("names the work agents in the viewer's language while they keep the name they were made with", async () => {
+  it('takes over once what an administrator set on the work agents an earlier release made', async () => {
     const query = database.query();
-    if (!(await database.builder().hasCollection('agAgents')))
-      await database.builder().createCollection('agAgents', (c) => {
-        c.string('id');
-        c.primary('id');
-        c.string('name');
-        c.json('nameText').nullable();
-      });
-    await query
-      .insertInto('agAgents')
-      .values([
-        { id: 'name-leads', name: 'Lead follow-up', nameText: null },
-        // Renamed by an administrator: shown as they wrote it.
-        { id: 'name-deals', name: 'Our deals', nameText: null },
-      ])
-      .execute();
-    await nameWorkAgents(database, {
-      leads: 'name-leads',
-      opportunities: 'name-deals',
-    });
-    // The assistant too, as its marker names it.
-    await query
-      .insertInto('agAgents')
-      .values({ id: 'name-assistant', name: 'Sales Expert', nameText: null })
-      .execute();
-    const marker = await query
-      .selectFrom('crmSettings')
-      .select('value')
-      .where('id', '=', 'agents-noco-v1')
-      .executeTakeFirst();
     await query
       .deleteFrom('crmSettings')
-      .where('id', '=', 'agents-noco-v1')
-      .execute();
-    await query
-      .insertInto('crmSettings')
-      .values({
-        id: 'agents-noco-v1',
-        value: JSON.stringify({ version: 1, agentId: 'name-assistant' }),
-        updatedAt: new Date().toISOString(),
-      })
-      .execute();
-    await nameAssistant(database);
-    if (marker)
-      await query
-        .updateTable('crmSettings')
-        .set({ value: marker.value })
-        .where('id', '=', 'agents-noco-v1')
-        .execute();
-    else
-      await query
-        .deleteFrom('crmSettings')
-        .where('id', '=', 'agents-noco-v1')
-        .execute();
-    const rows = await query
-      .selectFrom('agAgents')
-      .select(['id', 'nameText'])
-      .where('id', 'in', ['name-leads', 'name-deals', 'name-assistant'])
-      .orderBy('id')
-      .execute();
-    expect(
-      rows.map((row) => [
-        row.id,
-        typeof row.nameText === 'string'
-          ? JSON.parse(row.nameText)
-          : row.nameText,
-      ]),
-    ).toEqual([
-      ['name-assistant', { key: 'crm.agentPreset.agentName', ns: 'crm' }],
-      ['name-deals', null],
-      ['name-leads', { key: 'crm.agentWork.names.leads', ns: 'crm' }],
-    ]);
-  });
-
-  it('deletes the Background AI and its recorded use once every work has its agent', async () => {
-    const calls: string[] = [];
-    const fakeAgents = {
-      agents: {
-        get: (id: string) => Promise.resolve({ id, archivedAt: null }),
-        archive: (id: string) => {
-          calls.push(`archive ${id}`);
-          return Promise.resolve({ id });
-        },
-        remove: (id: string) => {
-          calls.push(`remove ${id}`);
-          return Promise.resolve();
-        },
-      },
-    } as never;
-    const query = database.query();
-    if (!(await database.builder().hasCollection('agModelUsage')))
-      await database.builder().createCollection('agModelUsage', (c) => {
-        c.string('id');
-        c.primary('id');
-        c.string('source');
-      });
-    await query
-      .insertInto('agModelUsage')
-      .values([
-        { id: 'u1', source: 'Background AI' },
-        { id: 'u2', source: 'crm' },
-        { id: 'u3', source: 'Lead follow-up' },
+      .where('id', 'in', [
+        'ai-work-agents',
+        'agents-work-v1',
+        'agents-background-v1',
       ])
       .execute();
-    const setMarker = async (id: string, value: unknown) => {
-      await query.deleteFrom('crmSettings').where('id', '=', id).execute();
-      await query
-        .insertInto('crmSettings')
-        .values({
-          id,
-          value: JSON.stringify(value),
-          updatedAt: new Date().toISOString(),
-        })
-        .execute();
-    };
-    await setMarker('agents-background-v1', { version: 1, agentId: 'bg' });
-    // Not while a work still lacks its agent.
-    await setMarker('agents-work-v1', {
-      version: 1,
-      agentIds: { leads: 'a1' },
-    });
-    await retireBackgroundAgent(fakeAgents, database);
-    expect(calls).toEqual([]);
-    await setMarker('agents-work-v1', {
-      version: 1,
-      agentIds: {
-        leads: 'a1',
-        opportunities: 'a2',
-        approvals: 'a3',
-        tasks: 'a4',
-        signals: 'a5',
-      },
-    });
-    await retireBackgroundAgent(fakeAgents, database);
-    await retireBackgroundAgent(fakeAgents, database);
-    expect(calls).toEqual(['archive bg', 'remove bg']);
-    expect(
-      (await query.selectFrom('agModelUsage').select('source').execute()).map(
-        (row) => row.source,
-      ),
-    ).toEqual(['Lead follow-up']);
-    const marker = await query
-      .selectFrom('crmSettings')
-      .select('value')
-      .where('id', '=', 'agents-background-v1')
-      .executeTakeFirst();
-    expect(JSON.parse(toText(marker?.value))).toMatchObject({
-      agentId: null,
-      removed: true,
-    });
-  });
-
-  it('creates an agent for each work once, each with its skill, taking over and archiving the Background AI', async () => {
-    const created: Record<string, unknown>[] = [];
-    const attached: Record<string, string[]> = {};
-    const archived: string[] = [];
-    const fakeAgents = {
-      online: {
-        services: {
-          list: () =>
-            Promise.resolve([
-              {
-                name: 'deepseek',
-                provider: 'deepseek',
-                enabled: true,
-                models: [{ value: 'deepseek-flash', kind: 'chat' }],
-              },
-              // A provider whose models cannot search the web.
-              {
-                name: 'kimi',
-                provider: 'moonshotai',
-                enabled: true,
-                models: [{ value: 'k2', kind: 'chat' }],
-              },
-              {
-                name: 'qwen',
-                provider: 'alibaba',
-                enabled: true,
-                models: [{ value: 'flash', kind: 'chat' }],
-              },
-            ]),
-        },
-      },
-      agents: {
-        create: (_by: string, input: Record<string, unknown>) => {
-          created.push(input);
-          return Promise.resolve({ id: `agent-${created.length}` });
-        },
-        // The Background AI an installation from before has, its
-        // instructions changed by an administrator.
-        get: (id: string) =>
-          Promise.resolve({
-            id,
-            archivedAt: null,
-            instructions: 'Our own rules.',
-            // Its order is not taken: the work's defaults replace it.
-            modelEntries: [
-              { modelService: 'qwen', model: 'flash' },
-              { modelService: 'deepseek', model: 'chat' },
-            ],
-          }),
-        archive: (id: string) => {
-          archived.push(id);
-          return Promise.resolve({ id });
-        },
-      },
-      skills: {
-        attach: (target: { scopeId: string }, ids: string[]) => {
-          attached[target.scopeId] = ids;
-          return Promise.resolve(ids);
-        },
-      },
-    } as never;
-    const query = database.query();
-    for (const id of [
-      'agents-work-v1',
-      'agents-background-v1',
-      'agents-skills-v1',
-    ])
-      await query.deleteFrom('crmSettings').where('id', '=', id).execute();
+    await query
+      .deleteFrom('agAgents')
+      .where('id', 'in', ['lead', 'review', 'archived', 'background'])
+      .execute();
     await query
       .insertInto('crmSettings')
       .values([
         {
-          id: 'agents-background-v1',
-          value: JSON.stringify({ version: 1, agentId: 'background-1' }),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 'agents-skills-v1',
+          id: 'agents-work-v1',
           value: JSON.stringify({
             version: 1,
-            skillIds: {
-              'lead-follow-up': 'skill-leads',
-              'company-signals': 'skill-signals',
-            },
+            agentIds: { leads: 'lead', approvals: 'review', tasks: 'archived' },
           }),
-          updatedAt: new Date().toISOString(),
+          updatedAt: new Date(),
+        },
+        {
+          id: 'agents-background-v1',
+          value: JSON.stringify({ version: 1, agentId: 'background' }),
+          updatedAt: new Date(),
         },
       ])
       .execute();
-    await provisionWorkAgents(fakeAgents, database);
-    await provisionWorkAgents(fakeAgents, database);
-    expect(created.map((agent) => agent.name)).toEqual([
-      'Lead follow-up',
-      'Opportunity follow-up',
-      'Approval review',
-      'Task assistant',
-      'Company research',
-    ]);
-    expect(created[0]).toMatchObject({
-      type: 'online',
-      access: 'ownerOnly',
-      actions: [],
-      // DeepSeek's fast model first; the Background AI's changed
-      // instructions.
-      modelEntries: [
-        { modelService: 'deepseek', model: 'deepseek-flash' },
-        { modelService: 'kimi', model: 'k2' },
-        { modelService: 'qwen', model: 'flash' },
-      ],
-      instructions: 'Our own rules.',
+    const upgradedAt = '2026-10-21T06:00:00.000Z';
+    await query
+      .insertInto('agAgents')
+      .values([
+        // Its model chosen, its instructions changed.
+        {
+          id: 'lead',
+          instructions: 'Follow every lead up in two lines.',
+          modelEntries: JSON.stringify([
+            { modelService: 'qwen', model: 'max' },
+            { modelService: 'deepseek', model: 'flash' },
+          ]),
+          archivedAt: upgradedAt,
+          deletedAt: upgradedAt,
+        },
+        // Its instructions as shipped.
+        {
+          id: 'review',
+          instructions: workInstructions('approvals'),
+          modelEntries: JSON.stringify([
+            { modelService: 'deepseek', model: 'flash' },
+          ]),
+          archivedAt: upgradedAt,
+          deletedAt: upgradedAt,
+        },
+        // Archived by a person before the upgrade.
+        {
+          id: 'archived',
+          instructions: 'Old.',
+          modelEntries: JSON.stringify([
+            { modelService: 'qwen', model: 'max' },
+          ]),
+          archivedAt: '2026-10-01T00:00:00.000Z',
+          deletedAt: upgradedAt,
+        },
+        // The Background AI, whose changed instructions a work without an
+        // agent of its own takes.
+        {
+          id: 'background',
+          instructions: 'Work for the CRM, briefly.',
+          modelEntries: JSON.stringify([]),
+          archivedAt: upgradedAt,
+          deletedAt: upgradedAt,
+        },
+      ])
+      .execute();
+    await adoptLegacyWorkAgents(database);
+    // Once: a later change of the old rows is not taken.
+    await query
+      .updateTable('agAgents')
+      .set({ instructions: 'Changed after.' })
+      .where('id', '=', 'lead')
+      .execute();
+    await adoptLegacyWorkAgents(database);
+    expect(await workAgentSettings(database)).toEqual({
+      leads: {
+        model: { modelService: 'qwen', model: 'max' },
+        instructions: 'Follow every lead up in two lines.',
+      },
+      approvals: {
+        model: { modelService: 'deepseek', model: 'flash' },
+        instructions: null,
+      },
+      opportunities: {
+        model: null,
+        instructions: 'Work for the CRM, briefly.',
+      },
+      signals: { model: null, instructions: 'Work for the CRM, briefly.' },
     });
-    // The company research: every chat model, DeepSeek's fast one first
-    // and those that can search the web before those that cannot.
-    expect(created[4]!.modelEntries).toEqual([
-      { modelService: 'deepseek', model: 'deepseek-flash' },
-      { modelService: 'qwen', model: 'flash' },
-      { modelService: 'kimi', model: 'k2' },
-    ]);
-    // Each its own skill, where the library has it.
-    expect(attached).toEqual({
-      'agent-1': ['skill-leads'],
-      'agent-5': ['skill-signals'],
-    });
-    expect(archived).toEqual(['background-1']);
-    expect(await workAgentIds(database)).toEqual({
-      leads: 'agent-1',
-      opportunities: 'agent-2',
-      approvals: 'agent-3',
-      tasks: 'agent-4',
-      signals: 'agent-5',
-    });
-    // The company work's agent still bearing its former name is renamed;
-    // one an administrator renamed keeps theirs.
-    const renamed: { id: string; patch: unknown }[] = [];
-    const named = (name: string) =>
-      ({
-        agents: {
-          get: (id: string) => Promise.resolve({ id, name, revision: 2 }),
-          update: (id: string, _by: null, patch: unknown) => {
-            renamed.push({ id, patch });
-            return Promise.resolve({ id });
+  });
+
+  it("names the work agents in the viewer's language, with the model each asks now", async () => {
+    const names = await workAgentNames(
+      {
+        models: {
+          gateway: {
+            catalog: () =>
+              Promise.resolve({
+                services: [
+                  {
+                    name: 'qwen',
+                    title: 'Qwen',
+                    provider: 'alibaba',
+                    models: [{ value: 'max', kind: 'chat' }],
+                  },
+                ],
+              }),
           },
         },
-      }) as never;
-    await renameWorkAgents(named('Company signals'), database);
-    expect(renamed).toEqual([
-      {
-        id: 'agent-5',
-        patch: { name: 'Company research', expectedRevision: 2 },
-      },
-    ]);
-    await renameWorkAgents(named('Our news desk'), database);
-    expect(renamed).toHaveLength(1);
-    // Without a Background AI, each its own instructions, DeepSeek's
-    // first.
-    created.length = 0;
+      } as never,
+      database,
+    );
+    expect(names.leads).toEqual({
+      name: 'Lead follow-up',
+      nameText: { key: 'crm.agentWork.names.leads', ns: 'crm' },
+      description: null,
+      descriptionText: { key: 'crm.agentWork.leads', ns: 'crm' },
+      model: { modelService: 'qwen', model: 'max' },
+    });
+    expect(names.signals?.name).toBe('Company research');
+  });
+
+  it('carries the conversations with the earlier assistant over to it once, in place', async () => {
+    const query = database.query();
     await query
       .deleteFrom('crmSettings')
-      .where('id', 'in', ['agents-work-v1', 'agents-background-v1'])
+      .where('id', '=', 'agents-native-conversations-v1')
       .execute();
-    await provisionWorkAgents(fakeAgents, database);
-    expect(created[1]!.instructions).toContain('following opportunities up');
-    expect(created[1]!.modelEntries).toEqual([
-      { modelService: 'deepseek', model: 'deepseek-flash' },
-      { modelService: 'kimi', model: 'k2' },
-      { modelService: 'qwen', model: 'flash' },
+    await query
+      .deleteFrom('agConversationMessages')
+      .where('conversationId', '=', 'old-chat')
+      .execute();
+    await query
+      .deleteFrom('agConversations')
+      .where('id', '=', 'old-chat')
+      .execute();
+    await query
+      .insertInto('agConversations')
+      .values({
+        id: 'old-chat',
+        userId: 'rep',
+        source: 'crm',
+        agentId: 'removed-agent',
+        mode: 'online',
+        modelService: 'qwen',
+        model: 'max',
+        metadata: null,
+        createdAt: '2026-10-19T09:00:00.000Z',
+      })
+      .execute();
+    const context = {
+      route: '/leads/l1',
+      items: [
+        {
+          kind: 'leads',
+          id: 'l1',
+          title: 'Tang Rui',
+          key: null,
+          url: '/main/leads/l1',
+        },
+      ],
+      dropped: 0,
+    };
+    await query
+      .insertInto('agConversationMessages')
+      .values([
+        {
+          id: 'old-1',
+          conversationId: 'old-chat',
+          seq: 1,
+          role: 'user',
+          content: JSON.stringify({ type: 'text', content: 'Is it worth it?' }),
+          workContext: JSON.stringify(context),
+          metadata: JSON.stringify({}),
+          createdAt: '2026-10-19T09:00:00.000Z',
+        },
+        {
+          id: 'old-2',
+          conversationId: 'old-chat',
+          seq: 2,
+          role: 'assistant',
+          content: JSON.stringify({ type: 'text', content: 'Yes, **soon**.' }),
+          workContext: null,
+          metadata: JSON.stringify({}),
+          createdAt: '2026-10-19T09:01:00.000Z',
+        },
+        {
+          id: 'old-3',
+          conversationId: 'old-chat',
+          seq: 3,
+          role: 'system',
+          content: JSON.stringify({ type: 'text', content: 'Add Acme' }),
+          workContext: null,
+          metadata: JSON.stringify({
+            notice: {
+              code: 'news',
+              type: 'planDecided',
+              title: 'Add Acme',
+              params: { planId: 'p1', decision: 'executed' },
+            },
+          }),
+          createdAt: '2026-10-19T09:02:00.000Z',
+        },
+      ])
+      .execute();
+    const resolved: unknown[] = [];
+    const fakeOnline = {
+      onlineAgent: {
+        configurator: {
+          resolve: (actor: { user: { id: string } }, options: unknown) => {
+            resolved.push({ user: actor.user.id, options });
+            return Promise.resolve({
+              scope: ['crm'],
+              systemPrompt: 'Prompt.',
+              tool: ['crm'],
+              toolVersions: { crm: '1' },
+              model: ['deepseek/flash', 'qwen/max'],
+              agentId: 'online',
+            });
+          },
+        },
+      },
+    } as never;
+    const warnings: unknown[] = [];
+    const logger = { warn: (details: object) => warnings.push(details) };
+    await adoptLegacyConversations(fakeOnline, service, logger);
+    await adoptLegacyConversations(fakeOnline, service, logger);
+    expect(warnings).toEqual([]);
+    expect(resolved).toEqual([
+      { user: 'rep', options: { scope: ['crm'], agentId: 'online' } },
+    ]);
+    const row = await query
+      .selectFrom('agConversations')
+      .selectAll()
+      .where('id', '=', 'old-chat')
+      .executeTakeFirst();
+    // Bound to the assistant, on its own model while the scope offers it.
+    expect(row).toMatchObject({
+      agentId: '0',
+      modelService: 'qwen',
+      model: 'max',
+    });
+    expect(JSON.parse(toText(row?.metadata))).toMatchObject({
+      onlineAgent: { kind: 'realtime', config: { scope: ['crm'] }, call: null },
+    });
+    const originals = (
+      await query
+        .selectFrom('agConversationMessages')
+        .select(['id', 'content'])
+        .where('conversationId', '=', 'old-chat')
+        .orderBy('seq')
+        .execute()
+    ).map((message) => JSON.parse(toText(message.content)).original);
+    expect(originals).toEqual([
+      {
+        id: 'old-1',
+        role: 'user',
+        metadata: {
+          conversationId: 'old-chat',
+          createdAt: '2026-10-19T09:00:00.000Z',
+          revision: 1,
+          seq: 1,
+          context,
+        },
+        parts: [{ type: 'text', text: 'Is it worth it?' }],
+      },
+      {
+        id: 'old-2',
+        role: 'assistant',
+        metadata: {
+          conversationId: 'old-chat',
+          createdAt: '2026-10-19T09:01:00.000Z',
+          revision: 1,
+          seq: 2,
+        },
+        parts: [{ type: 'text', text: 'Yes, **soon**.', state: 'done' }],
+      },
+      {
+        id: 'old-3',
+        role: 'system',
+        metadata: {
+          conversationId: 'old-chat',
+          createdAt: '2026-10-19T09:02:00.000Z',
+          revision: 1,
+          seq: 3,
+        },
+        parts: [
+          {
+            type: 'data-notice',
+            id: 'record:old-3',
+            data: {
+              type: 'planDecided',
+              title: 'Add Acme',
+              params: { planId: 'p1', decision: 'executed' },
+            },
+          },
+        ],
+      },
     ]);
   });
-  it('puts the method skills into the library once, attached to the assistant, keeping one a person added', async () => {
+
+  it('puts the method skills into the library once, keeping one a person added', async () => {
     const created: string[] = [];
-    let attached: string[] = ['their-own'];
     const fakeAgents = {
       skills: {
         // A person added a lead follow-up skill of their own already.
@@ -12557,12 +12582,6 @@ describe("The assistant's conversations on the Agents plugin", () => {
         create: (_by: null, input: { content: string }) => {
           created.push(/^name:\s*(\S+)$/mu.exec(input.content)?.[1] ?? '');
           return Promise.resolve({ id: `skill-${String(created.length)}` });
-        },
-        attached: () => Promise.resolve(attached),
-        attach: (target: { scope: string; scopeId: string }, ids: string[]) => {
-          expect(target).toEqual({ scope: 'agent', scopeId: 'agent-1' });
-          attached = ids;
-          return Promise.resolve(ids);
         },
       },
     } as never;
@@ -12580,14 +12599,15 @@ describe("The assistant's conversations on the Agents plugin", () => {
       'task-preparation',
       'company-signals',
     ]);
-    // Not the company signals' method: the chat cannot search.
-    expect(attached).toEqual([
-      'their-own',
+    const marker = await database
+      .query()
+      .selectFrom('crmSettings')
+      .select('value')
+      .where('id', '=', 'agents-skills-v1')
+      .executeTakeFirst();
+    expect(JSON.parse(toText(marker?.value)).skillIds['lead-follow-up']).toBe(
       'mine',
-      'skill-1',
-      'skill-2',
-      'skill-3',
-    ]);
+    );
   });
 
   it('adds the skills a start without their files missed, and never one already put there', async () => {

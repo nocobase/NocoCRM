@@ -14,6 +14,10 @@ import {
   AppSidebarProvider,
 } from '../../client/layouts/components/app-sidebar.js';
 import { NavigationMenu } from '../../client/layouts/components/navigation-menu.js';
+import {
+  createAppSidebarPreferenceStore,
+  SidebarPreferenceProvider,
+} from '../../client/layouts/use-sidebar-preference.js';
 
 // Menu-only groups drawn as headed sections (`sections`, which the CRM's
 // layout turns on), and a count beside an entry from the menu's `badges`, as
@@ -48,20 +52,24 @@ const items: RouteNavigationItem[] = [
   },
 ];
 
+const sidebarPreference = createAppSidebarPreferenceStore('/main');
+
 function shell(badges: Readonly<Record<string, number>>) {
   return (
     <MemoryRouter>
-      <AppSidebarProvider>
-        <AppSidebar label='Navigation'>
-          <NavigationMenu
-            items={items}
-            label='Menu'
-            selectedKey={undefined}
-            sections
-            badges={badges}
-          />
-        </AppSidebar>
-      </AppSidebarProvider>
+      <SidebarPreferenceProvider value={sidebarPreference}>
+        <AppSidebarProvider>
+          <AppSidebar label='Navigation'>
+            <NavigationMenu
+              items={items}
+              label='Menu'
+              selectedKey={undefined}
+              sections
+              badges={badges}
+            />
+          </AppSidebar>
+        </AppSidebarProvider>
+      </SidebarPreferenceProvider>
     </MemoryRouter>
   );
 }

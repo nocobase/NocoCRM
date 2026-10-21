@@ -1,5 +1,6 @@
 import {
-  useAgentText,
+  chatIsRunning,
+  useChatStream,
   useConversation,
   useConversationMessages,
 } from '@nocobase/app-plugin-agents/client/chat';
@@ -9,7 +10,9 @@ import { Button } from '../../ui/button.js';
 import { Spinner } from '../../ui/spinner.js';
 import { toText, useCrmText } from '../api.js';
 import { ErrorNotice } from '../common.js';
+import { useCrmChatAgents } from './ask.js';
 import { AgentReply, LiveLine } from './conversation.js';
+import { liveStep } from './step-text.js';
 
 // A question from the global search answered in its dialog
 // (search-dialog.tsx): the question, then the reply as it is written, the
@@ -33,17 +36,23 @@ export function SearchAnswer({
   onContinue: () => void;
 }): ReactElement {
   const { text } = useCrmText();
-  const agentText = useAgentText();
   const detail = useConversation(conversationId);
   const conversation = detail.data;
-  const running = Boolean(conversation?.run);
-  const messages = useConversationMessages(conversationId, running);
-  const replies = messages.items.filter(
-    (message) => message.role === 'assistant' && message.content.content.trim(),
-  );
-  const name =
-    (conversation?.agent ? agentText.name(conversation.agent) : null) ??
-    toText(text('agentChat.agent'));
+  const stream = useChatStream(conversationId);
+  const running =
+    chatIsRunning(conversation ?? null) ||
+    stream?.status === 'submitted' ||
+    stream?.status === 'streaming';
+  const messages = useConversationMessages(conversationId);
+  const replies = messages.items.flatMap((message) => {
+    if (message.role !== 'assistant') return [];
+    const content = message.parts
+      .flatMap((part) => (part.type === 'text' ? [part.text] : []))
+      .join('\n\n');
+    return content.trim() ? [{ message, content }] : [];
+  });
+  const assistant = useCrmChatAgents().data?.[0];
+  const name = assistant?.name ?? toText(text('agentChat.agent'));
   return (
     <div className='flex max-h-[min(70svh,40rem)] flex-col'>
       <div className='flex items-start gap-2 border-b border-border px-4 py-3'>
@@ -57,15 +66,20 @@ export function SearchAnswer({
           <ErrorNotice error={error} />
         ) : (
           <div className='flex flex-col gap-3'>
-            {replies.map((message) => (
+            {replies.map(({ message, content }) => (
               <AgentReply
                 key={message.id}
-                content={message.content.content}
-                at={message.createdAt}
+                content={content}
+                {...(message.metadata?.createdAt
+                  ? { at: message.metadata.createdAt }
+                  : {})}
               />
             ))}
-            {conversation?.run ? (
-              <LiveLine runId={conversation.run.id} agentName={name} />
+            {running && replies.length ? (
+              <LiveLine
+                step={liveStep(messages.items.at(-1))}
+                agentName={name}
+              />
             ) : !replies.length ? (
               <p
                 role='status'

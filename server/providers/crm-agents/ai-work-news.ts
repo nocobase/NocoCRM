@@ -1,4 +1,5 @@
 import type { Agents } from '@nocobase/app-plugin-agents/server/tokens';
+import type { AssistantWake } from './assistant.js';
 import { readEntry } from '../crm/ai-entries.js';
 import { takeAiWatch } from '../crm/ai-watches.js';
 import { latestReview } from '../crm/approval-review.js';
@@ -13,9 +14,9 @@ import type { CrmService } from '../crm/service.js';
 
 // How AI work an agent asked for from a conversation (`crm leads
 // request-follow-up` and its kin) reaches that conversation once its run
-// finishes: a notice the person sees, and an input that wakes the agent
-// with what the work came to, so it tells the person and proposes acting on
-// it. Work nobody asked for from a conversation has no watch and tells no
+// finishes: a notice the person sees, and what the work came to told to the
+// agent (an input that wakes a runner agent, the CRM's news for the
+// assistant, `wake`), so it tells the person and proposes acting on it. Work nobody asked for from a conversation has no watch and tells no
 // one here.
 
 const WORK: Record<string, { agent: string; read: string }> = {
@@ -34,6 +35,7 @@ const RESULT_LIMIT = 6000;
 export function deliverAiWork(
   agents: Agents,
   service: CrmService,
+  wake?: AssistantWake,
 ): (entryId: string) => Promise<void> {
   return async (entryId) => {
     const watch = await takeAiWatch(service.database, entryId);
@@ -83,6 +85,7 @@ export function deliverAiWork(
         },
       }),
     );
+    wake?.(watch.conversationId, text);
   };
 }
 
@@ -92,6 +95,7 @@ export function deliverAiWork(
 export async function deliverSignalCheck(
   agents: Agents,
   service: CrmService,
+  wake: AssistantWake | undefined,
   watch: { conversationId: string; companyId: string },
   outcome:
     | {
@@ -147,6 +151,7 @@ export async function deliverSignalCheck(
       },
     }),
   );
+  wake?.(watch.conversationId, text);
 }
 
 // A suggestion already made, put into the conversation that asks for it
@@ -210,17 +215,26 @@ async function inConversation(
   const rows = await service.database
     .query()
     .selectFrom('agConversationMessages')
-    .select(['metadata'])
+    .select(['metadata', 'content'])
     .where('conversationId', '=', conversationId)
     .where('role', '=', 'system')
     .execute();
+  type Notice = { type?: unknown; params?: { entryId?: unknown } };
+  const names = (notice: Notice | undefined) =>
+    notice?.type === 'aiWork' && notice.params?.entryId === entryId;
   return rows.some((row) => {
-    const metadata = jsonValue(row.metadata) as {
-      notice?: { type?: unknown; params?: { entryId?: unknown } };
-    } | null;
+    const metadata = jsonValue(row.metadata) as { notice?: Notice } | null;
+    // A native chat keeps it as a data part of the message it saves.
+    const original = (
+      jsonValue(row.content) as {
+        original?: { parts?: { type?: unknown; data?: Notice }[] };
+      } | null
+    )?.original;
     return (
-      metadata?.notice?.type === 'aiWork' &&
-      metadata.notice.params?.entryId === entryId
+      names(metadata?.notice) ||
+      (original?.parts ?? []).some(
+        (part) => part.type === 'data-notice' && names(part.data),
+      )
     );
   });
 }
@@ -261,6 +275,7 @@ async function titleFor(
 // company with them.
 export async function deliverCompanyProfile(
   agents: Agents,
+  wake: AssistantWake | undefined,
   conversationId: string,
   name: string,
   outcome:
@@ -300,4 +315,5 @@ export async function deliverCompanyProfile(
       },
     }),
   );
+  wake?.(conversationId, text);
 }

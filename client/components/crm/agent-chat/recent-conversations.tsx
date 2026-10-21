@@ -1,13 +1,12 @@
 import {
   AgentAvatar,
-  useAgentText,
   useChatPanel,
   useConversationList,
 } from '@nocobase/app-plugin-agents/client/chat';
 import { useState, type ReactElement } from 'react';
 import { Link } from 'react-router';
 import { relativeTime, toText, useCrmText } from '../api.js';
-import { listedConversations } from './ask.js';
+import { listedConversations, useAssistantName } from './ask.js';
 import { LastMessage } from './conversation-list.js';
 
 // How many conversations the overview shows.
@@ -20,7 +19,7 @@ const SHOWN = 4;
 // there is none, or while the list loads.
 export function RecentConversations(): ReactElement | null {
   const { text, language } = useCrmText();
-  const agentText = useAgentText();
+  const assistantName = useAssistantName();
   const panel = useChatPanel();
   const list = useConversationList({});
   const [now] = useState(() => Date.now());
@@ -44,8 +43,7 @@ export function RecentConversations(): ReactElement | null {
         {items.map((conversation) => {
           const title = conversation.title || text('agentChat.untitled');
           const unread = !conversation.read;
-          const agent =
-            agentText.name(conversation.agent) ?? text('agentChat.agent');
+          const agent = assistantName;
           return (
             <li key={conversation.id}>
               <button
@@ -82,7 +80,7 @@ export function RecentConversations(): ReactElement | null {
                     <span className='min-w-0 flex-1 truncate'>
                       <LastMessage
                         id={conversation.id}
-                        at={`${conversation.lastMessageAt}|${conversation.updatedAt}|${conversation.run?.id ?? ''}`}
+                        at={`${conversation.lastMessageAt}|${conversation.updatedAt}|${conversation.execution?.status ?? ''}`}
                         agent={agent}
                       />
                     </span>

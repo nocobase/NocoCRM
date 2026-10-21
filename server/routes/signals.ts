@@ -15,6 +15,7 @@ import {
   deliverCompanyProfile,
   deliverSignalCheck,
 } from '../providers/crm-agents/ai-work-news.js';
+import { assistantWake } from '../providers/crm-agents/assistant.js';
 import { runCommand, runConversationOf, type CrmEnv } from './context.js';
 import {
   CompanyProfile,
@@ -83,10 +84,15 @@ export function registerSignalRoutes(
       const input = c.req.valid('json');
       const { done } = await signals().startProfile(c.get('actor'), input);
       const conversationId = await runConversationOf(app, c.get('auth'));
-      const tell = (outcome: Parameters<typeof deliverCompanyProfile>[3]) =>
+      const tell = (outcome: Parameters<typeof deliverCompanyProfile>[4]) =>
         conversationId && app.container.has(agentsToken)
           ? deliverCompanyProfile(
               app.container.resolve(agentsToken),
+              assistantWake(
+                app,
+                app.container.resolve(crmToken),
+                app.container.resolve(agentsToken),
+              ),
               conversationId,
               input.name.trim(),
               outcome,
@@ -198,11 +204,16 @@ export function registerSignalRoutes(
       const companyId = c.req.param('companyId');
       const { done } = await signals().startCheck(c.get('actor'), companyId);
       const conversationId = await runConversationOf(app, c.get('auth'));
-      const tell = (outcome: Parameters<typeof deliverSignalCheck>[3]) =>
+      const tell = (outcome: Parameters<typeof deliverSignalCheck>[4]) =>
         conversationId && app.container.has(agentsToken)
           ? deliverSignalCheck(
               app.container.resolve(agentsToken),
               app.container.resolve(crmToken),
+              assistantWake(
+                app,
+                app.container.resolve(crmToken),
+                app.container.resolve(agentsToken),
+              ),
               { conversationId, companyId },
               outcome,
             )

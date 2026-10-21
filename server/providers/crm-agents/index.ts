@@ -1,5 +1,6 @@
 import { SEARCH_SOURCE } from './search-answers.js';
 import type { Application } from '@nocobase/app-server/application';
+import { loggingToken } from '@nocobase/app-server/logging';
 import {
   agentsAccessToken,
   agentsToken,
@@ -9,65 +10,32 @@ import { crmToken } from '../crm/index.js';
 import { crmPlansToken } from '../crm/plans/engine.js';
 import { deliverPlanOutcome } from './plan-news.js';
 import { deliverAiWork } from './ai-work-news.js';
-import { registerCrmSkill } from './skill.js';
+import { crmPlansSkill } from './skill.js';
 import { provisionSkills } from './library.js';
 import { SKILLS_DIR } from '../crm/ai-model.js';
-import {
-  nameWorkAgents,
-  renameWorkAgents,
-  provisionWorkAgents,
-  retireBackgroundAgent,
-} from './work-agents.js';
+import { adoptLegacyWorkAgents } from './work-agents.js';
+import { adoptLegacyConversations } from './legacy-conversations.js';
 import { registerContextKinds } from './context.js';
-import {
-  nameAssistant,
-  provisionAssistant,
-  refreshAssistantInstructions,
-  grantAssistantAction,
-  renameAssistant,
-} from './assistant.js';
+import { assistantWake, configureAssistant } from './assistant.js';
 import { crmConversationRules } from './rules.js';
 import { databaseManagerToken } from '@nocobase/db';
 import type { CrmSettings } from '../crm/schema.js';
 import { provisionModelServices } from './model-services.js';
-import {
-  agentActionOptions,
-  AI_WORK_ACTION,
-  COLLEAGUES_ACTION,
-  COMMENT_ACTION,
-  PLAN_ACTION,
-  recordAction,
-  SEARCH_ACTION,
-} from './actions.js';
+import { AGENT_ACTIONS, agentActionOptions } from './actions.js';
 import { crmActionGate, crmAgentsAccess } from './gate.js';
-import { CRM_ASSISTANT_INSTRUCTIONS } from './preset.js';
-import { entities } from '../crm/schema.js';
+import { assistantInstructions } from './preset.js';
 
-// The actions a CRM agent starts from: view, create and edit on each object,
-// search, colleagues, comments, plans and setting the AI agents to work on
-// a record (deleting and deciding approvals are
-// never granted, actions.ts).
-const PRESET_ACTIONS: readonly string[] = [
-  ...entities.flatMap((entity) => [
-    recordAction(entity, 'view'),
-    recordAction(entity, 'create'),
-    recordAction(entity, 'edit'),
-  ]),
-  SEARCH_ACTION,
-  COLLEAGUES_ACTION,
-  COMMENT_ACTION,
-  PLAN_ACTION,
-  AI_WORK_ACTION,
-];
-
-// The CRM on the Agents plugin: the business actions an agent may be given
-// and who holds them, the preset a CRM agent starts from and the assistant
-// made from it (assistant.ts), the rules and skills every conversation gets,
-// what a page context may name, and where conversations start. The CRM's
-// commands are its own API routes (`cliRoute` on server/routes); writes a
-// run asks for become plans a person confirms (server/providers/crm/plans).
-// The CRM's background AI (follow-ups, reviews, captures) asks the plugin's
-// model gateway (server/providers/crm/ai-model.ts).
+// The CRM on the Agents plugin: the assistant people talk to, a native chat
+// with the CRM's tools (assistant.ts); the business actions an agent may be
+// given and who holds them; the instructions, rules and actions every agent
+// discovered from runners gets, which reaches the CRM through its CLI; what
+// a page context may name; and where conversations start. The CRM's
+// commands are its own API routes (`runCommand` on server/routes); writes
+// an agent asks for become plans a person confirms
+// (server/providers/crm/plans). The CRM's background AI (follow-ups,
+// reviews, captures) asks the plugin's model gateway
+// (server/providers/crm/ai-model.ts) with its work agents' settings
+// (work-agents.ts).
 export default class CrmAgentsProvider extends ServiceProvider<Application> {
   readonly name = 'crm-agents';
   // The settings the conversation rules read, which run where nothing may
@@ -87,19 +55,17 @@ export default class CrmAgentsProvider extends ServiceProvider<Application> {
     const service = this.app.container.resolve(crmToken);
     agents.actions.provide(agentActionOptions);
     agents.gate.set(crmActionGate(service));
-    // Every online run gets how to use the CRM's commands and plans.
-    registerCrmSkill(agents);
-    agents.presets.register({
-      key: 'crm-assistant',
-      name: 'CRM assistant',
-      description:
-        'Looks records up across the CRM and proposes changes as plans the person confirms.',
-      nameText: { key: 'crm.agentPreset.name', ns: 'crm' },
-      descriptionText: { key: 'crm.agentPreset.description', ns: 'crm' },
-      instructions: CRM_ASSISTANT_INSTRUCTIONS,
-      type: 'online',
-      actions: [...PRESET_ACTIONS],
-    });
+    configureAssistant(this.app, agents, service, () => this.settings);
+    // An agent a runner reports works on the CRM as the assistant does,
+    // through the CLI in its shell.
+    agents.agents.setDefaults(() => ({
+      instructions: `${assistantInstructions('shell')}\n\n${crmPlansSkill(
+        'shell',
+      )
+        .replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/u, '')
+        .trim()}`,
+      actions: [...AGENT_ACTIONS],
+    }));
     agents.conversations.rules.provide(
       crmConversationRules(() => this.settings),
     );
@@ -108,13 +74,15 @@ export default class CrmAgentsProvider extends ServiceProvider<Application> {
       service,
       this.app.publicBasePath.replace(/\/+$/, ''),
     );
-    // What became of a plan goes back to the conversation that proposed it.
+    // What became of a plan, or of the AI work a conversation asked for,
+    // goes back to that conversation, and its assistant is told.
+    const wake = assistantWake(this.app, service, agents);
     this.app.container.resolve(crmPlansToken).onDecided = deliverPlanOutcome(
       agents,
       service,
+      wake,
     );
-    // What the AI agents did on a conversation's asking goes back to it.
-    service.aiFinished = deliverAiWork(agents, service);
+    service.aiFinished = deliverAiWork(agents, service, wake);
     agents.conversations.sources.register({
       key: 'crm',
       title: { key: 'crm.agentConversationSource', ns: 'crm' },
@@ -130,6 +98,7 @@ export default class CrmAgentsProvider extends ServiceProvider<Application> {
     if (!this.app.container.has(agentsToken)) return;
     const agents = this.app.container.resolve(agentsToken);
     const service = this.app.container.resolve(crmToken);
+    const database = this.app.container.resolve(databaseManagerToken);
     this.settings = await service.settings();
     const saved = service.settingsSaved;
     service.settingsSaved = (settings) => {
@@ -137,49 +106,33 @@ export default class CrmAgentsProvider extends ServiceProvider<Application> {
       saved?.(settings);
     };
     await provisionModelServices(this.app, agents);
-    await provisionAssistant(
-      agents,
-      this.app.container.resolve(databaseManagerToken),
-      PRESET_ACTIONS,
-    );
-    await renameAssistant(
-      agents,
-      this.app.container.resolve(databaseManagerToken),
-    );
-    await nameAssistant(this.app.container.resolve(databaseManagerToken));
-    await refreshAssistantInstructions(
-      agents,
-      this.app.container.resolve(databaseManagerToken),
-    );
-    // The assistant made before it could set the agents to work.
-    await grantAssistantAction(
-      agents,
-      this.app.container.resolve(databaseManagerToken),
-      AI_WORK_ACTION,
-      'crm-ai-work-action-v1',
-    );
     await provisionSkills(
       agents,
-      this.app.container.resolve(databaseManagerToken),
+      database,
       // Beside the compiled server, as the background runs read them: a
       // host may start the application from another root (NocoBase Studio).
       SKILLS_DIR,
     );
-    // After the skills, which each is given its own of.
-    await provisionWorkAgents(
+    // The work agents' settings from the plugin's agents of an earlier
+    // release, once.
+    await adoptLegacyWorkAgents(database).catch((error: unknown) => {
+      this.app.container
+        .resolve(loggingToken)
+        .getLogger('crm-agents')
+        .warn({ error }, 'work agent settings not adopted');
+    });
+    // The conversations with the earlier assistant, carried over once.
+    await adoptLegacyConversations(
       agents,
-      this.app.container.resolve(databaseManagerToken),
-    );
-    // Those made before their names were translated.
-    await renameWorkAgents(
-      agents,
-      this.app.container.resolve(databaseManagerToken),
-    );
-    await nameWorkAgents(this.app.container.resolve(databaseManagerToken));
-    // The Background AI they replaced, gone with its recorded use.
-    await retireBackgroundAgent(
-      agents,
-      this.app.container.resolve(databaseManagerToken),
-    );
+      service,
+      this.app.container.resolve(loggingToken).getLogger('crm-agents'),
+    ).catch((error: unknown) => {
+      this.app.container
+        .resolve(loggingToken)
+        .getLogger('crm-agents')
+        .warn({ error }, 'conversations not carried over');
+    });
+    // The discovered agents made before these defaults get them too.
+    await agents.agents.applyDefaults().catch(() => 0);
   }
 }

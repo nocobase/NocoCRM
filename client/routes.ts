@@ -13,7 +13,6 @@ import {
   usageRoute,
 } from '@nocobase/app-plugin-agents/client/routes';
 import {
-  Bot,
   BookOpen,
   Cpu,
   Gauge,
@@ -313,10 +312,10 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         navigation: { title: 'crm.navigation.guidance', icon: ScrollText },
         componentLoader: () => import('./pages/crm-guidance.js'),
       },
-      {
-        ...crmStyled(agentsRoute),
-        navigation: { title: 'crm.navigation.agentList', icon: Bot },
-      },
+      // The agents runners report (coding tools), which the CRM does not
+      // use since the Agents plugin 1.0: off the menu, kept as a route so
+      // the page grants stored for it stay valid.
+      crmStyled(agentsRoute),
       {
         ...crmStyled(skillsRoute),
         navigation: { title: 'crm.navigation.skills', icon: BookOpen },

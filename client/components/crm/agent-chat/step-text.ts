@@ -1,4 +1,7 @@
-import type { StepLine } from '@nocobase/app-plugin-agents/client/chat';
+import type {
+  AppUIMessage,
+  StepLine,
+} from '@nocobase/app-plugin-agents/client/chat';
 
 // What the agent's run is doing, in the person's words rather than the
 // command it runs: the plugin sums a run up as thinking, reading or working
@@ -62,4 +65,26 @@ export function stepWords(line: StepLine): StepWords {
   if (verb === 'summary' || verb === 'statistics')
     return { key: 'summary', values: { object } };
   return { key: 'read', values: { object } };
+}
+
+// What the assistant is doing now, from the last step of the reply it is
+// writing: a command it runs (the `crm` tool's first line), reading a
+// method skill, else thinking.
+export function liveStep(message: AppUIMessage | undefined): StepLine {
+  if (message?.role !== 'assistant') return { kind: 'thinking' };
+  const part = message.parts.at(-1);
+  if (!part) return { kind: 'thinking' };
+  if (part.type === 'tool-crm_skill')
+    return { kind: 'reading', subject: 'skill' };
+  if (part.type === 'tool-crm') {
+    const lines = (part.input as { lines?: unknown } | undefined)?.lines;
+    const line = Array.isArray(lines) ? String(lines[0] ?? '') : '';
+    return line
+      ? {
+          kind: 'reading',
+          subject: /^crm\s/u.test(line) ? line : `crm ${line}`,
+        }
+      : { kind: 'reading', subject: 'crm' };
+  }
+  return { kind: 'thinking' };
 }

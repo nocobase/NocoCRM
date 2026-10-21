@@ -329,6 +329,21 @@ export const crmIdID: CrmWording = {
     model: 'Model: {{model}}',
     defaultModel: 'Model: default',
     setUpAgent: 'Atur model dan instruksinya',
+    setup: {
+      title: 'Siapkan {{name}}',
+      description:
+        'Model yang ditanyai agen ini dan instruksi pembuka setiap prosesnya.',
+      model: 'Model',
+      defaultModel: 'Bawaan ({{model}})',
+      modelHint:
+        'Model yang bernalar panjang membuat setiap proses lambat; model cepat sudah cukup.',
+      modelHintSignals:
+        'Ia mencari di web dengan model ini: pilih model dari penyedia yang bisa mencari (DeepSeek, Qwen, OpenAI, Anthropic, Google).',
+      instructions: 'Instruksi',
+      instructionsHint:
+        'Dalam bahasa Inggris, seperti prompt CRM lainnya; agen menulis dalam bahasa kerja AI.',
+      restore: 'Pulihkan bawaan',
+    },
     byAgent:
       'Dijalankan oleh {{agent}}. Ia hanya memberi saran: penanggung jawab memutuskan di kotak masuk apakah akan menerimanya.',
     byAgentTasks:
@@ -1480,9 +1495,8 @@ export const crmIdID: CrmWording = {
       'Tanyakan kepada Agent tentang data Anda; perubahan yang diusulkannya dijalankan setelah Anda mengonfirmasinya.',
     nothingOpen: 'Pilih percakapan atau mulai yang baru',
     noAgent: 'Belum ada Agent',
-    noAgentDescription:
-      'Buat satu dari preset Asisten CRM di Pengaturan → Tim Agent.',
-    manageAgents: 'Kelola Agent',
+    noAgentDescription: 'Siapkan layanan model di Tim agen → Model.',
+    manageAgents: 'Siapkan model',
     agent: 'Agent',
     placeholder: 'Tanya Agent…',
     send: 'Kirim',
@@ -1520,6 +1534,11 @@ export const crmIdID: CrmWording = {
     notFound: 'Percakapan ini tidak ada.',
     backToList: 'Kembali ke percakapan',
     retry: 'Coba lagi',
+    outcome: {
+      failed: 'Jawaban tidak selesai.',
+      cancelled: 'Jawaban dihentikan.',
+      interrupted: 'Jawaban terputus.',
+    },
     offline: {
       agentMissing: 'Agent ini sudah tidak ada',
       agentArchived: 'Agent ini diarsipkan',
@@ -1527,6 +1546,7 @@ export const crmIdID: CrmWording = {
       noRunner:
         'Saat ini tidak ada runner yang dapat menjalankannya untuk Anda',
       modelUnavailable: 'Belum ada model AI yang disiapkan',
+      noModel: 'Belum ada model AI yang disiapkan',
     },
   },
   plans: {
@@ -2113,6 +2133,7 @@ export const crmIdID: CrmWording = {
         'crm-agent-chat': 'Percakapan Agent',
         'crm-record': 'Halaman data',
         'crm-decisions': 'Saran AI',
+        agents: 'Agen runner',
         scheduler: {
           schedules: 'Tugas terjadwal',
         },

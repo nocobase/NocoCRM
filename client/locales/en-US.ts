@@ -1,7 +1,11 @@
 import type { LocaleResource } from '@nocobase/i18n';
 
 import { crmEn } from './crm/index.js';
-import systemEnUS from './system/en-US.js';
+import systemEnUSWithSettings from './system/en-US.js';
+
+// The template's Settings pages (client/pages/settings/routes.ts) are not part of the CRM, which has its own; their copy,
+// `settings`, is left out so the other languages need not translate it.
+const { settings: _templateSettings, ...systemEnUS } = systemEnUSWithSettings;
 
 const enUS = {
   // The template's own copy: the shell, the sign-in pages, shared components and the homepage. Keep it in

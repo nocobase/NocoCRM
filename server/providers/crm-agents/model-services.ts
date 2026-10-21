@@ -39,7 +39,7 @@ export async function provisionModelServices(
   let existing: Set<string>;
   try {
     existing = new Set(
-      (await agents.online.services.list()).map((service) => service.name),
+      (await agents.models.services.list()).map((service) => service.name),
     );
   } catch {
     return;
@@ -67,7 +67,7 @@ export async function provisionModelServices(
       // Created under its key, which the plugin makes its name from and
       // agents name it by, then given the title config.yml writes it under
       // (OpenAI rather than openai); the name never changes with the title.
-      const created = await agents.online.services.create({
+      const created = await agents.models.services.create({
         title: name,
         provider: provider as never,
         baseUrl,
@@ -78,7 +78,7 @@ export async function provisionModelServices(
         })),
       });
       if (service.title && service.title !== created.title)
-        await agents.online.services.update(created.name, {
+        await agents.models.services.update(created.name, {
           title: service.title,
         });
     } catch (error) {

@@ -94,12 +94,24 @@ export function fakeModel(
   const calls: ModelCall[] = [];
   const warnings: unknown[] = [];
   container.instance(agentsToken, {
-    chat: { settings: async () => ({ defaultAgentId: null }) },
-    agents: { get: async () => Promise.reject(new Error('none')) },
-    online: {
+    models: {
       gateway: {
         catalog: async () => ({
-          services: [],
+          services: [
+            {
+              name: 'test',
+              title: 'Test',
+              provider: 'test',
+              models: [
+                {
+                  value: 'test-model',
+                  label: 'Test model',
+                  kind: 'chat',
+                  dimensions: null,
+                },
+              ],
+            },
+          ],
           defaultModel: { modelService: 'test', model: 'test-model' },
         }),
         languageModel: async (model: unknown) =>

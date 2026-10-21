@@ -1,11 +1,11 @@
-import { createHash } from 'node:crypto';
-import type { Agents } from '@nocobase/app-plugin-agents/server/tokens';
+import type { CommandMode } from './rules.js';
 
-// The skill every online run gets on the CRM: how its commands are found and
-// how a change is proposed as a plan. Prompt text, in English like the
+// How every agent on the CRM finds things with its commands and proposes a
+// change as a plan: part of the assistant's system prompt (assistant.ts) and
+// of the instructions agents discovered from runners get (index.ts). Prompt text, in English like the
 // CRM's other prompts. The command help (`crm docs <command>`) states every
 // field; this says what the help cannot: the plan's shape and its rules.
-export const CRM_PLANS_SKILL = `---
+export const crmPlansSkill = (mode: CommandMode): string => `---
 name: crm-plans
 description: How to look records up in the CRM with its commands, and how to propose changes to them as one plan the person confirms.
 ---
@@ -43,12 +43,11 @@ The CRM's own agents do their work in the background, as their cards' buttons ha
 
 ## Changing things: one plan
 
-You never change a record directly. Every write command answers PLAN_REQUIRED. Put the whole change into **one** plan, write it to a file and run:
-
-\`\`\`
-crm plan create --file /tmp/plan.json
-\`\`\`
-
+You never change a record directly. Every write command answers PLAN_REQUIRED. Put the whole change into **one** plan, ${
+  mode === 'shell'
+    ? 'write it to a file and run:\n\n```\ncrm plan create --file /tmp/plan.json\n```\n'
+    : "and run `crm plan create` with the plan as the command's `body`:\n"
+}
 \`\`\`json
 {
   "title": "Add Acme and its buyer, and plan the first call",
@@ -91,18 +90,6 @@ Steps (\`op\` and its \`params\`):
 - When the person decides, you are told: carried out, declined, failed at a step, or stale because a record changed meanwhile. Report it briefly; propose a new plan only if they still want the change.
 - Deleting records is never part of a plan.
 `;
-
-export function registerCrmSkill(agents: Agents): () => void {
-  return agents.online.skills.register({
-    slug: 'crm-plans',
-    name: 'crm-plans',
-    description:
-      'How to look records up in the CRM with its commands, and how to propose changes to them as one plan the person confirms.',
-    hash: createHash('sha256').update(CRM_PLANS_SKILL).digest('hex'),
-    markdown: CRM_PLANS_SKILL,
-    files: [],
-  });
-}
 
 // The CRM's method skills (ai/skills: lead follow-up, opportunity
 // follow-up, approval review, task preparation, company signals): the

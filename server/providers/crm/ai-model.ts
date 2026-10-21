@@ -5,10 +5,9 @@ import { agentsToken } from '@nocobase/app-plugin-agents/server/tokens';
 import { idGeneratorToken } from '@nocobase/app-server/id-generator';
 import { databaseManagerToken } from '@nocobase/db';
 import type { ServiceResolver } from '@nocobase/service-provider';
-import { BACKGROUND_MARKER } from '../crm-agents/background.js';
 import {
   WORK_AGENTS,
-  WORK_AGENTS_MARKER,
+  workAgentRun,
   type Work,
 } from '../crm-agents/work-agents.js';
 import { generateText, type LanguageModelUsage } from 'ai';
@@ -20,88 +19,20 @@ import { CrmError, toText } from './schema.js';
 // the captures, the merge proposals and the feedback write-ups ask the
 // Agents plugin's model gateway's language models, which keep the keys,
 // with their reasoning turned off (generateQuietly), the use recorded in
-// the plugin's usage table under the agent's name. Each call is a work's
-// (crm-agents/work-agents.ts: the lead and opportunity follow-ups, approval
-// review, task preparation, company signals), and the work's agent is how
-// an administrator configures it: its first model is the one asked and its
-// instructions open the system prompt; without it (archived, deleted, or
-// listing no model) the Background AI an installation from before still
-// has, else the people's default chat agent's first model, else the system
-// default chat model. A run is a session of turns, each one call: a reply
-// in another shape than asked is asked once more with what came before.
-// Results are JSON in the reply, checked against the shape the caller
-// gives; the gateway's `generate` has no structured output of its own.
+// the plugin's usage table under the work agent's name. Each call is a
+// work's (crm-agents/work-agents.ts: the lead and opportunity follow-ups,
+// approval review, task preparation, company research), whose settings on
+// the Agent work page are how an administrator configures it: the model
+// asked, and the instructions that open the system prompt. A run is a
+// session of turns, each one call: a reply in another shape than asked is
+// asked once more with what came before. Results are JSON in the reply,
+// checked against the shape the caller gives; the gateway's `generate` has
+// no structured output of its own.
 
 // Who the usage page records a work's use as: its agent, by name.
 export const sourceOf = (work: Work): string => WORK_AGENTS[work].name;
 
 type ModelRef = { modelService: string; model: string };
-type AgentSettings = { model: ModelRef | null; instructions: string };
-
-// An agent as the work follows it: its first model, when it lists one, and
-// its instructions; null when it is archived, deleted or unreadable.
-async function agentSettings(
-  container: ServiceResolver,
-  agentId: unknown,
-): Promise<AgentSettings | null> {
-  if (typeof agentId !== 'string' || !agentId) return null;
-  try {
-    const agent = await container.resolve(agentsToken).agents.get(agentId);
-    if (agent.archivedAt) return null;
-    const entry = agent.modelEntries[0];
-    return {
-      model:
-        entry && 'modelService' in entry
-          ? { modelService: entry.modelService, model: entry.model }
-          : null,
-      instructions: (agent.instructions ?? '').trim(),
-    };
-  } catch {
-    return null;
-  }
-}
-
-// The value a marker row keeps.
-async function markerValue(
-  container: ServiceResolver,
-  id: string,
-): Promise<Record<string, unknown> | null> {
-  if (!container.has(databaseManagerToken)) return null;
-  try {
-    const row = await container
-      .resolve(databaseManagerToken)
-      .query()
-      .selectFrom('crmSettings')
-      .select('value')
-      .where('id', '=', id)
-      .executeTakeFirst();
-    const value: unknown =
-      typeof row?.value === 'string' ? JSON.parse(row.value) : row?.value;
-    return value && typeof value === 'object'
-      ? (value as Record<string, unknown>)
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-// The agent a work follows: its own, else the Background AI an
-// installation from before has not yet had replaced.
-async function workAgent(
-  container: ServiceResolver,
-  work: Work,
-): Promise<AgentSettings | null> {
-  if (!container.has(agentsToken)) return null;
-  const ids = (await markerValue(container, WORK_AGENTS_MARKER))?.agentIds as
-    Record<string, unknown> | undefined;
-  return (
-    (await agentSettings(container, ids?.[work])) ??
-    (await agentSettings(
-      container,
-      (await markerValue(container, BACKGROUND_MARKER))?.agentId,
-    ))
-  );
-}
 
 // The model a work's run answers with and the instructions it opens with,
 // or null when there is no model to ask (no agents plugin, no enabled chat
@@ -111,28 +42,13 @@ async function crmRun(
   work: Work,
 ): Promise<{ model: ModelRef; instructions: string } | null> {
   if (!container.has(agentsToken)) return null;
-  const agents = container.resolve(agentsToken);
-  const own = await workAgent(container, work);
-  const instructions = own?.instructions ?? '';
-  if (own?.model) return { model: own.model, instructions };
-  try {
-    const { defaultAgentId } = await agents.chat.settings();
-    if (defaultAgentId) {
-      const agent = await agents.agents.get(defaultAgentId);
-      const entry = agent.archivedAt ? undefined : agent.modelEntries[0];
-      if (entry && 'modelService' in entry)
-        return {
-          model: { modelService: entry.modelService, model: entry.model },
-          instructions,
-        };
-    }
-  } catch {
-    // No default agent to read: the system default below.
-  }
-  const catalog = await agents.online.gateway.catalog('chat');
-  return catalog.defaultModel
-    ? { model: catalog.defaultModel, instructions }
-    : null;
+  return workAgentRun(
+    container.resolve(agentsToken),
+    container.has(databaseManagerToken)
+      ? container.resolve(databaseManagerToken)
+      : null,
+    work,
+  );
 }
 
 // The model a work's run answers with, or null when there is none to ask.
@@ -205,7 +121,7 @@ async function generateQuietly(
   const { model, system, prompt, source, signal } = request;
   const languageModel = await container
     .resolve(agentsToken)
-    .online.gateway.languageModel(model);
+    .models.gateway.languageModel(model);
   const ask = (quiet: boolean) =>
     generateText({
       model: languageModel,

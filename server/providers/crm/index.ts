@@ -237,10 +237,10 @@ export default class CrmProvider extends ServiceProvider<Application> {
                 service: model.modelService,
                 model: model.model,
                 apiKey,
-                languageModel: () => agents.online.gateway.languageModel(model),
+                languageModel: () => agents.models.gateway.languageModel(model),
               };
             const provider =
-              (await agents.online.services.list().catch(() => [])).find(
+              (await agents.models.services.list().catch(() => [])).find(
                 (service) => service.name === model.modelService,
               )?.provider ?? 'unknown';
             return {
@@ -248,7 +248,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
               service: model.modelService,
               model: model.model,
               provider,
-              languageModel: () => agents.online.gateway.languageModel(model),
+              languageModel: () => agents.models.gateway.languageModel(model),
             };
           },
           // A signal worth acting on reaches the company's open deals

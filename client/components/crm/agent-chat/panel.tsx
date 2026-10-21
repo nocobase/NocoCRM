@@ -40,6 +40,7 @@ import {
 } from '../record-drawer.js';
 import { useAgentReadiness, useCrmChatAgents } from './ask.js';
 import { Conversation } from './conversation.js';
+import { settlePanelOwner } from './panel-owner.js';
 import { ConversationList } from './conversation-list.js';
 
 // The CRM assistant's panel on the Agents plugin: the assistant's conversations
@@ -64,9 +65,18 @@ export function CrmAgentChatProvider({
 }): ReactElement {
   // The chat exists only for a signed-in person: signed out, its shortcut,
   // links and queries do nothing.
-  const signedIn = Boolean(useLiveSessionUserId());
+  const userId = useLiveSessionUserId();
+  const signedIn = Boolean(userId);
+  // One chat for each person who signs in (the plugin leaves it to the
+  // application): what the panel kept for the one before (its open
+  // conversation, in the tab's session storage) and the chat's cache go
+  // before the next mounts, so the next person never lands on a
+  // conversation that is not theirs. Idempotent, so it may run in render,
+  // which it must: the provider reads the stored state as it mounts.
+  settlePanelOwner(userId ?? null);
   return (
     <ChatProvider
+      key={userId ?? 'signed-out'}
       available={signedIn}
       conversationPath={(id) => `/agent-chat/${encodeURIComponent(id)}`}
     >

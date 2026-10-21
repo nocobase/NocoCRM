@@ -28,6 +28,7 @@ import {
   capability,
   conditions,
   outputFields,
+  requireCapability,
 } from '../providers/crm/authorization.js';
 import { agenda, dashboard } from '../providers/crm/dashboard.js';
 import {
@@ -40,10 +41,14 @@ import { searchPlaces, subdivisions } from '../providers/crm/geography.js';
 import { companySignalsToken } from '../providers/crm/company-signals.js';
 import { crmToken } from '../providers/crm/index.js';
 import { jsonValue } from '../providers/crm/values.js';
-import { BACKGROUND_MARKER } from '../providers/crm-agents/background.js';
 import {
-  workAgentIds,
+  chatModels,
+  saveWorkAgent,
   workAgentNames,
+  workAgentRun,
+  workAgentSettings,
+  workInstructions,
+  type Work,
 } from '../providers/crm-agents/work-agents.js';
 import { SKILLS_MARKER } from '../providers/crm-agents/library.js';
 import { pendingDecisions } from '../providers/crm/lead-evaluation.js';
@@ -85,6 +90,8 @@ import {
   AgentQuery,
   AgentSwitchesSchema,
   AgentSwitchInput,
+  WorkAgentSetup,
+  WorkAgentSetupInput,
   Attachment,
   AttachmentParams,
   AttachmentsQuery,
@@ -246,28 +253,14 @@ export function registerWorkspaceRoutes(
           // Which of the agents' triggers are on, so a form offers "AI
           // follows up at once" only while that would happen (agents.ts).
           agents: await agentSwitches(service),
-          // The agent the CRM's background work runs on (background.ts),
-          // which nobody chats with: the chat leaves it out of its agents.
-          backgroundAgent:
-            toText(
-              (
-                jsonValue(
-                  (
-                    await service.database
-                      .query()
-                      .selectFrom('crmSettings')
-                      .select('value')
-                      .where('id', '=', BACKGROUND_MARKER)
-                      .executeTakeFirst()
-                  )?.value,
-                ) as { agentId?: unknown } | null
-              )?.agentId ?? '',
-            ) || null,
-          // The work agents' ids, by work (work-agents.ts), which the chat
-          // leaves out and the Auto follow-up page links to.
-          workAgents: await workAgentIds(service.database),
-          // Their names, which the dialogs doing their work show.
-          workAgentNames: await workAgentNames(service.database),
+          // The work agents' names, which the dialogs doing their work
+          // show, and the model each asks (work-agents.ts).
+          workAgentNames: await workAgentNames(
+            app.container.has(agentsToken)
+              ? app.container.resolve(agentsToken)
+              : null,
+            service.database,
+          ),
           // The library ids of the CRM's method skills, by name (library.ts),
           // so the agents' pages link to each on the Skills page.
           methodSkills: Object.fromEntries(
@@ -912,6 +905,82 @@ export function registerWorkspaceRoutes(
           c.req.valid('json'),
         ),
       }),
+  );
+
+  // A work agent's setup on the Agent work page: the model it asks and the
+  // instructions its runs open with (work-agents.ts), for whoever manages
+  // the settings.
+  const setupOf = async (agent: Work) => {
+    const settings = (await workAgentSettings(service.database))[agent];
+    const run = app.container.has(agentsToken)
+      ? await workAgentRun(
+          app.container.resolve(agentsToken),
+          service.database,
+          agent,
+        ).catch(() => null)
+      : null;
+    const defaultInstructions = workInstructions(agent);
+    return {
+      model: settings?.model ?? null,
+      effectiveModel: run?.model ?? null,
+      instructions: settings?.instructions ?? defaultInstructions,
+      defaultInstructions,
+      custom: Boolean(settings?.instructions),
+    };
+  };
+  router.get(
+    '/aiAgents/:agent/setup',
+    describeRoute({
+      tags: ['Ai'],
+      summary: "Get an AI agent's setup",
+      operationId: 'getAiAgentSetup',
+      description: settingsOnly,
+      responses: {
+        '200': dataResponse(WorkAgentSetup),
+        ...apiErrorResponses,
+      },
+    }),
+    apiValidator('param', AgentParams),
+    async (c) => {
+      await requireCapability(c.get('actor'), 'manage', 'settings');
+      return c.json({ data: await setupOf(c.req.valid('param').agent) });
+    },
+  );
+  router.put(
+    '/aiAgents/:agent/setup',
+    describeRoute({
+      tags: ['Ai'],
+      summary: "Set up an AI agent's model and instructions",
+      operationId: 'updateAiAgentSetup',
+      description: `${settingsOnly} A model no enabled service offers is refused (\`invalidInput\`, field \`model\`).`,
+      responses: {
+        '200': dataResponse(WorkAgentSetup),
+        ...apiErrorResponses,
+      },
+    }),
+    apiValidator('param', AgentParams),
+    apiValidator('json', WorkAgentSetupInput),
+    async (c) => {
+      await requireCapability(c.get('actor'), 'manage', 'settings');
+      const { agent } = c.req.valid('param');
+      const input = c.req.valid('json');
+      if (input.model) {
+        const chosen = input.model;
+        const offered = app.container.has(agentsToken)
+          ? await chatModels(app.container.resolve(agentsToken))
+          : [];
+        if (
+          !offered.some(
+            (model) =>
+              model.modelService === chosen.modelService &&
+              model.model === chosen.model,
+          )
+        )
+          throw new CrmError('invalidInput', 400, 'model');
+      }
+      await saveWorkAgent(service.database, agent, input);
+      return c.json({ data: await setupOf(agent) });
+    },
   );
 
   // Attachments: uploading them, their names, and their content.

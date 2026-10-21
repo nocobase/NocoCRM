@@ -10,6 +10,10 @@ const jaJP: AppResource = {
   'auth.passwordResetSuccess':
     'パスワードがリセットされました。新しいパスワードでログインしてください。',
   'auth.requestNewResetLink': 'リセットリンクを再申請',
+  'auth.preparingSession': 'セッションを準備しています…',
+  'auth.connectionFailed': '接続できません',
+  'auth.connectionFailedDescription':
+    'リアルタイム接続を準備できませんでした。再試行してアプリに入るか、ログアウトしてください。',
   'deviceApproval.title': 'デバイスを認可',
   'deviceApproval.description':
     'コマンドラインまたは別のデバイスが、あなたとしてログインしようとしています。ご自身でログインを開始した場合にのみ承認してください。',
