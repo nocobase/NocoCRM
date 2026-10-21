@@ -37,11 +37,7 @@ const TABS: readonly Tab[] = [
     icon: Workflow,
   },
   { path: 'users', label: 'navigation.users', icon: UsersRound },
-  {
-    path: 'permission-sets',
-    label: 'navigation.permissionSets',
-    icon: ShieldUser,
-  },
+  { path: 'roles', label: 'navigation.roles', icon: ShieldUser },
   { path: 'api-keys', label: 'navigation.apiKeys', icon: KeyRound },
   {
     path: 'scheduled-tasks',
@@ -71,7 +67,7 @@ export default function SettingsPage(): ReactElement {
       action: 'manage',
     }),
     users: useCan({ resource: { type: 'user', id: '*' }, action: 'read' }),
-    'permission-sets': useCan({
+    roles: useCan({
       resource: { type: 'settings', id: 'authorization.permission-sets' },
       action: 'read',
     }),

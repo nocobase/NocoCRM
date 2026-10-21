@@ -41,14 +41,14 @@ import {
   FormDialog,
   LoadFailure,
   TextField,
-} from '../shared.js';
+} from '../common/shared.js';
 import {
   errorReason,
   errorStatus,
   useAdminText,
   useFormState,
   useLocalized,
-} from '../hooks.js';
+} from '../common/hooks.js';
 import type { ApiKeysOutletContext } from './index.js';
 
 const FORM_ID = 'settings-api-key-new';

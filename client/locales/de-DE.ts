@@ -1,5 +1,6 @@
 import type { AppResource } from './en-US.js';
 import { crmDeDE } from './crm/de-DE.js';
+import settingsDeDE from './settings/de-DE.js';
 
 // The pages in de-DE: the template's copy (./system/), the AI skills'
 // display text and the CRM's own (./crm/de-DE.ts), with the same keys as
@@ -582,6 +583,8 @@ const deDE: AppResource = {
       },
     },
   },
+  // The template's Settings copy, translated in ./settings/.
+  settings: settingsDeDE,
   crm: crmDeDE,
 };
 

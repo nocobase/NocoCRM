@@ -1,5 +1,6 @@
 import type { AppResource } from './en-US.js';
 import { crmFrFR } from './crm/fr-FR.js';
+import settingsFrFR from './settings/fr-FR.js';
 
 // The pages in fr-FR: the template's copy (./system/), the AI skills'
 // display text and the CRM's own (./crm/fr-FR.ts), with the same keys as
@@ -578,6 +579,8 @@ const frFR: AppResource = {
       },
     },
   },
+  // The template's Settings copy, translated in ./settings/.
+  settings: settingsFrFR,
   crm: crmFrFR,
 };
 

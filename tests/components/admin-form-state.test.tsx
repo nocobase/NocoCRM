@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { useMemo } from 'react';
 import { expect, it } from 'vitest';
 import { z } from 'zod';
-import { useFormState } from '../../client/pages/settings/hooks.js';
+import { useFormState } from '../../client/pages/settings/common/hooks.js';
 
 // The administration dialogs validate on submit (guideline T3.3): nothing
 // shows while a form is first filled in; after a failed submit a change

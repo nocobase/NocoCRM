@@ -1796,6 +1796,7 @@ const wording = {
       record: ['Record pages', '记录详情页'],
       decisions: ['AI suggestions in the inbox', '收件箱的 AI 建议'],
       agents: ['Agent work', 'Agent 工作'],
+      runnerAgents: ['Agents (from runners)', 'Agent（来自运行器）'],
       reports: ['Reports', '报表'],
       agentChat: ['AI conversations', 'AI 对话'],
       whatsapp: ['WhatsApp', 'WhatsApp'],
@@ -2928,7 +2929,7 @@ const wording = {
     settings: ['Settings', '设置'],
     // The administration pages (client/pages/settings/).
     users: ['Users', '用户'],
-    permissionSets: ['Permission sets', '权限集'],
+    roles: ['Roles', '角色'],
     apiKeys: ['API keys', 'API 密钥'],
     scheduledTasks: ['Scheduled tasks', '定时任务'],
     // The Agents plugin's pages, in Settings (migration step 2).

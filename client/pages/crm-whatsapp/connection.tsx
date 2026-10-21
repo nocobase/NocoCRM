@@ -43,7 +43,7 @@ import {
 } from '../../components/crm/api.js';
 import { ConfirmDialog } from '../../components/crm/confirm-dialog.js';
 import { useBusinessZone } from '../../components/crm/whatsapp/api.js';
-import { LoadFailure, TextField } from '../settings/shared.js';
+import { LoadFailure, TextField } from '../settings/common/shared.js';
 
 // The WhatsApp connection (/whatsapp/connection, from the WhatsApp page's
 // "Manage connection", as the mail accounts are reached from the mailbox):

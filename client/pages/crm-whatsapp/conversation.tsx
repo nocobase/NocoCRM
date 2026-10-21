@@ -50,7 +50,7 @@ import {
   MessagesSkeleton,
   WhatsAppMessages,
 } from '../../components/crm/whatsapp/messages.js';
-import { ConfirmAction } from '../settings/shared.js';
+import { ConfirmAction } from '../settings/common/shared.js';
 import { WhatsAppFailure } from '../../components/crm/whatsapp/failure.js';
 
 // One conversation beside the list (/whatsapp/:conversationId): the

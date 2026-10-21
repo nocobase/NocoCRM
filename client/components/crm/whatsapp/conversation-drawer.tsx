@@ -6,7 +6,7 @@ import { useState, type ReactElement } from 'react';
 import { Link } from 'react-router';
 import { Button } from '#components/ui/button';
 import { Sheet, SheetContent, SheetTitle } from '#components/ui/sheet';
-import { LoadFailure } from '../../../pages/settings/shared.js';
+import { LoadFailure } from '../../../pages/settings/common/shared.js';
 import { toText, useCrmApi, useCrmText } from '../api.js';
 import {
   CONVERSATION_POLL_MS,

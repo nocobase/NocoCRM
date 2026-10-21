@@ -1,10 +1,6 @@
 import type { AppResource } from './en-US.js';
 import { crmZh } from './crm/index.js';
-import systemZhCNWithSettings from './system/zh-CN.js';
-
-// The template's Settings pages (client/pages/settings/routes.ts) are not part of the CRM, which has its own; their copy,
-// `settings`, is left out so the other languages need not translate it.
-const { settings: _templateSettings, ...systemZhCN } = systemZhCNWithSettings;
+import systemZhCN from './system/zh-CN.js';
 
 const zhCN: AppResource = {
   // The template's own copy; see `./en-US.ts`.

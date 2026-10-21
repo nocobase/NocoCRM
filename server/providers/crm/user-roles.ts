@@ -46,7 +46,6 @@ export async function holdsCrmRecords(
   }
   return false;
 }
-const USERS_I18N_NAMESPACE = '@nocobase/app-plugin-users';
 
 export function createCrmUserRoleScope(
   authorization: Pick<AppAuthorization, 'permissionSets'>,
@@ -88,8 +87,10 @@ export function createCrmUserRoleScope(
   return {
     key: 'app',
     label: 'Roles',
-    labelI18nKey: 'page.roles',
-    labelI18nNs: USERS_I18N_NAMESPACE,
+    // The CRM's own word: the users plugin's pages, and their `page.roles`,
+    // went with its 2.0.
+    labelI18nKey: 'crm.admin.users.fields.roles',
+    labelI18nNs: 'crm',
     selection: 'multiple',
     requiredOnCreate: true,
     hasAuthenticatedDefaultAccess: true,

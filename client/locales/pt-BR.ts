@@ -1,5 +1,6 @@
 import type { AppResource } from './en-US.js';
 import { crmPtBR } from './crm/pt-BR.js';
+import settingsPtBR from './settings/pt-BR.js';
 
 // The pages in pt-BR: the template's copy (./system/), the AI skills'
 // display text and the CRM's own (./crm/pt-BR.ts), with the same keys as
@@ -576,6 +577,8 @@ const ptBR: AppResource = {
       },
     },
   },
+  // The template's Settings copy, translated in ./settings/.
+  settings: settingsPtBR,
   crm: crmPtBR,
 };
 

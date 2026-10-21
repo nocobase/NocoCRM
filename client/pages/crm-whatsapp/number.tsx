@@ -16,7 +16,7 @@ import {
   useCrmApi,
   useCrmText,
 } from '../../components/crm/api.js';
-import { FormDialog, TextField } from '../settings/shared.js';
+import { FormDialog, TextField } from '../settings/common/shared.js';
 import type { Connection, ConnectionContext } from './connection.js';
 
 // Add a WhatsApp number (/whatsapp/connection/numbers/new) or change one

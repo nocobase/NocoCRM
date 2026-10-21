@@ -1,5 +1,6 @@
 import type { AppResource } from './en-US.js';
 import { crmViVN } from './crm/vi-VN.js';
+import settingsViVN from './settings/vi-VN.js';
 
 // The pages in vi-VN: the template's copy (./system/), the AI skills'
 // display text and the CRM's own (./crm/vi-VN.ts), with the same keys as
@@ -573,6 +574,8 @@ const viVN: AppResource = {
       },
     },
   },
+  // The template's Settings copy, translated in ./settings/.
+  settings: settingsViVN,
   crm: crmViVN,
 };
 

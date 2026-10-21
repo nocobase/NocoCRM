@@ -1,5 +1,6 @@
 import type { AppResource } from './en-US.js';
 import { crmEsES } from './crm/es-ES.js';
+import settingsEsES from './settings/es-ES.js';
 
 // The pages in es-ES: the template's copy (./system/), the AI skills'
 // display text and the CRM's own (./crm/es-ES.ts), with the same keys as
@@ -576,6 +577,8 @@ const esES: AppResource = {
       },
     },
   },
+  // The template's Settings copy, translated in ./settings/.
+  settings: settingsEsES,
   crm: crmEsES,
 };
 

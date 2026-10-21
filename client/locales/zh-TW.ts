@@ -1,5 +1,6 @@
 import type { AppResource } from './en-US.js';
 import { crmZhTW } from './crm/zh-TW.js';
+import settingsZhTW from './settings/zh-TW.js';
 
 // The pages in zh-TW: the template's copy (./system/), the AI skills'
 // display text and the CRM's own (./crm/zh-TW.ts), with the same keys as
@@ -545,6 +546,8 @@ const zhTW: AppResource = {
       },
     },
   },
+  // The template's Settings copy, translated in ./settings/.
+  settings: settingsZhTW,
   crm: crmZhTW,
 };
 

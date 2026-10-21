@@ -177,7 +177,8 @@
     "#lib/*": "./client/lib/*.js",
     "#extensions/nocobase-file-component-ui": "./client/extensions/nocobase-file-component-ui/index.js",
     "#extensions/*": "./client/extensions/*.js",
-    "#pages/*": "./client/pages/*.js"
+    "#pages/*": "./client/pages/*.js",
+    "#components/data-table": "./client/components/data-table/index.js"
   },
   "scripts": {
     "postinstall": "nocobase skills sync",

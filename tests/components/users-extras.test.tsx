@@ -1,0 +1,186 @@
+// What the CRM adds to NocoBase 3's prepared Users page
+// (client/pages/settings/accounts/): the Invite button, Reset password and
+// Delete in a row's menu, each offered only to whoever holds the users
+// plugin's action, and a deletion the CRM refuses saying why.
+import { apiClientToken } from '@nocobase/app-client';
+import {
+  AuthenticationProvider,
+  authenticationClientToken,
+} from '@nocobase/app-plugin-authentication/client';
+import {
+  AuthorizationClient,
+  authorizationClientToken,
+  type AuthorizationSnapshot,
+} from '@nocobase/app-plugin-authorization/client';
+import {
+  answerApi,
+  renderWithApp,
+  type ApiCall,
+} from '@nocobase/app-testing/client';
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { Route, Routes } from 'react-router';
+import { expect, it, vi } from 'vitest';
+import packageMetadata from '../../package.json' with { type: 'json' };
+import enUS from '../../client/locales/en-US.js';
+import UsersPage from '../../client/pages/settings/users.js';
+
+const alice = {
+  id: 'alice',
+  name: 'Alice',
+  email: 'alice@example.test',
+  disabledAt: null,
+  roleScopes: { app: ['crm-sales-manager'] },
+};
+const users = enUS.crm.admin.users;
+
+function setup(
+  permissions: AuthorizationSnapshot,
+  remove: () => Response | object = () => new Response(null, { status: 204 }),
+) {
+  const api = vi.fn(({ method, path }: ApiCall) => {
+    if (path === 'authorization/permissions') return { data: permissions };
+    if (path === 'users/options')
+      return {
+        data: {
+          roleScopes: [
+            {
+              key: 'app',
+              label: 'Roles',
+              selection: 'multiple',
+              requiredOnCreate: true,
+              options: [
+                {
+                  value: 'crm-sales-manager',
+                  label: 'crm-sales-manager',
+                  labelI18nKey: 'crm.options.sales-manager',
+                  labelI18nNs: packageMetadata.name,
+                },
+              ],
+            },
+          ],
+        },
+      };
+    if (path === 'users/invitations') return { data: [] };
+    if (method === 'DELETE' && path === 'users/alice') return remove();
+    if (path === 'users') return { data: [alice], meta: { total: 1 } };
+    return new Response(null, { status: 404 });
+  });
+  const view = renderWithApp(
+    <AuthenticationProvider>
+      <Routes>
+        <Route path='/settings/users' element={<UsersPage />} />
+      </Routes>
+    </AuthenticationProvider>,
+    {
+      route: '/settings/users',
+      namespace: packageMetadata.name,
+      namespaces: { [packageMetadata.name]: enUS },
+      fetch: answerApi(api),
+      services: (app) => {
+        app.container.instance(authenticationClientToken, {
+          getSession: async () => ({ data: null }),
+        });
+        app.container.singleton(
+          authorizationClientToken,
+          (resolver) =>
+            new AuthorizationClient(resolver.resolve(apiClientToken)),
+        );
+      },
+    },
+  );
+  return { api, view };
+}
+
+const everything: AuthorizationSnapshot = {
+  unrestricted: true,
+  permissions: [],
+};
+
+it('names roles by their labels and offers inviting, a password reset and deletion to whoever may', async () => {
+  const user = userEvent.setup();
+  setup(everything);
+  expect(await screen.findByRole('link', { name: 'Alice' })).toBeVisible();
+  // The role's label, not its key.
+  expect(await screen.findByText('Sales manager')).toBeVisible();
+  expect(
+    // Drawn as a button, as New user is, with the link's address.
+    (await screen.findByRole('button', { name: users.invite })).getAttribute(
+      'href',
+    ),
+  ).toContain('/settings/users/invite');
+  await user.click(screen.getByRole('button', { name: /Alice/ }));
+  const menu = await screen.findByRole('menu');
+  expect(
+    within(menu)
+      .getByRole('menuitem', { name: users.actions.password })
+      .getAttribute('href'),
+  ).toContain('/settings/users/alice/password');
+  expect(
+    within(menu).getByRole('menuitem', { name: users.actions.delete }),
+  ).toBeVisible();
+});
+
+it('deletes a user once confirmed, and says why when the CRM refuses', async () => {
+  const user = userEvent.setup();
+  let refuse = true;
+  const { api } = setup(everything, () =>
+    refuse
+      ? Response.json(
+          { error: { code: 'BAD_REQUEST', message: 'holds records' } },
+          { status: 400 },
+        )
+      : new Response(null, { status: 204 }),
+  );
+  await screen.findByRole('link', { name: 'Alice' });
+  await user.click(screen.getByRole('button', { name: /Alice/ }));
+  await user.click(
+    await screen.findByRole('menuitem', { name: users.actions.delete }),
+  );
+  const dialog = await screen.findByRole('alertdialog');
+  expect(
+    within(dialog).getByText(
+      users.confirm.deleteTitle.replace('{{name}}', 'Alice'),
+    ),
+  ).toBeVisible();
+  await user.click(
+    within(dialog).getByRole('button', { name: users.actions.delete }),
+  );
+  expect(
+    await within(dialog).findByText(users.errors.holdsRecords),
+  ).toBeVisible();
+  refuse = false;
+  await user.click(
+    within(dialog).getByRole('button', { name: users.actions.delete }),
+  );
+  await waitFor(() =>
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument(),
+  );
+  expect(
+    api.mock.calls.filter(
+      ([call]) => call.method === 'DELETE' && call.path === 'users/alice',
+    ),
+  ).toHaveLength(2);
+});
+
+it('offers none of them without the users plugin actions', async () => {
+  const user = userEvent.setup();
+  setup({
+    unrestricted: false,
+    permissions: [
+      { resource: { type: 'user', id: '*' }, action: 'read', allowed: true },
+    ],
+  } as unknown as AuthorizationSnapshot);
+  await screen.findByRole('link', { name: 'Alice' });
+  expect(screen.queryByRole('button', { name: users.invite })).toBeNull();
+  const actions = screen.queryByRole('button', { name: /Alice/ });
+  if (actions) {
+    await user.click(actions);
+    expect(
+      screen.queryByRole('menuitem', { name: users.actions.password }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('menuitem', { name: users.actions.delete }),
+    ).toBeNull();
+  }
+});

@@ -450,45 +450,84 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         componentLoader: () =>
           import('./pages/settings/approval-flow/index.js'),
       },
-      // The administration pages the plugins left to the application in
-      // template 1.0.0-beta.60 (client/pages/settings/): each route checks
-      // what the plugin's own API checks.
+      // NocoBase 3's prepared Users and Roles pages (client/pages/settings/,
+      // the template's since 1.0.0-beta.74, registered here rather than
+      // through its routes.ts so they stay tabs of this Settings page, and
+      // without its Default access page, which the CRM does not offer).
+      // Each route checks what the plugin's own API checks.
       {
-        // The users plugin's `user` record type, which it does not place in
-        // the permission catalog: only the unrestricted root set opens it.
         name: 'settings-users',
         path: 'users',
         authz: { resource: { type: 'user', id: '*' }, action: 'read' },
-        componentLoader: () => import('./pages/settings/users/index.js'),
+        componentLoader: () => import('./pages/settings/users.js'),
         children: [
           {
-            name: 'settings-users-new',
-            path: 'new',
-            componentLoader: () => import('./pages/settings/users/new.js'),
+            name: 'settings-users-create',
+            path: 'create',
+            authz: { resource: { type: 'user', id: '*' }, action: 'create' },
+            componentLoader: () => import('./pages/settings/user-form.js'),
           },
           {
+            // Application addition: inviting by email, which the prepared
+            // pages leave out (pages/settings/accounts/).
             name: 'settings-users-invite',
             path: 'invite',
-            componentLoader: () => import('./pages/settings/users/invite.js'),
+            authz: { resource: { type: 'user', id: '*' }, action: 'invite' },
+            componentLoader: () =>
+              import('./pages/settings/accounts/invite.js'),
           },
           {
-            name: 'settings-users-edit',
-            path: ':userId/edit',
-            componentLoader: () => import('./pages/settings/users/edit.js'),
-          },
-          {
-            name: 'settings-users-roles',
-            path: ':userId/roles',
-            componentLoader: () => import('./pages/settings/users/roles.js'),
-          },
-          {
+            // Application addition: a new password set by an administrator.
             name: 'settings-users-password',
             path: ':userId/password',
-            componentLoader: () => import('./pages/settings/users/password.js'),
+            componentLoader: () =>
+              import('./pages/settings/accounts/password.js'),
+          },
+          {
+            name: 'settings-user',
+            path: ':userId',
+            componentLoader: () => import('./pages/settings/user-detail.js'),
+            children: [
+              {
+                name: 'settings-user-edit',
+                path: 'edit',
+                componentLoader: () => import('./pages/settings/user-form.js'),
+              },
+            ],
           },
         ],
       },
       {
+        name: 'settings-roles',
+        path: 'roles',
+        authz: {
+          resource: { type: 'settings', id: 'authorization.permission-sets' },
+          action: 'read',
+        },
+        componentLoader: () => import('./pages/settings/roles.js'),
+        children: [
+          {
+            name: 'settings-role-create',
+            path: 'create',
+            authz: {
+              resource: {
+                type: 'settings',
+                id: 'authorization.permission-sets',
+              },
+              action: 'create',
+            },
+            componentLoader: () => import('./pages/settings/role-form.js'),
+          },
+          {
+            name: 'settings-role-edit',
+            path: ':key/edit',
+            componentLoader: () => import('./pages/settings/role-form.js'),
+          },
+        ],
+      },
+      {
+        // The address the CRM's own Permission sets page had, kept for
+        // links and bookmarks.
         name: 'settings-permission-sets',
         path: 'permission-sets',
         authz: {
@@ -496,62 +535,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
           action: 'read',
         },
         componentLoader: () =>
-          import('./pages/settings/permission-sets/index.js'),
-        children: [
-          {
-            name: 'settings-permission-sets-new',
-            path: 'new',
-            componentLoader: () =>
-              import('./pages/settings/permission-sets/new.js'),
-          },
-          {
-            name: 'settings-permission-sets-rename',
-            path: 'edit/:setKey',
-            componentLoader: () =>
-              import('./pages/settings/permission-sets/rename.js'),
-          },
-          {
-            // A set's address: its permissions and its members are drawers
-            // over the list (pages/settings/permission-sets/detail/); the
-            // address alone opens the permissions.
-            name: 'settings-permission-set',
-            path: ':setKey',
-            componentLoader: () =>
-              import('./pages/settings/permission-sets/detail/index.js'),
-            children: [
-              {
-                // One draft for the three areas: the drawer stays mounted
-                // while :section changes.
-                name: 'settings-permission-set-permissions',
-                path: 'permissions',
-                componentLoader: () =>
-                  import('./pages/settings/permission-sets/detail/permissions.js'),
-                children: [
-                  {
-                    name: 'settings-permission-set-area',
-                    path: ':section',
-                    componentLoader: () =>
-                      import('./pages/settings/permission-sets/detail/area.js'),
-                  },
-                ],
-              },
-              {
-                name: 'settings-permission-set-members',
-                path: 'members',
-                componentLoader: () =>
-                  import('./pages/settings/permission-sets/detail/members.js'),
-                children: [
-                  {
-                    name: 'settings-permission-set-members-add',
-                    path: 'add',
-                    componentLoader: () =>
-                      import('./pages/settings/permission-sets/detail/add-members.js'),
-                  },
-                ],
-              },
-            ],
-          },
-        ],
+          import('./pages/settings/permission-sets-redirect.js'),
       },
       {
         // Every signed-in person manages their own keys only; the API

@@ -1,5 +1,6 @@
 import type { AppResource } from './en-US.js';
 import { crmJaJP } from './crm/ja-JP.js';
+import settingsJaJP from './settings/ja-JP.js';
 
 // The pages in ja-JP: the template's copy (./system/), the AI skills'
 // display text and the CRM's own (./crm/ja-JP.ts), with the same keys as
@@ -575,6 +576,8 @@ const jaJP: AppResource = {
       },
     },
   },
+  // The template's Settings copy, translated in ./settings/.
+  settings: settingsJaJP,
   crm: crmJaJP,
 };
 

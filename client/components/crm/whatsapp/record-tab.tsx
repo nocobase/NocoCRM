@@ -10,7 +10,7 @@ import {
   EmptyTitle,
 } from '#components/ui/empty';
 import { Tabs, TabsList, TabsTrigger } from '#components/ui/tabs';
-import { LoadFailure } from '../../../pages/settings/shared.js';
+import { LoadFailure } from '../../../pages/settings/common/shared.js';
 import { Button } from '#components/ui/button';
 import { WhatsAppConversationDrawer } from './conversation-drawer.js';
 import { toText, useCrmApi, useCrmScopeKey, useCrmText } from '../api.js';

@@ -16,7 +16,7 @@ import {
 } from '../../components/crm/api.js';
 import { RecordPicker } from '../../components/crm/record-picker.js';
 import type { Conversation } from '../../components/crm/whatsapp/api.js';
-import { FormDialog } from '../settings/shared.js';
+import { FormDialog } from '../settings/common/shared.js';
 import type { ConversationContext } from './conversation.js';
 
 // Link a WhatsApp customer to a lead or a contact (…/:conversationId/link),

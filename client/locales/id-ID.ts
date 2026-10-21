@@ -1,5 +1,6 @@
 import type { AppResource } from './en-US.js';
 import { crmIdID } from './crm/id-ID.js';
+import settingsIdID from './settings/id-ID.js';
 
 // The pages in id-ID: the template's copy (./system/), the AI skills'
 // display text and the CRM's own (./crm/id-ID.ts), with the same keys as
@@ -576,6 +577,8 @@ const idID: AppResource = {
       },
     },
   },
+  // The template's Settings copy, translated in ./settings/.
+  settings: settingsIdID,
   crm: crmIdID,
 };
 
