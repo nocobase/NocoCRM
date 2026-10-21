@@ -3,6 +3,7 @@ import { ApiClientError } from '@nocobase/app-client';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { inboxKeys } from '@nocobase/app-plugin-notification-in-app/client/inbox';
 import { describe, expect, it, vi } from 'vitest';
 import { crmEn } from '../../client/locales/crm/index.js';
 import { defaultSettings } from '../../server/providers/crm/schema.js';
@@ -14,6 +15,8 @@ import { defaultSettings } from '../../server/providers/crm/schema.js';
 
 const state = vi.hoisted(() => ({
   api: vi.fn(),
+  // Whether the demo dataset reads as imported.
+  demoPresent: false,
 }));
 
 const lookup = (key: string): unknown =>
@@ -37,7 +40,12 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
       data:
         path === 'systemSettings'
           ? defaultSettings
-          : { present: false, createdAt: null, records: 0, accounts: [] },
+          : {
+              present: state.demoPresent,
+              createdAt: null,
+              records: state.demoPresent ? 201 : 0,
+              accounts: [],
+            },
     }),
     useCrmApi: () => state.api,
     useCrmScopeKey: () => ['crm'],
@@ -213,6 +221,48 @@ describe('the settings page', () => {
     });
     expect(state.api).toHaveBeenCalledWith('demoData');
   }, 10000);
+
+  it("refreshes the inbox's notifications once the demo data is removed, without waiting for the realtime event", async () => {
+    const user = userEvent.setup();
+    state.api.mockReset();
+    state.api.mockImplementation((path: string) =>
+      Promise.resolve({
+        data: {
+          present: path !== 'demoData/remove',
+          createdAt: null,
+          records: path === 'demoData/remove' ? 0 : 201,
+          accounts: [],
+        },
+      }),
+    );
+    state.demoPresent = true;
+    const client = new QueryClient();
+    // The menu's unread count, as the in-app plugin keeps it.
+    client.setQueryData([...inboxKeys.unread], { count: 5 });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/settings/demo-data']}>
+          <DemoDataPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    // Offered once the dataset reads as present.
+    const remove = await screen.findByRole('button', { name: crmEn.demoReset });
+    await waitFor(() =>
+      expect((remove as HTMLButtonElement).disabled).toBe(false),
+    );
+    await user.click(remove);
+    await user.click(screen.getByRole('button', { name: crmEn.confirm }));
+    await waitFor(() =>
+      expect(state.api).toHaveBeenCalledWith('demoData/remove', 'POST', {}),
+    );
+    await waitFor(() =>
+      expect(client.getQueryState([...inboxKeys.unread])?.isInvalidated).toBe(
+        true,
+      ),
+    );
+    state.demoPresent = false;
+  });
 });
 
 describe('the General settings tab', () => {

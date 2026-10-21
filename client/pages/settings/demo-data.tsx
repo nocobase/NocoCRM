@@ -1,6 +1,7 @@
 import { useRef, useState, type ReactElement } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ApiClientError, useToaster } from '@nocobase/app-client';
+import { inboxKeys } from '@nocobase/app-plugin-notification-in-app/client/inbox';
 import { PageContainer } from '../../components/page-container.js';
 import { PageHeader } from '../../components/page-header.js';
 import { Button } from '../../components/ui/button.js';
@@ -86,7 +87,13 @@ export default function DemoDataPage(): ReactElement {
         type: 'success',
         title: text(wanted ? 'demoImported' : 'demoRemoved'),
       });
-      await refresh();
+      // The inbox's notifications too: the removal deletes those about the
+      // demo's records, which the menu's count would otherwise keep until
+      // the in-app plugin's realtime event arrives, if it does.
+      await Promise.all([
+        refresh(),
+        queryClient.invalidateQueries({ queryKey: inboxKeys.all }),
+      ]);
     };
     // Under way at once in what the banner reads, which then follows the
     // import's progress (demo-banner.tsx).
