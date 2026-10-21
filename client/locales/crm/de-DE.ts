@@ -2368,6 +2368,7 @@ export const crmDeDE: CrmWording = {
       'Wer genehmigen darf und welche Status eine Genehmigung vom Entwurf bis zur Entscheidung durchläuft. Die Status sind im Produkt festgelegt; wer genehmigen darf, legen Sie fest.',
     approvers: {
       title: 'Wer genehmigen darf',
+      configure: 'Genehmiger',
       hint: 'Der Antragsteller wählt den Genehmiger aus diesen Rollen und Personen; eine Person genügt. Eine Änderung gilt für die nächsten Einreichungen; bereits eingereichte Anträge behalten ihren Genehmiger.',
       roles: 'Rollen',
       people: 'Personen',

@@ -2335,6 +2335,7 @@ export const crmIdID: CrmWording = {
       'Siapa yang boleh menyetujui, dan status yang dilalui sebuah persetujuan, dari draf hingga keputusan. Status ditetapkan oleh produk; siapa yang boleh menyetujui Anda yang tentukan.',
     approvers: {
       title: 'Siapa yang boleh menyetujui',
+      configure: 'Pemberi persetujuan',
       hint: 'Pemohon memilih pemberi persetujuan dari peran dan orang berikut; salah satu saja sudah cukup. Perubahan berlaku untuk pengajuan berikutnya; permintaan yang sudah diajukan tetap dengan pemberi persetujuannya.',
       roles: 'Peran',
       people: 'Orang',

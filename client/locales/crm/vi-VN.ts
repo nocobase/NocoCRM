@@ -2324,6 +2324,7 @@ export const crmViVN: CrmWording = {
       'Ai được phê duyệt, và các trạng thái mà một phê duyệt trải qua, từ bản nháp đến quyết định. Các trạng thái do sản phẩm đặt sẵn; ai được phê duyệt do bạn thiết lập.',
     approvers: {
       title: 'Ai được phê duyệt',
+      configure: 'Người phê duyệt',
       hint: 'Người đề nghị chọn người phê duyệt từ các vai trò và người dưới đây; chỉ cần một người là đủ. Thay đổi áp dụng cho các lần gửi tiếp theo; các yêu cầu đã gửi giữ nguyên người phê duyệt.',
       roles: 'Vai trò',
       people: 'Người dùng',

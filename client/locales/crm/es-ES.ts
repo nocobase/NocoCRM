@@ -2354,6 +2354,7 @@ export const crmEsES: CrmWording = {
       'Quién puede aprobar y los estados por los que pasa una aprobación, desde el borrador hasta la decisión. Los estados los fija el producto; quién puede aprobar lo decides tú.',
     approvers: {
       title: 'Quién puede aprobar',
+      configure: 'Aprobadores',
       hint: 'El solicitante elige al aprobador entre estos roles y personas; basta con uno de ellos. Un cambio se aplica a los siguientes envíos; las solicitudes ya enviadas conservan su aprobador.',
       roles: 'Roles',
       people: 'Personas',

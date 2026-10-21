@@ -1,11 +1,20 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { describeLifecycle } from '@nocobase/lifecycle';
 import { expect, it, vi } from 'vitest';
 import { crmEn } from '../../client/locales/crm/index.js';
 import { approvalLifecycle } from '../../server/lifecycles/approvals.js';
 
 // Settings → Approval process: the approvals' lifecycle, read only, drawn
-// as a diagram with who takes each step beside it.
+// as a diagram with who takes each step beside it, and who may approve,
+// shown above it and edited in a dialog opened from there or from the
+// diagram's submit step.
 function english(key: string, options?: Record<string, unknown>): string {
   let value: unknown = crmEn;
   for (const part of key.split('.'))
@@ -121,23 +130,28 @@ it('draws the approval process with its states and actions named as the CRM name
   ).toBeTruthy();
 });
 
-it('sets who may approve: the roles and people chosen, saved from the version shown', async () => {
+it('shows who may approve now above the diagram, and edits the rule in a dialog saved from the version shown', async () => {
+  state.api.mockReset();
   state.api.mockResolvedValue({ data: state.rule });
   render(<ApprovalFlowPage />);
-  expect(screen.getByText('Who may approve')).toBeTruthy();
+  const summary = screen.getByRole('region', { name: 'Who may approve' });
   expect(
-    screen.getByText(
+    within(summary).getByText(
       'Approvers now: Wang Fang. Each must be active and hold the Decide approvals permission.',
     ),
   ).toBeTruthy();
-  expect(screen.getByText('The default: sales managers.')).toBeTruthy();
-  const save = screen.getByRole('button', { name: 'Save' });
+  // Nothing to edit on the page itself.
+  expect(within(summary).queryByRole('button', { name: 'Save' })).toBeNull();
+  fireEvent.click(within(summary).getByRole('button', { name: 'Edit' }));
+  const dialog = await screen.findByRole('dialog');
+  expect(within(dialog).getByText('The default: sales managers.')).toBeTruthy();
+  const save = within(dialog).getByRole('button', { name: 'Save' });
   // Nothing changed yet.
   expect((save as HTMLButtonElement).disabled).toBe(true);
   // A disabled user is not offered.
-  expect(screen.queryByLabelText('Gone')).toBeNull();
-  fireEvent.click(screen.getByLabelText('Administrator'));
-  fireEvent.click(screen.getByLabelText('Li Ming'));
+  expect(within(dialog).queryByLabelText('Gone')).toBeNull();
+  fireEvent.click(within(dialog).getByLabelText('Administrator'));
+  fireEvent.click(within(dialog).getByLabelText('Li Ming'));
   expect((save as HTMLButtonElement).disabled).toBe(false);
   fireEvent.click(save);
   await waitFor(() => expect(state.api).toHaveBeenCalled());
@@ -153,9 +167,10 @@ it('sets who may approve: the roles and people chosen, saved from the version sh
     revision: 0,
   });
   expect(typeof body.requestId).toBe('string');
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
 });
 
-it('says who set the rule and when, once an administrator has', () => {
+it('says in the dialog who set the rule and when, once an administrator has', async () => {
   state.rule = {
     ...state.rule,
     revision: 2,
@@ -163,7 +178,44 @@ it('says who set the rule and when, once an administrator has', () => {
     updatedAt: '2026-10-14T02:30:00.000Z',
   };
   render(<ApprovalFlowPage />);
+  fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+  const dialog = await screen.findByRole('dialog');
   expect(
-    screen.getByText('Version 2, set by Li Ming at 2026-10-14 10:30.'),
+    within(dialog).getByText('Version 2, set by Li Ming at 2026-10-14 10:30.'),
   ).toBeTruthy();
+});
+
+it('opens who may approve from the diagram, the one parameter it binds, and closes once saved', async () => {
+  state.api.mockReset();
+  state.api.mockResolvedValue({ data: state.rule });
+  render(<ApprovalFlowPage />);
+  const configuration = diagram.props.configuration as {
+    label: (target: { kind: string; name: string }) => string;
+    canConfigure: (group: { key: string }, field: string) => boolean;
+    onConfigure: (selection: unknown) => void;
+  };
+  expect(configuration.label({ kind: 'transition', name: 'submit' })).toBe(
+    'Approvers',
+  );
+  expect(configuration.canConfigure({ key: 'approvers' }, 'approverRule')).toBe(
+    true,
+  );
+  expect(configuration.canConfigure({ key: 'other' }, 'approverRule')).toBe(
+    false,
+  );
+  expect(screen.queryByRole('dialog')).toBeNull();
+  act(() => configuration.onConfigure({}));
+  const dialog = await screen.findByRole('dialog');
+  expect(within(dialog).getByText('Who may approve')).toBeTruthy();
+  const save = within(dialog).getByRole('button', { name: 'Save' });
+  expect((save as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(within(dialog).getByLabelText('Li Ming'));
+  fireEvent.click(save);
+  await waitFor(() => expect(state.api).toHaveBeenCalled());
+  expect(state.api.mock.calls[0]?.[2]).toMatchObject({
+    roles: ['sales-manager'],
+    users: ['li'],
+    revision: 2,
+  });
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
 });

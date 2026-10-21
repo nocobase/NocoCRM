@@ -2336,6 +2336,7 @@ export const crmPtBR: CrmWording = {
       'Quem pode aprovar e os estados pelos quais uma aprovação passa, do rascunho à decisão. Os estados são definidos pelo produto; quem pode aprovar é você quem define.',
     approvers: {
       title: 'Quem pode aprovar',
+      configure: 'Aprovadores',
       hint: 'O solicitante escolhe o aprovador entre estas funções e pessoas; basta qualquer um deles. Uma alteração vale para os próximos envios; solicitações já enviadas mantêm seu aprovador.',
       roles: 'Funções',
       people: 'Pessoas',

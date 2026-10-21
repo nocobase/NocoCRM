@@ -2356,6 +2356,7 @@ export const crmFrFR: CrmWording = {
       "Qui peut approuver, et les états par lesquels passe une approbation, du brouillon à la décision. Les états sont définis par le produit ; c'est à vous de définir qui peut approuver.",
     approvers: {
       title: 'Qui peut approuver',
+      configure: 'Approbateurs',
       hint: "Le demandeur choisit l'approbateur parmi ces rôles et ces personnes ; un seul suffit. Une modification s'applique aux prochaines soumissions ; les demandes déjà soumises conservent leur approbateur.",
       roles: 'Rôles',
       people: 'Personnes',

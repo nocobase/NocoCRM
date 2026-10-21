@@ -2948,7 +2948,7 @@ const wording = {
   },
   admin: adminWording,
   // Settings → Approval process (pages/settings/approval-flow/): the
-  // approvals' lifecycle, read only.
+  // approvals' lifecycle, read only, and who may approve.
   approvalFlow: {
     title: ['Approval process', '审批流程'],
     description: [
@@ -2957,6 +2957,8 @@ const wording = {
     ],
     approvers: {
       title: ['Who may approve', '谁可以审批'],
+      // The diagram's button for the rule, on its submit step.
+      configure: ['Approvers', '审批人'],
       hint: [
         'An applicant chooses the approver from these roles and people; any one of them is enough. A change applies to the next submissions; requests already submitted keep their approver.',
         '申请人从这些角色和人员中选择审批人，满足其中一项即可。修改只影响之后的提交，已提交的申请保留原审批人。',
