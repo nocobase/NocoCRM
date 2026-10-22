@@ -75,6 +75,7 @@ import {
 import {
   CrmError,
   defaultSettings,
+  defaultCurrencyFor,
   aiLanguages,
   definitions,
   entities,
@@ -229,9 +230,10 @@ export class CrmService {
   // approver rule.
   private readonly parameters: LifecycleParameterStore;
   // The settings a company has not chosen: `defaultSettings`, the AI's
-  // language that of the application (`i18n.defaultLocale`,
-  // APP_DEFAULT_LOCALE), so a deployment that starts in Chinese has its AI
-  // write Chinese until an administrator picks otherwise.
+  // language and the currency following the application's
+  // (`i18n.defaultLocale`, APP_DEFAULT_LOCALE), so a deployment that starts
+  // in Chinese has its AI write Chinese and its amounts in CNY until an
+  // administrator picks otherwise.
   public readonly defaults: CrmSettings;
   constructor(
     public readonly database: DatabaseManager,
@@ -243,6 +245,7 @@ export class CrmService {
     this.parameters = lifecycleParameterStore(database);
     this.defaults = {
       ...defaultSettings,
+      currency: defaultCurrencyFor(options.defaultLocale),
       aiLanguage: options.defaultLocale?.startsWith('zh')
         ? 'zh-CN'
         : defaultSettings.aiLanguage,

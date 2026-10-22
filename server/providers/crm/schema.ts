@@ -497,6 +497,16 @@ export const notificationSwitches = {
   taskReminders: 'notifyTaskReminders',
 } as const satisfies Record<NotificationKind, keyof CrmSettings>;
 export const aiLanguages = ['zh-CN', 'en-US'];
+// The currency a company starts with, by the application's language
+// (`i18n.defaultLocale`): the one most of its users trade in, among
+// `currencies`; USD where theirs is not offered.
+export function defaultCurrencyFor(locale: string | undefined): string {
+  if (locale?.startsWith('zh-CN')) return 'CNY';
+  if (locale?.startsWith('ja')) return 'JPY';
+  if (['de', 'fr', 'es'].some((language) => locale?.startsWith(language)))
+    return 'EUR';
+  return 'USD';
+}
 export const defaultSettings: CrmSettings = {
   currency: 'USD',
   timeZone: DEFAULT_TIME_ZONE,

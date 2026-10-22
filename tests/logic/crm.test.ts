@@ -942,6 +942,21 @@ describe('CRM API security and domain rules', () => {
       });
     }
   });
+  it("starts with the currency of the application's language", () => {
+    const at = (defaultLocale: string) =>
+      new CrmService(database, authorization, undefined, { defaultLocale })
+        .defaults.currency;
+    expect(at('zh-CN')).toBe('CNY');
+    expect(at('ja-JP')).toBe('JPY');
+    expect(at('de-DE')).toBe('EUR');
+    expect(at('fr-FR')).toBe('EUR');
+    expect(at('es-ES')).toBe('EUR');
+    // Where the language's own currency is not offered, and in English.
+    expect(at('zh-TW')).toBe('USD');
+    expect(at('pt-BR')).toBe('USD');
+    expect(at('en-US')).toBe('USD');
+    expect(at('')).toBe('USD');
+  });
   it("writes the AI's work in the application's language until a language is chosen", async () => {
     const chinese = new CrmService(database, authorization, undefined, {
       defaultLocale: 'zh-CN',
