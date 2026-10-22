@@ -117,6 +117,7 @@ export function PlanCard({ plan }: { plan: PlanView }): ReactElement {
           <PlanStep
             key={step.id}
             step={step}
+            titles={plan.titles}
             // A waiting plan's values are the person's to change before
             // deciding, as the confirmation cards' were.
             onRevise={
@@ -233,12 +234,15 @@ function outcomeText(
 
 function PlanStep({
   step,
+  titles,
   selectable,
   kept,
   onKept,
   onRevise,
 }: {
   step: Step;
+  // The records its values name, by id, so each links by its name.
+  titles: Record<string, string>;
   selectable: boolean;
   kept: boolean;
   onKept: (kept: boolean) => void;
@@ -320,6 +324,7 @@ function PlanStep({
                     name={change.field}
                     from={change.from}
                     to={change.to}
+                    titles={titles}
                     onRevise={editable ? onRevise : undefined}
                   />
                 </dd>
@@ -392,6 +397,7 @@ function StepValue({
   name,
   from,
   to,
+  titles,
   onRevise,
 }: {
   entity: Entity;
@@ -399,6 +405,7 @@ function StepValue({
   name: string;
   from: unknown;
   to: unknown;
+  titles: Record<string, string>;
   onRevise?: (values: Record<string, unknown>) => Promise<void>;
 }): ReactElement {
   const { text } = useCrmText();
@@ -409,6 +416,7 @@ function StepValue({
         field={field ?? { key: name, type: 'text' }}
         from={from}
         to={to}
+        titles={titles}
       />
     );
   const long = isLong(field, from, to);
@@ -417,7 +425,7 @@ function StepValue({
       long={long}
       old={
         filled(from) ? (
-          <OldValue field={field} value={from} long={long} />
+          <OldValue field={field} value={from} long={long} titles={titles} />
         ) : null
       }
       next={
@@ -428,6 +436,7 @@ function StepValue({
             entity={entity}
             record={{ id: '', [name]: to } as unknown as CrmRecord}
             field={field}
+            lookup={titles}
             label={toText(
               text(fieldLabelKey(entity, name), { defaultValue: name }),
             )}
@@ -447,10 +456,12 @@ function ChangeValue({
   field,
   from,
   to,
+  titles,
 }: {
   field: Field | { key: string; type: string };
   from: unknown;
   to: unknown;
+  titles: Record<string, string>;
 }): ReactElement {
   const long = isLong(field, from, to);
   return (
@@ -458,7 +469,7 @@ function ChangeValue({
       long={long}
       old={
         filled(from) ? (
-          <OldValue field={field} value={from} long={long} />
+          <OldValue field={field} value={from} long={long} titles={titles} />
         ) : null
       }
       next={
@@ -467,6 +478,7 @@ function ChangeValue({
             <Value
               field={field}
               record={{ id: '', [field.key]: to } as unknown as CrmRecord}
+              lookup={titles}
               plain
             />
           </span>
@@ -505,10 +517,12 @@ function OldValue({
   field,
   value,
   long,
+  titles,
 }: {
   field: Field | { key: string; type: string };
   value: unknown;
   long: boolean;
+  titles: Record<string, string>;
 }): ReactElement {
   if (long)
     return (
@@ -523,6 +537,7 @@ function OldValue({
       <Value
         field={field}
         record={{ id: '', [field.key]: value } as unknown as CrmRecord}
+        lookup={titles}
         plain
       />
     </span>

@@ -24,6 +24,7 @@ import {
 } from '../schema.js';
 import type { CrmService } from '../service.js';
 import type { TaskPreparer } from '../task-preparation.js';
+import { resolveTitles } from '../titles.js';
 import { jsonValue } from '../values.js';
 
 /**
@@ -169,6 +170,10 @@ export interface PlanView {
   expiresAt: string;
   createdAt: string;
   steps: PlanStepView[];
+  // The records the steps' values name (a task's company, its deal), by id,
+  // titled as the record pages title them, as far as the reader may read
+  // them; a value naming a record an earlier step creates ($1) is not here.
+  titles: Record<string, string>;
 }
 
 // The outcome a decision sends back to the agent's conversation.
@@ -337,7 +342,7 @@ export class CrmPlans {
       input.steps.map((step) => [step.op, step.ref ?? null, step.params]),
     );
     for (const row of rows) {
-      const plan = await this.load(toText(row.id));
+      const plan = await this.load(toText(row.id), actor);
       if (
         JSON.stringify(
           plan.steps.map((step) => [step.op, step.ref, step.params]),
@@ -385,7 +390,7 @@ export class CrmPlans {
     const plan = await this.load(id);
     // A plan is its proposer's: the person the agent works for decides it.
     if (plan.proposerUserId !== actor.id) throw new CrmError('notFound', 404);
-    return plan;
+    return (await this.named(actor, [plan]))[0];
   }
 
   // The reader's plans, those waiting first; a record's when `target` names
@@ -435,7 +440,10 @@ export class CrmPlans {
     );
     const start = (options.page - 1) * options.pageSize;
     return {
-      data: plans.slice(start, start + options.pageSize),
+      data: await this.named(
+        actor,
+        plans.slice(start, start + options.pageSize),
+      ),
       total: plans.length,
     };
   }
@@ -535,7 +543,7 @@ export class CrmPlans {
       }
       return this.close(actor, plan, 'failed', failureOf(error));
     }
-    const executed = await this.load(id);
+    const executed = await this.load(id, actor);
     await this.tell({ plan: executed, decision: 'executed' });
     return executed;
   }
@@ -653,7 +661,7 @@ export class CrmPlans {
       })
       .where('id', '=', plan.id)
       .execute();
-    const closed = await this.load(plan.id);
+    const closed = await this.load(plan.id, actor);
     await this.tell({ plan: closed, decision: status });
     return closed;
   }
@@ -689,7 +697,8 @@ export class CrmPlans {
     return null;
   }
 
-  private async load(id: string): Promise<PlanView> {
+  // The plan as stored; with the reader, the names its steps refer to.
+  private async load(id: string, actor?: Actor): Promise<PlanView> {
     const query = this.service.database.query();
     const plan = await query
       .selectFrom('crmPlans')
@@ -703,7 +712,7 @@ export class CrmPlans {
       .where('planId', '=', id)
       .orderBy('position', 'asc')
       .execute();
-    return {
+    const view: PlanView = {
       id: toText(plan.id),
       title: toText(plan.title),
       summary: plan.summary == null ? null : toText(plan.summary),
@@ -731,7 +740,45 @@ export class CrmPlans {
         status: toText(row.status) as PlanStepView['status'],
         result: json(row.result),
       })),
+      titles: {},
     };
+    return actor ? (await this.named(actor, [view]))[0] : view;
+  }
+
+  // The plans with the titles of the records their steps' values name
+  // (relation fields, old and new), resolved in one round for them all as
+  // the reader may read them, so the card links each by its name.
+  private async named(actor: Actor, plans: PlanView[]): Promise<PlanView[]> {
+    const named = new Map<PlanView, Set<string>>();
+    const extra: Partial<Record<Entity, string[]>> = {};
+    for (const plan of plans) {
+      const ids = new Set<string>();
+      for (const step of plan.steps) {
+        const fields = definitions[step.check?.entity as Entity]?.fields ?? [];
+        for (const change of step.check?.changes ?? []) {
+          const relation = fields.find((f) => f.key === change.field)?.relation;
+          if (!relation || relation === 'users') continue;
+          for (const value of [change.from, change.to].flat()) {
+            const id = typeof value === 'string' ? value : '';
+            if (!id || id.startsWith('$')) continue;
+            ids.add(id);
+            (extra[relation] ??= []).push(id);
+          }
+        }
+      }
+      named.set(plan, ids);
+    }
+    const { titles } = Object.keys(extra).length
+      ? await resolveTitles(this.service, actor, {}, extra)
+      : { titles: {} as Record<string, string> };
+    return plans.map((plan) => ({
+      ...plan,
+      titles: Object.fromEntries(
+        [...(named.get(plan) ?? [])]
+          .filter((id) => id in titles)
+          .map((id) => [id, titles[id]]),
+      ),
+    }));
   }
 
   // The mailbox each email of the steps goes from, as the person: the one

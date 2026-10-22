@@ -105,6 +105,7 @@ const plan = (overrides: Partial<PlanView> = {}): PlanView => ({
       'comment.create',
     ),
   ],
+  titles: {},
   ...overrides,
 });
 
@@ -232,6 +233,64 @@ describe('a plan card', () => {
     );
     expect(screen.getByText('未发送：邮件没能发出。')).toBeTruthy();
   });
+
+  it.each(['pending', 'executed'] as const)(
+    'names the company and deal a %s step creating a task links to',
+    (status) => {
+      const task = {
+        ...step(
+          1,
+          [
+            { field: 'name', from: null, to: '方案演示' },
+            { field: 'companyId', from: null, to: 'company-1' },
+            { field: 'opportunityId', from: null, to: 'deal-1' },
+          ],
+          'record.create',
+        ),
+        status: status === 'pending' ? ('pending' as const) : ('done' as const),
+        check: {
+          entity: 'tasks' as const,
+          id: null,
+          name: '方案演示',
+          changes: [
+            { field: 'name', from: null, to: '方案演示' },
+            { field: 'companyId', from: null, to: 'company-1' },
+            { field: 'opportunityId', from: null, to: 'deal-1' },
+          ],
+        },
+      };
+      renderWith(
+        <PlanCard
+          plan={plan({
+            status,
+            deciderUserId: status === 'pending' ? null : 'rep',
+            decidedAt: status === 'pending' ? null : new Date().toISOString(),
+            steps: [task],
+            titles: {
+              'company-1': '华光科技',
+              'deal-1': '华光科技 / 年度采购',
+            },
+          })}
+        />,
+      );
+      const card = screen.getByRole('region', { name: '更新周晓的线索' });
+      // Each by its name, linked to its page, not by what kind of record.
+      expect(
+        within(card)
+          .getByRole('link', { name: '华光科技' })
+          .getAttribute('href'),
+      ).toContain('company-1');
+      expect(
+        within(card)
+          .getByRole('link', { name: '华光科技 / 年度采购' })
+          .getAttribute('href'),
+      ).toContain('deal-1');
+      for (const entity of ['companies', 'opportunities'])
+        expect(
+          within(card).queryByText(crmZh.entities[entity as 'companies']),
+        ).toBeNull();
+    },
+  );
 
   it('shows each change from its old value to its new one, without hover', () => {
     renderWith(<PlanCard plan={plan()} />);

@@ -347,6 +347,7 @@ describe('the agent conversations', () => {
         expiresAt: '2099-01-01T00:00:00.000Z',
         createdAt: '2026-10-10T07:01:00.000Z',
         steps: [],
+        titles: {},
       },
     ];
     renderAt('/agent-chat/c1');
@@ -428,6 +429,7 @@ describe('the agent conversations', () => {
         expiresAt: '2099-01-01T00:00:00.000Z',
         createdAt: '2026-10-10T07:01:00.000Z',
         steps: [],
+        titles: {},
       },
     ];
     // The inbox's unfiltered query, already in the cache.

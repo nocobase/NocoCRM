@@ -262,5 +262,9 @@ export const PlanSchema: z.ZodType<PlanView> = z
     expiresAt: z.string(),
     createdAt: z.string(),
     steps: z.array(StepView),
+    titles: z.record(z.string(), z.string()).meta({
+      description:
+        'The records the steps’ values name, by id, titled as the reader may read them.',
+    }),
   })
   .meta({ ref: 'CrmPlan' });

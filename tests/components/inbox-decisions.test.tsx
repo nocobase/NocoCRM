@@ -345,6 +345,7 @@ const plan = (status = 'pending') => ({
       result: null,
     },
   ],
+  titles: {},
 });
 
 // The changes agents suggest in conversations are decided in their

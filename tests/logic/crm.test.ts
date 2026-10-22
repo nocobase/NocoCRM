@@ -11647,6 +11647,49 @@ describe('agents and plans', () => {
     });
   });
 
+  it('names the records the steps of a plan refer to, as the reader may read them', async () => {
+    const company = await service.save(actor('rep'), 'companies', {
+      name: 'Named Optics',
+    });
+    const deal = await service.save(actor('rep'), 'opportunities', {
+      name: 'Lens rollout',
+      companyId: company.id,
+      amount: 100,
+    });
+    const created = (
+      await (
+        await asRun('/plans', ['crm.plans/create'], 'POST', {
+          title: 'Plan the demo',
+          steps: [
+            {
+              op: 'record.create',
+              params: {
+                entity: 'tasks',
+                values: {
+                  name: 'Solution demo',
+                  companyId: company.id,
+                  opportunityId: deal.id,
+                },
+              },
+            },
+          ],
+        })
+      ).json()
+    ).data as PlanOutcome['plan'];
+    // Titled as the record pages title them: a deal with its company.
+    expect(created.titles).toEqual({
+      [toText(company.id)]: 'Named Optics',
+      [toText(deal.id)]: 'Named Optics / Lens rollout',
+    });
+    const listed = await plans.list(actor('rep'), {
+      page: 1,
+      pageSize: 20,
+    });
+    expect(listed.data.find((p) => p.id === created.id)?.titles).toEqual(
+      created.titles,
+    );
+  });
+
   it("lets a run set the CRM's agents to work directly and tells its conversation what they came to", async () => {
     const lead = await service.save(actor('rep'), 'leads', {
       name: 'Asked by the agent',
