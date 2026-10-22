@@ -1341,12 +1341,12 @@ export const crmEsES: CrmWording = {
   demoImport: 'Importar datos de demostración',
   demoImportTitle: '¿Importar los datos de demostración?',
   demoImportHint:
-    'Los registros de demostración se añaden a los tuyos, a nombre de las cuentas de demostración y tuyo, y también pasas a ser responsable de ventas. Los ajustes que siguen en su valor predeterminado toman los de los datos: moneda CNY, su zona horaria y su idioma de la IA. Cada cuenta recibe un buzón de demostración que nunca envía correo al exterior. Puedes quitarlo todo aquí.',
+    'Añade los registros y las cuentas de demostración, y también te convierte en responsable de ventas. Podrás quitarlo todo más tarde.',
   demoImported: 'Datos de demostración importados',
   demoReset: 'Eliminar datos de demostración',
   demoResetTitle: '¿Eliminar los datos de demostración?',
   demoResetHint:
-    'Se eliminan todos los registros creados por la importación, incluidos los cambios hechos en ellos desde entonces, y se desactivan las cuentas de demostración que creó: ya no pueden iniciar sesión ni aparecen como responsables, y una nueva importación las reactiva. Se retira el rol de responsable de ventas que te asignó la importación. También se eliminan los buzones de demostración y sus correos. Los registros creados manualmente se conservan.',
+    'Elimina todos los registros y correos de demostración, deshabilita las cuentas de demostración y te quita el rol de responsable de ventas. Los registros que creaste tú se mantienen.',
   demoRemoved: 'Datos de demostración eliminados',
   demoBanner:
     'Aún no hay datos de demostración. Importa un conjunto de ejemplo para probar los leads, las oportunidades y los seguimientos de la IA con registros realistas.',

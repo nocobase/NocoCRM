@@ -2061,15 +2061,15 @@ const wording = {
   demoImport: ['Import demo data', '导入演示数据'],
   demoImportTitle: ['Import the demo data?', '导入演示数据？'],
   demoImportHint: [
-    "The demo records are added beside your own, owned by the demo accounts and by you, and you also become a sales manager. Settings still at their defaults change to the demo data's: currency CNY, its timezone and its AI language. Each account gets a demo mailbox that never sends mail out. You can remove it all again here.",
-    '演示记录会加在现有数据旁边，负责人是演示账号和你，你也会成为销售经理。仍为默认值的设置会改成演示数据用的：币种人民币、所在时区和 AI 语言。每个账号会有一个演示邮箱，邮件不会真正发出。之后可以在这里全部清除。',
+    'Adds the demo records and accounts, and makes you a sales manager too. You can remove it all later.',
+    '会添加演示记录和演示账号，你也会成为销售经理。之后可以随时清除。',
   ],
   demoImported: ['Demo data imported', '演示数据已导入'],
   demoReset: ['Remove demo data', '清除演示数据'],
   demoResetTitle: ['Remove the demo data?', '清除演示数据？'],
   demoResetHint: [
-    'Every record the import created is deleted, including changes made to them since, and the demo accounts it created are disabled: they no longer sign in or appear as owners, and importing again enables them. The sales manager role the import gave you is removed. The demo mailboxes and their mail are removed too. Records created by hand stay.',
-    '导入创建的全部记录（含之后对它们的修改）都会被删除，导入时新建的演示账号会被停用：不能再登录，也不会出现在负责人等选项里，再次导入时会重新启用；导入时给你加上的销售经理角色会被移除；演示邮箱及其中的邮件也会一并删除。手工创建的记录保留。',
+    'Deletes every demo record and mail, disables the demo accounts and removes your sales manager role. Records you created yourself stay.',
+    '会删除演示数据的全部记录和邮件，停用演示账号，并去掉你的销售经理角色。你自己创建的记录会保留。',
   ],
   demoRemoved: ['Demo data removed', '演示数据已清除'],
   demoBanner: [

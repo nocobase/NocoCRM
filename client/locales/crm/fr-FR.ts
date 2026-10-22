@@ -1336,12 +1336,12 @@ export const crmFrFR: CrmWording = {
   demoImport: 'Importer les données de démonstration',
   demoImportTitle: 'Importer les données de démonstration ?',
   demoImportHint:
-    "Les fiches de démonstration s'ajoutent aux vôtres, attribuées aux comptes de démonstration et à vous, et vous devenez aussi responsable commercial. Les paramètres encore à leur valeur par défaut prennent ceux des données : devise CNY, leur fuseau horaire et leur langue de l'IA. Chaque compte reçoit une boîte de démonstration qui n'envoie jamais de courrier à l'extérieur. Vous pouvez tout retirer ici.",
+    'Ajoute les fiches et les comptes de démonstration, et vous rend aussi responsable commercial. Vous pourrez tout retirer plus tard.',
   demoImported: 'Données de démonstration importées',
   demoReset: 'Supprimer les données de démonstration',
   demoResetTitle: 'Supprimer les données de démonstration ?',
   demoResetHint:
-    "Toutes les fiches créées par l'importation sont supprimées, y compris les modifications apportées depuis, et les comptes de démonstration qu'elle a créés sont désactivés : ils ne peuvent plus se connecter ni apparaître comme responsables, et une nouvelle importation les réactive. Le rôle de responsable commercial que l'importation vous a donné est retiré. Les boîtes mail de démonstration et leurs e-mails sont également supprimés. Les fiches créées manuellement sont conservées.",
+    'Supprime toutes les fiches et tous les e-mails de démonstration, désactive les comptes de démonstration et vous retire le rôle de responsable commercial. Les fiches que vous avez créées restent.',
   demoRemoved: 'Données de démonstration supprimées',
   demoBanner:
     "Aucune donnée de démonstration pour l'instant. Importez un jeu de données d'exemple pour essayer les prospects, les opportunités et les suivis de l'IA avec des fiches réalistes.",

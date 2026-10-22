@@ -1317,12 +1317,12 @@ export const crmViVN: CrmWording = {
   demoImport: 'Nhập dữ liệu mẫu',
   demoImportTitle: 'Nhập dữ liệu mẫu?',
   demoImportHint:
-    'Bản ghi mẫu được thêm bên cạnh dữ liệu của bạn, thuộc các tài khoản mẫu và bạn, và bạn cũng trở thành quản lý bán hàng. Các thiết lập còn mặc định sẽ đổi theo dữ liệu mẫu: tiền tệ CNY, múi giờ và ngôn ngữ AI của nó. Mỗi tài khoản có một hộp thư mẫu không bao giờ gửi thư ra ngoài. Bạn có thể xóa tất cả ở đây.',
+    'Thêm các bản ghi và tài khoản mẫu, và bạn cũng trở thành quản lý bán hàng. Bạn có thể xóa tất cả sau.',
   demoImported: 'Đã nhập dữ liệu mẫu',
   demoReset: 'Gỡ bỏ dữ liệu mẫu',
   demoResetTitle: 'Gỡ bỏ dữ liệu mẫu?',
   demoResetHint:
-    'Mọi bản ghi do lần nhập tạo ra đều bị xóa, kể cả các thay đổi đối với chúng sau đó, và các tài khoản mẫu do lần nhập tạo ra bị vô hiệu hóa: chúng không thể đăng nhập hay xuất hiện làm người phụ trách nữa, và nhập lại sẽ kích hoạt lại chúng. Vai trò quản lý bán hàng mà lần nhập cấp cho bạn sẽ bị gỡ bỏ. Các hộp thư mẫu và email trong đó cũng bị gỡ bỏ. Các bản ghi tạo thủ công được giữ lại.',
+    'Xóa mọi bản ghi và email mẫu, tắt các tài khoản mẫu và gỡ vai trò quản lý bán hàng của bạn. Các bản ghi bạn tự tạo vẫn được giữ.',
   demoRemoved: 'Đã gỡ bỏ dữ liệu mẫu',
   demoBanner:
     'Chưa có dữ liệu mẫu. Nhập một bộ dữ liệu mẫu để dùng thử khách hàng tiềm năng, cơ hội và tính năng theo dõi của AI với các bản ghi sát thực tế.',

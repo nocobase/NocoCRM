@@ -1323,12 +1323,12 @@ export const crmIdID: CrmWording = {
   demoImport: 'Impor data demo',
   demoImportTitle: 'Impor data demo?',
   demoImportHint:
-    'Data demo ditambahkan di samping data Anda, dimiliki akun demo dan Anda, dan Anda juga menjadi manajer penjualan. Pengaturan yang masih default diubah ke milik data demo: mata uang CNY, zona waktu, dan bahasa AI-nya. Setiap akun mendapat kotak surat demo yang tidak pernah mengirim email keluar. Anda dapat menghapus semuanya lagi di sini.',
+    'Menambahkan data dan akun demo, dan Anda juga menjadi manajer penjualan. Anda dapat menghapus semuanya nanti.',
   demoImported: 'Data demo diimpor',
   demoReset: 'Hapus data demo',
   demoResetTitle: 'Hapus data demo?',
   demoResetHint:
-    'Semua data yang dibuat oleh impor dihapus, termasuk perubahan yang dibuat padanya sejak itu, dan akun demo yang dibuatnya dinonaktifkan: akun tersebut tidak dapat masuk lagi atau muncul sebagai penanggung jawab, dan impor ulang akan mengaktifkannya kembali. Peran manajer penjualan yang diberikan impor kepada Anda dicabut. Kotak surat demo beserta emailnya juga dihapus. Data yang dibuat secara manual tetap ada.',
+    'Menghapus semua data dan email demo, menonaktifkan akun demo, dan mencabut peran manajer penjualan Anda. Data yang Anda buat sendiri tetap ada.',
   demoRemoved: 'Data demo dihapus',
   demoBanner:
     'Belum ada data demo. Impor kumpulan data contoh untuk mencoba prospek, peluang, dan tindak lanjut AI dengan data yang realistis.',

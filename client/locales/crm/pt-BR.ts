@@ -1328,12 +1328,12 @@ export const crmPtBR: CrmWording = {
   demoImport: 'Importar dados de demonstração',
   demoImportTitle: 'Importar os dados de demonstração?',
   demoImportHint:
-    'Os registros de demonstração são adicionados aos seus, atribuídos às contas de demonstração e a você, e você também passa a ser gerente de vendas. As configurações ainda no padrão passam a usar as dos dados: moeda CNY, o fuso horário e o idioma da IA. Cada conta recebe uma caixa de demonstração que nunca envia e-mails para fora. Você pode remover tudo aqui.',
+    'Adiciona os registros e as contas de demonstração, e você também passa a ser gerente de vendas. Você pode remover tudo depois.',
   demoImported: 'Dados de demonstração importados',
   demoReset: 'Remover dados de demonstração',
   demoResetTitle: 'Remover os dados de demonstração?',
   demoResetHint:
-    'Todos os registros criados pela importação são excluídos, incluindo as alterações feitas neles desde então, e as contas de demonstração criadas por ela são desativadas: não podem mais entrar nem aparecem como responsáveis, e uma nova importação as reativa. A função de gerente de vendas que a importação deu a você é removida. As caixas de e-mail de demonstração e seus e-mails também são removidos. Os registros criados manualmente permanecem.',
+    'Exclui todos os registros e e-mails de demonstração, desativa as contas de demonstração e remove sua função de gerente de vendas. Os registros que você criou continuam.',
   demoRemoved: 'Dados de demonstração removidos',
   demoBanner:
     'Ainda não há dados de demonstração. Importe um conjunto de exemplo para experimentar leads, oportunidades e os acompanhamentos da IA com registros realistas.',

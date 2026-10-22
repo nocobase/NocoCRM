@@ -1347,12 +1347,12 @@ export const crmDeDE: CrmWording = {
   demoImport: 'Demodaten importieren',
   demoImportTitle: 'Demodaten importieren?',
   demoImportHint:
-    'Die Demodatensätze kommen zu Ihren eigenen hinzu und gehören den Demokonten und Ihnen; Sie werden außerdem Vertriebsleiter. Einstellungen, die noch auf dem Standard stehen, werden auf die der Demodaten gesetzt: Währung CNY, deren Zeitzone und KI-Sprache. Jedes Konto erhält ein Demopostfach, das nie E-Mails nach außen sendet. Sie können alles hier wieder entfernen.',
+    'Fügt die Demodatensätze und -konten hinzu und macht Sie auch zum Vertriebsleiter. Sie können alles später wieder entfernen.',
   demoImported: 'Demodaten importiert',
   demoReset: 'Demodaten entfernen',
   demoResetTitle: 'Demodaten entfernen?',
   demoResetHint:
-    'Alle durch den Import erstellten Datensätze werden gelöscht, einschließlich seitdem vorgenommener Änderungen, und die dabei erstellten Demokonten werden deaktiviert: Sie können sich nicht mehr anmelden und erscheinen nicht mehr als Verantwortliche; ein erneuter Import aktiviert sie wieder. Die durch den Import vergebene Rolle Vertriebsleiter wird Ihnen entzogen. Auch die Demo-Postfächer und ihre E-Mails werden entfernt. Manuell erstellte Datensätze bleiben erhalten.',
+    'Löscht alle Demodatensätze und -E-Mails, deaktiviert die Demokonten und entzieht Ihnen die Rolle Vertriebsleiter. Selbst angelegte Datensätze bleiben erhalten.',
   demoRemoved: 'Demodaten entfernt',
   demoBanner:
     'Noch keine Demodaten. Importieren Sie einen Beispieldatenbestand, um Leads, Verkaufschancen und das Nachfassen der KI mit realistischen Datensätzen auszuprobieren.',
