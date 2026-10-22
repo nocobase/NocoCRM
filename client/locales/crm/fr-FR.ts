@@ -1325,18 +1325,18 @@ export const crmFrFR: CrmWording = {
   clearDate: 'Effacer',
   demoData: 'Données de démonstration',
   demoDescription:
-    "Un jeu de données où NocoBase vend ses propres licences et services à des clients fictifs, en chinois ou en anglais : prospects, entreprises, contacts, opportunités, tâches et approbations, e-mails dans des boîtes mail de démonstration et conversations sur deux numéros WhatsApp de démonstration, datés par rapport au jour de l'importation. L'importation crée les comptes de démonstration ci-dessous s'ils n'existent pas ; le mot de passe est le nom d'utilisateur suivi de 123.",
+    "Des données de vente de NocoBase avec des clients fictifs, en anglais ou en chinois : pistes, entreprises, contacts, opportunités, tâches, approbations, e-mails et conversations WhatsApp. L'import crée les comptes ci-dessous ; chaque mot de passe est le nom d'utilisateur suivi de 123.",
   demoLanguage: 'Langue des données de démonstration',
   demoAbsent: "Aucune donnée de démonstration n'a été importée.",
   demoPresent:
     'Données de démonstration importées le {{date}} : {{count}} fiches.',
   demoSettingsSet:
-    "L'importation a défini les paramètres commerciaux {{names}}, qui étaient à leurs valeurs par défaut, sur ceux pour lesquels les données de démonstration sont conçues.",
+    "L'import a modifié ces paramètres pour les données de démonstration : {{names}}.",
   demoAccounts: 'Comptes de démonstration',
   demoImport: 'Importer les données de démonstration',
   demoImportTitle: 'Importer les données de démonstration ?',
   demoImportHint:
-    "Les fiches sont ajoutées à la base de données actuelle et appartiennent aux comptes de démonstration et à vous : vous devenez également responsable commercial, en conservant votre rôle d'administrateur, et êtes responsable d'une partie d'entre elles. Les paramètres commerciaux encore à leurs valeurs par défaut sont définis pour la démonstration : la devise en CNY, le fuseau horaire commercial sur celui du jeu de données (Shanghai pour le chinois, New York pour l'anglais) et la langue de travail de l'IA sur celle du jeu de données ; les paramètres que vous avez modifiés restent inchangés. Rien d'autre n'est modifié, et l'importation peut être supprimée ici. Les comptes de démonstration et vous recevez chacun une boîte mail de démonstration contenant des e-mails échangés avec les clients de démonstration ; elle n'envoie qu'aux personnes de la démonstration, et rien n'est jamais réellement distribué.",
+    "Les fiches de démonstration s'ajoutent aux vôtres, attribuées aux comptes de démonstration et à vous, et vous devenez aussi responsable commercial. Les paramètres encore à leur valeur par défaut prennent ceux des données : devise CNY, leur fuseau horaire et leur langue de l'IA. Chaque compte reçoit une boîte de démonstration qui n'envoie jamais de courrier à l'extérieur. Vous pouvez tout retirer ici.",
   demoImported: 'Données de démonstration importées',
   demoReset: 'Supprimer les données de démonstration',
   demoResetTitle: 'Supprimer les données de démonstration ?',

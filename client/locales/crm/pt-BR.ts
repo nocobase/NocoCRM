@@ -1317,18 +1317,18 @@ export const crmPtBR: CrmWording = {
   clearDate: 'Limpar',
   demoData: 'Dados de demonstração',
   demoDescription:
-    'Um conjunto de dados da NocoBase vendendo suas próprias licenças e serviços a clientes fictícios, em chinês ou em inglês: leads, empresas, contatos, oportunidades, tarefas e aprovações, e-mails em caixas de e-mail de demonstração e conversas em dois números de WhatsApp de demonstração, com datas relativas ao dia da importação. A importação cria as contas de demonstração abaixo quando elas não existem; a senha é o nome de usuário seguido de 123.',
+    'Dados de vendas da NocoBase com clientes fictícios, em inglês ou chinês: leads, empresas, contatos, oportunidades, tarefas, aprovações, e-mails e conversas de WhatsApp. A importação cria as contas abaixo; cada senha é o nome de usuário seguido de 123.',
   demoLanguage: 'Idioma dos dados de demonstração',
   demoAbsent: 'Nenhum dado de demonstração foi importado.',
   demoPresent:
     'Dados de demonstração importados em {{date}}: {{count}} registros.',
   demoSettingsSet:
-    'A importação definiu as configurações de negócio {{names}}, que estavam no padrão, com os valores para os quais os dados de demonstração foram escritos.',
+    'A importação alterou estas configurações para os dados de demonstração: {{names}}.',
   demoAccounts: 'Contas de demonstração',
   demoImport: 'Importar dados de demonstração',
   demoImportTitle: 'Importar os dados de demonstração?',
   demoImportHint:
-    'Os registros são adicionados ao banco de dados atual e pertencem às contas de demonstração e a você: você também se torna gerente de vendas, mantendo sua função de administrador, e fica responsável por parte deles. As configurações de negócio que ainda estão no padrão são ajustadas para a demonstração: a moeda para CNY, o fuso horário de negócio para o do conjunto de dados (Xangai para chinês, Nova York para inglês) e o idioma de trabalho da IA para o do conjunto de dados; as configurações que você alterou permanecem. Nada mais do que já existe é alterado, e a importação pode ser removida novamente aqui. As contas de demonstração e você recebem, cada um, uma caixa de e-mail de demonstração com e-mails trocados com os clientes de demonstração; ela só envia para as pessoas da demonstração, e nada é realmente entregue.',
+    'Os registros de demonstração são adicionados aos seus, atribuídos às contas de demonstração e a você, e você também passa a ser gerente de vendas. As configurações ainda no padrão passam a usar as dos dados: moeda CNY, o fuso horário e o idioma da IA. Cada conta recebe uma caixa de demonstração que nunca envia e-mails para fora. Você pode remover tudo aqui.',
   demoImported: 'Dados de demonstração importados',
   demoReset: 'Remover dados de demonstração',
   demoResetTitle: 'Remover os dados de demonstração?',

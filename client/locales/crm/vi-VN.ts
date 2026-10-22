@@ -1307,17 +1307,17 @@ export const crmViVN: CrmWording = {
   clearDate: 'Xóa',
   demoData: 'Dữ liệu mẫu',
   demoDescription:
-    'Bộ dữ liệu về việc NocoBase bán giấy phép và dịch vụ của chính mình cho các khách hàng hư cấu, bằng tiếng Trung hoặc tiếng Anh: khách hàng tiềm năng, công ty, liên hệ, cơ hội, công việc và phê duyệt, email trong các hộp thư mẫu và hội thoại trên hai số WhatsApp mẫu, với ngày tháng tính theo ngày nhập. Khi nhập sẽ tạo các tài khoản mẫu dưới đây nếu chúng chưa tồn tại; mật khẩu là tên người dùng kèm theo 123.',
+    'Dữ liệu bán hàng mẫu của NocoBase với khách hàng hư cấu, bằng tiếng Anh hoặc tiếng Trung: khách hàng tiềm năng, công ty, liên hệ, cơ hội, công việc, phê duyệt, email và trò chuyện WhatsApp. Khi nhập sẽ tạo các tài khoản dưới đây; mật khẩu là tên người dùng kèm 123.',
   demoLanguage: 'Ngôn ngữ dữ liệu mẫu',
   demoAbsent: 'Chưa nhập dữ liệu mẫu.',
   demoPresent: 'Đã nhập dữ liệu mẫu vào {{date}}: {{count}} bản ghi.',
   demoSettingsSet:
-    'Khi nhập, các cài đặt nghiệp vụ {{names}} (đang ở giá trị mặc định) đã được đặt theo cài đặt mà dữ liệu mẫu được soạn cho.',
+    'Lần nhập đã đổi các thiết lập này cho dữ liệu mẫu: {{names}}.',
   demoAccounts: 'Tài khoản mẫu',
   demoImport: 'Nhập dữ liệu mẫu',
   demoImportTitle: 'Nhập dữ liệu mẫu?',
   demoImportHint:
-    'Các bản ghi được thêm vào cơ sở dữ liệu hiện tại và thuộc về các tài khoản mẫu và bạn: bạn cũng trở thành quản lý bán hàng, vẫn giữ vai trò quản trị viên, và phụ trách một phần trong số đó. Các cài đặt nghiệp vụ vẫn ở giá trị mặc định sẽ được đặt cho dữ liệu mẫu: tiền tệ thành CNY, múi giờ nghiệp vụ theo bộ dữ liệu (Thượng Hải cho tiếng Trung, New York cho tiếng Anh), và ngôn ngữ làm việc của AI theo bộ dữ liệu; các cài đặt bạn đã thay đổi được giữ nguyên. Không có dữ liệu hiện có nào khác bị thay đổi, và bạn có thể gỡ bỏ dữ liệu đã nhập tại đây. Mỗi tài khoản mẫu và bạn đều nhận một hộp thư mẫu chứa email với các khách hàng mẫu; hộp thư này chỉ gửi đến những người trong dữ liệu mẫu, và không email nào thực sự được gửi đi.',
+    'Bản ghi mẫu được thêm bên cạnh dữ liệu của bạn, thuộc các tài khoản mẫu và bạn, và bạn cũng trở thành quản lý bán hàng. Các thiết lập còn mặc định sẽ đổi theo dữ liệu mẫu: tiền tệ CNY, múi giờ và ngôn ngữ AI của nó. Mỗi tài khoản có một hộp thư mẫu không bao giờ gửi thư ra ngoài. Bạn có thể xóa tất cả ở đây.',
   demoImported: 'Đã nhập dữ liệu mẫu',
   demoReset: 'Gỡ bỏ dữ liệu mẫu',
   demoResetTitle: 'Gỡ bỏ dữ liệu mẫu?',

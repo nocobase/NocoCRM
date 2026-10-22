@@ -1314,17 +1314,16 @@ export const crmIdID: CrmWording = {
   clearDate: 'Hapus',
   demoData: 'Data demo',
   demoDescription:
-    'Kumpulan data tentang NocoBase yang menjual lisensi dan layanannya sendiri kepada pelanggan fiktif, dalam bahasa Tionghoa atau Inggris: prospek, perusahaan, kontak, peluang, tugas, dan persetujuan, email di kotak surat demo, serta percakapan di dua nomor WhatsApp demo, dengan tanggal relatif terhadap hari impor. Impor akan membuat akun demo di bawah ini jika belum ada; kata sandinya adalah nama pengguna diikuti 123.',
+    'Data penjualan NocoBase dengan pelanggan fiktif, dalam bahasa Inggris atau Mandarin: prospek, perusahaan, kontak, peluang, tugas, persetujuan, email, dan obrolan WhatsApp. Impor membuat akun di bawah ini; setiap kata sandi adalah nama pengguna diikuti 123.',
   demoLanguage: 'Bahasa data demo',
   demoAbsent: 'Belum ada data demo yang diimpor.',
   demoPresent: 'Data demo diimpor pada {{date}}: {{count}} data.',
-  demoSettingsSet:
-    'Impor ini mengubah pengaturan bisnis {{names}}, yang masih bernilai default, menjadi pengaturan yang digunakan data demo.',
+  demoSettingsSet: 'Impor mengubah pengaturan ini untuk data demo: {{names}}.',
   demoAccounts: 'Akun demo',
   demoImport: 'Impor data demo',
   demoImportTitle: 'Impor data demo?',
   demoImportHint:
-    'Data ditambahkan ke basis data saat ini dan menjadi milik akun demo dan Anda: Anda juga menjadi manajer penjualan, tetap dengan peran administrator Anda, dan menjadi penanggung jawab sebagian data. Pengaturan bisnis yang masih default diatur untuk demo: mata uang menjadi CNY, zona waktu bisnis mengikuti kumpulan data (Shanghai untuk bahasa Tionghoa, New York untuk bahasa Inggris), dan bahasa kerja AI mengikuti kumpulan data; pengaturan yang sudah Anda ubah tetap. Tidak ada data lain yang diubah, dan impor ini dapat dihapus kembali dari sini. Akun demo dan Anda masing-masing mendapat kotak surat demo berisi email dengan pelanggan demo; kotak surat ini hanya mengirim ke orang-orang dalam demo, dan tidak ada email yang benar-benar terkirim.',
+    'Data demo ditambahkan di samping data Anda, dimiliki akun demo dan Anda, dan Anda juga menjadi manajer penjualan. Pengaturan yang masih default diubah ke milik data demo: mata uang CNY, zona waktu, dan bahasa AI-nya. Setiap akun mendapat kotak surat demo yang tidak pernah mengirim email keluar. Anda dapat menghapus semuanya lagi di sini.',
   demoImported: 'Data demo diimpor',
   demoReset: 'Hapus data demo',
   demoResetTitle: 'Hapus data demo?',

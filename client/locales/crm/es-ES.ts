@@ -1330,18 +1330,18 @@ export const crmEsES: CrmWording = {
   clearDate: 'Borrar',
   demoData: 'Datos de demostración',
   demoDescription:
-    'Un conjunto de datos de NocoBase vendiendo sus propias licencias y servicios a clientes ficticios, en chino o en inglés: leads, empresas, contactos, oportunidades, tareas y aprobaciones, correos en buzones de demostración y conversaciones en dos números de WhatsApp de demostración, con fechas relativas al día de la importación. Al importar se crean las cuentas de demostración siguientes si no existen; la contraseña es el nombre de usuario seguido de 123.',
+    'Datos de ventas de NocoBase con clientes ficticios, en inglés o en chino: leads, empresas, contactos, oportunidades, tareas, aprobaciones, correos y chats de WhatsApp. Al importarlos se crean las cuentas siguientes; cada contraseña es el nombre de usuario seguido de 123.',
   demoLanguage: 'Idioma de los datos de demostración',
   demoAbsent: 'No se han importado datos de demostración.',
   demoPresent:
     'Datos de demostración importados el {{date}}: {{count}} registros.',
   demoSettingsSet:
-    'La importación ha cambiado la configuración del negocio {{names}}, que tenía los valores predeterminados, a la que usan los datos de demostración.',
+    'La importación cambió estos ajustes para los datos de demostración: {{names}}.',
   demoAccounts: 'Cuentas de demostración',
   demoImport: 'Importar datos de demostración',
   demoImportTitle: '¿Importar los datos de demostración?',
   demoImportHint:
-    'Los registros se añaden a la base de datos actual y pertenecen a las cuentas de demostración y a ti: pasas a ser también responsable de ventas, conservas tu rol de administrador y eres responsable de una parte de ellos. La configuración del negocio que aún tiene los valores predeterminados se ajusta para la demostración: la moneda a CNY, la zona horaria del negocio a la del conjunto de datos (Shanghái para chino, Nueva York para inglés) y el idioma de trabajo de la IA al del conjunto de datos; la configuración que hayas cambiado se mantiene. No se modifica nada más de lo existente y la importación puede eliminarse de nuevo desde aquí. Las cuentas de demostración y tú recibís un buzón de demostración con correos con los clientes de demostración; solo envía a las personas de la demostración y nunca se entrega nada.',
+    'Los registros de demostración se añaden a los tuyos, a nombre de las cuentas de demostración y tuyo, y también pasas a ser responsable de ventas. Los ajustes que siguen en su valor predeterminado toman los de los datos: moneda CNY, su zona horaria y su idioma de la IA. Cada cuenta recibe un buzón de demostración que nunca envía correo al exterior. Puedes quitarlo todo aquí.',
   demoImported: 'Datos de demostración importados',
   demoReset: 'Eliminar datos de demostración',
   demoResetTitle: '¿Eliminar los datos de demostración?',

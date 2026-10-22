@@ -1337,17 +1337,17 @@ export const crmDeDE: CrmWording = {
   clearDate: 'Leeren',
   demoData: 'Demodaten',
   demoDescription:
-    'Ein Demodatenbestand, in dem NocoBase seine eigenen Lizenzen und Services an fiktive Kunden verkauft, auf Chinesisch oder Englisch: Leads, Unternehmen, Kontakte, Verkaufschancen, Aufgaben und Genehmigungen, E-Mails in Demo-Postfächern und Unterhaltungen über zwei Demo-WhatsApp-Nummern, datiert relativ zum Importtag. Beim Import werden die unten aufgeführten Demokonten erstellt, sofern sie noch nicht existieren; das Passwort ist der Benutzername gefolgt von 123.',
+    'Beispieldaten aus dem Vertrieb von NocoBase mit erfundenen Kunden, auf Englisch oder Chinesisch: Leads, Unternehmen, Kontakte, Verkaufschancen, Aufgaben, Genehmigungen, E-Mails und WhatsApp-Chats. Beim Import werden die folgenden Konten angelegt; das Passwort ist jeweils der Benutzername gefolgt von 123.',
   demoLanguage: 'Sprache der Demodaten',
   demoAbsent: 'Es wurden keine Demodaten importiert.',
   demoPresent: 'Demodaten am {{date}} importiert: {{count}} Datensätze.',
   demoSettingsSet:
-    'Der Import hat die Geschäftseinstellungen {{names}}, die noch auf Standardwerten standen, auf die Werte gesetzt, für die die Demodaten geschrieben sind.',
+    'Der Import hat diese Einstellungen für die Demodaten geändert: {{names}}.',
   demoAccounts: 'Demokonten',
   demoImport: 'Demodaten importieren',
   demoImportTitle: 'Demodaten importieren?',
   demoImportHint:
-    'Die Datensätze werden zur aktuellen Datenbank hinzugefügt und gehören den Demokonten und Ihnen: Sie werden zusätzlich Vertriebsleiter, behalten Ihre Administratorrolle und sind für einen Teil davon verantwortlich. Geschäftseinstellungen, die noch auf Standardwerten stehen, werden für die Demo gesetzt: die Währung auf CNY, die Geschäftszeitzone auf die des Datenbestands (Shanghai für Chinesisch, New York für Englisch) und die KI-Arbeitssprache auf die des Datenbestands; von Ihnen geänderte Einstellungen bleiben erhalten. Sonst wird nichts Bestehendes geändert, und der Import kann hier wieder entfernt werden. Die Demokonten und Sie erhalten jeweils ein Demo-Postfach mit E-Mails mit den Demokunden; es sendet nur an Personen aus der Demo, und nichts wird tatsächlich zugestellt.',
+    'Die Demodatensätze kommen zu Ihren eigenen hinzu und gehören den Demokonten und Ihnen; Sie werden außerdem Vertriebsleiter. Einstellungen, die noch auf dem Standard stehen, werden auf die der Demodaten gesetzt: Währung CNY, deren Zeitzone und KI-Sprache. Jedes Konto erhält ein Demopostfach, das nie E-Mails nach außen sendet. Sie können alles hier wieder entfernen.',
   demoImported: 'Demodaten importiert',
   demoReset: 'Demodaten entfernen',
   demoResetTitle: 'Demodaten entfernen?',
