@@ -168,7 +168,9 @@ export async function deploy({
   summary,
   wait = sleep,
   now = Date.now,
-  timeout = 600_000,
+  // Studio may take longer than ten minutes to run a release and pass its
+  // health check (the global one did for 1.0.0-beta.62).
+  timeout = 20 * 60_000,
 }) {
   validateConfig(env);
   summary(
@@ -295,7 +297,7 @@ export async function deploy({
     await wait(10_000);
   }
   throw new Error(
-    'Deployment timed out after 10 minutes; look at Studio before running the workflow again (nothing is rolled back)',
+    `Deployment timed out after ${timeout / 60_000} minutes; look at Studio before running the workflow again (nothing is rolled back)`,
   );
 }
 

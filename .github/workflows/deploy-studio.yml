@@ -60,7 +60,8 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # Up to 10 minutes to upload and 20 to wait for the release to run.
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
