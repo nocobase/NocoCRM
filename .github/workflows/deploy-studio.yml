@@ -91,8 +91,11 @@ jobs:
         with:
           name: release-archive
           path: storage/exports
+      # 1.0.0-beta.58 is the last npm release that holds the CLI: from
+      # 1.0.0-beta.59 the package is intentionally empty (Studio is developed
+      # privately). Install it from a Studio server once CI can.
       - name: Install nb-studio
-        run: npm install --prefix "$RUNNER_TEMP/studio-cli" --ignore-scripts --no-audit --no-fund @nocobase/studio-cli@1.0.0-beta.59
+        run: npm install --prefix "$RUNNER_TEMP/studio-cli" --ignore-scripts --no-audit --no-fund @nocobase/studio-cli@1.0.0-beta.58
       - name: Deploy or request Studio approval
         env:
           NB_STUDIO_API_KEY: ${{ secrets.NB_STUDIO_API_KEY }}
