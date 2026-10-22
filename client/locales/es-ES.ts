@@ -466,6 +466,15 @@ const esES: AppResource = {
   "Prepares a salesperson for a task they are about to do with a customer (a call, a meeting, a visit, a demo) — what the task should achieve, where things stand from the record's tasks, comments and mail, who is on the other side and what part each plays, the questions to ask, what to bring, the risks, and the points to cover in order. Use it on the morning of a task, or when the task's owner asks to be prepared.":
     'Prepara a un comercial para una tarea que va a realizar con un cliente (una llamada, una reunión, una visita, una demostración) —qué debe lograr la tarea, en qué punto están las cosas según las tareas, los comentarios y el correo del registro, quién está al otro lado y qué papel desempeña cada uno, las preguntas que hacer, qué llevar, los riesgos y los puntos que tratar en orden—. Se usa la mañana de la tarea o cuando el responsable de la tarea pide que se le prepare.',
   flowDiagram: {
+    controls: 'Controles del diagrama',
+    fitView: 'Ajustar a la vista',
+    fullscreen: 'Pantalla completa',
+    exitFullscreen: 'Salir de pantalla completa',
+    escapeHint: 'Pulsa Esc para salir',
+    leavesTo: 'Lleva a',
+    arrivesFrom: 'Viene de',
+    otherRoutes: 'Otras rutas',
+    minimap: 'Vista general del diagrama',
     configure: 'Configurar',
     overview: 'Vista general del diagrama',
     actualSize: 'Tamaño real',

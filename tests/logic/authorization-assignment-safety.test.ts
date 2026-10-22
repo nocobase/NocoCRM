@@ -42,7 +42,7 @@ const test = createAppTest({
     notification: {
       channels: {
         'system-email': {
-          provider: 'smtp',
+          type: 'smtp',
           host: 'localhost',
           port: 465,
           secure: true,

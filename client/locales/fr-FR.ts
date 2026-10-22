@@ -468,6 +468,15 @@ const frFR: AppResource = {
   "Prepares a salesperson for a task they are about to do with a customer (a call, a meeting, a visit, a demo) — what the task should achieve, where things stand from the record's tasks, comments and mail, who is on the other side and what part each plays, the questions to ask, what to bring, the risks, and the points to cover in order. Use it on the morning of a task, or when the task's owner asks to be prepared.":
     "Prépare un commercial à une tâche qu'il s'apprête à mener avec un client (un appel, une réunion, une visite, une démo) — ce que la tâche doit accomplir, où en sont les choses d'après les tâches, commentaires et e-mails de la fiche, qui se trouve en face et quel rôle chacun joue, les questions à poser, ce qu'il faut apporter, les risques et les points à aborder dans l'ordre. À utiliser le matin d'une tâche, ou lorsque le responsable de la tâche demande à être préparé.",
   flowDiagram: {
+    controls: 'Commandes du diagramme',
+    fitView: 'Ajuster à la vue',
+    fullscreen: 'Plein écran',
+    exitFullscreen: 'Quitter le plein écran',
+    escapeHint: 'Appuyez sur Échap pour quitter',
+    leavesTo: 'Mène à',
+    arrivesFrom: 'Vient de',
+    otherRoutes: 'Autres chemins',
+    minimap: 'Aperçu du diagramme',
     configure: 'Configurer',
     overview: 'Aperçu du diagramme',
     actualSize: 'Taille réelle',

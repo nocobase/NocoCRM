@@ -4,6 +4,23 @@ import type settingsEnUS from '../system/settings-en-US.js';
 // The template's Settings copy (client/locales/system/settings-en-US.ts): the
 // prepared Users and Roles pages and the permission editor, in de-DE.
 const settings: LocaleResource<typeof settingsEnUS> = {
+  setup: {
+    title: 'Voraussetzungen der Funktion',
+    checking: 'Aktuelle Konfiguration wird geprüft…',
+    checkAgain: 'Erneut prüfen',
+    ready: 'Die geprüften Voraussetzungen sind erfüllt.',
+    missing: 'Prüfen Sie die folgenden Konfigurationspunkte.',
+    manageMembers: 'Mitglieder verwalten',
+    manageMembersFor: 'Mitglieder von {{role}} verwalten',
+    unavailable:
+      'Die Prüfung ist gerade nicht möglich. Versuchen Sie es erneut.',
+    signIn:
+      'Ihre Sitzung ist abgelaufen. Melden Sie sich erneut an, um die Konfiguration zu prüfen.',
+    forbidden:
+      'Sie haben keinen Zugriff, um diese Konfiguration zu prüfen. Wenden Sie sich an einen Administrator.',
+    invalid:
+      'Diese Voraussetzung konnte nicht überprüft werden. Bitten Sie die Betreuer der Anwendung, ihre Konfiguration zu prüfen.',
+  },
   permissionManagement: 'Berechtigungsverwaltung',
   defaultAccess: {
     noResourcesShort: 'Keine konfigurierbaren Objekte verfügbar',
@@ -167,7 +184,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   denied: 'Sie haben keinen Zugriff. Wenden Sie sich an einen Administrator.',
   missing: 'Dieser Datensatz existiert nicht oder wurde gelöscht.',
   conflict:
-    'Diese Rolle wurde geändert. Laden Sie sie neu und führen Sie Ihre Änderungen vor dem Speichern zusammen.',
+    'Die Anfrage steht im Konflikt mit den aktuellen Daten. Prüfen Sie den neuesten Stand, bevor Sie es erneut versuchen.',
   sessionEnded: 'Ihre Sitzung ist abgelaufen. Melden Sie sich erneut an.',
   previous: 'Zurück',
   next: 'Weiter',
@@ -224,5 +241,25 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   },
   recordScope: 'Datensatzbereich',
   levelFor: 'Bereich für {{name}}',
+  userActionSaved: {
+    disable: 'Benutzer „{{name}}“ deaktiviert',
+    enable: 'Benutzer „{{name}}“ aktiviert',
+    revokeSessions: 'Aktive Sitzungen von „{{name}}“ beendet',
+  },
+  roleFilterIncomplete:
+    'Wählen Sie sowohl einen Rollenbereich als auch eine Rolle aus, oder setzen Sie die Filter zurück.',
+  backToSource: 'Zurück zur vorherigen Seite',
+  roleFilter: 'Nach Rolle filtern',
+  allRoles: 'Alle Rollen',
+  editUserFor: '{{name}} bearbeiten',
+  usersReadOnlyEmpty:
+    'Wenden Sie sich an einen Administrator, um Benutzer hinzuzufügen oder die Berechtigungen zum Anlegen von Benutzern und Zuweisen von Rollen zu erhalten.',
+  rolesReadOnlyEmpty:
+    'Wenden Sie sich an einen Administrator, um eine Rolle anzulegen oder die Berechtigung zum Anlegen von Rollen zu erhalten.',
+  selectRoles: 'Rollen auswählen',
+  searchRoles: 'Rollen suchen',
+  noRolesFound: 'Keine Rollen gefunden.',
+  invalidRequest:
+    'Einige Werte sind ungültig. Prüfen Sie Ihre Eingaben oder Filter und versuchen Sie es erneut.',
 };
 export default settings;

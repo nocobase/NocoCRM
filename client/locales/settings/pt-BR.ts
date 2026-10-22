@@ -4,6 +4,22 @@ import type settingsEnUS from '../system/settings-en-US.js';
 // The template's Settings copy (client/locales/system/settings-en-US.ts): the
 // prepared Users and Roles pages and the permission editor, in pt-BR.
 const settings: LocaleResource<typeof settingsEnUS> = {
+  setup: {
+    title: 'Pré-requisitos do recurso',
+    checking: 'Verificando a configuração atual…',
+    checkAgain: 'Verificar novamente',
+    ready: 'Os pré-requisitos verificados estão prontos.',
+    missing: 'Revise os itens de configuração abaixo.',
+    manageMembers: 'Gerenciar membros',
+    manageMembersFor: 'Gerenciar membros de {{role}}',
+    unavailable: 'Não foi possível verificar agora. Tente novamente.',
+    signIn:
+      'Sua sessão expirou. Entre novamente para verificar a configuração.',
+    forbidden:
+      'Você não tem acesso para verificar esta configuração. Fale com um administrador.',
+    invalid:
+      'Não foi possível verificar este pré-requisito. Peça a quem mantém o aplicativo para verificar a configuração.',
+  },
   permissionManagement: 'Gerenciamento de permissões',
   defaultAccess: {
     noResourcesShort: 'Nenhum objeto configurável disponível',
@@ -160,7 +176,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   denied: 'Você não tem acesso. Fale com um administrador.',
   missing: 'Este registro não existe ou foi excluído.',
   conflict:
-    'Esta função foi alterada. Recarregue-a e incorpore suas alterações antes de salvar.',
+    'A solicitação conflita com os dados atuais. Revise o registro mais recente antes de tentar novamente.',
   sessionEnded: 'Sua sessão foi encerrada. Entre novamente.',
   previous: 'Anterior',
   next: 'Próxima',
@@ -217,5 +233,25 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   },
   recordScope: 'Escopo de registros',
   levelFor: 'Alcance de {{name}}',
+  userActionSaved: {
+    disable: 'Usuário "{{name}}" desativado',
+    enable: 'Usuário "{{name}}" ativado',
+    revokeSessions: 'Sessões ativas de "{{name}}" revogadas',
+  },
+  roleFilterIncomplete:
+    'Escolha um escopo de função e uma função, ou limpe os filtros.',
+  backToSource: 'Voltar à página anterior',
+  roleFilter: 'Filtrar por função',
+  allRoles: 'Todas as funções',
+  editUserFor: 'Editar {{name}}',
+  usersReadOnlyEmpty:
+    'Fale com um administrador para adicionar usuários ou obter permissão para criar usuários e atribuir funções.',
+  rolesReadOnlyEmpty:
+    'Fale com um administrador para criar uma função ou obter permissão para criar funções.',
+  selectRoles: 'Selecionar funções',
+  searchRoles: 'Pesquisar funções',
+  noRolesFound: 'Nenhuma função encontrada.',
+  invalidRequest:
+    'Alguns valores são inválidos. Verifique o que foi digitado ou os filtros e tente novamente.',
 };
 export default settings;

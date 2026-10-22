@@ -16,7 +16,7 @@ vi.mock('../../client/pages/settings/accounts/user-extras.js', () => ({
   PendingInvitations: () => null,
 }));
 vi.mock('../../client/pages/settings/accounts/user-row-extras.js', () => ({
-  useUserExtras: () => ({ items: null, dialogs: null }),
+  useUserExtras: () => ({ items: null, dialogs: null, offered: false }),
 }));
 import UserForm from '../../client/pages/settings/user-form.js';
 import UsersPage from '../../client/pages/settings/users.js';
@@ -58,7 +58,7 @@ describe('template system settings', () => {
       services,
       fetch: answerApi(calls),
     });
-    expect(await screen.findByRole('link', { name: 'Alice' })).toBeVisible();
+    expect(await screen.findByText('Alice', { exact: true })).toBeVisible();
     expect(
       screen.queryByRole('link', { name: 'New user' }),
     ).not.toBeInTheDocument();

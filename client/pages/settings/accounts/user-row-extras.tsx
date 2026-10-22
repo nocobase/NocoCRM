@@ -5,20 +5,26 @@ import type { ManagedUser } from '@nocobase/app-plugin-users/client/user-client'
 import { useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
 
-import { DropdownMenuItem } from '#components/ui/dropdown-menu';
+import { Button } from '#components/ui/button';
 import { useUserPermission } from '../hooks.js';
 import { ConfirmAction } from '../shared.js';
 import { errorReason, errorStatus, useAdminText } from '../common/hooks.js';
 import { useUsersClient } from './data.js';
 
 /**
- * A row's Reset password and Delete: `items` go in its menu, `dialogs` beside
- * it. Deleting oneself the server refuses, and the dialog says so.
+ * A row's Reset password and Delete, buttons beside the page's own (Disable,
+ * Revoke sessions): `items` the buttons, `dialogs` what they open, `offered`
+ * whether there is any. Deleting oneself the server refuses, and the dialog
+ * says so.
  */
 export function useUserExtras(
   user: ManagedUser,
   reload: () => void,
-): { readonly items: ReactNode; readonly dialogs: ReactNode } {
+): {
+  readonly items: ReactNode;
+  readonly dialogs: ReactNode;
+  readonly offered: boolean;
+} {
   const { text } = useAdminText();
   const location = useLocation();
   const client = useUsersClient();
@@ -56,7 +62,10 @@ export function useUserExtras(
   const items = (
     <>
       {canReset && (
-        <DropdownMenuItem
+        <Button
+          variant='outline'
+          size='xs'
+          nativeButton={false}
           render={
             <Link
               to={{
@@ -67,18 +76,19 @@ export function useUserExtras(
           }
         >
           {text('users.actions.password')}
-        </DropdownMenuItem>
+        </Button>
       )}
       {canDelete && (
-        <DropdownMenuItem
-          variant='destructive'
+        <Button
+          variant='outline'
+          size='xs'
           onClick={() => {
             setError(undefined);
             setDeleting(true);
           }}
         >
           {text('users.actions.delete')}
-        </DropdownMenuItem>
+        </Button>
       )}
     </>
   );
@@ -94,5 +104,5 @@ export function useUserExtras(
       onConfirm={() => void remove()}
     />
   );
-  return { items, dialogs };
+  return { items, dialogs, offered: canReset || canDelete };
 }

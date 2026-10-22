@@ -465,6 +465,15 @@ const jaJP: AppResource = {
   "Prepares a salesperson for a task they are about to do with a customer (a call, a meeting, a visit, a demo) — what the task should achieve, where things stand from the record's tasks, comments and mail, who is on the other side and what part each plays, the questions to ask, what to bring, the risks, and the points to cover in order. Use it on the morning of a task, or when the task's owner asks to be prepared.":
     '営業担当が顧客と行う予定のタスク（電話、会議、訪問、デモ）の準備を支援します。タスクで達成すべきこと、レコードのタスク・コメント・メールから見た現状、先方の参加者とそれぞれの役割、尋ねるべき質問、持参するもの、リスク、順に押さえるべきポイントをまとめます。タスク当日の朝、またはタスクの担当者が準備を依頼したときに使います。',
   flowDiagram: {
+    controls: '図の操作',
+    fitView: '全体を表示',
+    fullscreen: '全画面表示',
+    exitFullscreen: '全画面表示を終了',
+    escapeHint: 'Esc キーで終了',
+    leavesTo: '遷移先',
+    arrivesFrom: '遷移元',
+    otherRoutes: 'その他の経路',
+    minimap: '図の概観',
     configure: '設定',
     overview: '図の概観',
     actualSize: '実寸',

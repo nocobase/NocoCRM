@@ -4,6 +4,22 @@ import type settingsEnUS from '../system/settings-en-US.js';
 // The template's Settings copy (client/locales/system/settings-en-US.ts): the
 // prepared Users and Roles pages and the permission editor, in es-ES.
 const settings: LocaleResource<typeof settingsEnUS> = {
+  setup: {
+    title: 'Requisitos previos de la función',
+    checking: 'Comprobando la configuración actual…',
+    checkAgain: 'Volver a comprobar',
+    ready: 'Los requisitos comprobados están listos.',
+    missing: 'Revisa los elementos de configuración siguientes.',
+    manageMembers: 'Gestionar miembros',
+    manageMembersFor: 'Gestionar los miembros de {{role}}',
+    unavailable: 'No se puede comprobar ahora. Inténtalo de nuevo.',
+    signIn:
+      'Tu sesión ha caducado. Vuelve a iniciar sesión para comprobar la configuración.',
+    forbidden:
+      'No tienes acceso para comprobar esta configuración. Contacta con un administrador.',
+    invalid:
+      'No se ha podido verificar este requisito. Pide a quien mantiene la aplicación que revise su configuración.',
+  },
   permissionManagement: 'Gestión de permisos',
   defaultAccess: {
     noResourcesShort: 'No hay objetos configurables disponibles',
@@ -160,7 +176,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   denied: 'No tienes acceso. Ponte en contacto con un administrador.',
   missing: 'Este registro no existe o se ha eliminado.',
   conflict:
-    'Este rol ha cambiado. Vuelve a cargarlo y combina tus cambios antes de guardar.',
+    'La solicitud entra en conflicto con los datos actuales. Revisa la versión más reciente antes de volver a intentarlo.',
   sessionEnded: 'Tu sesión ha finalizado. Vuelve a iniciar sesión.',
   previous: 'Anterior',
   next: 'Siguiente',
@@ -217,5 +233,24 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   },
   recordScope: 'Alcance de registros',
   levelFor: 'Alcance de {{name}}',
+  userActionSaved: {
+    disable: 'Usuario "{{name}}" deshabilitado',
+    enable: 'Usuario "{{name}}" habilitado',
+    revokeSessions: 'Sesiones activas de "{{name}}" revocadas',
+  },
+  roleFilterIncomplete: 'Elige un ámbito de rol y un rol, o borra los filtros.',
+  backToSource: 'Volver a la página anterior',
+  roleFilter: 'Filtrar por rol',
+  allRoles: 'Todos los roles',
+  editUserFor: 'Editar {{name}}',
+  usersReadOnlyEmpty:
+    'Contacta con un administrador para añadir usuarios u obtener permiso para crear usuarios y asignar roles.',
+  rolesReadOnlyEmpty:
+    'Contacta con un administrador para crear un rol u obtener permiso para crear roles.',
+  selectRoles: 'Seleccionar roles',
+  searchRoles: 'Buscar roles',
+  noRolesFound: 'No se han encontrado roles.',
+  invalidRequest:
+    'Algunos valores no son válidos. Revisa lo introducido o los filtros e inténtalo de nuevo.',
 };
 export default settings;

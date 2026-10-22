@@ -85,7 +85,7 @@ import { lifecycleRuntimeToken } from '../lifecycles.js';
 
 // The Channel the CRM's notifications go through: the in-app inbox, named
 // `inbox` in the notification configuration (`notification.channels.inbox`
-// with `provider: in-app`, the template's name for it).
+// with `type: in-app`, the template's name for it).
 export const CRM_INBOX_CHANNEL = 'inbox';
 
 export const crmToken: ServiceToken<CrmService> =

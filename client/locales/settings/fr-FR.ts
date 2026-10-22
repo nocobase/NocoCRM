@@ -4,6 +4,22 @@ import type settingsEnUS from '../system/settings-en-US.js';
 // The template's Settings copy (client/locales/system/settings-en-US.ts): the
 // prepared Users and Roles pages and the permission editor, in fr-FR.
 const settings: LocaleResource<typeof settingsEnUS> = {
+  setup: {
+    title: 'Prérequis de la fonctionnalité',
+    checking: 'Vérification de la configuration actuelle…',
+    checkAgain: 'Vérifier à nouveau',
+    ready: 'Les prérequis vérifiés sont prêts.',
+    missing: 'Vérifiez les éléments de configuration ci-dessous.',
+    manageMembers: 'Gérer les membres',
+    manageMembersFor: 'Gérer les membres de {{role}}',
+    unavailable: 'Vérification impossible pour le moment. Réessayez.',
+    signIn:
+      'Votre session a expiré. Reconnectez-vous pour vérifier la configuration.',
+    forbidden:
+      "Vous n'avez pas accès à la vérification de cette configuration. Contactez un administrateur.",
+    invalid:
+      "Ce prérequis n'a pas pu être vérifié. Demandez au mainteneur de l'application de vérifier sa configuration.",
+  },
   permissionManagement: 'Gestion des autorisations',
   defaultAccess: {
     noResourcesShort: 'Aucun objet configurable disponible',
@@ -160,7 +176,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   denied: "Vous n'avez pas accès. Contactez un administrateur.",
   missing: "Cette fiche n'existe pas ou a été supprimée.",
   conflict:
-    "Ce rôle a été modifié. Rechargez-le et reportez vos modifications avant d'enregistrer.",
+    'La requête est en conflit avec les données actuelles. Consultez la dernière version avant de réessayer.',
   sessionEnded: 'Votre session a expiré. Reconnectez-vous.',
   previous: 'Précédent',
   next: 'Suivant',
@@ -218,5 +234,25 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   },
   recordScope: 'Portée des fiches',
   levelFor: 'Portée de « {{name}} »',
+  userActionSaved: {
+    disable: 'Utilisateur « {{name}} » désactivé',
+    enable: 'Utilisateur « {{name}} » activé',
+    revokeSessions: 'Sessions actives de « {{name}} » révoquées',
+  },
+  roleFilterIncomplete:
+    'Choisissez à la fois une portée de rôle et un rôle, ou effacez les filtres.',
+  backToSource: 'Revenir à la page précédente',
+  roleFilter: 'Filtrer par rôle',
+  allRoles: 'Tous les rôles',
+  editUserFor: 'Modifier {{name}}',
+  usersReadOnlyEmpty:
+    "Contactez un administrateur pour ajouter des utilisateurs ou obtenir les autorisations de créer des utilisateurs et d'attribuer des rôles.",
+  rolesReadOnlyEmpty:
+    "Contactez un administrateur pour créer un rôle ou obtenir l'autorisation de créer des rôles.",
+  selectRoles: 'Choisir des rôles',
+  searchRoles: 'Rechercher des rôles',
+  noRolesFound: 'Aucun rôle trouvé.',
+  invalidRequest:
+    'Certaines valeurs ne sont pas valides. Vérifiez votre saisie ou vos filtres, puis réessayez.',
 };
 export default settings;

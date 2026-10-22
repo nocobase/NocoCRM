@@ -435,6 +435,15 @@ const zhTW: AppResource = {
   "Prepares a salesperson for a task they are about to do with a customer (a call, a meeting, a visit, a demo) — what the task should achieve, where things stand from the record's tasks, comments and mail, who is on the other side and what part each plays, the questions to ask, what to bring, the risks, and the points to cover in order. Use it on the morning of a task, or when the task's owner asks to be prepared.":
     '為業務即將和客戶進行的任務（電話、會議、拜訪、展示）做準備：任務要達成什麼、從記錄的任務、評論和郵件看事情進展到哪一步、對方都有誰以及各自的角色、要問的問題、要帶的資料、風險，以及依順序要講的重點。在任務當天早上，或任務負責人要求準備時使用。',
   flowDiagram: {
+    controls: '流程圖控制',
+    fitView: '符合畫布',
+    fullscreen: '全螢幕',
+    exitFullscreen: '結束全螢幕',
+    escapeHint: '按 Esc 結束',
+    leavesTo: '前往',
+    arrivesFrom: '來自',
+    otherRoutes: '其他路徑',
+    minimap: '流程縮略導覽',
     configure: '設定',
     overview: '流程縮略導覽',
     actualSize: '實際大小',

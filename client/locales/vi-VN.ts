@@ -463,6 +463,15 @@ const viVN: AppResource = {
   "Prepares a salesperson for a task they are about to do with a customer (a call, a meeting, a visit, a demo) — what the task should achieve, where things stand from the record's tasks, comments and mail, who is on the other side and what part each plays, the questions to ask, what to bring, the risks, and the points to cover in order. Use it on the morning of a task, or when the task's owner asks to be prepared.":
     'Giúp nhân viên bán hàng chuẩn bị cho một công việc sắp làm với khách hàng (cuộc gọi, cuộc họp, chuyến thăm, buổi demo) — công việc cần đạt được gì, tình hình hiện tại dựa trên các công việc, bình luận và email của bản ghi, phía bên kia gồm những ai và mỗi người đóng vai trò gì, các câu hỏi cần đặt ra, những gì cần mang theo, các rủi ro, và các điểm cần trao đổi theo thứ tự. Dùng vào buổi sáng ngày diễn ra công việc, hoặc khi người phụ trách công việc yêu cầu được chuẩn bị.',
   flowDiagram: {
+    controls: 'Điều khiển sơ đồ',
+    fitView: 'Vừa khung nhìn',
+    fullscreen: 'Toàn màn hình',
+    exitFullscreen: 'Thoát toàn màn hình',
+    escapeHint: 'Nhấn Esc để thoát',
+    leavesTo: 'Dẫn đến',
+    arrivesFrom: 'Đến từ',
+    otherRoutes: 'Đường khác',
+    minimap: 'Tổng quan sơ đồ',
     configure: 'Cấu hình',
     overview: 'Tổng quan sơ đồ',
     actualSize: 'Kích thước thực',

@@ -134,6 +134,10 @@ export function RouteOverlay({
             <DialogOverlay forceRender />
             <DialogPrimitive.Popup
               ref={popupRef}
+              // The template's markers of which kind of overlay this is,
+              // which its tests and pages read.
+              data-slot='route-overlay-content'
+              data-presentation={drawer ? 'drawer' : 'dialog'}
               finalFocus={() => {
                 const previous = previousFocusRef.current;
                 if (parentPopup?.current) {
@@ -155,17 +159,26 @@ export function RouteOverlay({
             >
               {/* Application change: the description sits close under the
                   title (space-y-1, the library's space-y-2). */}
-              <header className='shrink-0 space-y-1 border-b p-4 pr-12'>
+              <header
+                data-slot='route-overlay-header'
+                className='shrink-0 space-y-1 border-b p-4 pr-12'
+              >
                 <DialogTitle>{title}</DialogTitle>
                 {description != null && (
                   <DialogDescription>{description}</DialogDescription>
                 )}
               </header>
-              <div className='min-h-0 flex-1 overflow-y-auto p-4'>
+              <div
+                data-slot='route-overlay-body'
+                className='min-h-0 flex-1 overflow-y-auto p-4'
+              >
                 {children}
               </div>
               {footer != null && (
-                <footer className='flex shrink-0 flex-wrap justify-end gap-2 border-t p-4'>
+                <footer
+                  data-slot='route-overlay-footer'
+                  className='flex shrink-0 flex-wrap justify-end gap-2 border-t p-4'
+                >
                   {footer}
                 </footer>
               )}

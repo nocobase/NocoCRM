@@ -466,6 +466,15 @@ const idID: AppResource = {
   "Prepares a salesperson for a task they are about to do with a customer (a call, a meeting, a visit, a demo) — what the task should achieve, where things stand from the record's tasks, comments and mail, who is on the other side and what part each plays, the questions to ask, what to bring, the risks, and the points to cover in order. Use it on the morning of a task, or when the task's owner asks to be prepared.":
     'Mempersiapkan tenaga penjualan untuk tugas yang akan dilakukannya bersama pelanggan (panggilan, rapat, kunjungan, demo) — apa yang harus dicapai tugas tersebut, posisi terkini berdasarkan tugas, komentar, dan email pada data, siapa saja di pihak pelanggan dan peran masing-masing, pertanyaan yang perlu diajukan, apa yang perlu dibawa, risikonya, dan poin yang perlu dibahas secara berurutan. Gunakan pada pagi hari tugas, atau saat penanggung jawab tugas meminta dipersiapkan.',
   flowDiagram: {
+    controls: 'Kontrol diagram',
+    fitView: 'Sesuaikan tampilan',
+    fullscreen: 'Layar penuh',
+    exitFullscreen: 'Keluar dari layar penuh',
+    escapeHint: 'Tekan Esc untuk keluar',
+    leavesTo: 'Menuju ke',
+    arrivesFrom: 'Datang dari',
+    otherRoutes: 'Jalur lain',
+    minimap: 'Ikhtisar diagram',
     configure: 'Konfigurasi',
     overview: 'Ikhtisar diagram',
     actualSize: 'Ukuran asli',

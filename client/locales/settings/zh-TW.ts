@@ -4,6 +4,19 @@ import type settingsEnUS from '../system/settings-en-US.js';
 // The template's Settings copy (client/locales/system/settings-en-US.ts): the
 // prepared Users and Roles pages and the permission editor, in zh-TW.
 const settings: LocaleResource<typeof settingsEnUS> = {
+  setup: {
+    title: '功能前置條件',
+    checking: '正在檢查目前設定…',
+    checkAgain: '重新檢查',
+    ready: '已檢查的前置條件都已就緒。',
+    missing: '請檢查下列設定項目。',
+    manageMembers: '管理成員',
+    manageMembersFor: '管理「{{role}}」成員',
+    unavailable: '目前無法檢查，請稍後再試。',
+    signIn: '登入工作階段已過期，請重新登入後再檢查設定。',
+    forbidden: '你沒有檢查此設定的權限，請聯絡管理員。',
+    invalid: '無法驗證此前置條件，請應用程式維護者檢查其設定。',
+  },
   permissionManagement: '權限管理',
   defaultAccess: {
     noResourcesShort: '目前沒有可設定的業務物件',
@@ -149,7 +162,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   loading: '載入中',
   denied: '你沒有存取權限，請聯絡管理員。',
   missing: '此記錄不存在或已被刪除。',
-  conflict: '此角色已被修改，請重新載入並合併你的變更後再儲存。',
+  conflict: '請求與目前資料衝突，請查看最新記錄後再試。',
   sessionEnded: '你的工作階段已結束，請重新登入。',
   previous: '上一頁',
   next: '下一頁',
@@ -203,5 +216,22 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   },
   recordScope: '記錄範圍',
   levelFor: '{{name}} 的範圍',
+  userActionSaved: {
+    disable: '已停用使用者「{{name}}」',
+    enable: '已啟用使用者「{{name}}」',
+    revokeSessions: '已撤銷「{{name}}」的所有工作階段',
+  },
+  roleFilterIncomplete: '請同時選擇角色範圍和角色，或清除篩選。',
+  backToSource: '返回上一頁',
+  roleFilter: '依角色篩選',
+  allRoles: '全部角色',
+  editUserFor: '編輯 {{name}}',
+  usersReadOnlyEmpty:
+    '請聯絡管理員新增使用者，或授予你建立使用者和指派角色的權限。',
+  rolesReadOnlyEmpty: '請聯絡管理員建立角色，或授予你建立角色的權限。',
+  selectRoles: '選擇角色',
+  searchRoles: '搜尋角色',
+  noRolesFound: '找不到角色。',
+  invalidRequest: '部分值無效，請檢查輸入內容或篩選條件後再試。',
 };
 export default settings;

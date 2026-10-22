@@ -1,6 +1,6 @@
 // What the CRM adds to NocoBase 3's prepared Users page
 // (client/pages/settings/accounts/): the Invite button, Reset password and
-// Delete in a row's menu, each offered only to whoever holds the users
+// Delete among a row's buttons, each offered only to whoever holds the users
 // plugin's action, and a deletion the CRM refuses saying why.
 import { apiClientToken } from '@nocobase/app-client';
 import {
@@ -97,8 +97,7 @@ const everything: AuthorizationSnapshot = {
   permissions: [],
 };
 
-it('names roles by their labels and offers inviting, a password reset and deletion to whoever may', async () => {
-  const user = userEvent.setup();
+it('offers inviting, a password reset and deletion to whoever may', async () => {
   setup(everything);
   expect(await screen.findByRole('link', { name: 'Alice' })).toBeVisible();
   // The role's label, not its key.
@@ -109,15 +108,14 @@ it('names roles by their labels and offers inviting, a password reset and deleti
       'href',
     ),
   ).toContain('/settings/users/invite');
-  await user.click(screen.getByRole('button', { name: /Alice/ }));
-  const menu = await screen.findByRole('menu');
+  // Beside the page's own Disable and Revoke sessions.
   expect(
-    within(menu)
-      .getByRole('menuitem', { name: users.actions.password })
+    screen
+      .getByRole('button', { name: users.actions.password })
       .getAttribute('href'),
   ).toContain('/settings/users/alice/password');
   expect(
-    within(menu).getByRole('menuitem', { name: users.actions.delete }),
+    screen.getByRole('button', { name: users.actions.delete }),
   ).toBeVisible();
 });
 
@@ -133,9 +131,8 @@ it('deletes a user once confirmed, and says why when the CRM refuses', async () 
       : new Response(null, { status: 204 }),
   );
   await screen.findByRole('link', { name: 'Alice' });
-  await user.click(screen.getByRole('button', { name: /Alice/ }));
   await user.click(
-    await screen.findByRole('menuitem', { name: users.actions.delete }),
+    await screen.findByRole('button', { name: users.actions.delete }),
   );
   const dialog = await screen.findByRole('alertdialog');
   expect(
@@ -164,23 +161,18 @@ it('deletes a user once confirmed, and says why when the CRM refuses', async () 
 });
 
 it('offers none of them without the users plugin actions', async () => {
-  const user = userEvent.setup();
   setup({
     unrestricted: false,
     permissions: [
       { resource: { type: 'user', id: '*' }, action: 'read', allowed: true },
     ],
   } as unknown as AuthorizationSnapshot);
-  await screen.findByRole('link', { name: 'Alice' });
+  await screen.findByText('Alice');
   expect(screen.queryByRole('button', { name: users.invite })).toBeNull();
-  const actions = screen.queryByRole('button', { name: /Alice/ });
-  if (actions) {
-    await user.click(actions);
-    expect(
-      screen.queryByRole('menuitem', { name: users.actions.password }),
-    ).toBeNull();
-    expect(
-      screen.queryByRole('menuitem', { name: users.actions.delete }),
-    ).toBeNull();
-  }
+  expect(
+    screen.queryByRole('button', { name: users.actions.password }),
+  ).toBeNull();
+  expect(
+    screen.queryByRole('button', { name: users.actions.delete }),
+  ).toBeNull();
 });

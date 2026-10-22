@@ -470,6 +470,15 @@ const deDE: AppResource = {
   "Prepares a salesperson for a task they are about to do with a customer (a call, a meeting, a visit, a demo) — what the task should achieve, where things stand from the record's tasks, comments and mail, who is on the other side and what part each plays, the questions to ask, what to bring, the risks, and the points to cover in order. Use it on the morning of a task, or when the task's owner asks to be prepared.":
     'Bereitet einen Vertriebsmitarbeiter auf eine anstehende Aufgabe mit einem Kunden vor (Anruf, Meeting, Besuch, Demo) – was die Aufgabe erreichen soll, wo die Dinge laut Aufgaben, Kommentaren und E-Mails des Datensatzes stehen, wer auf der Gegenseite sitzt und welche Rolle jeder spielt, welche Fragen zu stellen sind, was mitzubringen ist, die Risiken und die Punkte, die der Reihe nach zu behandeln sind. Verwenden am Morgen einer Aufgabe oder wenn der Verantwortliche der Aufgabe um Vorbereitung bittet.',
   flowDiagram: {
+    controls: 'Diagrammsteuerung',
+    fitView: 'Einpassen',
+    fullscreen: 'Vollbild',
+    exitFullscreen: 'Vollbild beenden',
+    escapeHint: 'Zum Beenden Esc drücken',
+    leavesTo: 'Führt zu',
+    arrivesFrom: 'Kommt von',
+    otherRoutes: 'Weitere Wege',
+    minimap: 'Diagrammübersicht',
     configure: 'Konfigurieren',
     overview: 'Diagrammübersicht',
     actualSize: 'Originalgröße',

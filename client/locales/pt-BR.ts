@@ -466,6 +466,15 @@ const ptBR: AppResource = {
   "Prepares a salesperson for a task they are about to do with a customer (a call, a meeting, a visit, a demo) — what the task should achieve, where things stand from the record's tasks, comments and mail, who is on the other side and what part each plays, the questions to ask, what to bring, the risks, and the points to cover in order. Use it on the morning of a task, or when the task's owner asks to be prepared.":
     'Prepara um vendedor para uma tarefa que ele está prestes a realizar com um cliente (uma ligação, uma reunião, uma visita, uma demonstração) — o que a tarefa deve alcançar, em que pé estão as coisas segundo as tarefas, os comentários e os e-mails do registro, quem está do outro lado e qual é o papel de cada um, as perguntas a fazer, o que levar, os riscos e os pontos a abordar, em ordem. Use na manhã da tarefa ou quando o responsável pela tarefa pedir para ser preparado.',
   flowDiagram: {
+    controls: 'Controles do diagrama',
+    fitView: 'Ajustar à tela',
+    fullscreen: 'Tela cheia',
+    exitFullscreen: 'Sair da tela cheia',
+    escapeHint: 'Pressione Esc para sair',
+    leavesTo: 'Leva a',
+    arrivesFrom: 'Vem de',
+    otherRoutes: 'Outros caminhos',
+    minimap: 'Visão geral do diagrama',
     configure: 'Configurar',
     overview: 'Visão geral do diagrama',
     actualSize: 'Tamanho real',

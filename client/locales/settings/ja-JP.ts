@@ -4,6 +4,21 @@ import type settingsEnUS from '../system/settings-en-US.js';
 // The template's Settings copy (client/locales/system/settings-en-US.ts): the
 // prepared Users and Roles pages and the permission editor, in ja-JP.
 const settings: LocaleResource<typeof settingsEnUS> = {
+  setup: {
+    title: '機能の前提条件',
+    checking: '現在の設定を確認しています…',
+    checkAgain: '再確認',
+    ready: '確認した前提条件はすべて整っています。',
+    missing: '以下の設定項目を確認してください。',
+    manageMembers: 'メンバーを管理',
+    manageMembersFor: '「{{role}}」のメンバーを管理',
+    unavailable: '現在確認できません。もう一度お試しください。',
+    signIn:
+      'セッションの有効期限が切れました。再ログインして設定を確認してください。',
+    forbidden: 'この設定を確認する権限がありません。管理者に連絡してください。',
+    invalid:
+      'この前提条件を検証できませんでした。アプリケーションの管理者に設定の確認を依頼してください。',
+  },
   permissionManagement: '権限管理',
   defaultAccess: {
     noResourcesShort: '設定できる業務オブジェクトはありません',
@@ -161,7 +176,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   denied: 'アクセス権がありません。管理者にお問い合わせください。',
   missing: 'このレコードは存在しないか、削除されています。',
   conflict:
-    'このロールは変更されています。再読み込みし、変更内容を反映してから保存してください。',
+    'リクエストが現在のデータと競合しています。最新のレコードを確認してから再試行してください。',
   sessionEnded: 'セッションが終了しました。再ログインしてください。',
   previous: '前へ',
   next: '次へ',
@@ -218,5 +233,25 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   },
   recordScope: 'レコード範囲',
   levelFor: '「{{name}}」の範囲',
+  userActionSaved: {
+    disable: 'ユーザー「{{name}}」を無効にしました',
+    enable: 'ユーザー「{{name}}」を有効にしました',
+    revokeSessions: '「{{name}}」のアクティブなセッションを取り消しました',
+  },
+  roleFilterIncomplete:
+    'ロールの範囲とロールの両方を選ぶか、フィルターをクリアしてください。',
+  backToSource: '前のページに戻る',
+  roleFilter: 'ロールで絞り込む',
+  allRoles: 'すべてのロール',
+  editUserFor: '{{name}} を編集',
+  usersReadOnlyEmpty:
+    'ユーザーの追加、またはユーザー作成とロール割り当ての権限については管理者に連絡してください。',
+  rolesReadOnlyEmpty:
+    'ロールの作成、またはロール作成の権限については管理者に連絡してください。',
+  selectRoles: 'ロールを選択',
+  searchRoles: 'ロールを検索',
+  noRolesFound: 'ロールが見つかりません。',
+  invalidRequest:
+    '一部の値が無効です。入力内容またはフィルターを確認して、もう一度お試しください。',
 };
 export default settings;

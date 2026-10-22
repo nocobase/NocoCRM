@@ -4,6 +4,21 @@ import type settingsEnUS from '../system/settings-en-US.js';
 // The template's Settings copy (client/locales/system/settings-en-US.ts): the
 // prepared Users and Roles pages and the permission editor, in id-ID.
 const settings: LocaleResource<typeof settingsEnUS> = {
+  setup: {
+    title: 'Prasyarat fitur',
+    checking: 'Memeriksa konfigurasi saat ini…',
+    checkAgain: 'Periksa lagi',
+    ready: 'Prasyarat yang diperiksa sudah siap.',
+    missing: 'Tinjau item konfigurasi di bawah ini.',
+    manageMembers: 'Kelola anggota',
+    manageMembersFor: 'Kelola anggota {{role}}',
+    unavailable: 'Tidak dapat memeriksa saat ini. Coba lagi.',
+    signIn: 'Sesi Anda telah berakhir. Masuk lagi untuk memeriksa konfigurasi.',
+    forbidden:
+      'Anda tidak memiliki akses untuk memeriksa konfigurasi ini. Hubungi administrator.',
+    invalid:
+      'Prasyarat ini tidak dapat diverifikasi. Minta pengelola aplikasi untuk memeriksa konfigurasinya.',
+  },
   permissionManagement: 'Manajemen izin',
   defaultAccess: {
     noResourcesShort: 'Tidak ada objek yang dapat dikonfigurasi',
@@ -160,7 +175,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   denied: 'Anda tidak memiliki akses. Hubungi administrator.',
   missing: 'Data ini tidak ada atau telah dihapus.',
   conflict:
-    'Peran ini telah berubah. Muat ulang dan gabungkan perubahan Anda sebelum menyimpan.',
+    'Permintaan bertentangan dengan data saat ini. Tinjau data terbaru sebelum mencoba lagi.',
   sessionEnded: 'Sesi Anda telah berakhir. Masuk lagi.',
   previous: 'Sebelumnya',
   next: 'Berikutnya',
@@ -217,5 +232,25 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   },
   recordScope: 'Cakupan data',
   levelFor: 'Cakupan "{{name}}"',
+  userActionSaved: {
+    disable: 'Pengguna "{{name}}" dinonaktifkan',
+    enable: 'Pengguna "{{name}}" diaktifkan',
+    revokeSessions: 'Sesi aktif "{{name}}" dicabut',
+  },
+  roleFilterIncomplete:
+    'Pilih cakupan peran dan peran sekaligus, atau hapus filter.',
+  backToSource: 'Kembali ke halaman sebelumnya',
+  roleFilter: 'Filter menurut peran',
+  allRoles: 'Semua peran',
+  editUserFor: 'Edit {{name}}',
+  usersReadOnlyEmpty:
+    'Hubungi administrator untuk menambahkan pengguna atau memberi izin membuat pengguna dan menetapkan peran.',
+  rolesReadOnlyEmpty:
+    'Hubungi administrator untuk membuat peran atau memberi izin membuat peran.',
+  selectRoles: 'Pilih peran',
+  searchRoles: 'Cari peran',
+  noRolesFound: 'Peran tidak ditemukan.',
+  invalidRequest:
+    'Beberapa nilai tidak valid. Periksa masukan atau filter Anda, lalu coba lagi.',
 };
 export default settings;

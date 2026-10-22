@@ -4,6 +4,21 @@ import type settingsEnUS from '../system/settings-en-US.js';
 // The template's Settings copy (client/locales/system/settings-en-US.ts): the
 // prepared Users and Roles pages and the permission editor, in vi-VN.
 const settings: LocaleResource<typeof settingsEnUS> = {
+  setup: {
+    title: 'Điều kiện tiên quyết của tính năng',
+    checking: 'Đang kiểm tra cấu hình hiện tại…',
+    checkAgain: 'Kiểm tra lại',
+    ready: 'Các điều kiện đã kiểm tra đều sẵn sàng.',
+    missing: 'Hãy xem lại các mục cấu hình bên dưới.',
+    manageMembers: 'Quản lý thành viên',
+    manageMembersFor: 'Quản lý thành viên của {{role}}',
+    unavailable: 'Hiện không thể kiểm tra. Hãy thử lại.',
+    signIn: 'Phiên của bạn đã hết hạn. Hãy đăng nhập lại để kiểm tra cấu hình.',
+    forbidden:
+      'Bạn không có quyền kiểm tra cấu hình này. Hãy liên hệ quản trị viên.',
+    invalid:
+      'Không thể xác minh điều kiện này. Hãy nhờ người duy trì ứng dụng kiểm tra cấu hình.',
+  },
   permissionManagement: 'Quản lý quyền',
   defaultAccess: {
     noResourcesShort: 'Không có đối tượng nào để cấu hình',
@@ -160,7 +175,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   denied: 'Bạn không có quyền truy cập. Hãy liên hệ quản trị viên.',
   missing: 'Bản ghi này không tồn tại hoặc đã bị xóa.',
   conflict:
-    'Vai trò này đã thay đổi. Hãy tải lại và hợp nhất các thay đổi của bạn trước khi lưu.',
+    'Yêu cầu xung đột với dữ liệu hiện tại. Hãy xem bản ghi mới nhất trước khi thử lại.',
   sessionEnded: 'Phiên của bạn đã kết thúc. Hãy đăng nhập lại.',
   previous: 'Trước',
   next: 'Tiếp',
@@ -217,5 +232,25 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   },
   recordScope: 'Phạm vi bản ghi',
   levelFor: 'Phạm vi của {{name}}',
+  userActionSaved: {
+    disable: 'Đã tắt người dùng "{{name}}"',
+    enable: 'Đã bật người dùng "{{name}}"',
+    revokeSessions: 'Đã thu hồi các phiên đang hoạt động của "{{name}}"',
+  },
+  roleFilterIncomplete:
+    'Hãy chọn cả phạm vi vai trò và vai trò, hoặc xóa bộ lọc.',
+  backToSource: 'Quay lại trang trước',
+  roleFilter: 'Lọc theo vai trò',
+  allRoles: 'Tất cả vai trò',
+  editUserFor: 'Sửa {{name}}',
+  usersReadOnlyEmpty:
+    'Hãy liên hệ quản trị viên để thêm người dùng hoặc cấp quyền tạo người dùng và gán vai trò.',
+  rolesReadOnlyEmpty:
+    'Hãy liên hệ quản trị viên để tạo vai trò hoặc cấp quyền tạo vai trò.',
+  selectRoles: 'Chọn vai trò',
+  searchRoles: 'Tìm vai trò',
+  noRolesFound: 'Không tìm thấy vai trò.',
+  invalidRequest:
+    'Một số giá trị không hợp lệ. Hãy kiểm tra dữ liệu nhập hoặc bộ lọc rồi thử lại.',
 };
 export default settings;
