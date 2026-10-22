@@ -2,7 +2,8 @@
 // them as well (the lead's follow-up card shows when its task will be
 // planned, as the server plans it).
 
-// The business time zone of a CRM whose settings name none, and what the
+// The business time zone of a CRM whose settings name none and whose
+// language names none either (defaultTimeZoneFor in schema.ts), and what the
 // pages read until the settings have loaded: US Eastern time.
 export const DEFAULT_TIME_ZONE = 'America/New_York';
 

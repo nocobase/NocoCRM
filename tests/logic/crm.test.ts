@@ -957,6 +957,22 @@ describe('CRM API security and domain rules', () => {
     expect(at('en-US')).toBe('USD');
     expect(at('')).toBe('USD');
   });
+  it("starts in the business time zone of the application's language", () => {
+    const at = (defaultLocale: string) =>
+      new CrmService(database, authorization, undefined, { defaultLocale })
+        .defaults.timeZone;
+    expect(at('zh-CN')).toBe('Asia/Shanghai');
+    expect(at('zh-TW')).toBe('Asia/Taipei');
+    expect(at('ja-JP')).toBe('Asia/Tokyo');
+    expect(at('de-DE')).toBe('Europe/Berlin');
+    expect(at('fr-FR')).toBe('Europe/Paris');
+    expect(at('es-ES')).toBe('Europe/Madrid');
+    expect(at('pt-BR')).toBe('America/Sao_Paulo');
+    expect(at('id-ID')).toBe('Asia/Jakarta');
+    expect(at('vi-VN')).toBe('Asia/Ho_Chi_Minh');
+    expect(at('en-US')).toBe('America/New_York');
+    expect(at('')).toBe('America/New_York');
+  });
   it("writes the AI's work in the application's language until a language is chosen", async () => {
     const chinese = new CrmService(database, authorization, undefined, {
       defaultLocale: 'zh-CN',

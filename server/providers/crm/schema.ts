@@ -507,6 +507,27 @@ export function defaultCurrencyFor(locale: string | undefined): string {
     return 'EUR';
   return 'USD';
 }
+// The business time zone a company starts with, by the application's
+// language: its country's (the capital's where it has several), and US
+// Eastern time for English and any other.
+const LANGUAGE_TIME_ZONES: readonly [string, string][] = [
+  ['zh-CN', 'Asia/Shanghai'],
+  ['zh-TW', 'Asia/Taipei'],
+  ['ja', 'Asia/Tokyo'],
+  ['de', 'Europe/Berlin'],
+  ['fr', 'Europe/Paris'],
+  ['es', 'Europe/Madrid'],
+  ['pt-BR', 'America/Sao_Paulo'],
+  ['id', 'Asia/Jakarta'],
+  ['vi', 'Asia/Ho_Chi_Minh'],
+];
+export function defaultTimeZoneFor(locale: string | undefined): string {
+  return (
+    LANGUAGE_TIME_ZONES.find(([language]) =>
+      locale?.startsWith(language),
+    )?.[1] ?? DEFAULT_TIME_ZONE
+  );
+}
 export const defaultSettings: CrmSettings = {
   currency: 'USD',
   timeZone: DEFAULT_TIME_ZONE,
