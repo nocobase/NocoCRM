@@ -46,7 +46,9 @@ const test = createAppTest({
           host: 'localhost',
           port: 465,
           secure: true,
-          auth: { user: 'test@example.test' },
+          // Complete without SMTP_PASSWORD (CI has none): the server
+          // refuses an email channel without its password.
+          auth: { user: 'test@example.test', pass: 'test-password' },
           from: 'test@example.test',
         },
       },
