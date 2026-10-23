@@ -77,7 +77,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   scopeExplanation:
     '各範囲はそれぞれ対応するデータに適用されます。操作には、さらにその権限チェックを通過する必要があります。',
   noAdditionalScopeHint:
-    'この操作では、ここでレコードへのアクセスは追加で付与されません。実際のアクセスは、既定のアクセス、共有ルール、制限ルールで決まります。',
+    'このロールはレコードを追加しません。実際のアクセスは他のロールや、既定・共有・制限のルールにもよります。',
   systemToolsHint:
     'システム設定とツールを管理します。付与する前に、各操作に含まれる機能を確認してください。',
   userAccountsHint:
@@ -85,7 +85,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   businessOperationsHint:
     'このロールが実行できる操作と、各操作で利用できるデータを選択します。',
   pageAccessHint:
-    'このロールが開けるページを制御します。各ページのデータと操作には、それぞれの権限が必要です。',
+    'このロールが開ける業務ページを選びます。ユーザー管理や業務設定を含むすべてのシステム設定は「設定の権限」で管理します。データと業務操作には別の権限が必要です。',
   roleAssignment: 'ロールの割り当て',
   accountSecurity: 'アカウントのセキュリティ',
   userInformation: 'ユーザー情報',
@@ -192,7 +192,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   selectVisiblePermissions: '「{{name}}」で表示中の権限を選択',
   permissionSummary: '{{total}} 件中 {{enabled}} 件が有効',
   preservedRecordScope: '既存の設定を維持',
-  noRecordScope: 'レコードへの追加アクセスなし',
+  noRecordScope: '既定のルールを使う',
   permissionFilter: {
     limit: '最大 20 件の条件',
     configure: '条件',
@@ -253,5 +253,16 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   noRolesFound: 'ロールが見つかりません。',
   invalidRequest:
     '一部の値が無効です。入力内容またはフィルターを確認して、もう一度お試しください。',
+  expandPermissionGroup: '{{name}} を展開',
+  collapsePermissionGroup: '{{name}} を折りたたむ',
+  pagesOutsideNavigation: 'ナビゲーション外のページ',
+  configurationPermissions: '設定の権限',
+  configurationPermissionsHint:
+    'システム設定、ユーザー管理、業務設定へのアクセスと操作を管理します。アプリケーションに実際にある機能だけが表示されます。',
+  permissionEmptyHint:
+    'このロールで設定できる権限を公開するよう、アプリケーションの開発者に依頼してください。',
+  permissionReadOnlyHint: 'これらの権限は読み取り専用です。',
+  permissionManagedHint: 'この権限はアプリケーションが管理しています。',
+  permissionSaveHint: '権限の変更は保存後に有効になります。',
 };
 export default settings;

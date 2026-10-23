@@ -81,7 +81,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   scopeExplanation:
     'Jeder Bereich gilt für die zugehörigen Daten. Der Vorgang muss außerdem seine Berechtigungsprüfungen bestehen.',
   noAdditionalScopeHint:
-    'Diese Aktion gewährt hier keinen zusätzlichen Datensatzzugriff. Der tatsächliche Zugriff ergibt sich weiterhin aus Standardzugriff, Freigabe- und Einschränkungsregeln.',
+    'Diese Rolle fügt keine Datensätze hinzu. Der tatsächliche Zugriff hängt auch von anderen Rollen sowie von Standard-, Freigabe- und Einschränkungsregeln ab.',
   systemToolsHint:
     'Systemkonfiguration und Werkzeuge verwalten. Prüfen Sie vor dem Gewähren, welche Funktionen jede Aktion umfasst.',
   userAccountsHint:
@@ -89,7 +89,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   businessOperationsHint:
     'Wählen Sie die Vorgänge, die diese Rolle ausführen darf, und die Daten, die jeder Vorgang verwenden darf.',
   pageAccessHint:
-    'Legt fest, welche Seiten diese Rolle öffnen darf. Daten und Aktionen auf jeder Seite erfordern eigene Berechtigungen.',
+    'Wählen Sie die Geschäftsseiten, die diese Rolle öffnen kann. Alle Systemeinstellungen, einschließlich Benutzerverwaltung und Geschäftskonfiguration, werden unter Konfigurationsberechtigungen gesteuert. Daten und Geschäftsaktionen erfordern eigene Berechtigungen.',
   roleAssignment: 'Rollenzuweisung',
   accountSecurity: 'Kontosicherheit',
   userInformation: 'Benutzerdaten',
@@ -200,7 +200,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   selectVisiblePermissions: 'Sichtbare Berechtigungen in {{name}} auswählen',
   permissionSummary: '{{enabled}} von {{total}} aktiviert',
   preservedRecordScope: 'Bestehende Konfiguration beibehalten',
-  noRecordScope: 'Kein zusätzlicher Datensatzzugriff',
+  noRecordScope: 'Standardregeln verwenden',
   permissionFilter: {
     limit: 'Bis zu 20 Bedingungen',
     configure: 'Bedingungen',
@@ -261,5 +261,16 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   noRolesFound: 'Keine Rollen gefunden.',
   invalidRequest:
     'Einige Werte sind ungültig. Prüfen Sie Ihre Eingaben oder Filter und versuchen Sie es erneut.',
+  expandPermissionGroup: '{{name}} aufklappen',
+  collapsePermissionGroup: '{{name}} zuklappen',
+  pagesOutsideNavigation: 'Seiten außerhalb der Navigation',
+  configurationPermissions: 'Konfigurationsberechtigungen',
+  configurationPermissionsHint:
+    'Steuert Zugriff und Aktionen für Systemeinstellungen, Benutzerverwaltung und Geschäftskonfiguration. Es werden nur tatsächlich vorhandene Funktionen der Anwendung angezeigt.',
+  permissionEmptyHint:
+    'Bitten Sie die Entwickler der Anwendung, die Berechtigungen freizugeben, die diese Rolle konfigurieren kann.',
+  permissionReadOnlyHint: 'Diese Berechtigungen sind schreibgeschützt.',
+  permissionManagedHint: 'Diese Berechtigung wird von der Anwendung verwaltet.',
+  permissionSaveHint: 'Änderungen an Berechtigungen gelten nach dem Speichern.',
 };
 export default settings;

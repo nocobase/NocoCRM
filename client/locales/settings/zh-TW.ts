@@ -69,14 +69,14 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   scopeExplanation:
     '每項範圍分別約束對應的資料，實際操作仍須通過相應的權限檢查。',
   noAdditionalScopeHint:
-    '此操作在這裡不額外授予資料存取權限，實際可存取的範圍仍取決於預設資料範圍、共享與限制規則。',
+    '此角色不增加任何記錄。實際存取還取決於其他角色以及預設、共用和限制規則。',
   systemToolsHint: '管理系統設定與工具，授權前請確認每項操作包含的功能。',
   userAccountsHint:
     '管理使用者資料、帳號安全和角色指派，請逐項確認要授予的權限。',
   businessOperationsHint:
     '設定此角色可以執行的業務操作，以及每項操作可使用的資料範圍。',
   pageAccessHint:
-    '控制此角色可以進入哪些頁面。頁面中的資料和操作仍須另外授權。',
+    '選擇此角色可以開啟的業務頁面。所有系統設定（包括使用者管理和業務設定）都在「設定權限」中控制。資料和業務操作需要另外授權。',
   roleAssignment: '角色指派',
   accountSecurity: '帳號安全',
   userInformation: '使用者資料',
@@ -178,7 +178,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   selectVisiblePermissions: '選取「{{name}}」中顯示的權限',
   permissionSummary: '已啟用 {{enabled}} / {{total}}',
   preservedRecordScope: '保留現有設定',
-  noRecordScope: '不額外授予記錄存取權限',
+  noRecordScope: '使用預設規則',
   permissionFilter: {
     limit: '最多 20 個條件',
     configure: '條件',
@@ -233,5 +233,15 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   searchRoles: '搜尋角色',
   noRolesFound: '找不到角色。',
   invalidRequest: '部分值無效，請檢查輸入內容或篩選條件後再試。',
+  expandPermissionGroup: '展開{{name}}',
+  collapsePermissionGroup: '收合{{name}}',
+  pagesOutsideNavigation: '不在導覽中的頁面',
+  configurationPermissions: '設定權限',
+  configurationPermissionsHint:
+    '控制系統設定、使用者管理和業務設定的存取與操作。只顯示應用程式實際具備的功能。',
+  permissionEmptyHint: '請應用程式開發者開放此角色可以設定的權限。',
+  permissionReadOnlyHint: '這些權限為唯讀。',
+  permissionManagedHint: '此權限由應用程式管理。',
+  permissionSaveHint: '權限變更在儲存後生效。',
 };
 export default settings;

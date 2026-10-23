@@ -77,7 +77,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   scopeExplanation:
     'Mỗi phạm vi áp dụng cho dữ liệu tương ứng. Thao tác cũng phải vượt qua các bước kiểm tra quyền của nó.',
   noAdditionalScopeHint:
-    'Thao tác này không cấp thêm quyền truy cập bản ghi nào ở đây. Quyền truy cập thực tế vẫn do quyền mặc định, quy tắc chia sẻ và quy tắc hạn chế quyết định.',
+    'Vai trò này không thêm bản ghi nào. Quyền truy cập thực tế còn phụ thuộc vào các vai trò khác và các quy tắc mặc định, chia sẻ và hạn chế.',
   systemToolsHint:
     'Quản lý cấu hình hệ thống và công cụ. Hãy xem lại các khả năng mà mỗi thao tác bao gồm trước khi cấp quyền.',
   userAccountsHint:
@@ -85,7 +85,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   businessOperationsHint:
     'Chọn các thao tác mà vai trò này được thực hiện và dữ liệu mà mỗi thao tác được dùng.',
   pageAccessHint:
-    'Kiểm soát các trang mà vai trò này được mở. Dữ liệu và thao tác trên mỗi trang cần quyền riêng.',
+    'Chọn các trang nghiệp vụ mà vai trò này có thể mở. Mọi thiết lập hệ thống, kể cả quản lý người dùng và cấu hình nghiệp vụ, được kiểm soát trong Quyền cấu hình. Dữ liệu và thao tác nghiệp vụ cần quyền riêng.',
   roleAssignment: 'Gán vai trò',
   accountSecurity: 'Bảo mật tài khoản',
   userInformation: 'Thông tin người dùng',
@@ -191,7 +191,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   selectVisiblePermissions: 'Chọn các quyền đang hiển thị trong {{name}}',
   permissionSummary: 'Đã bật {{enabled}}/{{total}}',
   preservedRecordScope: 'Giữ cấu hình hiện có',
-  noRecordScope: 'Không cấp thêm quyền truy cập bản ghi',
+  noRecordScope: 'Dùng quy tắc mặc định',
   permissionFilter: {
     limit: 'Tối đa 20 điều kiện',
     configure: 'Điều kiện',
@@ -252,5 +252,16 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   noRolesFound: 'Không tìm thấy vai trò.',
   invalidRequest:
     'Một số giá trị không hợp lệ. Hãy kiểm tra dữ liệu nhập hoặc bộ lọc rồi thử lại.',
+  expandPermissionGroup: 'Mở rộng {{name}}',
+  collapsePermissionGroup: 'Thu gọn {{name}}',
+  pagesOutsideNavigation: 'Trang ngoài thanh điều hướng',
+  configurationPermissions: 'Quyền cấu hình',
+  configurationPermissionsHint:
+    'Kiểm soát quyền truy cập và thao tác với thiết lập hệ thống, quản lý người dùng và cấu hình nghiệp vụ. Chỉ hiển thị các tính năng thực có của ứng dụng.',
+  permissionEmptyHint:
+    'Hãy nhờ nhà phát triển ứng dụng mở các quyền mà vai trò này có thể cấu hình.',
+  permissionReadOnlyHint: 'Các quyền này chỉ đọc.',
+  permissionManagedHint: 'Quyền này do ứng dụng quản lý.',
+  permissionSaveHint: 'Thay đổi quyền có hiệu lực sau khi lưu.',
 };
 export default settings;

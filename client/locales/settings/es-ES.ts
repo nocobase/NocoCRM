@@ -79,7 +79,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   scopeExplanation:
     'Cada alcance se aplica a sus datos correspondientes. La operación también debe superar sus comprobaciones de autorización.',
   noAdditionalScopeHint:
-    'Esta acción no concede aquí acceso adicional a registros. El acceso predeterminado y las reglas de uso compartido y de restricción siguen determinando el acceso real.',
+    'Este rol no añade registros. El acceso efectivo también depende de otros roles y de las reglas predeterminadas, de uso compartido y de restricción.',
   systemToolsHint:
     'Gestiona la configuración y las herramientas del sistema. Revisa las capacidades que incluye cada acción antes de conceder el acceso.',
   userAccountsHint:
@@ -87,7 +87,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   businessOperationsHint:
     'Elige las operaciones que puede realizar este rol y los datos que puede usar cada operación.',
   pageAccessHint:
-    'Controla qué páginas puede abrir este rol. Los datos y las acciones de cada página requieren sus propios permisos.',
+    'Elige las páginas de negocio que este rol puede abrir. Todos los ajustes del sistema, incluida la gestión de usuarios y la configuración del negocio, se controlan en Permisos de configuración. Los datos y las acciones de negocio requieren permisos aparte.',
   roleAssignment: 'Asignación de roles',
   accountSecurity: 'Seguridad de la cuenta',
   userInformation: 'Información del usuario',
@@ -192,7 +192,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   selectVisiblePermissions: 'Seleccionar los permisos visibles de {{name}}',
   permissionSummary: '{{enabled}} de {{total}} habilitados',
   preservedRecordScope: 'Conservar la configuración existente',
-  noRecordScope: 'Sin acceso adicional a registros',
+  noRecordScope: 'Usar las reglas predeterminadas',
   permissionFilter: {
     limit: 'Hasta 20 condiciones',
     configure: 'Condiciones',
@@ -252,5 +252,16 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   noRolesFound: 'No se han encontrado roles.',
   invalidRequest:
     'Algunos valores no son válidos. Revisa lo introducido o los filtros e inténtalo de nuevo.',
+  expandPermissionGroup: 'Expandir {{name}}',
+  collapsePermissionGroup: 'Contraer {{name}}',
+  pagesOutsideNavigation: 'Páginas fuera de la navegación',
+  configurationPermissions: 'Permisos de configuración',
+  configurationPermissionsHint:
+    'Controla el acceso y las acciones de los ajustes del sistema, la gestión de usuarios y la configuración del negocio. Solo se muestran funciones reales de la aplicación.',
+  permissionEmptyHint:
+    'Pide al desarrollador de la aplicación que exponga los permisos que este rol puede configurar.',
+  permissionReadOnlyHint: 'Estos permisos son de solo lectura.',
+  permissionManagedHint: 'La aplicación gestiona este permiso.',
+  permissionSaveHint: 'Los cambios de permisos se aplican al guardar.',
 };
 export default settings;

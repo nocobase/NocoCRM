@@ -110,8 +110,11 @@ export function registerCrmResources(authz: AppAuthorization): void {
   });
   // The composites the permission workspace shows and edits (resources.ts):
   // one per object, listed in the CRM's own subsection under Business, and
-  // the capabilities in one under Administration. Pages need no server
-  // registration: the workspace lists them from the client route tree.
+  // the capabilities in a second one there, since the role editor shows only
+  // Business and opts in what it lists (client/pages/settings/
+  // permission-workspace.ts); the settings item goes to its Configuration
+  // permissions. Pages need no server registration: the workspace lists
+  // them from the client route tree.
   authz.ui.sections.add({
     name: CRM_GROUP,
     title: { key: 'crm.authz.group', ns: 'crm' },
@@ -120,7 +123,7 @@ export function registerCrmResources(authz: AppAuthorization): void {
   authz.ui.sections.add({
     name: CRM_CAPABILITIES_GROUP,
     title: { key: 'crm.authz.capabilities', ns: 'crm' },
-    parent: 'administration',
+    parent: 'business',
   });
   for (const entity of entities)
     authz.ui.place(

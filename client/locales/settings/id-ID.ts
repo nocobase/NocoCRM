@@ -76,7 +76,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   scopeExplanation:
     'Setiap rentang berlaku untuk datanya masing-masing. Operasinya juga harus lolos pemeriksaan otorisasinya.',
   noAdditionalScopeHint:
-    'Tindakan ini tidak memberikan akses data tambahan di sini. Akses default, aturan berbagi, dan aturan pembatasan tetap menentukan akses sebenarnya.',
+    'Peran ini tidak menambahkan data. Akses sebenarnya juga bergantung pada peran lain serta aturan default, berbagi, dan pembatasan.',
   systemToolsHint:
     'Kelola konfigurasi dan alat sistem. Periksa kemampuan yang dicakup setiap tindakan sebelum memberikan akses.',
   userAccountsHint:
@@ -84,7 +84,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   businessOperationsHint:
     'Pilih operasi yang dapat dilakukan peran ini dan data yang dapat digunakan setiap operasi.',
   pageAccessHint:
-    'Menentukan halaman yang dapat dibuka peran ini. Data dan tindakan di setiap halaman memerlukan izinnya sendiri.',
+    'Pilih halaman bisnis yang dapat dibuka peran ini. Semua pengaturan sistem, termasuk pengelolaan pengguna dan konfigurasi bisnis, diatur di Izin konfigurasi. Data dan tindakan bisnis memerlukan izin tersendiri.',
   roleAssignment: 'Penetapan peran',
   accountSecurity: 'Keamanan akun',
   userInformation: 'Informasi pengguna',
@@ -191,7 +191,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   selectVisiblePermissions: 'Pilih izin yang terlihat di {{name}}',
   permissionSummary: '{{enabled}} dari {{total}} aktif',
   preservedRecordScope: 'Pertahankan konfigurasi yang ada',
-  noRecordScope: 'Tanpa akses data tambahan',
+  noRecordScope: 'Gunakan aturan default',
   permissionFilter: {
     limit: 'Maksimal 20 kondisi',
     configure: 'Kondisi',
@@ -252,5 +252,16 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   noRolesFound: 'Peran tidak ditemukan.',
   invalidRequest:
     'Beberapa nilai tidak valid. Periksa masukan atau filter Anda, lalu coba lagi.',
+  expandPermissionGroup: 'Bentangkan {{name}}',
+  collapsePermissionGroup: 'Ciutkan {{name}}',
+  pagesOutsideNavigation: 'Halaman di luar navigasi',
+  configurationPermissions: 'Izin konfigurasi',
+  configurationPermissionsHint:
+    'Mengatur akses dan tindakan untuk pengaturan sistem, pengelolaan pengguna, dan konfigurasi bisnis. Hanya fitur aplikasi yang benar-benar ada yang ditampilkan.',
+  permissionEmptyHint:
+    'Minta pengembang aplikasi membuka izin yang dapat dikonfigurasi untuk peran ini.',
+  permissionReadOnlyHint: 'Izin ini hanya baca.',
+  permissionManagedHint: 'Izin ini dikelola oleh aplikasi.',
+  permissionSaveHint: 'Perubahan izin berlaku setelah disimpan.',
 };
 export default settings;

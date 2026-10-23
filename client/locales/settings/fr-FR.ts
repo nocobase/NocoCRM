@@ -78,7 +78,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   scopeExplanation:
     "Chaque portée s'applique aux données correspondantes. L'opération doit aussi passer ses propres contrôles d'autorisation.",
   noAdditionalScopeHint:
-    "Cette action n'accorde ici aucun accès supplémentaire aux fiches. L'accès par défaut, les règles de partage et de restriction déterminent toujours l'accès réel.",
+    "Ce rôle n'ajoute aucune fiche. L'accès effectif dépend aussi des autres rôles et des règles par défaut, de partage et de restriction.",
   systemToolsHint:
     "Gérer la configuration et les outils du système. Vérifiez les fonctions incluses dans chaque action avant d'accorder l'accès.",
   userAccountsHint:
@@ -86,7 +86,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   businessOperationsHint:
     'Choisissez les opérations que ce rôle peut effectuer et les données que chaque opération peut utiliser.',
   pageAccessHint:
-    'Détermine les pages que ce rôle peut ouvrir. Les données et les actions de chaque page nécessitent leurs propres autorisations.',
+    'Choisissez les pages métier que ce rôle peut ouvrir. Tous les paramètres système, y compris la gestion des utilisateurs et la configuration métier, sont contrôlés dans Autorisations de configuration. Les données et les actions métier nécessitent des autorisations distinctes.',
   roleAssignment: 'Attribution des rôles',
   accountSecurity: 'Sécurité du compte',
   userInformation: "Informations de l'utilisateur",
@@ -193,7 +193,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
     'Sélectionner les autorisations visibles dans {{name}}',
   permissionSummary: '{{enabled}} sur {{total}} activées',
   preservedRecordScope: 'Conserver la configuration existante',
-  noRecordScope: 'Aucun accès supplémentaire aux fiches',
+  noRecordScope: 'Utiliser les règles par défaut',
   permissionFilter: {
     limit: "Jusqu'à 20 conditions",
     configure: 'Conditions',
@@ -254,5 +254,17 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   noRolesFound: 'Aucun rôle trouvé.',
   invalidRequest:
     'Certaines valeurs ne sont pas valides. Vérifiez votre saisie ou vos filtres, puis réessayez.',
+  expandPermissionGroup: 'Développer {{name}}',
+  collapsePermissionGroup: 'Réduire {{name}}',
+  pagesOutsideNavigation: 'Pages hors navigation',
+  configurationPermissions: 'Autorisations de configuration',
+  configurationPermissionsHint:
+    "Contrôle l'accès et les actions pour les paramètres système, la gestion des utilisateurs et la configuration métier. Seules les fonctionnalités réelles de l'application sont affichées.",
+  permissionEmptyHint:
+    "Demandez au développeur de l'application d'exposer les autorisations que ce rôle peut configurer.",
+  permissionReadOnlyHint: 'Ces autorisations sont en lecture seule.',
+  permissionManagedHint: "Cette autorisation est gérée par l'application.",
+  permissionSaveHint:
+    "Les modifications des autorisations prennent effet après l'enregistrement.",
 };
 export default settings;

@@ -79,7 +79,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   scopeExplanation:
     'Cada alcance se aplica aos dados correspondentes. A operação também precisa passar pelas próprias verificações de autorização.',
   noAdditionalScopeHint:
-    'Esta ação não concede aqui nenhum acesso adicional a registros. O acesso padrão e as regras de compartilhamento e de restrição ainda determinam o acesso efetivo.',
+    'Esta função não adiciona registros. O acesso efetivo também depende de outras funções e das regras padrão, de compartilhamento e de restrição.',
   systemToolsHint:
     'Gerencie a configuração e as ferramentas do sistema. Revise os recursos que cada ação inclui antes de conceder acesso.',
   userAccountsHint:
@@ -87,7 +87,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   businessOperationsHint:
     'Escolha as operações que esta função pode realizar e os dados que cada operação pode usar.',
   pageAccessHint:
-    'Controla quais páginas esta função pode abrir. Os dados e as ações de cada página exigem permissões próprias.',
+    'Escolha as páginas de negócio que esta função pode abrir. Todas as configurações do sistema, incluindo o gerenciamento de usuários e a configuração do negócio, são controladas em Permissões de configuração. Dados e ações de negócio exigem permissões próprias.',
   roleAssignment: 'Atribuição de funções',
   accountSecurity: 'Segurança da conta',
   userInformation: 'Informações do usuário',
@@ -192,7 +192,7 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   selectVisiblePermissions: 'Selecionar as permissões visíveis em {{name}}',
   permissionSummary: '{{enabled}} de {{total}} ativadas',
   preservedRecordScope: 'Manter a configuração existente',
-  noRecordScope: 'Sem acesso adicional a registros',
+  noRecordScope: 'Usar as regras padrão',
   permissionFilter: {
     limit: 'Até 20 condições',
     configure: 'Condições',
@@ -253,5 +253,16 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   noRolesFound: 'Nenhuma função encontrada.',
   invalidRequest:
     'Alguns valores são inválidos. Verifique o que foi digitado ou os filtros e tente novamente.',
+  expandPermissionGroup: 'Expandir {{name}}',
+  collapsePermissionGroup: 'Recolher {{name}}',
+  pagesOutsideNavigation: 'Páginas fora da navegação',
+  configurationPermissions: 'Permissões de configuração',
+  configurationPermissionsHint:
+    'Controla o acesso e as ações das configurações do sistema, do gerenciamento de usuários e da configuração do negócio. Só aparecem recursos reais do aplicativo.',
+  permissionEmptyHint:
+    'Peça ao desenvolvedor do aplicativo para expor as permissões que esta função pode configurar.',
+  permissionReadOnlyHint: 'Estas permissões são somente leitura.',
+  permissionManagedHint: 'Esta permissão é gerenciada pelo aplicativo.',
+  permissionSaveHint: 'As alterações de permissões valem depois de salvar.',
 };
 export default settings;
