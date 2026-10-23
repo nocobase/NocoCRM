@@ -66,6 +66,8 @@ import {
   modelKey,
   useAgentModels,
   useAgentReadiness,
+  useAssistantDescription,
+  useAssistantName,
   useChatModelChoices,
   useCrmSubmit,
 } from './ask.js';
@@ -107,6 +109,8 @@ export function Conversation({
 }): ReactElement {
   const { text } = useCrmText();
   const agentText = useAgentText();
+  const assistantName = useAssistantName();
+  const assistantDescription = useAssistantDescription();
   const detail = useConversation(conversationId);
   // The assistant itself unavailable (no model set up, an external demo's
   // case) says so in every conversation, as the ask boxes do: a
@@ -265,10 +269,12 @@ export function Conversation({
   };
   const listed = agents[0];
   const name = listed
-    ? (agentText.name(listed) ?? text('agentChat.agent'))
-    : text('agentChat.agent');
+    ? (agentText.name(listed) ?? assistantName)
+    : assistantName;
   // What the assistant does, under the title, as its own list describes it.
-  const description = listed ? agentText.description(listed) : null;
+  const description = listed
+    ? agentText.description(listed)
+    : assistantDescription;
   const availability: ChatAvailability | null =
     conversation?.availability ?? agent?.availability ?? null;
   const offline =

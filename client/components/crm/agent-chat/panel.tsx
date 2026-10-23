@@ -15,7 +15,6 @@ import {
   AgentAvatar,
   CHAT_PANEL_ATTRIBUTE,
   ChatProvider,
-  useAgentText,
   useChatPanel,
   useConversation,
   useConversationActions,
@@ -38,7 +37,12 @@ import {
   useRecordDrawerHosted,
   useRecordDrawerState,
 } from '../record-drawer.js';
-import { useAgentReadiness, useCrmChatAgents } from './ask.js';
+import {
+  useAgentReadiness,
+  useAssistantDescription,
+  useAssistantName,
+  useCrmChatAgents,
+} from './ask.js';
 import { Conversation } from './conversation.js';
 import { settlePanelOwner } from './panel-owner.js';
 import { ConversationList } from './conversation-list.js';
@@ -139,7 +143,6 @@ function AgentPanel(): ReactElement | null {
 
 function PanelBody({ modal = false }: { modal?: boolean }): ReactElement {
   const { text } = useCrmText();
-  const agentText = useAgentText();
   const panel = useChatPanel();
   const agents = useCrmChatAgents();
   const readiness = useAgentReadiness();
@@ -173,9 +176,8 @@ function PanelBody({ modal = false }: { modal?: boolean }): ReactElement {
     setFresh((current) => ({ ...current, id: conversation.id }));
     panel.selectConversation(conversation.id);
   };
-  const agent = readiness.agent;
-  const name = agent ? agentText.name(agent) : text('agentPanel.title');
-  const role = agent ? agentText.description(agent) : null;
+  const name = useAssistantName();
+  const role = useAssistantDescription();
   // A conversation under way is named in the panel's header, its title over
   // the agent and what it does, with its actions behind the "…" menu; the
   // conversation draws no header of its own here (`inPanel`).

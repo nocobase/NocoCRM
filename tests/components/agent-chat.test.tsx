@@ -466,6 +466,19 @@ describe('the agent conversations', () => {
     );
   });
 
+  it('names the assistant as the CRM does while no model is set up', async () => {
+    // The plugin lists the assistant only while a chat model is set up; an
+    // imported conversation still reads as the assistant's, not as "Agent".
+    state.agents = [];
+    state.open = [conversation('c1', '顺丰这条线索怎么跟')];
+    renderAt('/agent-chat/c1');
+    // Named over what it does, under the conversation's title.
+    expect(
+      await screen.findByText(/^销售专家 · 懂销售的 AI 助手/u),
+    ).toBeTruthy();
+    expect(screen.queryByText('Agent')).toBeNull();
+  });
+
   it('shows why an agent cannot answer and keeps Send off', async () => {
     state.agents = [
       {

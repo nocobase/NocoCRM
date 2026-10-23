@@ -88,13 +88,26 @@ export function useCrmChatAgents(): ReturnType<typeof useChatAgents> {
   return { ...agents, data } as ReturnType<typeof useChatAgents>;
 }
 
-// The assistant's name in the viewer's language (Sales Expert, 销售专家).
+// The assistant's name in the viewer's language (Sales Expert, 销售专家),
+// and what it does. The plugin lists the assistant only while a chat model
+// is set up, so without one it is still named as the CRM names it.
 export function useAssistantName(): string {
   const { text } = useCrmText();
   const agentText = useAgentText();
   const agent = useCrmChatAgents().data?.[0];
   return (
-    (agent ? agentText.name(agent) : null) ?? toText(text('agentChat.agent'))
+    (agent ? agentText.name(agent) : null) ??
+    toText(text('agentPreset.agentName'))
+  );
+}
+
+export function useAssistantDescription(): string {
+  const { text } = useCrmText();
+  const agentText = useAgentText();
+  const agent = useCrmChatAgents().data?.[0];
+  return (
+    (agent ? agentText.description(agent) : null) ??
+    toText(text('agentPreset.description'))
   );
 }
 

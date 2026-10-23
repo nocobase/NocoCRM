@@ -8,9 +8,9 @@ import { ArrowLeft, MessageSquarePlus, Sparkles } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { Button } from '../../ui/button.js';
 import { Spinner } from '../../ui/spinner.js';
-import { toText, useCrmText } from '../api.js';
+import { useCrmText } from '../api.js';
 import { ErrorNotice } from '../common.js';
-import { useCrmChatAgents } from './ask.js';
+import { useAssistantName } from './ask.js';
 import { AgentReply, LiveLine } from './conversation.js';
 import { liveStep } from './step-text.js';
 
@@ -51,8 +51,7 @@ export function SearchAnswer({
       .join('\n\n');
     return content.trim() ? [{ message, content }] : [];
   });
-  const assistant = useCrmChatAgents().data?.[0];
-  const name = assistant?.name ?? toText(text('agentChat.agent'));
+  const name = useAssistantName();
   return (
     <div className='flex max-h-[min(70svh,40rem)] flex-col'>
       <div className='flex items-start gap-2 border-b border-border px-4 py-3'>
