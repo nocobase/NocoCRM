@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Application } from '@nocobase/app-server/application';
+import { idGeneratorToken } from '@nocobase/app-server/id-generator';
 import { agentsToken } from '@nocobase/app-plugin-agents/server/tokens';
 import { mailServiceToken } from '@nocobase/app-plugin-mail/server';
 import { inAppNotificationStoreToken } from '@nocobase/app-plugin-notification-in-app/server';
@@ -16,7 +17,10 @@ import {
   assistantActor,
 } from '../providers/crm-agents/assistant.js';
 import { jsonValue } from '../providers/crm/values.js';
-import { namePlaceholderModel } from '../providers/crm-agents/placeholder-model.js';
+import {
+  namePlaceholderModel,
+  placeholderModel,
+} from '../providers/crm-agents/placeholder-model.js';
 import {
   DEMO_MAIL_NAME,
   DEMO_MAIL_SECRET,
@@ -195,16 +199,68 @@ export function demoServices(app: Application): {
         async create(userId, chat) {
           const service = app.container.resolve(crmToken);
           const query = service.database.query();
-          const session = await app.container
-            .resolve(agentsToken)
-            .onlineAgent.realtime(assistantActor(service, userId), {
-              scope: [ASSISTANT_SCOPE],
-              title: chat.title,
-              source: 'crm',
-            });
-          const conversationId = session.sessionId;
+          const online = app.container.resolve(agentsToken).onlineAgent;
+          const actor = assistantActor(service, userId);
           const first = chat.messages[0]?.at ?? new Date().toISOString();
           const last = chat.messages.at(-1)?.at ?? first;
+          let conversationId: string;
+          try {
+            conversationId = (
+              await online.realtime(actor, {
+                scope: [ASSISTANT_SCOPE],
+                title: chat.title,
+                source: 'crm',
+              })
+            ).sessionId;
+          } catch (error) {
+            // The plugin opens a conversation only with a chat model to
+            // answer in it, so a deployment without a model service would
+            // import none: the row is written as the plugin writes it, with
+            // the assistant's configuration, under the placeholder model.
+            const placeholder = placeholderModel(app);
+            if (!placeholder || !app.container.has(idGeneratorToken))
+              throw error;
+            conversationId = app.container
+              .resolve(idGeneratorToken)
+              .generateString();
+            const config = await online.configurator.resolve(actor, {
+              scope: [ASSISTANT_SCOPE],
+            });
+            await query
+              .insertInto('agConversations')
+              .values({
+                id: conversationId,
+                userId,
+                agentId: '0',
+                mode: 'online',
+                ...placeholder,
+                fallbackFromAgentId: null,
+                title: chat.title,
+                titleSource: 'user',
+                category: 'chat',
+                showInChatList: true,
+                source: 'crm',
+                read: true,
+                thread: 0,
+                lastSeq: 0,
+                syncRunId: null,
+                syncSeq: 0,
+                lastMessageAt: last,
+                archivedAt: null,
+                lockedAt: null,
+                createdAt: first,
+                updatedAt: last,
+                metadata: JSON.stringify({
+                  onlineAgent: {
+                    version: 1,
+                    kind: 'realtime',
+                    config,
+                    call: null,
+                  },
+                }),
+              })
+              .execute();
+          }
           for (const [index, message] of chat.messages.entries()) {
             const id = randomUUID();
             // The first question carries the record it was asked from,
