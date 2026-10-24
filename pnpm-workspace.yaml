@@ -381,6 +381,15 @@ minimumReleaseAgeExclude:
   - '@nocobase/app-cli-client@0.1.0-beta.15'
   - '@nocobase/app-plugin-agents@1.0.0-beta.20'
   - '@nocobase/app-plugin-foundation@0.1.0-beta.2'
+  - '@nocobase/app-client@4.0.0-beta.3'
+  - '@nocobase/app-plugin-agents@1.0.0-beta.23'
+  - '@nocobase/app-plugin-foundation@0.1.0-beta.4'
+  - '@nocobase/app-plugin-mail@1.0.0-beta.17'
+  - '@nocobase/app-plugin-scheduler@1.0.0-beta.20'
+  - '@nocobase/app-skills@0.1.0-beta.48'
+  - '@nocobase/dev-config@0.1.0-beta.25'
+  - '@nocobase/document-extractor@0.1.0-beta.0'
+  - '@nocobase/jobs@0.1.0-beta.4'
 
 # One SQLite binding for the whole tree: the NocoBase packages accept 12 or 13,
 # and loading two builds of the native addon in one process crashes it.

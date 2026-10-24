@@ -1,3 +1,4 @@
+import { copyText } from '@nocobase/app-client';
 import {
   Fragment,
   useEffect,
@@ -2002,9 +2003,11 @@ function EmailDraft({
           variant='ghost'
           className='-my-1 shrink-0'
           onClick={() => {
-            void navigator.clipboard
-              .writeText(`${draft.subject}\n\n${draft.body}`)
-              .then(() => setCopied(true));
+            void copyText(`${draft.subject}\n\n${draft.body}`).then(
+              (copied) => {
+                if (copied) setCopied(true);
+              },
+            );
           }}
         >
           <Copy />

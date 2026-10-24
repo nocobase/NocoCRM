@@ -1,3 +1,4 @@
+import { createUuid } from '@nocobase/app-client';
 import { useState, type ReactElement } from 'react';
 
 import { Button } from '../../../components/ui/button.js';
@@ -124,7 +125,7 @@ function useApproverRuleEditor(rule: ApproverRule) {
         roles,
         users: people,
         revision: rule.revision,
-        requestId: crypto.randomUUID(),
+        requestId: createUuid(),
       });
       // The pickers' approvers are in the workspace metadata.
       await refresh();

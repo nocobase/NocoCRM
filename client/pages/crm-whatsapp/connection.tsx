@@ -2,6 +2,7 @@ import {
   ApiClientError,
   useNavigationGuard,
   useToaster,
+  copyText,
 } from '@nocobase/app-client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CopyIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
@@ -677,10 +678,10 @@ function CopyButton({
             size='icon-sm'
             aria-label={label}
             onClick={() =>
-              void (
-                navigator.clipboard?.writeText(value) ??
-                Promise.reject(new Error('no clipboard'))
-              )
+              void copyText(value)
+                .then((copied) => {
+                  if (!copied) throw new Error('not copied');
+                })
                 .then(() =>
                   toaster.show({
                     type: 'success',

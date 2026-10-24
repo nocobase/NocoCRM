@@ -1,3 +1,4 @@
+import { createUuid } from '@nocobase/app-client';
 import {
   useState,
   type Dispatch,
@@ -147,7 +148,7 @@ function toRow(lead: CapturedLead, owner: string | undefined): ReviewRow {
     Object.entries(lead.input).filter(([, value]) => value !== null),
   );
   return {
-    key: crypto.randomUUID(),
+    key: createUuid(),
     input: { ...(owner ? { ownerId: owner } : {}), ...input },
     uncertain: lead.uncertain,
     duplicates: lead.duplicates,
@@ -515,9 +516,9 @@ function CaptureReview({
       setRows((all) => merge(all ?? [], data.leads, defaultOwner));
       setTurns((all) => [
         ...all,
-        { id: crypto.randomUUID(), from: 'user', text: said },
+        { id: createUuid(), from: 'user', text: said },
         ...(data.reply
-          ? [{ id: crypto.randomUUID(), from: 'ai' as const, text: data.reply }]
+          ? [{ id: createUuid(), from: 'ai' as const, text: data.reply }]
           : []),
       ]);
       setInstruction('');

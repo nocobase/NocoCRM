@@ -5,7 +5,7 @@
 // route tabs. Template 1.0.0-beta.60 removed the settings area and the
 // plugins' own pages; these pages are the application's, built on the
 // plugins' APIs. Functions and hooks are in ./hooks.ts.
-import { useToaster } from '@nocobase/app-client';
+import { useToaster, copyText } from '@nocobase/app-client';
 import { useAuthentication } from '@nocobase/app-plugin-authentication/client';
 import { AlertCircleIcon, CheckIcon, CopyIcon } from 'lucide-react';
 import {
@@ -286,8 +286,12 @@ export function CopyField({
         <InputGroupButton
           aria-label={text('common.copy')}
           onClick={() => {
-            void navigator.clipboard.writeText(value).then(
-              () => {
+            void copyText(value).then(
+              (copied) => {
+                if (!copied) {
+                  document.getElementById(id)?.focus();
+                  return;
+                }
                 setCopied(true);
                 toaster.show({ type: 'success', title: text('common.copied') });
               },

@@ -1,4 +1,4 @@
-import { useToaster } from '@nocobase/app-client';
+import { useToaster, createUuid } from '@nocobase/app-client';
 import {
   buildPageContext,
   chatKeys,
@@ -38,7 +38,7 @@ import { toText, useCrmApi, useCrmText, type Entity } from '../api.js';
 // the scope gives it the CRM's prompt and tools.
 
 // An id for what the browser sends or uploads, matched in the answer.
-const newClientId = (): string => crypto.randomUUID();
+const newClientId = (): string => createUuid();
 
 // Where the CRM's conversations come from (registered by the server's
 // CrmAgentsProvider).

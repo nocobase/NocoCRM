@@ -1,3 +1,4 @@
+import { copyText } from '@nocobase/app-client';
 import { Button } from '#components/ui/button';
 import { Skeleton } from '#components/ui/skeleton';
 import { Spinner } from '#components/ui/spinner';
@@ -739,9 +740,10 @@ function SentAt({
         aria-label={label}
         title={label}
         onClick={() =>
-          void navigator.clipboard
-            ?.writeText(content)
-            .then(() => setCopied(true))
+          void copyText(content)
+            .then((copied) => {
+              if (copied) setCopied(true);
+            })
             .catch(() => undefined)
         }
       >

@@ -1,3 +1,4 @@
+import { copyText } from '@nocobase/app-client';
 import {
   stepsToPageBefore,
   useNoteHistoryEntry,
@@ -4591,9 +4592,10 @@ export function Copyable({ children }: { children: ReactNode }): ReactElement {
       ''
     ).trim();
     if (!value) return;
-    void navigator.clipboard
-      ?.writeText(value)
-      .then(() => setCopied(true))
+    void copyText(value)
+      .then((copied) => {
+        if (copied) setCopied(true);
+      })
       .catch(() => undefined);
   };
   // A menu's button opens on a click; an inline value, which a click only

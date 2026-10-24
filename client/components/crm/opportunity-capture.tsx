@@ -1,3 +1,4 @@
+import { createUuid } from '@nocobase/app-client';
 import { useState, type ReactElement } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { FileText, Sparkles } from 'lucide-react';
@@ -200,9 +201,9 @@ export function OpportunityCaptureDialog({
       take(data.deal, input, true);
       setTurns((all) => [
         ...all,
-        { id: crypto.randomUUID(), from: 'user', text: said },
+        { id: createUuid(), from: 'user', text: said },
         ...(data.reply
-          ? [{ id: crypto.randomUUID(), from: 'ai' as const, text: data.reply }]
+          ? [{ id: createUuid(), from: 'ai' as const, text: data.reply }]
           : []),
       ]);
       setInstruction('');

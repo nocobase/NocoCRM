@@ -2,7 +2,7 @@ import {
   plainTextToMailHtml,
   useMailClient,
 } from '@nocobase/app-plugin-mail/client';
-import { useToaster } from '@nocobase/app-client';
+import { useToaster, createUuid, copyText } from '@nocobase/app-client';
 import { Copy, Mail, SquarePen } from 'lucide-react';
 import {
   useEffect,
@@ -151,7 +151,7 @@ export function EmailStep({
   const [copied, setCopied] = useState(false);
   // One key for this card's message, so sending again after an unclear
   // answer cannot send it twice (the plugin's idempotency).
-  const [idempotencyKey] = useState(() => crypto.randomUUID());
+  const [idempotencyKey] = useState(() => createUuid());
   // The recipients, read once from the record.
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
@@ -405,9 +405,9 @@ export function EmailStep({
               size='sm'
               variant='outline'
               onClick={() => {
-                void navigator.clipboard
-                  .writeText(`${subject}\n\n${body}`)
-                  .then(() => setCopied(true));
+                void copyText(`${subject}\n\n${body}`).then((copied) => {
+                  if (copied) setCopied(true);
+                });
               }}
             >
               <Copy />
