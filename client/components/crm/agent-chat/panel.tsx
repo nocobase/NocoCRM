@@ -236,6 +236,9 @@ function PanelBody({ modal = false }: { modal?: boolean }): ReactElement {
           onArchived={() => panel.selectConversation(null)}
           onRestored={() => undefined}
           onBack={() => panel.setView('history')}
+          // The remembered conversation gone (the demo data imported
+          // again, say): a new one, as on opening the panel afresh.
+          onMissing={() => panel.selectConversation(null)}
           inPanel
         />
       )}

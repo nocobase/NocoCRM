@@ -92,6 +92,7 @@ export function Conversation({
   onArchived,
   onRestored,
   onBack,
+  onMissing,
   inPanel = false,
 }: {
   conversationId: string | null;
@@ -102,6 +103,10 @@ export function Conversation({
   // Back to the conversations from one that is gone: in the panel its own
   // list; left out, the full page's.
   onBack?: () => void;
+  // One that is gone without anyone asking for it, such as the panel's
+  // remembered conversation once the demo data was imported again: given,
+  // it is called instead of saying it does not exist.
+  onMissing?: () => void;
   // In the assistant's panel, whose own header names the conversation and
   // holds its actions: no header of its own for one under way, nor for a
   // new one.
@@ -112,6 +117,14 @@ export function Conversation({
   const assistantName = useAssistantName();
   const assistantDescription = useAssistantDescription();
   const detail = useConversation(conversationId);
+  const missing = Boolean(
+    conversationId &&
+    detail.error &&
+    errorCode(detail.error).code === 'notFound',
+  );
+  useEffect(() => {
+    if (missing) onMissing?.();
+  }, [missing, onMissing]);
   // The assistant itself unavailable (no model set up, an external demo's
   // case) says so in every conversation, as the ask boxes do: a
   // conversation's own availability does not tell.
@@ -200,8 +213,8 @@ export function Conversation({
     if (box) box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
   };
 
+  if (missing && onMissing) return <></>;
   if (conversationId && detail.error) {
-    const missing = errorCode(detail.error).code === 'notFound';
     return (
       <div className='flex flex-col items-start gap-3 p-6'>
         {missing ? (

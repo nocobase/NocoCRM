@@ -1,5 +1,12 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { ApiClientError } from '@nocobase/app-client';
 import { I18nRuntime } from '@nocobase/i18n';
 import { I18nProvider } from '@nocobase/i18n/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -29,6 +36,8 @@ const state = vi.hoisted(() => ({
   archived: [] as unknown[],
   messages: [] as unknown[],
   plans: [] as unknown[],
+  // Conversations the plugin answers 404 for.
+  missing: [] as string[],
 }));
 
 vi.mock('@nocobase/app-plugin-agents/client/chat', async (importOriginal) => {
@@ -66,19 +75,42 @@ vi.mock('@nocobase/app-plugin-agents/client/chat', async (importOriginal) => {
     }),
     useConversationList: (query: { archived?: boolean }) =>
       list(query.archived ? state.archived : state.open),
-    useConversation: (id: string | null) => ({
-      data: id
+    useConversation: (id: string | null) =>
+      id && state.missing.includes(id)
         ? {
-            ...(state.open.find(
-              (item) => (item as { id: string }).id === id,
-            ) as object),
-            availability: { online: true, reason: null, onlineRunners: 1 },
+            data: undefined,
+            isLoading: false,
+            error: new ApiClientError('gone', {
+              status: 404,
+              method: 'GET',
+              url: `/api/agents/conversations/${id}`,
+              payload: {
+                error: {
+                  status: 'NOT_FOUND',
+                  reason: 'NOT_FOUND',
+                  domain: 'agents',
+                },
+              },
+            }),
+            refetch: vi.fn(),
           }
-        : undefined,
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-    }),
+        : {
+            data: id
+              ? {
+                  ...(state.open.find(
+                    (item) => (item as { id: string }).id === id,
+                  ) as object),
+                  availability: {
+                    online: true,
+                    reason: null,
+                    onlineRunners: 1,
+                  },
+                }
+              : undefined,
+            isLoading: false,
+            error: null,
+            refetch: vi.fn(),
+          },
     useConversationMessages: () => ({
       items: state.messages,
       pending: [],
@@ -152,6 +184,8 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
 
 const { default: AgentChatPage } =
   await import('../../client/pages/crm-agent-chat/index.js');
+const { Conversation } =
+  await import('../../client/components/crm/agent-chat/conversation.js');
 
 const agent = {
   id: 'online',
@@ -218,6 +252,7 @@ let runtime: I18nRuntime;
 beforeEach(async () => {
   state.agents = [agent];
   state.open = [];
+  state.missing = [];
   state.archived = [];
   state.messages = [];
   state.plans = [];
@@ -453,6 +488,41 @@ describe('the agent conversations', () => {
     );
     expect(screen.getByRole('textbox', { name: '问任何问题…' })).toBeTruthy();
     expect(screen.queryByText('别处的计划')).toBeNull();
+  });
+
+  it('says a conversation that is gone does not exist on its page', async () => {
+    state.missing = ['gone'];
+    state.open = [conversation('c1', '展会线索')];
+    renderAt('/agent-chat/gone');
+    expect(await screen.findByText('这个对话不存在。')).toBeTruthy();
+  });
+
+  it('starts afresh in the panel when its remembered conversation is gone', async () => {
+    state.missing = ['gone'];
+    const missing = vi.fn();
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <MemoryRouter>
+          <I18nProvider runtime={runtime}>
+            <Conversation
+              conversationId='gone'
+              agents={[agent] as never}
+              onCreated={vi.fn()}
+              onArchived={vi.fn()}
+              onRestored={vi.fn()}
+              onMissing={missing}
+              inPanel
+            />
+          </I18nProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(missing).toHaveBeenCalled());
+    expect(screen.queryByText('这个对话不存在。')).toBeNull();
   });
 
   it('points to the models when the assistant is not there', () => {
