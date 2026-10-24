@@ -2604,6 +2604,7 @@ export const crmJaJP: CrmWording = {
     merged: 'リードの統合',
   },
   errors: {
+    demoReadOnly: 'デモモードではデータを変更できません。',
     serverError: '問題が発生しました。もう一度お試しください。',
     invalidInput: '入力内容を確認して、もう一度お試しください。',
     evaluationDecided: 'この推奨事項はすでに処理されています。',

@@ -2646,6 +2646,8 @@ export const crmFrFR: CrmWording = {
     merged: 'Prospects fusionnés',
   },
   errors: {
+    demoReadOnly:
+      'Le mode démo est activé. Les données ne peuvent pas être modifiées.',
     serverError: "Une erreur s'est produite. Veuillez réessayer.",
     invalidInput: 'Vérifiez les valeurs et réessayez.',
     evaluationDecided:

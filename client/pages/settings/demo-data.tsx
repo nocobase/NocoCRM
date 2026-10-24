@@ -1,3 +1,7 @@
+import {
+  DemoModeSettings,
+  type DemoSettingsComponents,
+} from '@nocobase/app-plugin-demo-mode/client/settings';
 import { useRef, useState, type ReactElement } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ApiClientError, useToaster } from '@nocobase/app-client';
@@ -26,7 +30,7 @@ import { DEFAULT_TIME_ZONE } from '../../../server/providers/crm/zone-time.js';
 // Settings → Demo data, a tab of its own (it was the General tab's last
 // card): the demo dataset's accounts, whether it is there, and importing it
 // in either language or removing it, never saved with the settings.
-export default function DemoDataPage(): ReactElement {
+export function LegacyDemoDataPage(): ReactElement {
   const { text, language } = useCrmText();
   const api = useCrmApi();
   const refresh = useRefresh();
@@ -239,6 +243,41 @@ export default function DemoDataPage(): ReactElement {
           </>
         </CardContent>
       </Card>
+    </PageContainer>
+  );
+}
+
+// The Settings tab already names this page; omit the duplicate plugin heading
+// and its refresh action through the public slot rather than hiding them with CSS.
+const demoSettingsComponents: DemoSettingsComponents = {
+  Header: () => null,
+};
+
+// Keep the ordinary application's importer; dedicated demos use the plugin's
+// overview, visitor identities and daily-reset settings with its own permissions.
+export default function DemoDataPage(): ReactElement {
+  const mode = useCrmQuery<{ enabled: boolean }>('demoMode/status');
+  const { text } = useCrmText();
+  if (mode.isLoading) return <Loading />;
+  if (mode.error) return <ErrorNotice error={mode.error} />;
+  if (!mode.data?.enabled) return <LegacyDemoDataPage />;
+  const counts: Record<string, string> = {
+    crmLeads: 'entities.leads',
+    crmCompanies: 'entities.companies',
+    crmContacts: 'entities.contacts',
+    crmOpportunities: 'entities.opportunities',
+    crmTasks: 'entities.tasks',
+    crmApprovals: 'entities.approvals',
+    '@user': 'navigation.users',
+  };
+  return (
+    <PageContainer>
+      <DemoModeSettings
+        components={demoSettingsComponents}
+        label={(_kind, id) =>
+          counts[id] ? toText(text(counts[id])) : undefined
+        }
+      />
     </PageContainer>
   );
 }

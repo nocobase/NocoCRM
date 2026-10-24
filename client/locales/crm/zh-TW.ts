@@ -2491,6 +2491,7 @@ export const crmZhTW: CrmWording = {
     merged: '線索合併',
   },
   errors: {
+    demoReadOnly: '目前處於 demo 模式，資料無法修改',
     serverError: '操作失敗，請重試。',
     invalidInput: '請檢查填寫內容後重試。',
     evaluationDecided: '這則建議已經處理過了。',

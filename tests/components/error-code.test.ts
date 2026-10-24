@@ -14,6 +14,19 @@ const failure = (body: unknown, status = 400): ApiClientError =>
   });
 
 describe('errorCode', () => {
+  it('keeps the demo refusal distinct from a server or permission error', () => {
+    expect(
+      errorCode(
+        failure({
+          error: {
+            status: 'FAILED_PRECONDITION',
+            reason: 'DEMO_READ_ONLY',
+            domain: 'demoMode',
+          },
+        }),
+      ).code,
+    ).toBe('demoReadOnly');
+  });
   it("turns the CRM's reasons back into its codes, with the field and an upstream detail", () => {
     expect(
       errorCode(

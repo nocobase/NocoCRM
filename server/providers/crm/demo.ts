@@ -364,6 +364,13 @@ function zoneOffsetMinutes(timeZone: string, date: Date): number {
   return match[1] === '-' ? -minutes : minutes;
 }
 
+export interface DemoImportOptions {
+  /** Demo Mode has already reconciled credentials without revoking carried sessions. */
+  identitiesPrepared?: boolean;
+  progress?: (fraction: number) => Promise<void>;
+  strict?: boolean;
+}
+
 export async function populateDemo(
   service: CrmService,
   authz: AppAuthorization,
@@ -373,6 +380,7 @@ export async function populateDemo(
   mailboxes?: DemoMailboxes,
   chats?: DemoChats,
   whatsapp?: WhatsAppService,
+  options: DemoImportOptions = {},
 ): Promise<DemoStatus> {
   await requireCapability(actor, 'manage', 'settings');
   // The marker is claimed before anything is written, so a second import
@@ -427,6 +435,7 @@ export async function populateDemo(
       chats,
       whatsapp,
       claim,
+      options,
     );
   } catch (error) {
     if (claim.manifest) await deleteRecords(service, claim.manifest);
@@ -453,6 +462,7 @@ async function populate(
   whatsapp: WhatsAppService | undefined,
   // What the import wrote so far, for taking it back should it fail.
   claim: Claim,
+  options: DemoImportOptions,
 ): Promise<DemoStatus> {
   const text = demoContent(language);
   const query = service.database.query();
@@ -476,7 +486,8 @@ async function populate(
     if (found) {
       // One a removal disabled is the demo's again.
       if (disabled.has(found.id)) await accounts.enable(found.id);
-      await accounts.resetPassword(found.id, demoPassword(account.username));
+      if (!options.identitiesPrepared)
+        await accounts.resetPassword(found.id, demoPassword(account.username));
       if (found.name !== account.name)
         await accounts.rename(found.id, account.name);
     }
@@ -582,6 +593,7 @@ async function populate(
   // taken back by the next (populateDemo).
   const progress = async (percent: number): Promise<void> => {
     reached(percent);
+    await options.progress?.(percent / 100);
     await query
       .updateTable('crmSettings')
       .set({
@@ -2463,7 +2475,10 @@ async function populate(
     for (const [index, [userId, mailbox]] of owners.entries()) {
       const accountId = await mailboxes
         .connect(userId, mailbox)
-        .catch(() => undefined);
+        .catch((error: unknown) => {
+          if (options.strict) throw error;
+          return undefined;
+        });
       if (accountId) manifest.mailAccounts.push({ userId, accountId });
       // The mailboxes take the longest, the plugin copying each one's mail.
       await progress(70 + Math.round(((index + 1) / owners.length) * 20));

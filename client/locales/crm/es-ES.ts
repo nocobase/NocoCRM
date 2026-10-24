@@ -2644,6 +2644,8 @@ export const crmEsES: CrmWording = {
     merged: 'Leads fusionados',
   },
   errors: {
+    demoReadOnly:
+      'El modo demo está activado. No se pueden modificar los datos.',
     serverError: 'Se ha producido un error. Inténtalo de nuevo.',
     invalidInput: 'Revisa los valores e inténtalo de nuevo.',
     evaluationDecided: 'Ya se ha decidido sobre esta recomendación.',

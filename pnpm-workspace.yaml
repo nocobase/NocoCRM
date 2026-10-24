@@ -390,6 +390,7 @@ minimumReleaseAgeExclude:
   - '@nocobase/dev-config@0.1.0-beta.25'
   - '@nocobase/document-extractor@0.1.0-beta.0'
   - '@nocobase/jobs@0.1.0-beta.4'
+  - '@nocobase/app-plugin-demo-mode@0.1.0-beta.2'
 
 # One SQLite binding for the whole tree: the NocoBase packages accept 12 or 13,
 # and loading two builds of the native addon in one process crashes it.

@@ -19,6 +19,7 @@ import file from '@nocobase/app-plugin-file/server';
 import mail from '@nocobase/app-plugin-mail/server';
 import agents from '@nocobase/app-plugin-agents/server';
 import foundation from '@nocobase/app-plugin-foundation/server';
+import demoMode from '@nocobase/app-plugin-demo-mode/server';
 
 const serverPlugins: AppServerPlugins = defineServerPlugins([
   authentication,
@@ -38,6 +39,7 @@ const serverPlugins: AppServerPlugins = defineServerPlugins([
   mail,
   agents,
   foundation,
+  demoMode,
 ]);
 
 export default serverPlugins;

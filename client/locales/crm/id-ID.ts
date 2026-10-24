@@ -2626,6 +2626,7 @@ export const crmIdID: CrmWording = {
     merged: 'Prospek digabung',
   },
   errors: {
+    demoReadOnly: 'Mode demo aktif. Data tidak dapat diubah.',
     serverError: 'Terjadi kesalahan. Silakan coba lagi.',
     invalidInput: 'Periksa nilai yang dimasukkan dan coba lagi.',
     evaluationDecided: 'Rekomendasi ini sudah diputuskan.',

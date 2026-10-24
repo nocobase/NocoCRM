@@ -2660,6 +2660,8 @@ export const crmDeDE: CrmWording = {
     merged: 'Leads zusammengeführt',
   },
   errors: {
+    demoReadOnly:
+      'Der Demomodus ist aktiviert. Daten können nicht geändert werden.',
     serverError: 'Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.',
     invalidInput: 'Prüfen Sie die Werte und versuchen Sie es erneut.',
     evaluationDecided: 'Über diese Empfehlung wurde bereits entschieden.',

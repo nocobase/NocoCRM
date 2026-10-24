@@ -1,5 +1,75 @@
 # The demo dataset
 
+Read-only deployments use `@nocobase/app-plugin-demo-mode`, configured by
+`server/config/demo-mode.ts` and `NOCOBASE_DEMO_MODE`. It is off by default.
+The existing importer and dataset remain unchanged. `demo-presentation.ts` registers
+the already imported plugin dataset `crm` for status and visitor identities,
+without generating data or adopting untracked accounts. Its lifecycle callbacks use `demo-lifecycle.ts`: the plugin owns identities
+and lifecycle, and the existing `populateDemo` writes the same CRM story.
+Clear removes all CRM business records, fictional mail, conversations and files,
+including partial imports and visitor additions. Authorized plugin management
+(reset, clear, generate and configuration) remains available; ordinary business
+writes are refused. Preserve the saved automatic reset setting. Beta.2 keeps
+the executing administrator enabled, with their current permissions and session,
+after clear or failed-reset cleanup. Leave identity cleanup to the plugin; quick
+sign-in stays unavailable until generation completes. An ordinary CRM import is not plugin-owned and does not gain
+quick sign-in merely by being described by this adapter.
+
+Dedicated demos use `DemoModeSettings` at `/settings/demo-data`; ordinary
+deployments retain the original importer there. Since Demo Mode beta.2, data,
+daily reset and visitor accounts appear together on one page; do not add the
+removed Overview/Daily reset tabs or pass their removed component slots. The host
+supplies a stable, empty `Header` slot to omit the duplicate page title and Refresh
+row under the Settings tab. The existing CRM administrator
+route gate remains, and the plugin checks its own settings permissions within
+the page. `DemoAccountMenu` is mounted before sign-out in the Base UI account
+menu, with `accountSwitcher: 'menu'`; guests retain the plugin entry. Keep
+`demoMode.quickSignIn: true` on the dedicated deployment. Only the existing
+plugin-owned visitor accounts are offered, including its public demo admin;
+normal system administrators are never adopted. Switching reloads the page to
+clear the previous account's state.
+
+The plugin guards SQL. `server/providers/demo-mode.ts` additionally refuses
+mutating Mail and Agents requests before external
+or streamed effects; the CRM's route guard does the same for its owned routes.
+The workspace skips its language-preference write in demo mode. Never solve a
+read failure by allowing writes to the whole business collection. CRM schedules,
+follow-up jobs and timers are paused, and real models are not provisioned from
+configuration. Mail's own background synchronization still runs: demo deployments
+must use the fictional provider and no real external credentials. The readonly
+policy must not be mistaken for isolation of arbitrary external integrations.
+`tests/logic/demo-mode.test.ts` exercises the real application and plugin guard.
+The old import banner is hidden while the plugin reports demo mode, including
+when a preview deployment's dataset was created outside the CRM importer.
+
+The dedicated `nococrm.nfvd.net` deployment on host `252` predates the published
+plugin. Its seven additional executed preview migrations are preserved byte for
+byte in `/opt/nococrm/legacy-demo-migrations`, mounted read-only at
+`/app/dist/legacy-demo-migrations`. Its main migration sources include both the
+normal CRM directory and that archive under the original plugin package identity.
+Keep this mount and configuration on later deployments; the published plugin
+consolidated those sources, and removing the archive prevents startup. The archive
+retains each original manifest checksum; its manifest lists only archived files.
+After the full demo deployment is installed, `scheduler sync --finalize` retires
+the old CRM and preview reset definitions and removes their persisted job rules;
+otherwise the jobs backend can keep warning about definitions no longer present.
+The initial preview migration's compatible schema and the Agents creation
+migration were reviewed before the supported checksum repair. Deployment backups
+retain the original history, configuration and storage together. Saved collection
+exceptions, online chat and automatic reset are disabled through the plugin's
+configuration service; the `crmUserPreferences` environment exception is removed.
+
+Demo Mode `0.1.0-beta.1` removes the built-in write, simulation and AI settings
+tabs; it preserves their configuration APIs and saved policies. Its default
+integrated chat and registered simulation adapters are now enabled, and tools
+use a supplied mock or an explicitly declared local read. CRM does not register
+those integrations: keep the early request guard even when the default chat
+policy is enabled. Preserve this deployment's saved `chat.enabled: false`, empty
+collection exceptions and disabled reset across upgrades. Beta.2 requires Agents `1.0.0-beta.23` and App Client `4.0.0-beta.3`; the
+latter supplies the HTTP-compatible UUID and clipboard helpers imported by both
+plugins. Keep these compatible versions together. No additional migration is
+introduced by these three patch upgrades.
+
 Read this before changing the demo dataset, its content files, its mail, its WhatsApp conversations, its import and removal, or the demo banner.
 
 The demo dataset is a product feature (`server/providers/crm/demo.ts`, imported and removed from the settings page), not a script or a seed. The settings' Demo data tab (`/settings/demo-data`, `client/pages/settings/demo-data.tsx`) reads the dataset's state from its query and tells the outcome in a toast, since importing or removing it changes the importer's roles and the route guards mount the page anew while the new permissions load; the outcome is written at once into that query and into the workspace's `demoPresent`, which the banner reads, and an import whose request a gateway cuts off (a 502, 503 or 504, or a lost connection, as a hosted deployment's proxy gives up before the server finishes) is not taken for a failure: the card asks how the dataset stands every three seconds, for up to three minutes, until it is there. It comes in Chinese and English, chosen on import (`language` on `POST /demoData/import`, recorded in the manifest): the same story, told with people and companies of that language: its text and everything derived from a name (the demo accounts, each language's own, looked up by the part they play, `DemoSeat`; mailboxes; website and email domains) in `server/providers/crm/demo-content/` (`zh-CN.ts`, `en-US.ts`, one `DemoContent` shape), and everything else shared in `demo.ts`, which holds no text of its own. Change both content files together. Its texts are long on purpose, so the pages show how long text reads: companies' introductions (which their deals' descriptions reuse) and leads' original messages run to several paragraphs, as do the leads' company introductions and every street address in the particulars, the tasks' description, results and the approvals; each of the eight companies has meeting notes on its timeline, some answered by a colleague (`companyNotes`); every converted lead carries the tasks done on it before its conversion and every invalid one the first contact that set it aside, each with its result (`convertedLeadTasks`, `invalidLeadTasks`, H World's `leadTask`); H World's lead is converted with its deal, so its earlier task links the lead, the company and the deal at once; the importer takes part in some of the colleagues' deal tasks, ahead and past (`internalParticipants`); every task done or cancelled is written as it happened, created open and then closed at its time with its result (the import's `saver`), so its timeline reads created, then completed with the result under that entry; and a comment's heading is a plain line above its text, never bold, a comment being what a person writes. The facts in the texts agree with the records' fields (employees, city, amounts). The administrator importing it is the demo's main account, a sales manager for its lifetime: they decide the sellers' and the manager's approvals (two waiting, one decided), and own, besides a share of the team's records, four projects at real companies (`projects-zh-CN.ts` and `projects-en-US.ts`, the same companies in both, their people and exchanges the demo's own): SF Express's new lead, H World's converted lead and deal at proposal with a discount out to the manager and tomorrow's review, GAC's deal in negotiation with approved payment terms and an overdue task, and New Hope won with an extension. The AI's work on them is written as its cards keep it (`crmHistory` rows of action `ai`, results typed against `Verdict`, `OpportunityVerdict`, `TaskPreparation` and `ApprovalReview`), so the import needs no model and the importer's inbox opens on five suggestions waiting and four handled; as the import ends the manager @-mentions them, replies to their comment and gives them a task, which the notification pass delivers. The importer also finds four finished conversations with Noco about those projects under the menu's Conversations (`chats` in the projects files): the Agents plugin creates each conversation (it opens none without a chat model, so a deployment without one gets the conversation row written as the plugin writes it, with the assistant's configuration from its configurator and the placeholder model of `crm-agents/placeholder-model.ts`; `tests/logic/demo-conversations.test.ts`) and its messages are written into the plugin's `agConversationMessages` as its store writes them, the first question carrying the record it was asked about as its page context (H World's and GAC's deals, SF Express's lead), so the bar names it (`demoChats` in `server/routes/demo-services.ts`, `@temporary(nocobase-official)` until the plugin can import a finished conversation), recorded in the manifest as `chats` and deleted with the demo data; none is made without the plugin or before Noco exists. Removing the demo data (`resetDemo`) also deletes from everyone's inbox, once its records are gone, the in-app notifications whose route target names a CRM record that no longer exists, its own and any an earlier removal or a deletion left (`DemoInbox.removeOrphans` in `demo-services.ts`: the plugin's items read and checked against the CRM's tables, a former `/crm/accounts/` path against the companies', deleted through its `inAppNotificationStoreToken` store), and disables the demo accounts an import created (those of either language with a demo username at `@demo.example`; an existing account an import reused stays as it was), and importing again enables them and resets their passwords: they are disabled rather than deleted because the users plugin keeps a deleted account's address and username, so a deleted demo company could not be created again.

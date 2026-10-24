@@ -63,6 +63,36 @@ A banner offers the **demo data**, imported and removed on **Settings → Demo d
 
 The administrator who imports it becomes a sales manager too, with records, approvals, AI suggestions and conversations of their own. Each account gets a demo mailbox (`<username>@demo.example`) holding the dataset's customer conversations, and a demo WhatsApp number holds a few customer chats, so mail and WhatsApp can be tried without connecting anything. Demo mail is never delivered outside the dataset's `.example` addresses. Removing the demo data removes all of it and disables the demo accounts. The demo amounts are in yuan, so the import sets the currency to CNY; after removing the demo data, change it on **Settings → General** if you use another currency.
 
+### Read-only Demo Mode
+
+`@nocobase/app-plugin-demo-mode` controls read-only showcase deployments. It is
+disabled by default. Use a dedicated database and storage directory and enable
+`NOCOBASE_DEMO_MODE=true` (or `demoMode.enabled: true` in `config.yml`). Generate
+the existing CRM story through **Settings → Demo environment**. For SQLite,
+the default database lives under `APP_STORAGE_DIR`; an explicit `DB_FILENAME`
+must also point to the demo database.
+
+In Demo Mode, **Settings → Demo environment** shows the plugin's data, daily
+reset and visitor accounts together on one page. Existing plugin-owned accounts appear in the account menu
+when `demoMode.quickSignIn` is true (the default). This does not enroll ordinary
+CRM-imported accounts or recreate data. Visitors may switch between those
+existing demo identities; the plugin reloads the page and retains the current
+path. Pages remain readable; mutations,
+uploads, mail actions and Agent actions return `DEMO_READ_ONLY`, including for
+administrators. Authorized plugin generation, clear, reset and schedule changes
+remain available. Clear and failed-reset cleanup preserve the executing
+administrator's access; quick sign-in returns once the dataset is ready again.
+Upgrading does not regenerate an existing deployment's data. The CRM's
+background follow-ups, reminder scans and timeline
+synchronization are paused. Use only the existing fictional mail provider and
+no real integration credentials in this deployment: the Mail plugin's own
+background synchronization is independent of request write protection.
+
+The plugin lifecycle adapter reuses the existing dataset generator. Manage
+generation, cleanup and reset through the plugin while Demo Mode stays enabled.
+Preserve the deployment's saved daily-reset setting during upgrades. Do not add
+writable collection exceptions to a read-only showcase.
+
 ### Roles
 
 Accounts are created on **Settings → Users**, each with one or more roles; there is no self-registration.

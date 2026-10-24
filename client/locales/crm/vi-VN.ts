@@ -2613,6 +2613,7 @@ export const crmViVN: CrmWording = {
     merged: 'Đã gộp khách hàng tiềm năng',
   },
   errors: {
+    demoReadOnly: 'Chế độ demo đang bật. Không thể sửa đổi dữ liệu.',
     serverError: 'Đã xảy ra lỗi. Vui lòng thử lại.',
     invalidInput: 'Hãy kiểm tra các giá trị và thử lại.',
     evaluationDecided: 'Đề xuất này đã được quyết định.',

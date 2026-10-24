@@ -53,6 +53,7 @@ import {
 import { SKILLS_MARKER } from '../providers/crm-agents/library.js';
 import { pendingDecisions } from '../providers/crm/lead-evaluation.js';
 import { mailTimelineToken } from '../providers/crm/mail-timeline.js';
+import { isDemoMode } from '../providers/crm/demo-mode.js';
 import { noticesOf } from '../providers/crm/notices.js';
 import {
   CrmError,
@@ -190,7 +191,8 @@ export function registerWorkspaceRoutes(
     }),
     async (c) => {
       const actor = c.get('actor');
-      await service.rememberLocale(actor);
+      // Reading the workspace must not persist preferences in a read-only demo.
+      if (!isDemoMode(app)) await service.rememberLocale(actor);
       const permissions: Record<string, unknown> = {};
       // What the person may read, kept for the page-context resolvers of
       // the Agents plugin (CrmService.rememberReads).

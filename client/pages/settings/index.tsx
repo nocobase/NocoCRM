@@ -1,3 +1,4 @@
+import { useTranslation } from '@nocobase/i18n/client';
 import type { ReactElement } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router';
 import { useCan } from '@nocobase/app-plugin-authorization/client';
@@ -14,7 +15,7 @@ import {
 import { PageFrameContext } from '../../components/page-frame.js';
 import { LinkTabs } from '../../components/crm/link-tabs.js';
 import { Loading } from '../../components/crm/common.js';
-import { useCrmText } from '../../components/crm/api.js';
+import { useCrmQuery, useCrmText } from '../../components/crm/api.js';
 
 // Settings, the menu's one entry for them: the pages that configure the CRM
 // and its people, a tab each, at the addresses they had as entries of their
@@ -50,6 +51,9 @@ const TABS: readonly Tab[] = [
 
 export default function SettingsPage(): ReactElement {
   const { text } = useCrmText();
+  const { t: demoText } = useTranslation('@nocobase/app-plugin-demo-mode');
+  const demoMode = useCrmQuery<{ enabled: boolean }>('demoMode/status').data
+    ?.enabled;
   const { pathname } = useLocation();
   // The same checks as the tabs' routes in client/routes.ts; API keys are
   // everyone's own.
@@ -99,7 +103,10 @@ export default function SettingsPage(): ReactElement {
           label={text('navigation.settings')}
           tabs={tabs.map((tab) => ({
             to: `/settings/${tab.path}`,
-            label: text(tab.label),
+            label:
+              tab.path === 'demo-data' && demoMode
+                ? demoText('settings.title')
+                : text(tab.label),
             icon: tab.icon,
             selected: tab.path === current,
           }))}

@@ -10,6 +10,7 @@ import { crmZh } from '../../client/locales/crm/index.js';
 // in this browser; while an import runs, how far it has got.
 
 const state = vi.hoisted(() => ({
+  demoMode: false,
   metadata: {} as { settingsAccess?: boolean; demoPresent?: boolean },
   status: undefined as
     | { present: boolean; importing: { percent: number | null } | null }
@@ -22,7 +23,10 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
   return {
     ...actual,
     useMetadata: () => ({ data: state.metadata }),
-    useCrmQuery: () => ({ data: state.status }),
+    useCrmQuery: (path: string) => ({
+      data:
+        path === 'demoMode/status' ? { enabled: state.demoMode } : state.status,
+    }),
     useCrmScopeKey: () => ['test'],
     useCrmText: () => ({
       text: (key: string): string => {
@@ -50,6 +54,15 @@ describe('the demo banner', () => {
   beforeEach(() => {
     localStorage.clear();
     state.status = undefined;
+    state.demoMode = false;
+  });
+
+  it('hides the old import prompt in read-only demo deployments', () => {
+    state.demoMode = true;
+    state.metadata = { settingsAccess: true, demoPresent: false };
+    renderBanner();
+    expect(screen.queryByText(crmZh.demoBanner)).toBeNull();
+    expect(screen.queryByRole('link')).toBeNull();
   });
 
   it('offers the import to an administrator while no demo data is imported', () => {

@@ -12,6 +12,7 @@ import {
 import { authorizationToken } from '@nocobase/app-plugin-authorization';
 import { notificationServiceToken } from '@nocobase/app-plugin-notification/server';
 import { schedulerServiceToken } from '@nocobase/app-plugin-scheduler/server/tokens';
+import { isDemoMode } from './demo-mode.js';
 import { scanLeadSignals } from './lead-signals.js';
 import { sweepFiles } from './file-sweep.js';
 import { sweepSearchAnswers } from '../crm-agents/search-answers.js';
@@ -302,7 +303,10 @@ export default class CrmProvider extends ServiceProvider<Application> {
     // (lead-signals.ts): a scheduler task, so administrators see each pass,
     // what it started, and may switch it off on the scheduled tasks page.
     // At nine in the morning of the CRM's time zone as it stands at boot.
-    if (this.app.container.has(schedulerServiceToken)) {
+    if (
+      !isDemoMode(this.app) &&
+      this.app.container.has(schedulerServiceToken)
+    ) {
       const scheduler = this.app.container.resolve(schedulerServiceToken);
       const service = this.app.container.resolve(crmToken);
       const settings = await service.settings();
@@ -545,7 +549,10 @@ export default class CrmProvider extends ServiceProvider<Application> {
     const service = this.app.container.resolve(crmToken);
     // The follow-ups run as tasks of the jobs service (follow-up-jobs.ts):
     // kept across a restart, as many at once as `crmFollowUps` allows.
-    if (this.app.container.has(jobExecutorServiceToken)) {
+    if (
+      !isDemoMode(this.app) &&
+      this.app.container.has(jobExecutorServiceToken)
+    ) {
       const executor = this.app.container
         .resolve(jobExecutorServiceToken)
         .getJobExecutor('crm', FOLLOW_UP_JOBS);
@@ -695,6 +702,9 @@ export default class CrmProvider extends ServiceProvider<Application> {
         .mediaFile(actor, messageId)
         .then(() => true)
         .catch(() => false);
+    // Request write protection does not cover background work. Keep the
+    // imported snapshot unchanged, including notices, mail and WhatsApp.
+    if (isDemoMode(this.app)) return;
     // Plain timers: @nocobase/cron, which ran these passes, was never
     // published to the public npm registry. Each pass skips a tick while
     // the previous one still runs.

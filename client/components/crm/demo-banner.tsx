@@ -29,11 +29,14 @@ function readDismissed(): boolean {
 export function DemoBanner(): ReactElement | null {
   const { text } = useCrmText();
   const metadata = useMetadata().data;
+  const demoMode = useCrmQuery<{ enabled: boolean }>('demoMode/status').data;
   const [dismissed, setDismissed] = useState(readDismissed);
   const queryClient = useQueryClient();
   const scopeKey = useCrmScopeKey();
   const offered =
-    Boolean(metadata?.settingsAccess) && metadata?.demoPresent === false;
+    demoMode?.enabled === false &&
+    Boolean(metadata?.settingsAccess) &&
+    metadata?.demoPresent === false;
   const status = useCrmQuery<DemoStatus>('demoData', offered, {
     refetchInterval: (data) => (data?.importing ? 1000 : false),
   }).data;

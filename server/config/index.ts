@@ -24,6 +24,7 @@ import ai from './ai.js';
 import users from './users.js';
 import mail from './mail.js';
 import agents from './agents.js';
+import demoMode from './demo-mode.js';
 
 const defaultConfigs: AppConfigFactory<{
   auth: ReturnType<typeof auth>;
@@ -48,6 +49,7 @@ const defaultConfigs: AppConfigFactory<{
   users: ReturnType<typeof users>;
   mail: ReturnType<typeof mail>;
   agents: ReturnType<typeof agents>;
+  demoMode: ReturnType<typeof demoMode>;
 }> = defaultAppConfigs({
   auth,
   authorization,
@@ -71,6 +73,7 @@ const defaultConfigs: AppConfigFactory<{
   users,
   mail,
   agents,
+  demoMode,
 });
 
 export default defaultConfigs;

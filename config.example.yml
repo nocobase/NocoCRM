@@ -1,5 +1,12 @@
 # Copy this file to config.yml before starting the application.
 
+# Read-only showcase deployment. Use its own database and storage directory.
+# Import the existing CRM demo dataset before enabling; no new data is generated.
+# NOCOBASE_DEMO_MODE=true enables the same plugin setting.
+# demoMode:
+#   enabled: true
+#   quickSignIn: true
+
 # app:
 #   Public origin used for callbacks and redirects in production.
 #   publicOrigin: https://apps.example.com

@@ -35,3 +35,7 @@ The CRM's own changes to the sidebar, the header and the layouts are described i
 The shared list of shell behaviors to keep when customizing is in [customizing the shell](../skills/nocobase-app-development/references/frontend/references/shell.md).
 
 The signed-in region waits in `client/routing/session-preparation.tsx` before mounting `AppLayout`: the authentication provider first reconnects active realtime subscriptions as the current session and waits for the open notification, including permission invalidation. A ten-second timeout shows a localized retry/sign-out screen. Keep this boundary inside `RequiredAuthentication`; guest login must remain reachable without realtime. Readiness is only for initial session preparation. Subsequent permission notifications and reconnects still use normal fail-closed route unmounting, including portal and effect cleanup.
+
+The account menu mounts the Demo Mode plugin's `DemoAccountMenu` before sign-out.
+Keep `accountSwitcher: 'menu'` in `client/plugins.ts`; the plugin owns account
+listing and session switching and hides this entry outside the dedicated demo.

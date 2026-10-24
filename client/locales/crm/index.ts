@@ -3318,6 +3318,10 @@ const wording = {
     merged: ['Leads merged', '线索合并'],
   },
   errors: {
+    demoReadOnly: [
+      'Demo mode is enabled. Data cannot be modified.',
+      '当前处于 demo 模式，数据不可修改',
+    ],
     serverError: [
       'Something went wrong. Please try again.',
       '操作失败，请重试。',

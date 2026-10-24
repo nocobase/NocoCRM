@@ -35,6 +35,8 @@ import {
 } from '../providers/crm-agents/actions.js';
 import { watchAiWork } from '../providers/crm/ai-watches.js';
 import { crmToken } from '../providers/crm/index.js';
+import { isDemoMode } from '../providers/crm/demo-mode.js';
+import { DemoReadOnlyError } from '@nocobase/app-plugin-demo-mode/server';
 import {
   ASSISTANT_SCHEME,
   assistantActions,
@@ -80,6 +82,12 @@ export function crmGuard(app: Application) {
     const scope = c.get('authz');
     const id = scope.identity.principal?.id;
     if (!id) throw new CrmError('unauthorized', 401);
+    // Refuse before uploads, outbound calls, AI work or queues can run. The
+    // plugin remains responsible for SQL protection, including writes on GET.
+    if (isDemoMode(app) && !['GET', 'HEAD', 'OPTIONS'].includes(c.req.method)) {
+      c.header('Server-Timing', 'demo-read-only');
+      throw new DemoReadOnlyError([]);
+    }
     c.set('actor', {
       id,
       scope,

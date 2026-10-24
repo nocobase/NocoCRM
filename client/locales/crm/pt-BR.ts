@@ -2626,6 +2626,8 @@ export const crmPtBR: CrmWording = {
     merged: 'Leads mesclados',
   },
   errors: {
+    demoReadOnly:
+      'O modo de demonstração está ativado. Os dados não podem ser alterados.',
     serverError: 'Algo deu errado. Tente novamente.',
     invalidInput: 'Verifique os valores e tente novamente.',
     evaluationDecided: 'Esta recomendação já foi decidida.',
