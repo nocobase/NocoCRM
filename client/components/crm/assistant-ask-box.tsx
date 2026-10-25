@@ -10,7 +10,7 @@ import {
 import { toText, useCrmText } from './api.js';
 import { useAskDraft, useFocusReturn } from './assistant-ask.js';
 import { AskComposer } from './assistant-ask-composer.js';
-import { useAgentReadiness } from './agent-chat/ask.js';
+import { useAgentReadiness, useDemoSite } from './agent-chat/ask.js';
 
 // The overview's ask box: the first thing on the page, in its flow rather
 // than floating like the dock (which the overview does not show), always
@@ -29,7 +29,10 @@ export function AssistantAskBox({
 } = {}): ReactElement | null {
   const { text } = useCrmText();
   const readiness = useAgentReadiness();
-  const disabled = readiness.state !== 'ready';
+  // A demo site takes no question, but the box still opens the panel on
+  // one (useAskDraft), as the dock does.
+  const demo = useDemoSite();
+  const disabled = readiness.state !== 'ready' && !demo;
   const draft = useAskDraft(undefined, disabled);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -39,7 +42,7 @@ export function AssistantAskBox({
   );
 
   const unavailable =
-    readiness.state === 'unavailable' ? readiness.reason : undefined;
+    readiness.state === 'unavailable' && !demo ? readiness.reason : undefined;
   const placeholder = unavailable ?? toText(text('dock.placeholder'));
 
   const box = (

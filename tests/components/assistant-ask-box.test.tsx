@@ -142,17 +142,25 @@ describe("the overview's ask box", () => {
     expect(chatFake.created).toHaveLength(0);
   });
 
-  it('takes no question on a read-only demo site, saying so', async () => {
+  it('opens the panel on the question on a read-only demo site, sending nothing', async () => {
     const user = userEvent.setup();
     metadata.current = { demoSite: true };
     try {
       render(<AssistantAskBox />);
-      expect(
-        screen.getByRole('textbox', { name: english('agentPanel.demoSite') }),
-      ).toBeDisabled();
-      await user.click(screen.getByRole('textbox'));
+      const input = screen.getByRole('textbox', {
+        name: english('dock.placeholder'),
+      });
+      expect(input).toBeEnabled();
+      await user.click(input);
       await user.keyboard('Hello{Enter}');
       expect(chatFake.created).toHaveLength(0);
+      expect(chatFake.sent).toHaveLength(0);
+      expect(chatFake.opened).toContainEqual({
+        conversationId: null,
+        view: 'chat',
+        draft: 'Hello',
+      });
+      expect(input).toHaveValue('');
     } finally {
       metadata.current = undefined;
     }

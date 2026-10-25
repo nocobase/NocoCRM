@@ -405,13 +405,28 @@ export class CrmPlans {
       pageSize: number;
     },
   ): Promise<{ data: PlanView[]; total: number }> {
-    await this.expireDue();
+    // A read writes nothing (a demo site refuses every write): a pending
+    // plan past its time is listed as expired, and stored so once someone
+    // decides on a plan (decidable).
+    const now = new Date().toISOString();
     let select = this.service.database
       .query()
       .selectFrom('crmPlans')
       .select(['id'])
       .where('proposerUserId', '=', actor.id);
-    if (options.status) select = select.where('status', '=', options.status);
+    if (options.status === 'pending')
+      select = select
+        .where('status', '=', 'pending')
+        .where('expiresAt', '>=', now);
+    else if (options.status === 'expired')
+      select = select.where((eb) =>
+        eb.or([
+          eb('status', '=', 'expired'),
+          eb.and([eb('status', '=', 'pending'), eb('expiresAt', '<', now)]),
+        ]),
+      );
+    else if (options.status)
+      select = select.where('status', '=', options.status);
     if (options.conversationId)
       select = select.where('conversationId', '=', options.conversationId);
     if (options.target) {
@@ -611,7 +626,7 @@ export class CrmPlans {
     return this.close(actor, plan, 'voided', null);
   }
 
-  // Pending plans a day old expire; read before every list.
+  // Pending plans a day old expire; stored before every decision.
   async expireDue(): Promise<number> {
     const now = new Date().toISOString();
     const result = await this.service.database
@@ -716,7 +731,12 @@ export class CrmPlans {
       id: toText(plan.id),
       title: toText(plan.title),
       summary: plan.summary == null ? null : toText(plan.summary),
-      status: toText(plan.status) as PlanStatus,
+      // Expired once its time has passed, whether or not stored so yet.
+      status:
+        toText(plan.status) === 'pending' &&
+        (iso(plan.expiresAt) ?? '') < new Date().toISOString()
+          ? 'expired'
+          : (toText(plan.status) as PlanStatus),
       revision: Number(plan.revision),
       proposerUserId: toText(plan.proposerUserId),
       agentId: plan.agentId == null ? null : toText(plan.agentId),

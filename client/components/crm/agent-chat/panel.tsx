@@ -39,6 +39,7 @@ import {
 } from '../record-drawer.js';
 import {
   useAgentReadiness,
+  useDemoSite,
   useAssistantDescription,
   useAssistantName,
   useCrmChatAgents,
@@ -146,6 +147,7 @@ function PanelBody({ modal = false }: { modal?: boolean }): ReactElement {
   const panel = useChatPanel();
   const agents = useCrmChatAgents();
   const readiness = useAgentReadiness();
+  const demo = useDemoSite();
   const list = useConversationList({});
   // The page's drawer when it draws one, else the panel's own (one
   // `?open=` never opens two).
@@ -213,8 +215,13 @@ function PanelBody({ modal = false }: { modal?: boolean }): ReactElement {
   const history = panel.view === 'history';
   const body = (
     <div className='flex min-h-0 flex-1 flex-col px-4'>
-      {!history && !conversationId && readiness.state === 'unavailable' ? (
+      {!history &&
+      !conversationId &&
+      readiness.state === 'unavailable' &&
+      !demo ? (
         // No agent to start a conversation with: why, not an empty picker.
+        // A demo site's new conversation shows still, with the question an
+        // ask box put in its composer and why it goes no further.
         <p className='m-auto max-w-xs py-10 text-center text-sm text-muted-foreground'>
           {readiness.reason}
         </p>

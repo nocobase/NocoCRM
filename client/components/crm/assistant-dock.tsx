@@ -11,7 +11,12 @@ import {
 } from '../ui/tooltip.js';
 import { toText, useCrmText, useMetadata, type Entity } from './api.js';
 import { usePanelOpen, useAskDraft, useFocusReturn } from './assistant-ask.js';
-import { recordPin, useAgentReadiness, useDiscuss } from './agent-chat/ask.js';
+import {
+  recordPin,
+  useAgentReadiness,
+  useDemoSite,
+  useDiscuss,
+} from './agent-chat/ask.js';
 import { AskComposer } from './assistant-ask-composer.js';
 import { useCurrentRecord, type CurrentRecord } from './current-record.js';
 
@@ -98,9 +103,12 @@ export function AssistantDock(): ReactElement | null {
   const isMobile = useIsMobile();
   // Switched off for the company in Settings → General (assistantDock).
   const { data: meta } = useMetadata();
+  // A demo site takes no question, but the dock stays open to one: sending
+  // opens the panel on it (useAskDraft), which says why it goes no further.
+  const demo = useDemoSite();
   const unavailable =
-    readiness.state === 'unavailable' ? readiness.reason : undefined;
-  const draft = useAskDraft(record, readiness.state !== 'ready');
+    readiness.state === 'unavailable' && !demo ? readiness.reason : undefined;
+  const draft = useAskDraft(record, readiness.state !== 'ready' && !demo);
   // Focus is in the dock, or its model menu (which lies outside it) is open.
   const [focused, setFocused] = useState(false);
   const [modelMenu, setModelMenu] = useState(false);

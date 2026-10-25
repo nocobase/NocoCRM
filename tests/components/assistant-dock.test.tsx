@@ -18,6 +18,8 @@ const state = vi.hoisted(() => ({
   mobile: false,
   // The company's switch in Settings → General (assistantDock).
   dock: true,
+  // A read-only demo site (Demo Mode).
+  demoSite: false,
 }));
 
 // The crm locale's English text by its dotted key, with {{name}} filled in.
@@ -40,7 +42,11 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
     // No workspace here but the dock's switch: no background agent to
     // leave out of the chat.
     useMetadata: () => ({
-      data: state.dock ? undefined : { settings: { assistantDock: false } },
+      data: state.demoSite
+        ? { demoSite: true, settings: {} }
+        : state.dock
+          ? undefined
+          : { settings: { assistantDock: false } },
     }),
   };
 });
@@ -93,6 +99,7 @@ describe('the assistant dock', () => {
   beforeEach(() => {
     chatFake.open = false;
     state.mobile = false;
+    state.demoSite = false;
     chatFake.reset();
     localStorage.clear();
   });
@@ -397,6 +404,29 @@ describe('the assistant dock', () => {
     await user.click(input);
     expect(screen.queryByRole('list')).toBeNull();
     expect(chatFake.created).toHaveLength(0);
+  });
+
+  it('opens the panel on the question about the record on a demo site, sending nothing', async () => {
+    const user = userEvent.setup();
+    state.demoSite = true;
+    renderDock('/leads/l1', { name: 'Tang Rui' });
+    const input = screen.getByRole('textbox', {
+      name: 'Ask anything about this lead…',
+    });
+    expect(input).toBeEnabled();
+    await user.click(input);
+    await user.click(
+      screen.getByRole('button', { name: english('dock.q.lead.summary') }),
+    );
+    expect(chatFake.created).toHaveLength(0);
+    expect(chatFake.sent).toHaveLength(0);
+    expect(chatFake.opened[0]).toEqual({
+      conversationId: null,
+      view: 'chat',
+      draft: english('dock.q.lead.summary'),
+    });
+    expect(chatFake.pinned).toHaveLength(1);
+    expect(chatFake.pinned[0]).toMatchObject({ id: 'l1' });
   });
 
   it('is a round button on a phone that opens a new conversation from the record', async () => {

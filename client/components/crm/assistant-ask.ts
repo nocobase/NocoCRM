@@ -10,6 +10,7 @@ import {
   useAgentReadiness,
   useAskAgent,
   useAskFiles,
+  useDemoSite,
 } from './agent-chat/ask.js';
 import type { Entity } from './api.js';
 import type { CurrentRecord } from './current-record.js';
@@ -72,7 +73,10 @@ export function usePanelOpen(): boolean {
 
 // A question being written in one of the ask boxes: its text, its files and
 // the model picked, and sending it, which starts a conversation with the assistant
-// (from the page's record, when given) and opens the panel on it.
+// (from the page's record, when given) and opens the panel on it. On a demo
+// site, which takes no question, sending only opens the panel on a new
+// conversation with the question in its composer and the record pinned, so
+// a visitor still sees where a question goes; nothing is created.
 export interface AskDraft {
   value: string;
   setValue: (value: string) => void;
@@ -95,11 +99,29 @@ export function useAskDraft(
   const files = useAskFiles();
   const { models, model, select } = useAgentModels(readiness.agent);
   const askAgent = useAskAgent();
+  const panel = useChatPanel();
+  const demo = useDemoSite();
   const [value, setValue] = useState('');
   const [sending, setSending] = useState(false);
   const blocked = disabled || sending || files.uploading;
   const send = (prompt?: string): boolean => {
     const question = (prompt ?? value).trim();
+    if (demo) {
+      if (blocked || !question) return false;
+      setValue('');
+      files.clear();
+      panel.clearPinned();
+      panel.openChat({ conversationId: null, view: 'chat', draft: question });
+      if (record)
+        panel.openChat({
+          pin: recordPin(
+            record.entity as Entity,
+            record.recordId,
+            record.name ?? '',
+          ),
+        });
+      return true;
+    }
     const agent = readiness.agent;
     if (blocked || !agent || (!question && !files.ready.length)) return false;
     const typed = value;

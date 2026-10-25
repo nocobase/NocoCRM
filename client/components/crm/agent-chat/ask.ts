@@ -117,13 +117,19 @@ export function useAssistantDescription(): string {
   );
 }
 
+// A read-only demo site (Demo Mode), which refuses every question.
+export function useDemoSite(): boolean {
+  return Boolean(useMetadata().data?.demoSite);
+}
+
 // The assistant, and whether it can answer now.
 export function useAgentReadiness(): AgentReadiness {
   const { text } = useCrmText();
   const agents = useCrmChatAgents();
   // A read-only demo site (Demo Mode) refuses every question before it is
-  // sent, so the assistant says so instead of offering to send one.
-  if (useMetadata().data?.demoSite)
+  // sent, so the assistant says so instead of offering to send one; the
+  // ask boxes still open the panel on the question (useAskDraft).
+  if (useDemoSite())
     return {
       state: 'unavailable',
       agent: agents.data?.[0] ?? null,
