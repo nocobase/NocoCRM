@@ -7280,8 +7280,9 @@ describe('demo dataset', () => {
         .execute(),
     ).toHaveLength(demoSignals.length);
     // The company's WhatsApp numbers, the demo's own (demo-whatsapp.ts),
-    // with their conversations: five with demo records, which carry their
-    // lines (H World's two people both on its company and deal), three
+    // with their conversations: twenty with demo records, which carry
+    // their lines (H World's two people both on its company and deal), a
+    // person at every other company and the followed-up leads, three
     // with people nobody linked, one of them set aside. They
     // are never the connection's, and the records offer their WhatsApp tab.
     const waNumbers = await database
@@ -7301,7 +7302,7 @@ describe('demo dataset', () => {
       '+1 555 010 0199',
       '+44 7700 900123',
     ]);
-    expect(view.demoNumbers.map((n) => n.conversations)).toEqual([6, 2]);
+    expect(view.demoNumbers.map((n) => n.conversations)).toEqual([21, 2]);
     await expect(
       whatsapp.updateNumber(view.demoNumbers[0].id, {}),
     ).rejects.toMatchObject({ code: 'notFound' });
@@ -7379,11 +7380,7 @@ describe('demo dataset', () => {
       .execute();
     expect(waConversations.map((row) => toText(row.state)).sort()).toEqual([
       'dismissed',
-      'linked',
-      'linked',
-      'linked',
-      'linked',
-      'linked',
+      ...Array<string>(20).fill('linked'),
       'unlinked',
       'unlinked',
     ]);
