@@ -10,17 +10,43 @@ vi.mock('../../client/theme/index.js', () => ({
 vi.mock('../../client/layouts/components/user-menu.js', () => ({
   UserMenu: () => null,
 }));
+vi.mock('../../client/layouts/components/demo-mode-badge.js', () => ({
+  DemoModeBadge: () => null,
+}));
 
 const state = vi.hoisted(() => ({
   readiness: { state: 'ready' } as { state: string; reason?: string },
   open: false,
+  demoSite: false,
+  conversationId: null as string | null,
   toggleChat: vi.fn(),
+  openChat: vi.fn(),
 }));
 vi.mock('@nocobase/app-plugin-agents/client/chat', () => ({
-  useChatPanel: () => ({ open: state.open, toggleChat: state.toggleChat }),
+  useChatPanel: () => ({
+    open: state.open,
+    conversationId: state.conversationId,
+    toggleChat: state.toggleChat,
+    openChat: state.openChat,
+  }),
+  useConversationList: () => ({
+    data: {
+      pages: [
+        {
+          items: [
+            { id: 'c1', source: 'crm' },
+            { id: 'c2', source: 'crm' },
+          ],
+        },
+      ],
+    },
+  }),
 }));
 vi.mock('../../client/components/crm/agent-chat/ask.js', () => ({
   useAgentReadiness: () => state.readiness,
+  useDemoSite: () => state.demoSite,
+  listedConversations: (pages: { items: unknown[] }[] | undefined) =>
+    (pages ?? []).flatMap((page) => page.items),
 }));
 vi.mock('../../client/components/crm/api.js', () => ({
   toText: (value: unknown) => String(value ?? ''),
@@ -30,7 +56,10 @@ vi.mock('../../client/components/crm/api.js', () => ({
 beforeEach(() => {
   state.readiness = { state: 'ready' };
   state.open = false;
+  state.demoSite = false;
+  state.conversationId = null;
   state.toggleChat.mockReset();
+  state.openChat.mockReset();
 });
 
 // The header carries no Settings or Inbox entry: the settings pages are a
@@ -70,4 +99,24 @@ it('says why, disabled, while the assistant cannot answer, and waits while it lo
   state.readiness = { state: 'loading' };
   rerender(<AssistantHeaderButton />);
   expect(screen.queryByRole('button')).toBeNull();
+});
+
+it('opens the first conversation on a demo site, where they can be read', () => {
+  state.readiness = { state: 'unavailable', reason: 'Demo site' };
+  state.demoSite = true;
+  const { rerender } = render(<AssistantHeaderButton />);
+  const button = screen.getByRole('button', { name: 'dock.open' });
+  expect(button.hasAttribute('disabled')).toBe(false);
+  fireEvent.click(button);
+  expect(state.openChat).toHaveBeenCalledWith({
+    conversationId: 'c1',
+    view: 'chat',
+  });
+  expect(state.toggleChat).not.toHaveBeenCalled();
+  // One already open stays; an open panel closes.
+  state.conversationId = 'c2';
+  rerender(<AssistantHeaderButton />);
+  fireEvent.click(screen.getByRole('button', { name: 'dock.open' }));
+  expect(state.toggleChat).toHaveBeenCalledTimes(1);
+  expect(state.openChat).toHaveBeenCalledTimes(1);
 });

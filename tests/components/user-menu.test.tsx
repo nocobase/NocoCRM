@@ -115,7 +115,9 @@ it('reports a network sign-out failure and allows retry', async () => {
   await waitFor(() => expect(state.refresh).toHaveBeenCalledOnce());
 });
 
-it('offers the plugin account switcher and preserves the current page', async () => {
+// The header's Demo Mode badge switches accounts (demo-mode-badge.tsx), so
+// the account menu offers none, even on a demo site.
+it('offers no account switcher, the header badge doing that', async () => {
   state.accounts = [
     {
       username: 'nocobase',
@@ -132,11 +134,7 @@ it('offers the plugin account switcher and preserves the current page', async ()
   );
   screen.getByRole('button', { name: 'Open account menu' }).focus();
   await userEvent.keyboard('{Enter}');
-  await userEvent.hover(
-    await screen.findByRole('menuitem', { name: 'accounts.menu' }),
-  );
-  await userEvent.click(
-    await screen.findByRole('menuitemradio', { name: /Demo sales/ }),
-  );
-  expect(state.signIn).toHaveBeenCalledWith('sales', '/leads');
+  expect(await screen.findByRole('menu')).toBeTruthy();
+  expect(screen.queryByRole('menuitem', { name: 'accounts.menu' })).toBeNull();
+  expect(screen.queryByText('Demo sales')).toBeNull();
 });

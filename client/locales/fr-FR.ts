@@ -174,6 +174,14 @@ const frFR: AppResource = {
   'status.deniedDescription': "Vous n'êtes pas autorisé à accéder à {{label}}.",
   'status.routeFailedDescription':
     "La route {{label}} de {{packageName}} n'a pas pu être chargée.",
+  // The header's Demo Mode badge (client/layouts/components/demo-mode-badge.tsx).
+  demoMode: {
+    badge: 'Mode démo',
+    title: 'Ceci est une démo',
+    hint: "Les données sont réinitialisées chaque jour et les modifications ne sont pas enregistrées. Passez à l'un des comptes ci-dessous pour voir ce que voit chaque rôle.",
+    accounts: 'Changer de compte',
+    switchFailed: 'Impossible de changer de compte. Veuillez réessayer.',
+  },
   shell: {
     buildFreely: "L'IA construit librement.",
     reliability: '<brand>NocoBase</brand> en garantit la fiabilité.',

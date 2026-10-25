@@ -155,6 +155,14 @@ const zhTW: AppResource = {
   'status.deniedDescription': '你沒有存取 {{label}} 的權限。',
   'status.routeFailedDescription':
     '無法載入 {{packageName}} 的路由 {{label}}。',
+  // The header's Demo Mode badge (client/layouts/components/demo-mode-badge.tsx).
+  demoMode: {
+    badge: '示範模式',
+    title: '這是示範環境',
+    hint: '資料每天自動重設，修改不會儲存。可以直接切換到下方的帳戶，看看不同角色看到的內容。',
+    accounts: '切換帳戶',
+    switchFailed: '切換帳戶失敗，請重試。',
+  },
   shell: {
     buildFreely: 'AI 自由建構',
     reliability: '<brand>NocoBase</brand> 保障可靠',

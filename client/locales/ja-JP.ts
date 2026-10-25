@@ -171,6 +171,15 @@ const jaJP: AppResource = {
   'status.deniedDescription': '{{label}} にアクセスする権限がありません。',
   'status.routeFailedDescription':
     '{{packageName}} のルート {{label}} を読み込めませんでした。',
+  // The header's Demo Mode badge (client/layouts/components/demo-mode-badge.tsx).
+  demoMode: {
+    badge: 'デモモード',
+    title: 'これはデモ環境です',
+    hint: 'データは毎日リセットされ、変更は保存されません。下のアカウントに切り替えて、役割ごとの見え方を確認できます。',
+    accounts: 'アカウントを切り替え',
+    switchFailed:
+      'アカウントを切り替えられませんでした。もう一度お試しください。',
+  },
   shell: {
     buildFreely: 'AI は自由に構築する。',
     reliability: '<brand>NocoBase</brand> が信頼性を支える。',

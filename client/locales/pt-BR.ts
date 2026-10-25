@@ -172,6 +172,14 @@ const ptBR: AppResource = {
   'status.deniedDescription': 'Você não tem permissão para acessar {{label}}.',
   'status.routeFailedDescription':
     'Não foi possível carregar a rota {{label}} de {{packageName}}.',
+  // The header's Demo Mode badge (client/layouts/components/demo-mode-badge.tsx).
+  demoMode: {
+    badge: 'Modo demo',
+    title: 'Esta é uma demonstração',
+    hint: 'Os dados são redefinidos todos os dias e as alterações não são salvas. Troque para qualquer conta abaixo para ver o que cada função vê.',
+    accounts: 'Trocar de conta',
+    switchFailed: 'Não foi possível trocar de conta. Tente novamente.',
+  },
   shell: {
     buildFreely: 'A IA constrói livremente.',
     reliability: 'O <brand>NocoBase</brand> garante a confiabilidade.',

@@ -170,6 +170,14 @@ const viVN: AppResource = {
   'status.deniedDescription': 'Bạn không có quyền truy cập {{label}}.',
   'status.routeFailedDescription':
     'Không thể tải route {{label}} từ {{packageName}}.',
+  // The header's Demo Mode badge (client/layouts/components/demo-mode-badge.tsx).
+  demoMode: {
+    badge: 'Chế độ demo',
+    title: 'Đây là bản demo',
+    hint: 'Dữ liệu được đặt lại mỗi ngày và các thay đổi không được lưu. Chuyển sang một tài khoản bên dưới để xem mỗi vai trò thấy gì.',
+    accounts: 'Chuyển tài khoản',
+    switchFailed: 'Không chuyển được tài khoản. Vui lòng thử lại.',
+  },
   shell: {
     buildFreely: 'AI tự do xây dựng.',
     reliability: '<brand>NocoBase</brand> giữ cho mọi thứ đáng tin cậy.',

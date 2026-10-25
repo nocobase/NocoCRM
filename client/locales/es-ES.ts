@@ -172,6 +172,14 @@ const esES: AppResource = {
   'status.deniedDescription': 'No tienes permiso para acceder a {{label}}.',
   'status.routeFailedDescription':
     'No se ha podido cargar la ruta {{label}} de {{packageName}}.',
+  // The header's Demo Mode badge (client/layouts/components/demo-mode-badge.tsx).
+  demoMode: {
+    badge: 'Modo demo',
+    title: 'Esto es una demostración',
+    hint: 'Los datos se restablecen cada día y los cambios no se guardan. Cambia a cualquiera de estas cuentas para ver lo que ve cada rol.',
+    accounts: 'Cambiar de cuenta',
+    switchFailed: 'No se pudo cambiar de cuenta. Inténtalo de nuevo.',
+  },
   shell: {
     buildFreely: 'La IA construye con libertad.',
     reliability: '<brand>NocoBase</brand> lo mantiene fiable.',

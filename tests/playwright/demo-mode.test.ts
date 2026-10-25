@@ -86,8 +86,8 @@ test('plugin settings and account menu use the existing dataset and preserve rea
   );
 
   await page.goto(`${origin}/main/leads`);
-  await page.getByRole('button', { name: '打开账户菜单' }).click();
-  await page.getByRole('menuitem', { name: /^账号：/ }).hover();
+  // The header's Demo Mode badge switches accounts (demo-mode-badge.tsx).
+  await page.getByRole('button', { name: /演示模式/ }).click();
   await expect(page.getByRole('menuitemradio')).toHaveCount(visitors.length);
   await page.screenshot({
     path: 'storage/demo-mode-verification/account-menu.png',
@@ -174,8 +174,7 @@ test('plugin settings remain readable in English and on a narrow dark screen', a
     path: 'storage/demo-mode-verification/plugin-settings-mobile-dark.png',
     fullPage: true,
   });
-  await page.getByRole('button', { name: 'Open account menu' }).click();
-  await page.getByRole('menuitem', { name: /^Account:/ }).hover();
+  await page.getByRole('button', { name: /Demo mode/ }).click();
   const accounts = (
     await (
       await context.request.get(`${origin}/main/api/demoMode/accounts`)

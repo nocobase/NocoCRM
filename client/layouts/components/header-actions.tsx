@@ -3,6 +3,7 @@ import { TooltipProvider } from '#components/ui/tooltip';
 
 import { AssistantHeaderButton } from '../../components/crm/assistant-header-button.js';
 import { ThemeSettings } from '../../theme/index.js';
+import { DemoModeBadge } from './demo-mode-badge.js';
 import { UserMenu } from './user-menu.js';
 
 /**
@@ -14,6 +15,9 @@ export function HeaderActions(): ReactElement {
   return (
     <TooltipProvider>
       <div className='flex shrink-0 items-center gap-2'>
+        {/* Application change (2026-10-25): a Demo Mode deployment says
+            so, with its accounts to switch to. */}
+        <DemoModeBadge />
         <AssistantHeaderButton />
         <ThemeSettings />
         <UserMenu />

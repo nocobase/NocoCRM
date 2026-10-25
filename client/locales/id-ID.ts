@@ -172,6 +172,14 @@ const idID: AppResource = {
     'Anda tidak memiliki izin untuk mengakses {{label}}.',
   'status.routeFailedDescription':
     'Rute {{label}} dari {{packageName}} tidak dapat dimuat.',
+  // The header's Demo Mode badge (client/layouts/components/demo-mode-badge.tsx).
+  demoMode: {
+    badge: 'Mode demo',
+    title: 'Ini adalah demo',
+    hint: 'Data diatur ulang setiap hari dan perubahan tidak disimpan. Beralihlah ke akun di bawah untuk melihat apa yang dilihat setiap peran.',
+    accounts: 'Ganti akun',
+    switchFailed: 'Tidak dapat mengganti akun. Silakan coba lagi.',
+  },
   shell: {
     buildFreely: 'AI membangun dengan bebas.',
     reliability: '<brand>NocoBase</brand> menjaganya tetap andal.',

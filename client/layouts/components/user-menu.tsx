@@ -2,7 +2,6 @@ import { useAuthenticationErrorResolver } from '@nocobase/app-plugin-authenticat
 import { useToaster } from '@nocobase/app-client';
 import { useTranslation } from '@nocobase/i18n/client';
 import { useAuthentication } from '@nocobase/app-plugin-authentication/client';
-import { DemoAccountMenu } from '@nocobase/app-plugin-demo-mode/client/account-menu';
 import { LogOut, UserRound } from 'lucide-react';
 import { useState, type ReactElement } from 'react';
 
@@ -75,7 +74,6 @@ export function UserMenu(): ReactElement {
         </div>
         <DropdownMenuSeparator />
         <LanguageSwitcher />
-        <DemoAccountMenu />
         <DropdownMenuSeparator />
         <DropdownMenuItem
           disabled={isLoggingOut}

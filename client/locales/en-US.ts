@@ -113,6 +113,14 @@ const enUS = {
       won: { who: 'Sophie Bennett', what: 'the signed contract is back' },
     },
   },
+  // The header's Demo Mode badge (client/layouts/components/demo-mode-badge.tsx).
+  demoMode: {
+    badge: 'Demo mode',
+    title: 'This is a demo',
+    hint: 'The data resets every day and changes are not saved. Switch to any account below to see what each role sees.',
+    accounts: 'Switch account',
+    switchFailed: 'Could not switch accounts. Please try again.',
+  },
   navigation: { ...systemEnUS.navigation, home: 'Overview' },
 };
 

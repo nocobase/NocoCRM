@@ -176,6 +176,15 @@ const deDE: AppResource = {
   'status.deniedDescription': 'Sie haben keine Berechtigung für {{label}}.',
   'status.routeFailedDescription':
     'Route {{label}} aus {{packageName}} konnte nicht geladen werden.',
+  // The header's Demo Mode badge (client/layouts/components/demo-mode-badge.tsx).
+  demoMode: {
+    badge: 'Demo-Modus',
+    title: 'Dies ist eine Demo',
+    hint: 'Die Daten werden täglich zurückgesetzt, Änderungen werden nicht gespeichert. Wechseln Sie zu einem der Konten unten, um zu sehen, was jede Rolle sieht.',
+    accounts: 'Konto wechseln',
+    switchFailed:
+      'Das Konto konnte nicht gewechselt werden. Bitte versuchen Sie es erneut.',
+  },
   shell: {
     buildFreely: 'KI baut frei.',
     reliability: '<brand>NocoBase</brand> macht es zuverlässig.',
