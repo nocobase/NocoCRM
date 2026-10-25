@@ -20,7 +20,8 @@ import {
 // conversation is the panel's +. Disabled, saying why, while the assistant
 // cannot answer; on a demo site it still opens the panel, whose
 // conversations can be read though no question is sent, on the first of
-// them unless one is already open.
+// them unless one of them is already open (the one it remembers may be
+// gone: the demo is reset daily, and another account has its own).
 export function AssistantHeaderButton(): ReactElement | null {
   return useDemoSite() ? <DemoHeaderButton /> : <HeaderButton />;
 }
@@ -29,12 +30,16 @@ export function AssistantHeaderButton(): ReactElement | null {
 // elsewhere asks for no list.
 function DemoHeaderButton(): ReactElement | null {
   const panel = useChatPanel();
-  const first = listedConversations(useConversationList({}).data?.pages)[0];
+  const listed = listedConversations(useConversationList({}).data?.pages);
+  const first = listed[0];
+  const remembered = listed.some(
+    (conversation) => conversation.id === panel.conversationId,
+  );
   return (
     <HeaderButton
       demo
       onOpen={
-        first && panel.conversationId === null
+        first && !remembered
           ? () => panel.openChat({ conversationId: first.id, view: 'chat' })
           : undefined
       }

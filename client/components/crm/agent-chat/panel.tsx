@@ -38,6 +38,7 @@ import {
   useRecordDrawerState,
 } from '../record-drawer.js';
 import {
+  listedConversations,
   useAgentReadiness,
   useDemoSite,
   useAssistantDescription,
@@ -244,8 +245,18 @@ function PanelBody({ modal = false }: { modal?: boolean }): ReactElement {
           onRestored={() => undefined}
           onBack={() => panel.setView('history')}
           // The remembered conversation gone (the demo data imported
-          // again, say): a new one, as on opening the panel afresh.
-          onMissing={() => panel.selectConversation(null)}
+          // again, say): a new one, as on opening the panel afresh; on a
+          // demo site, where a new one takes no question, the latest of
+          // the demo's own instead (reset daily, or another account's).
+          onMissing={() =>
+            panel.selectConversation(
+              demo
+                ? (listedConversations(list.data?.pages).find(
+                    (conversation) => conversation.id !== conversationId,
+                  )?.id ?? null)
+                : null,
+            )
+          }
           inPanel
         />
       )}

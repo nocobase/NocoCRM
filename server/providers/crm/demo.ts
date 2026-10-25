@@ -2554,12 +2554,13 @@ async function populate(
   });
 
   // The importer's conversations with the assistant about their projects,
-  // each a few minutes long, over the last days.
+  // each a few minutes long, over the last days; H World's the latest, so
+  // it heads the list and the demo site's ✨ opens it.
   await progress(95);
   if (chats) {
     manifest.chats = [];
     const when: readonly [number, number][] = [
-      [-3, 16],
+      [-1, 18],
       [-2, 9.5],
       [-1, 11],
       [-1, 17],

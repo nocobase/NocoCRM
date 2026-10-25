@@ -127,7 +127,7 @@ export const zhProjects: DemoProjects = {
       messages: [
         {
           role: 'user',
-          text: '明天华住的方案评审会，陆晨肯定会再提首年价格，我该怎么谈？',
+          text: '华住的方案评审会马上要开了，陆晨肯定会再提首年价格，我该怎么谈？',
         },
         {
           role: 'assistant',

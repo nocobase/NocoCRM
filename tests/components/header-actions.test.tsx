@@ -119,4 +119,13 @@ it('opens the first conversation on a demo site, where they can be read', () => 
   fireEvent.click(screen.getByRole('button', { name: 'dock.open' }));
   expect(state.toggleChat).toHaveBeenCalledTimes(1);
   expect(state.openChat).toHaveBeenCalledTimes(1);
+  // One remembered but gone (the demo reset, another account's): the
+  // first again.
+  state.conversationId = 'gone';
+  rerender(<AssistantHeaderButton />);
+  fireEvent.click(screen.getByRole('button', { name: 'dock.open' }));
+  expect(state.openChat).toHaveBeenLastCalledWith({
+    conversationId: 'c1',
+    view: 'chat',
+  });
 });

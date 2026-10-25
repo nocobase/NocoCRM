@@ -151,7 +151,7 @@ export const enProjects: DemoProjects = {
       messages: [
         {
           role: 'user',
-          text: "Chen Lu will raise the first-year price again at tomorrow's H World review. How should I handle it?",
+          text: 'Chen Lu will raise the first-year price again at the H World review coming up. How should I handle it?',
         },
         {
           role: 'assistant',
