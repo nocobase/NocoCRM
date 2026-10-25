@@ -6,15 +6,33 @@ NocoCRM 是面向 B2B 销售团队的 CRM，基于 [NocoBase 3](https://www.noco
 
 ## 开始使用
 
-在自己电脑上运行 NocoCRM 只需要 Node.js 和 pnpm：数据保存在一个 SQLite 文件里，除 AI 外的所有功能都不需要任何账号或密钥。整个过程大约十分钟。
+在自己电脑上运行 NocoCRM 只需要 Node.js 和 pnpm：数据默认保存在一个 SQLite 文件里（也可以用 PostgreSQL 或 MySQL），除 AI 外的所有功能都不需要任何账号或密钥。可以让编程 Agent 来安装，也可以手动安装（大约十分钟），装好后登录，再看接下来做什么。
 
-### 1. 安装工具
+### 用编程 Agent 安装
+
+最省事的方法是让编程 Agent 来装。在准备放 NocoCRM 的文件夹里打开 Claude Code、Codex、Cursor 或其他编程 Agent，把下面这段发给它：
+
+```text
+在这台电脑上安装并启动 NocoCRM（https://github.com/nocobase/NocoCRM）。
+克隆到 NocoCRM 文件夹，确认有 Node.js 24 或更高版本和 pnpm 11，
+然后按仓库里的 AGENTS.md 和 README 操作。
+数据库：用默认的 SQLite。
+用 pnpm dev 启动，告诉我 Local: 地址和怎么登录。
+```
+
+想用 PostgreSQL 或 MySQL，把数据库那一行改成连接信息，例如：`数据库：PostgreSQL，主机 localhost，端口 5432，数据库名 nococrm，用户名 postgres，密码单独告诉你。`
+
+仓库里的 `AGENTS.md` 会指导 Agent 操作，之后还可以让它接入模型服务或邮箱，或者直接修改应用。装好后接着看[登录](#登录)。
+
+### 手动安装
+
+#### 1. 安装工具
 
 - **Node.js 24 或更高版本**。用 `node -v` 查看版本。
 - **pnpm 11**。运行一次 `corepack enable`，pnpm 就会使用 `package.json` 指定的版本；也可以用 `npm install -g pnpm@11` 安装。
-- **可选：一个大模型服务的 API 密钥**，助手和 AI Agent 需要它，比如 DeepSeek、OpenAI、Claude、Gemini、通义千问。应用启动后再添加（第 6 步）。
+- **可选：一个大模型服务的 API 密钥**，助手和 AI Agent 需要它，比如 DeepSeek、OpenAI、Claude、Gemini、通义千问。应用启动后再添加（见[接下来做什么](#接下来做什么)）。
 
-### 2. 获取代码
+#### 2. 获取代码
 
 ```bash
 git clone https://github.com/nocobase/NocoCRM.git
@@ -22,7 +40,7 @@ cd NocoCRM
 pnpm install
 ```
 
-### 3. 生成配置
+#### 3. 生成配置
 
 ```bash
 pnpm nocobase config init --dialect sqlite
@@ -30,7 +48,7 @@ pnpm nocobase config init --dialect sqlite
 
 这会生成配置文件 `config.yml`，其中的 `secrets` 节包括一个自动生成的密钥，用来加密保存模型密钥、邮箱密码等。`config.yml` 不会提交到 Git。`--dialect sqlite` 表示数据保存在一个文件里；要改用 PostgreSQL 或 MySQL，见[配置](#配置)里的“数据库”。
 
-### 4. 启动应用
+#### 4. 启动应用
 
 ```bash
 pnpm dev
@@ -38,13 +56,13 @@ pnpm dev
 
 第一次启动会创建并初始化数据库 `storage/crm.sqlite`。准备好后会打印一个 `Local:` 地址，通常是 `http://127.0.0.1:13000/main/`，在浏览器里打开它。如果 13000 端口被占用，会自动换到下一个空闲端口，所以请以打印出来的地址为准。
 
-### 5. 登录
+### 登录
 
 用初始管理员登录：用户名 `nocobase`，密码 `admin123`。登录后可以在 **设置 → 用户** 里修改密码。应用没有自助注册，其他账号都由管理员创建。
 
 界面默认是英文，右上角头像菜单里可以切换语言。想让所有人默认用中文，在 `config.yml` 里设置 `i18n.defaultLocale: zh-CN`。
 
-### 6. 接下来做什么
+### 接下来做什么
 
 1. **用演示数据先看看。** 页面顶部的横幅会提示导入，也可以打开 **设置 → 演示数据**，选择中文或英文后导入。它会加入一个销售团队，带有客户、商机、任务、审批、邮件和对话（见下面的[演示数据](#演示数据)）。
 2. **添加团队成员。** 在 **设置 → 用户** 里创建账号或发送邀请，并给每个人分配角色（见下面的[角色](#角色)）。每个角色能做什么，在 **设置 → 角色** 里设置。
@@ -77,7 +95,7 @@ pnpm dev
 
 | 遇到的情况                        | 怎么办                                                                                                                                                        |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm install` 拒绝运行或提示版本 | 使用 Node.js 24 或更高版本和 pnpm 11（第 1 步）。                                                                                                             |
+| `pnpm install` 拒绝运行或提示版本 | 使用 Node.js 24 或更高版本和 pnpm 11（见[安装工具](#1-安装工具)）。                                                                                           |
 | 页面打不开                        | 使用 `pnpm dev` 打印的 `Local:` 地址，包括 `/main/`。同一个目录只能运行一个 `pnpm dev`，先停掉另一个。                                                        |
 | 提示"助手暂时不可用"              | 还没有接入模型。在 **Agent 团队 → 模型** 里添加一个模型服务并填入密钥。                                                                                       |
 | 忘记管理员密码                    | 让另一位管理员在 **设置 → 用户** 里重置。本地使用的话，也可以按下面的方法重新开始，并在 `config.yml` 里设新密码。                                             |

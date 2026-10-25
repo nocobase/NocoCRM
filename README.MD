@@ -6,15 +6,33 @@ NocoCRM is a CRM for B2B sales teams, built on [NocoBase 3](https://www.nocobase
 
 ## Getting started
 
-You need nothing but Node.js and pnpm to run NocoCRM on your own computer: it keeps its data in a SQLite file, and every feature except the AI works without any account or key. Setting it up takes about ten minutes.
+You need nothing but Node.js and pnpm to run NocoCRM on your own computer: it keeps its data in a SQLite file by default (PostgreSQL and MySQL work too), and every feature except the AI works without any account or key. Install it with a coding agent, or by hand in about ten minutes; then sign in and take the first steps.
 
-### 1. Install the tools
+### Install with a coding agent
+
+The easiest way is to let a coding agent do it. Open Claude Code, Codex, Cursor or another coding agent in the folder where NocoCRM should go, and give it this:
+
+```text
+Install NocoCRM from https://github.com/nocobase/NocoCRM on this computer and start it.
+Clone it into a NocoCRM folder, make sure Node.js 24 or later and pnpm 11 are available,
+then follow the repository's AGENTS.md and README.
+Database: the default, SQLite.
+Start it with pnpm dev, then tell me the Local: address and how to sign in.
+```
+
+For PostgreSQL or MySQL, change the database line to its connection, for example: `Database: PostgreSQL, host localhost, port 5432, database nococrm, username postgres; I'll give you the password separately.`
+
+The repository's `AGENTS.md` guides the agent, so later on you can ask the same agent to connect a model service or mail, or to change the application itself. Then go on with [Sign in](#sign-in).
+
+### Install by hand
+
+#### 1. Install the tools
 
 - **Node.js 24 or later.** Check with `node -v`.
 - **pnpm 11.** Run `corepack enable` once and pnpm uses the version `package.json` pins; or install it with `npm install -g pnpm@11`.
-- **Optional: an API key for a large-model service**, which the assistant and the AI agents need, such as DeepSeek, OpenAI, Claude, Gemini or Qwen. You add it once the application runs (step 6).
+- **Optional: an API key for a large-model service**, which the assistant and the AI agents need, such as DeepSeek, OpenAI, Claude, Gemini or Qwen. You add it once the application runs (see [First steps](#first-steps)).
 
-### 2. Get the code
+#### 2. Get the code
 
 ```bash
 git clone https://github.com/nocobase/NocoCRM.git
@@ -22,7 +40,7 @@ cd NocoCRM
 pnpm install
 ```
 
-### 3. Create the configuration
+#### 3. Create the configuration
 
 ```bash
 pnpm nocobase config init --dialect sqlite
@@ -30,7 +48,7 @@ pnpm nocobase config init --dialect sqlite
 
 This writes the configuration file `config.yml`, whose `secrets` section holds a generated key that encrypts the model keys, mailbox passwords and the like the application saves. `config.yml` is not committed to Git. `--dialect sqlite` keeps the data in a file; to run on PostgreSQL or MySQL instead, see [Database](#configuration) under Configuration.
 
-### 4. Start the application
+#### 4. Start the application
 
 ```bash
 pnpm dev
@@ -38,13 +56,13 @@ pnpm dev
 
 The first start creates the database, `storage/crm.sqlite`, and sets it up. When it is ready, it prints a `Local:` address, normally `http://127.0.0.1:13000/main/`. Open that address; if port 13000 is taken, the next free port is used, so always use the address it prints.
 
-### 5. Sign in
+### Sign in
 
 Sign in as the first administrator: username `nocobase` (or email `admin@nocobase.com`), password `admin123`. Once signed in, you can change the password on **Settings → Users**. There is no self-registration: the administrator creates every other account.
 
 The interface starts in English; switch the language from the avatar menu at the top right.
 
-### 6. First steps
+### First steps
 
 1. **Look around with the demo data.** The banner at the top offers it, or open **Settings → Demo data**, choose English or Chinese and import it. It adds a sales team with customers, deals, tasks, approvals, mail and conversations (see [Demo data](#demo-data) below).
 2. **Add your team.** Create accounts or send invitations on **Settings → Users**, and give each person a role (see [Roles](#roles) below). What each role may do is set on **Settings → Roles**.
@@ -77,7 +95,7 @@ Accounts are created on **Settings → Users**, each with one or more roles; the
 
 | What you see                                         | What to do                                                                                                                                                                                                          |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm install` refuses to run or fails on the engine | Use Node.js 24 or later and pnpm 11 (step 1).                                                                                                                                                                       |
+| `pnpm install` refuses to run or fails on the engine | Use Node.js 24 or later and pnpm 11 (see [Install the tools](#1-install-the-tools)).                                                                                                                                |
 | The page does not open                               | Use the `Local:` address `pnpm dev` printed, including `/main/`. Only one `pnpm dev` runs per folder; stop the other one first.                                                                                     |
 | "The assistant is not available"                     | No model is connected yet. Add a model service with its key on **Agent team → Models**.                                                                                                                             |
 | Forgot the administrator password                    | Another administrator resets it on **Settings → Users**. On a local copy you can also start over (below) with a new password in `config.yml`.                                                                       |
