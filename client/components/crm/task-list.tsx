@@ -490,9 +490,10 @@ const HEAD = 'text-sm';
 
 // The groups folded away, kept in this browser; a blocked or cleared
 // storage only means every group shows again.
-// Later and closed start folded, the near ones open.
-const FOLDED_KEY = 'nococrm:task-groups-folded-v2';
-const FOLDED_FIRST: readonly DueGroup[] = ['later', 'closed'];
+// Only closed starts folded, every group of tasks to do open; the key
+// moved on from v2, whose default folded later too, so that default goes.
+const FOLDED_KEY = 'nococrm:task-groups-folded-v3';
+const FOLDED_FIRST: readonly DueGroup[] = ['closed'];
 function readFoldedGroups(): Set<DueGroup> {
   try {
     const stored: unknown = JSON.parse(

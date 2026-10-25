@@ -158,6 +158,35 @@ describe('the task list', () => {
     );
   });
 
+  it('shows the tasks due later at first, only the closed ones folded', async () => {
+    state.api.mockImplementation((path: string) =>
+      Promise.resolve(
+        path.includes('excludeStatus=open')
+          ? page([task('done-1', '已完成的任务', 'completed')])
+          : path.startsWith('tasks?')
+            ? page([
+                {
+                  ...task('later-1', '下个月的待办', 'open'),
+                  dueAt: '2099-01-05T01:00:00.000Z',
+                },
+              ])
+            : { data: {} },
+      ),
+    );
+    renderList();
+    expect(await screen.findByText('下个月的待办')).toBeTruthy();
+    expect(
+      screen
+        .getByRole('button', { name: /以后/ })
+        .getAttribute('aria-expanded'),
+    ).toBe('true');
+    expect(
+      screen
+        .getByRole('button', { name: /已结束/ })
+        .getAttribute('aria-expanded'),
+    ).toBe('false');
+  });
+
   it('completes a task through its outcome dialog and opens it again', async () => {
     renderList();
     await screen.findByText('我的待办');
