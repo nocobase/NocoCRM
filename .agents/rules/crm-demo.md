@@ -15,6 +15,12 @@ business records, fictional mail, conversations and files.
 In Demo Mode, `/settings/demo-data` uses `DemoModeSettings` through
 `demoModeRoutes()` with `demoMode.data/read`. Ordinary installations retain their
 sample importer with `crm/manage`. The sample-import banner is hidden in Demo Mode.
+The page shows the data card without its actions (`CardAction: () => null`):
+any visitor may enter a demo site as its administrator, and its language,
+Generate, Clear and Reset would wipe the demo for everyone. The counts, the
+daily reset and the accounts stay; reset by hand with `POST
+<base path>/api/demoMode/data/reset` as an administrator, or `pnpm nocobase
+demo-mode data reset --force` on the server.
 
 The plugin guards database writes. CRM, Mail and Agents request guards also block
 external effects; CRM background work and real model provisioning are paused.

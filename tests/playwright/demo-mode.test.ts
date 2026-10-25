@@ -66,12 +66,12 @@ test('plugin settings and account menu use the existing dataset and preserve rea
     path: 'storage/demo-mode-verification/plugin-settings.png',
     fullPage: true,
   });
-  // Production smoke tests never clear or regenerate the shared deployment.
-  await page.getByRole('button', { name: '重置', exact: true }).click();
-  await page
-    .getByRole('alertdialog')
-    .getByRole('button', { name: '取消', exact: true })
-    .click();
+  // The data card offers no Generate, Clear or Reset: any visitor may be
+  // its administrator (demo-environment.tsx).
+  for (const name of ['生成', '清空', '重置'])
+    await expect(page.getByRole('button', { name, exact: true })).toHaveCount(
+      0,
+    );
   await expect(
     page.getByRole('tab', { name: '概览', exact: true }),
   ).toHaveCount(0);
