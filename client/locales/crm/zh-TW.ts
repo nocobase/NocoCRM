@@ -1393,6 +1393,7 @@ export const crmZhTW: CrmWording = {
     model: '模型',
     removePin: '移除{{label}}',
     notSetUp: '助理暫時無法使用，請聯絡管理員在 設定 → Agent 團隊 裡設定。',
+    demoSite: '展示站上不能向助手提問。',
     sendFailed: '問題沒有送出，請重試。',
     uploadFailed: '「{{name}}」上傳失敗。',
     fileTooLarge: '「{{name}}」太大，無法新增。',

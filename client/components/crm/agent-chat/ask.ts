@@ -23,7 +23,13 @@ import {
 } from '@nocobase/app-plugin-agents/shared/conversations';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
-import { toText, useCrmApi, useCrmText, type Entity } from '../api.js';
+import {
+  toText,
+  useCrmApi,
+  useCrmText,
+  useMetadata,
+  type Entity,
+} from '../api.js';
 
 // The CRM's ways into the assistant's chat from outside its panel: whether
 // it can answer, the models a new conversation may answer with, the files a
@@ -115,6 +121,14 @@ export function useAssistantDescription(): string {
 export function useAgentReadiness(): AgentReadiness {
   const { text } = useCrmText();
   const agents = useCrmChatAgents();
+  // A read-only demo site (Demo Mode) refuses every question before it is
+  // sent, so the assistant says so instead of offering to send one.
+  if (useMetadata().data?.demoSite)
+    return {
+      state: 'unavailable',
+      agent: agents.data?.[0] ?? null,
+      reason: toText(text('agentPanel.demoSite')),
+    };
   if (agents.isLoading) return { state: 'loading', agent: null };
   const agent = agents.data?.[0] ?? null;
   if (!agent)

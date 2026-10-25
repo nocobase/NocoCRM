@@ -56,6 +56,8 @@ export interface Metadata {
   // Whether the CRM's AI employee is switched on (its Enabled switch on the
   // AI Employee plugin's settings page): every assistant entry follows it.
   assistant: boolean;
+  // A read-only demo site (Demo Mode): the assistant takes no questions.
+  demoSite?: boolean;
   // The CRM's work agents' names as written and the references translating
   // them, by work (crm-agents/work-agents.ts): the dialogs doing that work
   // name it.

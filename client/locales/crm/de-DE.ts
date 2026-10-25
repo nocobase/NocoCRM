@@ -1496,6 +1496,7 @@ export const crmDeDE: CrmWording = {
     removePin: '{{label}} entfernen',
     notSetUp:
       'Der Assistent ist nicht verfügbar. Bitten Sie einen Administrator, ihn unter Einstellungen → Agent-Team einzurichten.',
+    demoSite: 'Auf dieser Demo-Website nimmt der Assistent keine Fragen an.',
     sendFailed: 'Die Frage wurde nicht gesendet. Versuchen Sie es erneut.',
     uploadFailed: '„{{name}}“ konnte nicht hochgeladen werden.',
     fileTooLarge: '„{{name}}“ ist zu groß zum Anhängen.',

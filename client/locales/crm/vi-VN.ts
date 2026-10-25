@@ -1466,6 +1466,7 @@ export const crmViVN: CrmWording = {
     removePin: 'Gỡ {{label}}',
     notSetUp:
       'Trợ lý chưa khả dụng. Hãy nhờ quản trị viên thiết lập trong Cài đặt → Đội ngũ Agent.',
+    demoSite: 'Trên trang demo này, trợ lý không nhận câu hỏi.',
     sendFailed: 'Câu hỏi chưa được gửi. Hãy thử lại.',
     uploadFailed: 'Không thể tải lên “{{name}}”.',
     fileTooLarge: '“{{name}}” quá lớn để đính kèm.',

@@ -1456,6 +1456,7 @@ export const crmJaJP: CrmWording = {
     removePin: '{{label}} を削除',
     notSetUp:
       'アシスタントは利用できません。設定 → Agent チームで設定するよう管理者に依頼してください。',
+    demoSite: 'このデモサイトではアシスタントに質問できません。',
     sendFailed: '質問を送信できませんでした。もう一度お試しください。',
     uploadFailed: '「{{name}}」をアップロードできませんでした。',
     fileTooLarge: '「{{name}}」はサイズが大きすぎるため添付できません。',

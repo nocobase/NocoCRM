@@ -20,6 +20,11 @@ function english(key: string): string {
   return typeof value === 'string' ? value : key;
 }
 
+// The workspace as the pages read it; a demo site's says so.
+const metadata = vi.hoisted(() => ({
+  current: undefined as { demoSite?: boolean } | undefined,
+}));
+
 vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
   const actual =
     await importOriginal<typeof import('../../client/components/crm/api.js')>();
@@ -27,7 +32,7 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
     ...actual,
     useCrmText: () => ({ text: english, language: 'en-US' }),
     // No workspace here: no background agent to leave out of the chat.
-    useMetadata: () => ({ data: undefined }),
+    useMetadata: () => ({ data: metadata.current }),
   };
 });
 // The assistant on the Agents plugin, with two models (tests/setup/agent-chat-fake).
@@ -135,6 +140,22 @@ describe("the overview's ask box", () => {
     await user.click(screen.getByRole('textbox'));
     await user.keyboard('Hello{Enter}');
     expect(chatFake.created).toHaveLength(0);
+  });
+
+  it('takes no question on a read-only demo site, saying so', async () => {
+    const user = userEvent.setup();
+    metadata.current = { demoSite: true };
+    try {
+      render(<AssistantAskBox />);
+      expect(
+        screen.getByRole('textbox', { name: english('agentPanel.demoSite') }),
+      ).toBeDisabled();
+      await user.click(screen.getByRole('textbox'));
+      await user.keyboard('Hello{Enter}');
+      expect(chatFake.created).toHaveLength(0);
+    } finally {
+      metadata.current = undefined;
+    }
   });
 
   it('takes focus back when the panel it opened closes with focus left in it', () => {

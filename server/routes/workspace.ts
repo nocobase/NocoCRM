@@ -246,6 +246,8 @@ export function registerWorkspaceRoutes(
             : {}),
           // Whether the pages offer the assistant at all.
           assistant: await service.assistantEnabled(),
+          // A read-only demo site refuses every question before it is sent.
+          demoSite: isDemoMode(app),
           // Whether the company's WhatsApp number is connected, or the demo
           // dataset's number holds conversations, so records show their
           // WhatsApp tab (whatsapp/service.ts).

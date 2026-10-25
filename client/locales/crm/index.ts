@@ -2291,6 +2291,10 @@ const wording = {
       'The assistant is not available. Ask an administrator to set it up in Settings → Agent team.',
       '助手暂时不可用，请联系管理员在 设置 → Agent 团队 里设置。',
     ],
+    demoSite: [
+      'The assistant does not take questions on this demo site.',
+      '演示站上不能向助手提问。',
+    ],
     sendFailed: [
       'The question was not sent. Try again.',
       '问题没发出去，请重试。',

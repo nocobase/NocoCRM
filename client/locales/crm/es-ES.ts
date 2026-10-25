@@ -1490,6 +1490,7 @@ export const crmEsES: CrmWording = {
     removePin: 'Quitar {{label}}',
     notSetUp:
       'El asistente no está disponible. Pide a un administrador que lo configure en Configuración → Equipo de Agents.',
+    demoSite: 'En este sitio de demostración el asistente no recibe preguntas.',
     sendFailed: 'La pregunta no se ha enviado. Inténtalo de nuevo.',
     uploadFailed: 'No se ha podido subir "{{name}}".',
     fileTooLarge: '"{{name}}" es demasiado grande para adjuntarlo.',

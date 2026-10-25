@@ -1471,6 +1471,7 @@ export const crmIdID: CrmWording = {
     removePin: 'Hapus {{label}}',
     notSetUp:
       'Asisten tidak tersedia. Minta administrator untuk menyiapkannya di Pengaturan → Tim Agent.',
+    demoSite: 'Asisten tidak menerima pertanyaan di situs demo ini.',
     sendFailed: 'Pertanyaan tidak terkirim. Coba lagi.',
     uploadFailed: '"{{name}}" tidak dapat diunggah.',
     fileTooLarge: '"{{name}}" terlalu besar untuk dilampirkan.',

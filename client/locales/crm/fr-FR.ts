@@ -1485,6 +1485,8 @@ export const crmFrFR: CrmWording = {
     removePin: 'Retirer {{label}}',
     notSetUp:
       "L'assistant n'est pas disponible. Demandez à un administrateur de le configurer dans Paramètres → Équipe d'Agents.",
+    demoSite:
+      'Sur ce site de démonstration, l’assistant ne prend pas de questions.',
     sendFailed: "La question n'a pas été envoyée. Réessayez.",
     uploadFailed: "« {{name}} » n'a pas pu être téléversé.",
     fileTooLarge: '« {{name}} » est trop volumineux pour être joint.',
