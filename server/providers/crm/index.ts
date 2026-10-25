@@ -685,8 +685,10 @@ export default class CrmProvider extends ServiceProvider<Application> {
             'customerReplied',
           );
       })().catch(() => undefined);
+    // A read-only demo site (Demo Mode) starts no follow-up: no work runs
+    // there beyond what its data shows.
     timeline.customerReplied = (_mailboxOwnerId, target) =>
-      customerReplied(target);
+      isDemoMode(this.app) ? undefined : customerReplied(target);
     const whatsapp = this.app.container.resolve(whatsappToken);
     whatsapp.customerReplied = customerReplied;
     whatsapp.publicBasePath = toText(this.app.publicBasePath ?? '');
@@ -702,9 +704,6 @@ export default class CrmProvider extends ServiceProvider<Application> {
         .mediaFile(actor, messageId)
         .then(() => true)
         .catch(() => false);
-    // Request write protection does not cover background work. Keep the
-    // imported snapshot unchanged, including notices, mail and WhatsApp.
-    if (isDemoMode(this.app)) return;
     // Plain timers: @nocobase/cron, which ran these passes, was never
     // published to the public npm registry. Each pass skips a tick while
     // the previous one still runs.
@@ -713,10 +712,17 @@ export default class CrmProvider extends ServiceProvider<Application> {
         setInterval(() => void tick().catch(() => undefined), ms),
       );
     };
+    // On a read-only demo site (Demo Mode) too: the reminders and the
+    // notifications its data queues reach the inbox, and its mailboxes' mail
+    // reaches the records' timelines, which a record's Mail tab lists from
+    // colleagues' mailboxes. Neither reaches outside the deployment.
     every(30_000, () => this.scan());
     // @temporary(nocobase-official): every mailbox read once a minute until
     // the Mail plugin publishes a server-side change event (mail-timeline.ts).
     every(60_000, () => timeline.syncAll());
+    // Request write protection does not cover background work. A demo site
+    // keeps WhatsApp's deliveries and media fetching off.
+    if (isDemoMode(this.app)) return;
     // WhatsApp deliveries read, their media fetched within Meta's five
     // minutes, and the follow-ups of customers gone quiet started.
     every(10_000, () => whatsapp.process());
