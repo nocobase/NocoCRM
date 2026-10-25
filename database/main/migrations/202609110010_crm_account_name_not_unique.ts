@@ -11,7 +11,9 @@ import {
 const migration: MigrationDefinition = defineMigration({
   name: '202609110010_crm_account_name_not_unique',
   async up({ builder }: MigrationContext): Promise<void> {
-    await builder.dropIndex('crmAccounts', 'idx_crm_accounts_name');
+    // unique() made a constraint, which PostgreSQL will not drop as an index;
+    // where the constraint is an index (SQLite, MySQL) this drops the index.
+    await builder.dropConstraint('crmAccounts', 'idx_crm_accounts_name');
     await builder.addIndex('crmAccounts', {
       name: 'idx_crm_accounts_name',
       fields: ['name'],

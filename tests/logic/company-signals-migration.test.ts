@@ -1,7 +1,6 @@
 // @vitest-environment node
 
-import sqlite from '@nocobase/db-sqlite';
-import { createDatabaseManager, defineDatabase } from '@nocobase/db';
+import { createTestDatabase } from '@nocobase/app-testing/server';
 import { expect, it } from 'vitest';
 import migration from '../../database/main/migrations/202610140002_crm_company_signals.js';
 import checksMigration from '../../database/main/migrations/202610150001_crm_signal_checks.js';
@@ -11,21 +10,9 @@ import checkIdsMigration from '../../database/main/migrations/202610150002_crm_s
 // (database/main/migrations/202610140002_crm_company_signals.ts): created
 // beside the companies, one event kept once per company, and dropped again.
 it("creates the signals table and the companies' signal columns, and drops them", async () => {
-  const isolated = createDatabaseManager(
-    defineDatabase({
-      drivers: { sqlite },
-      default: 'main',
-      connections: {
-        main: {
-          dialect: 'sqlite',
-          filename: ':memory:',
-          schemaManagement: 'managed',
-        },
-      },
-    }),
-  );
+  const test = await createTestDatabase();
+  const isolated = test.database;
   try {
-    await isolated.connect();
     const builder = isolated.builder();
     // The companies as they stood before.
     await builder.createCollection('crmCompanies', (c) => {
@@ -85,28 +72,16 @@ it("creates the signals table and the companies' signal columns, and drops them"
       ).sort(),
     ).toEqual(['id', 'name']);
   } finally {
-    await isolated.destroy();
+    await test.destroy();
   }
 });
 
 // The checks' log, and the check each signal names
 // (202610150001_crm_signal_checks, 202610150002_crm_signal_check_ids).
 it('adds the signal checks and the check a signal names, and removes them', async () => {
-  const isolated = createDatabaseManager(
-    defineDatabase({
-      drivers: { sqlite },
-      default: 'main',
-      connections: {
-        main: {
-          dialect: 'sqlite',
-          filename: ':memory:',
-          schemaManagement: 'managed',
-        },
-      },
-    }),
-  );
+  const test = await createTestDatabase();
+  const isolated = test.database;
   try {
-    await isolated.connect();
     const builder = isolated.builder();
     await builder.createCollection('crmCompanies', (c) => {
       c.string('id', { length: 36 });
@@ -172,6 +147,6 @@ it('adds the signal checks and the check a signal names, and removes them', asyn
     expect(await builder.hasCollection('crmSignalChecks')).toBe(false);
     expect(await builder.hasCollection('crmSignals')).toBe(true);
   } finally {
-    await isolated.destroy();
+    await test.destroy();
   }
 });

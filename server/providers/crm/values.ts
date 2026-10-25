@@ -32,11 +32,7 @@ export function encodeRow(row: Row): Row {
   return Object.fromEntries(
     Object.entries(row).map(([key, value]) => [
       key,
-      jsonFields.has(key) && value != null
-        ? JSON.stringify(value)
-        : typeof value === 'boolean'
-          ? Number(value)
-          : value,
+      jsonFields.has(key) && value != null ? JSON.stringify(value) : value,
     ]),
   );
 }

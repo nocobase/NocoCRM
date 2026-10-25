@@ -1,7 +1,6 @@
 // @vitest-environment node
 
-import sqlite from '@nocobase/db-sqlite';
-import { createDatabaseManager, defineDatabase } from '@nocobase/db';
+import { createTestDatabase } from '@nocobase/app-testing/server';
 import { describe, expect, it } from 'vitest';
 import migration from '../../database/main/migrations/202610150003_crm_linkedin.js';
 import { differing } from '../../server/providers/crm/lead-merge.js';
@@ -58,21 +57,9 @@ describe('a LinkedIn address', () => {
 });
 
 it('adds the LinkedIn address to leads, contacts and companies, and takes it away', async () => {
-  const isolated = createDatabaseManager(
-    defineDatabase({
-      drivers: { sqlite },
-      default: 'main',
-      connections: {
-        main: {
-          dialect: 'sqlite',
-          filename: ':memory:',
-          schemaManagement: 'managed',
-        },
-      },
-    }),
-  );
+  const test = await createTestDatabase();
+  const isolated = test.database;
   try {
-    await isolated.connect();
     const builder = isolated.builder();
     const connection = isolated.connection();
     const query = isolated.query();
@@ -118,6 +105,6 @@ it('adds the LinkedIn address to leads, contacts and companies, and takes it awa
       ).rejects.toThrow();
     expect(await lead()).toMatchObject({ name: 'Jane Doe' });
   } finally {
-    await isolated.destroy();
+    await test.destroy();
   }
 });

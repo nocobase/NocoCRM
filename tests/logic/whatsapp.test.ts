@@ -1,7 +1,6 @@
 // @vitest-environment node
 
-import sqlite from '@nocobase/db-sqlite';
-import { createDatabaseManager, defineDatabase } from '@nocobase/db';
+import { createTestDatabase } from '@nocobase/app-testing/server';
 import { createHash, createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import migration from '../../database/main/migrations/202610150004_crm_whatsapp.js';
@@ -201,21 +200,9 @@ describe('media from the Cloud API', () => {
 });
 
 it('creates the WhatsApp tables and takes them away', async () => {
-  const isolated = createDatabaseManager(
-    defineDatabase({
-      drivers: { sqlite },
-      default: 'main',
-      connections: {
-        main: {
-          dialect: 'sqlite',
-          filename: ':memory:',
-          schemaManagement: 'managed',
-        },
-      },
-    }),
-  );
+  const test = await createTestDatabase();
+  const isolated = test.database;
   try {
-    await isolated.connect();
     const builder = isolated.builder();
     const query = isolated.query();
     const context = {
@@ -263,7 +250,7 @@ it('creates the WhatsApp tables and takes them away', async () => {
         query.selectFrom(table).selectAll().execute(),
       ).rejects.toThrow();
   } finally {
-    await isolated.destroy();
+    await test.destroy();
   }
 });
 

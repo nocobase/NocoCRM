@@ -13,7 +13,7 @@ const migration: MigrationDefinition = defineMigration({
     const disabled = await query
       .selectFrom('crmUserPreferences')
       .select('id')
-      .where('disabled', '=', 1)
+      .where('disabled', '=', true)
       .execute();
     if (disabled.length)
       await query

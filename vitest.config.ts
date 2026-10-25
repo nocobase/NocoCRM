@@ -4,9 +4,16 @@ import { createReactVitestConfig } from '@nocobase/dev-config/vitest/react';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
 
+// NOCOBASE_TEST_DB_DIALECT=postgres or mysql runs the database tests on a server, which installs the application's
+// hundred-odd migrations several times slower than SQLite and is shared by the files running side by side: a test
+// that starts the whole application gets longer than the preset's 30 seconds to do it.
+const dialect = process.env.NOCOBASE_TEST_DB_DIALECT?.trim();
+const serverDatabase = !!dialect && dialect !== 'sqlite';
+
 export default createReactVitestConfig({
   test: {
     root,
+    ...(serverDatabase ? { testTimeout: 120_000, hookTimeout: 120_000 } : {}),
     server: {
       deps: {
         // Transform the public Client surfaces so vi.mock applies, without duplicating the Server packages' identity tokens.

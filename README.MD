@@ -25,10 +25,10 @@ pnpm install
 ### 3. Create the configuration
 
 ```bash
-pnpm nocobase config init
+pnpm nocobase config init --dialect sqlite
 ```
 
-This writes the configuration file `config.yml`, whose `secrets` section holds a generated key that encrypts the model keys, mailbox passwords and the like the application saves. `config.yml` is not committed to Git.
+This writes the configuration file `config.yml`, whose `secrets` section holds a generated key that encrypts the model keys, mailbox passwords and the like the application saves. `config.yml` is not committed to Git. `--dialect sqlite` keeps the data in a file; to run on PostgreSQL or MySQL instead, see [Database](#configuration) under Configuration.
 
 ### 4. Start the application
 
@@ -75,15 +75,16 @@ Accounts are created on **Settings → Users**, each with one or more roles; the
 
 ### Common problems
 
-| What you see                                         | What to do                                                                                                                                                     |
-| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm install` refuses to run or fails on the engine | Use Node.js 24 or later and pnpm 11 (step 1).                                                                                                                  |
-| The page does not open                               | Use the `Local:` address `pnpm dev` printed, including `/main/`. Only one `pnpm dev` runs per folder; stop the other one first.                                |
-| "The assistant is not available"                     | No model is connected yet. Add a model service with its key on **Agent team → Models**.                                                                        |
-| Forgot the administrator password                    | Another administrator resets it on **Settings → Users**. On a local copy you can also start over (below) with a new password in `config.yml`.                  |
-| Saved keys or mailboxes stopped working              | `config.yml` was lost or generated again. Restore the backed-up `config.yml`, or enter the keys and reconnect the mailboxes again.                             |
-| You want to start over with an empty database        | Stop `pnpm dev`, delete `storage/crm.sqlite`, `storage/objects/` and `storage/ai-files/`, and start again. This deletes all local data.                        |
-| You want the newest version                          | `git pull`, then `pnpm install` and `pnpm dev`. Database changes are applied when the application starts; back up `storage/` first if the data matters to you. |
+| What you see                                         | What to do                                                                                                                                                                                                          |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm install` refuses to run or fails on the engine | Use Node.js 24 or later and pnpm 11 (step 1).                                                                                                                                                                       |
+| The page does not open                               | Use the `Local:` address `pnpm dev` printed, including `/main/`. Only one `pnpm dev` runs per folder; stop the other one first.                                                                                     |
+| "The assistant is not available"                     | No model is connected yet. Add a model service with its key on **Agent team → Models**.                                                                                                                             |
+| Forgot the administrator password                    | Another administrator resets it on **Settings → Users**. On a local copy you can also start over (below) with a new password in `config.yml`.                                                                       |
+| Saved keys or mailboxes stopped working              | `config.yml` was lost or generated again. Restore the backed-up `config.yml`, or enter the keys and reconnect the mailboxes again.                                                                                  |
+| You want to start over with an empty database        | Stop `pnpm dev`, delete `storage/crm.sqlite`, `storage/objects/` and `storage/ai-files/`, and start again. This deletes all local data.                                                                             |
+| You want the newest version                          | `git pull`, then `pnpm install` and `pnpm dev`. Database changes are applied when the application starts; back up `storage/` first if the data matters to you.                                                      |
+| The start warns of a migration's checksum mismatch   | A release reworded a migration your database already ran, without changing what it did (so that it runs on PostgreSQL and MySQL too). Run `pnpm nocobase db repair` once, in a terminal, to record the new wording. |
 
 ## Agents
 
@@ -136,7 +137,14 @@ The follow-ups, reviews and briefs land in the owner's **Inbox → AI suggestion
 
 **Where it is served.** `APP_BASE_PATH` is the mount path (`/main` by default) and `APP_PUBLIC_ORIGIN` the public origin without the path.
 
-**Database.** SQLite at `storage/crm.sqlite` by default; migrations run on start. For PostgreSQL, add `@nocobase/db-postgres` and run `pnpm nocobase config init --dialect postgres --force`.
+**Database.** SQLite at `storage/crm.sqlite` by default; migrations run on start. NocoCRM also runs on PostgreSQL and MySQL (MariaDB uses the MySQL driver). Their drivers are installed for development and tests only, so a build carries SQLite alone; to run on one of them:
+
+1. Move its driver into the dependencies a build carries with `pnpm add --save-prod @nocobase/db-postgres` (or `@nocobase/db-mysql`).
+2. Create an empty database (for MySQL with the `utf8mb4` character set) and a user that may create tables in it.
+3. Write the configuration for it with `pnpm nocobase config init --dialect postgres` (or `mysql`; add `--force` to replace an existing `config.yml`), set the connection with `pnpm nocobase config set database.connections.main.host=… database.connections.main.port=… database.connections.main.database=… database.connections.main.username=…` and its password with `pnpm nocobase config set --from-env database.connections.main.password=<variable>`, and check it with `pnpm nocobase config check`.
+4. Start with `pnpm dev`, or build and deploy as below: the first start creates the tables. On PostgreSQL it also adds two small functions, and the `LIKE` operators between `json` and `text` that use them, to the connection's schema, so that the CRM can match JSON columns there as it does on SQLite and MySQL.
+
+The environment variables `DB_DIALECT`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME` and `DB_PASSWORD` override `config.yml`. Changing the database does not move data: the new one starts empty, and **Settings → Demo data** can fill it. The tests run on SQLite; `NOCOBASE_TEST_DB_DIALECT=postgres` runs the database tests on a PostgreSQL server (read from `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD` and `PGDATABASE`, each test in a schema of its own), and `NOCOBASE_TEST_DB_DIALECT=mysql` on a MySQL server (`MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_ADMIN_USER` and `MYSQL_ADMIN_PASSWORD`, each test in a database of its own).
 
 ## Built on NocoBase 3
 
@@ -171,7 +179,7 @@ pnpm build --target linux-x64 --tar   # writes storage/exports/dist.tar.gz
   npx @nocobase/app-installer@beta upgrade --dir /srv/nocobase/crm --archive dist.tar.gz
   ```
 
-- **By hand.** Unpack the archive, run `pnpm nocobase config init` and `pnpm nocobase config check` inside `dist/`, and run `node ./dist/server/standalone.js` under a service manager, keeping `config.yml` and `storage/` beside `dist/` across updates.
+- **By hand.** Unpack the archive, run `pnpm nocobase config init` (with `--dialect` when the build carries more than one database driver) and `pnpm nocobase config check` inside `dist/`, and run `node ./dist/server/standalone.js` under a service manager, keeping `config.yml` and `storage/` beside `dist/` across updates.
 
 To serve the client's static files from a CDN, build with `CDN_BASE_URL=https://cdn.example.com/crm/v1/ pnpm build`, upload `dist/client/` there with its paths and CORS allowed for the application's origin, and keep `dist/client/` on the server too, which still serves the HTML.
 

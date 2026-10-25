@@ -54,11 +54,12 @@ async function rename(
       : action === 'commentEdited'
         ? 'noteEdited'
         : action;
+    // No LIKE on the JSON column, which PostgreSQL has no form of: the key
+    // is looked for in the parsed changes below.
     for (const row of await query
       .selectFrom('crmHistory')
       .select(['id', 'changes'])
       .where('action', '=', named)
-      .where('changes', 'like', `%${from}%`)
       .execute()) {
       const changes = parse(row.changes);
       if (typeof changes !== 'object' || changes === null) continue;

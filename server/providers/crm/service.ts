@@ -150,6 +150,10 @@ export function searchWords(text: string): string[] {
     .slice(0, 8);
 }
 
+// Past this many rows a word matches, PostgreSQL's search falls back to a
+// match of the letters' case (CrmService.containing).
+const CASELESS_LIMIT = 5000;
+
 // A detail page's related lists and history come this many at a time.
 export const RELATED_PAGE = 20;
 // Settings → Approval process: the approver rule as roles and people, the
@@ -781,14 +785,16 @@ export class CrmService {
       const phone = /^[\d\s+().-]{5,}$/.test(term.trim())
         ? normalizePhone(term)
         : '';
-      if (phone && searchFields.includes('phone'))
-        select = select.where((eb) =>
-          eb.or([
-            eb('phone', 'like', `%${phone}%`),
-            ...searchFields.map((f) => eb(f, 'like', `%${term.trim()}%`)),
-          ]),
+      if (phone && searchFields.includes('phone')) {
+        const holding = await this.containing(
+          definitions[entity].table,
+          searchFields,
+          term.trim(),
         );
-      else {
+        select = select.where((eb) =>
+          eb.or([eb('phone', 'like', `%${phone}%`), ...holding(eb)]),
+        );
+      } else {
         // Otherwise word by word, in any order: every word matches one of
         // the search fields.
         const words = searchWords(term);
@@ -804,9 +810,14 @@ export class CrmService {
             : undefined;
         for (const word of words) {
           const companies = byCompany?.get(word) ?? [];
+          const holding = await this.containing(
+            definitions[entity].table,
+            searchFields,
+            word,
+          );
           select = select.where((eb) =>
             eb.or([
-              ...searchFields.map((f) => eb(f, 'like', `%${word}%`)),
+              ...holding(eb),
               ...(companies.length ? [eb('companyId', 'in', companies)] : []),
             ]),
           );
@@ -814,6 +825,41 @@ export class CrmService {
       }
     }
     return { select, fields };
+  }
+  // Where any of the fields holds the text, ignoring case. LIKE does so on
+  // SQLite (for ASCII letters) and on MySQL (by its default collation), but
+  // matches case exactly on PostgreSQL, and the query layer has neither
+  // lower() nor ILIKE. There a text with letters that have a case is looked
+  // up first through the Repository, whose match can ignore it, and the
+  // query keeps the rows found; a text so common it matches more than
+  // CASELESS_LIMIT rows, which one statement should not list, is matched
+  // with LIKE as it stands.
+  private async containing(
+    table: string,
+    fields: readonly string[],
+    text: string,
+  ): Promise<(eb: ExpressionBuilder) => Expression<SqlBool>[]> {
+    const like = (eb: ExpressionBuilder) =>
+      fields.map((field) => eb(field, 'like', `%${text}%`));
+    if (
+      !fields.length ||
+      this.database.connection().dialect !== 'postgres' ||
+      text.toLowerCase() === text.toUpperCase()
+    )
+      return like;
+    const rows = await this.database.repository(table).findMany({
+      filter: (filter) =>
+        filter.or(
+          fields.map((field) =>
+            filter.string(field).includes(text, { mode: 'insensitive' }),
+          ),
+        ),
+      select: (select) => select.fields('id'),
+      limit: CASELESS_LIMIT + 1,
+    });
+    if (rows.length > CASELESS_LIMIT) return like;
+    const ids = rows.map((row) => toText(row.id));
+    return (eb) => [ids.length ? eb('id', 'in', ids) : eb('id', '=', '')];
   }
   // For each word, the companies the reader may read whose name holds it
   // (at most 500 each).
@@ -831,11 +877,16 @@ export class CrmService {
     }
     if (!outputFields('companies', access).includes('name')) return named;
     for (const word of words) {
+      const holding = await this.containing(
+        definitions.companies.table,
+        ['name'],
+        word,
+      );
       const rows = await query
         .selectFrom(definitions.companies.table)
         .select('id')
         .where((eb) => compileFilter(eb, access.scope))
-        .where('name', 'like', `%${word}%`)
+        .where((eb) => eb.or(holding(eb)))
         .limit(500)
         .execute();
       named.set(

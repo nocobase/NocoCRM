@@ -123,26 +123,26 @@ When the built-in mechanism genuinely cannot express what is being asked, changi
 
 ## Index
 
-| Read                                                                               | When                                                                                                                  |
-| ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| [.agents/rules/components.md](.agents/rules/components.md)                         | Adding or changing a component, a shadcn primitive, a UI Library item, or the visual design                           |
-| [.agents/rules/shell.md](.agents/rules/shell.md)                                   | Changing layouts, the header, sidebar, breadcrumbs, the account menu or loading indicators                            |
-| [.agents/rules/build-and-deploy.md](.agents/rules/build-and-deploy.md)             | Changing the build, packing a deployment, `CDN_BASE_URL`, or building for another platform                            |
-| [.agents/rules/crm-overview.md](.agents/rules/crm-overview.md)                     | Any change to NocoCRM: specification, languages, navigation and settings, record links, conventions                   |
-| [.agents/rules/crm-look.md](.agents/rules/crm-look.md)                             | The CRM's colours, theme presets, tags, status colours, record forms, date and time inputs                            |
-| [.agents/rules/crm-record-pages.md](.agents/rules/crm-record-pages.md)             | A record's page or drawer, its particulars, the timeline, comments, change history                                    |
-| [.agents/rules/crm-tasks.md](.agents/rules/crm-tasks.md)                           | Tasks, the task list and calendar, reminders, what counts as contact                                                  |
-| [.agents/rules/crm-inbox-and-overview.md](.agents/rules/crm-inbox-and-overview.md) | The inbox, AI suggestions, notifications, the overview, reports, menu counts                                          |
-| [.agents/rules/crm-assistant.md](.agents/rules/crm-assistant.md)                   | The assistant, its dock and panel, conversations, business guidance, plans, agents calling the CRM                    |
-| [.agents/rules/crm-ai-follow-ups.md](.agents/rules/crm-ai-follow-ups.md)           | Lead and deal follow-ups, approval review, task preparation, the background model                                     |
-| [.agents/rules/crm-agents-and-search.md](.agents/rules/crm-agents-and-search.md)   | The Agent work page and its switches, the global search                                                               |
-| [.agents/rules/crm-capture-and-merge.md](.agents/rules/crm-capture-and-merge.md)   | AI capture of leads, opportunities and companies, duplicate leads and merging                                         |
-| [.agents/rules/crm-mail.md](.agents/rules/crm-mail.md)                             | Mailbox pages, a record's Mail tab, sending mail, mail in follow-ups                                                  |
-| [.agents/rules/crm-permissions.md](.agents/rules/crm-permissions.md)               | Roles, permission sets, resources, page grants, capabilities                                                          |
-| [.agents/rules/crm-server.md](.agents/rules/crm-server.md)                         | HTTP routes and errors, migrations, model services, notifications, attachments, titles, approval lifecycle, approvers |
-| [.agents/rules/crm-demo.md](.agents/rules/crm-demo.md)                             | The demo dataset, its mail, import and removal, the demo banner                                                       |
-| [.agents/rules/crm-signals.md](.agents/rules/crm-signals.md)                       | Company signals: the web search, the daily check, the Signals tab, signal notices and timeline lines                  |
-| [.agents/rules/crm-whatsapp.md](.agents/rules/crm-whatsapp.md)                     | WhatsApp: the webhook, conversations, a record's WhatsApp tab and timeline lines, what follow-ups read, its settings  |
+| Read                                                                               | When                                                                                                                                        |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| [.agents/rules/components.md](.agents/rules/components.md)                         | Adding or changing a component, a shadcn primitive, a UI Library item, or the visual design                                                 |
+| [.agents/rules/shell.md](.agents/rules/shell.md)                                   | Changing layouts, the header, sidebar, breadcrumbs, the account menu or loading indicators                                                  |
+| [.agents/rules/build-and-deploy.md](.agents/rules/build-and-deploy.md)             | Changing the build, packing a deployment, `CDN_BASE_URL`, or building for another platform                                                  |
+| [.agents/rules/crm-overview.md](.agents/rules/crm-overview.md)                     | Any change to NocoCRM: specification, languages, navigation and settings, record links, conventions                                         |
+| [.agents/rules/crm-look.md](.agents/rules/crm-look.md)                             | The CRM's colours, theme presets, tags, status colours, record forms, date and time inputs                                                  |
+| [.agents/rules/crm-record-pages.md](.agents/rules/crm-record-pages.md)             | A record's page or drawer, its particulars, the timeline, comments, change history                                                          |
+| [.agents/rules/crm-tasks.md](.agents/rules/crm-tasks.md)                           | Tasks, the task list and calendar, reminders, what counts as contact                                                                        |
+| [.agents/rules/crm-inbox-and-overview.md](.agents/rules/crm-inbox-and-overview.md) | The inbox, AI suggestions, notifications, the overview, reports, menu counts                                                                |
+| [.agents/rules/crm-assistant.md](.agents/rules/crm-assistant.md)                   | The assistant, its dock and panel, conversations, business guidance, plans, agents calling the CRM                                          |
+| [.agents/rules/crm-ai-follow-ups.md](.agents/rules/crm-ai-follow-ups.md)           | Lead and deal follow-ups, approval review, task preparation, the background model                                                           |
+| [.agents/rules/crm-agents-and-search.md](.agents/rules/crm-agents-and-search.md)   | The Agent work page and its switches, the global search                                                                                     |
+| [.agents/rules/crm-capture-and-merge.md](.agents/rules/crm-capture-and-merge.md)   | AI capture of leads, opportunities and companies, duplicate leads and merging                                                               |
+| [.agents/rules/crm-mail.md](.agents/rules/crm-mail.md)                             | Mailbox pages, a record's Mail tab, sending mail, mail in follow-ups                                                                        |
+| [.agents/rules/crm-permissions.md](.agents/rules/crm-permissions.md)               | Roles, permission sets, resources, page grants, capabilities                                                                                |
+| [.agents/rules/crm-server.md](.agents/rules/crm-server.md)                         | HTTP routes and errors, migrations, PostgreSQL and MySQL, model services, notifications, attachments, titles, approval lifecycle, approvers |
+| [.agents/rules/crm-demo.md](.agents/rules/crm-demo.md)                             | The demo dataset, its mail, import and removal, the demo banner                                                                             |
+| [.agents/rules/crm-signals.md](.agents/rules/crm-signals.md)                       | Company signals: the web search, the daily check, the Signals tab, signal notices and timeline lines                                        |
+| [.agents/rules/crm-whatsapp.md](.agents/rules/crm-whatsapp.md)                     | WhatsApp: the webhook, conversations, a record's WhatsApp tab and timeline lines, what follow-ups read, its settings                        |
 
 ## Visible and manageable role assignments
 

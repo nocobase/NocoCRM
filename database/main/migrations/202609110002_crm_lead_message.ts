@@ -35,18 +35,31 @@ async function renameHistoryKey(
   from: Column,
   to: Column,
 ): Promise<void> {
+  // Matched here rather than with LIKE, which PostgreSQL has no form of for
+  // a JSON column; a driver may also hand the JSON back parsed.
   const rows = await query
     .selectFrom('crmHistory')
     .select(['id', 'changes'])
     .where('entity', '=', 'leads')
-    .where('changes', 'like', `%"${from}"%`)
     .execute();
-  for (const row of rows)
+  for (const row of rows) {
+    const text =
+      typeof row.changes === 'string'
+        ? row.changes
+        : JSON.stringify(row.changes ?? null);
+    if (!text.includes(`"${from}"`)) continue;
+    const renamed = text.split(`"${from}"`).join(`"${to}"`);
     await query
       .updateTable('crmHistory')
-      .set({ changes: String(row.changes).split(`"${from}"`).join(`"${to}"`) })
+      .set({
+        changes:
+          typeof row.changes === 'string'
+            ? renamed
+            : (JSON.parse(renamed) as unknown),
+      })
       .where('id', '=', row.id)
       .execute();
+  }
 }
 
 const migration: MigrationDefinition = defineMigration({

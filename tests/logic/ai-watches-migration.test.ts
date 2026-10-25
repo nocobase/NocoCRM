@@ -1,7 +1,6 @@
 // @vitest-environment node
 
-import sqlite from '@nocobase/db-sqlite';
-import { createDatabaseManager, defineDatabase } from '@nocobase/db';
+import { createTestDatabase } from '@nocobase/app-testing/server';
 import { expect, it } from 'vitest';
 import migration from '../../database/main/migrations/202610160001_crm_ai_watches.js';
 
@@ -9,21 +8,9 @@ import migration from '../../database/main/migrations/202610160001_crm_ai_watche
 // (database/main/migrations/202610160001_crm_ai_watches.ts): one row per AI
 // entry, and dropped again.
 it('creates the AI watches table keyed by the entry, and drops it', async () => {
-  const isolated = createDatabaseManager(
-    defineDatabase({
-      drivers: { sqlite },
-      default: 'main',
-      connections: {
-        main: {
-          dialect: 'sqlite',
-          filename: ':memory:',
-          schemaManagement: 'managed',
-        },
-      },
-    }),
-  );
+  const test = await createTestDatabase();
+  const isolated = test.database;
   try {
-    await isolated.connect();
     const builder = isolated.builder();
     const query = isolated.query();
     const context = {
@@ -49,6 +36,6 @@ it('creates the AI watches table keyed by the entry, and drops it', async () => 
     await migration.down(context);
     expect(await builder.hasCollection('crmAiWatches')).toBe(false);
   } finally {
-    await isolated.destroy();
+    await test.destroy();
   }
 });

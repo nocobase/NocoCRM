@@ -1,7 +1,6 @@
 // @vitest-environment node
 
-import sqlite from '@nocobase/db-sqlite';
-import { createDatabaseManager, defineDatabase } from '@nocobase/db';
+import { createTestDatabase } from '@nocobase/app-testing/server';
 import {
   createRepositoryLifecycleStore,
   ParameterConfigurationError,
@@ -25,21 +24,9 @@ const collections = [
 // saved, read back with its selections, and a save from a stale version is
 // a conflict.
 it('creates the lifecycle parameter tables the store keeps versions in, and drops them', async () => {
-  const isolated = createDatabaseManager(
-    defineDatabase({
-      drivers: { sqlite },
-      default: 'main',
-      connections: {
-        main: {
-          dialect: 'sqlite',
-          filename: ':memory:',
-          schemaManagement: 'managed',
-        },
-      },
-    }),
-  );
+  const test = await createTestDatabase();
+  const isolated = test.database;
   try {
-    await isolated.connect();
     const builder = isolated.builder();
     const context = {
       builder,
@@ -83,6 +70,6 @@ it('creates the lifecycle parameter tables the store keeps versions in, and drop
     for (const name of collections)
       expect(await builder.hasCollection(name)).toBe(false);
   } finally {
-    await isolated.destroy();
+    await test.destroy();
   }
 });

@@ -34,16 +34,16 @@ import { normalizePhone } from '../../server/providers/crm/phone.js';
 import legacyTimestampsMigration from '../../database/main/migrations/202609200001_legacy_epoch_timestamps.js';
 import salesSetsSeed from '../../database/main/seeds/202610040001_crm_sales_permission_sets.js';
 // @vitest-environment node
-import sqlite from '@nocobase/db-sqlite';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
+import { type DatabaseManager } from '@nocobase/db';
 import {
-  createDatabaseManager,
-  defineDatabase,
-  type DatabaseManager,
-} from '@nocobase/db';
+  createTestDatabase,
+  testDatabaseDialect,
+  type TestDatabase,
+} from '@nocobase/app-testing/server';
 import {
   createAppAuthorization,
   authorizationToken,
@@ -220,6 +220,7 @@ import {
   TaskPreparer,
 } from '../../server/providers/crm/task-preparation.js';
 
+let testDatabase: TestDatabase | undefined;
 let database: DatabaseManager;
 let authorization: AppAuthorization;
 // A plain collection grant as a permission set may store it, with the record
@@ -333,20 +334,8 @@ const actor = (id: string): Actor => ({
 });
 beforeAll(async () => {
   folder = await mkdtemp(resolve(tmpdir(), 'crm-test-'));
-  database = createDatabaseManager(
-    defineDatabase({
-      drivers: { sqlite },
-      default: 'main',
-      connections: {
-        main: {
-          dialect: 'sqlite',
-          filename: resolve(folder, 'test.sqlite'),
-          schemaManagement: 'managed',
-        },
-      },
-    }),
-  );
-  await database.connect();
+  testDatabase = await createTestDatabase();
+  database = testDatabase.database;
   // The in-app notification plugin's items, as the demo's removal reads them.
   await database.builder().createCollection('notificationInAppItems', (c) => {
     c.string('id');
@@ -789,9 +778,9 @@ beforeAll(async () => {
     publicBasePath: '/test',
     paths: createAppPaths({ rootDir: folder }),
   } as Application);
-}, 30000);
+});
 afterAll(async () => {
-  await database?.destroy();
+  await testDatabase?.destroy();
   if (folder) await rm(folder, { recursive: true, force: true });
 });
 const request = (
@@ -6827,6 +6816,10 @@ describe('lead signals', () => {
       })
       .execute();
     const requests: { by: string; lead: string; trigger: unknown }[] = [];
+    // A history id holds at most 36 characters, which a database other than
+    // SQLite enforces.
+    const entryId = (lead: string, again = false) =>
+      `signal-${lead.slice(0, 8)}${again ? '-again' : ''}`;
     const evaluator = {
       available: async () => true,
       request: async (
@@ -6840,7 +6833,7 @@ describe('lead signals', () => {
           .query()
           .insertInto('crmHistory')
           .values({
-            id: requests.length > 1 ? `signal-${lead}-again` : `signal-${lead}`,
+            id: entryId(lead, requests.length > 1),
             entity: 'leads',
             recordId: lead,
             actorId: by.id,
@@ -6852,7 +6845,7 @@ describe('lead signals', () => {
             createdAt: new Date().toISOString(),
           })
           .execute();
-        return { id: `signal-${lead}` };
+        return { id: entryId(lead) };
       },
     } as unknown as LeadEvaluator;
     await scanLeadSignals(service, evaluator, new Date(), 1000);
@@ -6871,12 +6864,12 @@ describe('lead signals', () => {
       .query()
       .updateTable('crmHistory')
       .set({ aiStatus: 'failed' })
-      .where('id', '=', `signal-${toText(quiet.id)}`)
+      .where('id', '=', entryId(toText(quiet.id)))
       .execute();
     await database
       .query()
       .deleteFrom('crmHistory')
-      .where('id', '=', `signal-${toText(quiet.id)}-again`)
+      .where('id', '=', entryId(toText(quiet.id), true))
       .execute();
     requests.length = 0;
     await scanLeadSignals(service, evaluator, new Date(), 1000);
@@ -8202,21 +8195,9 @@ describe('resolved titles and paged filters', () => {
 });
 
 it('maps legacy industry and country text to codes and back', async () => {
-  const isolated = createDatabaseManager(
-    defineDatabase({
-      drivers: { sqlite },
-      default: 'main',
-      connections: {
-        main: {
-          dialect: 'sqlite',
-          filename: ':memory:',
-          schemaManagement: 'managed',
-        },
-      },
-    }),
-  );
+  const test = await createTestDatabase();
+  const isolated = test.database;
   try {
-    await isolated.connect();
     const migrator = isolated.createMigrator({
       directory: resolve('database/main/migrations'),
       packageName: 'crm',
@@ -8257,7 +8238,7 @@ it('maps legacy industry and country text to codes and back', async () => {
       country: 'China',
     });
   } finally {
-    await isolated.destroy();
+    await test.destroy();
   }
 });
 
@@ -8297,22 +8278,10 @@ it('rejects country and subdivision values outside ISO 3166', async () => {
   });
 });
 
-it('reverses the CRM migration on a real SQLite database', async () => {
-  const isolated = createDatabaseManager(
-    defineDatabase({
-      drivers: { sqlite },
-      default: 'main',
-      connections: {
-        main: {
-          dialect: 'sqlite',
-          filename: ':memory:',
-          schemaManagement: 'managed',
-        },
-      },
-    }),
-  );
+it('reverses the CRM migration on a real database', async () => {
+  const test = await createTestDatabase();
+  const isolated = test.database;
   try {
-    await isolated.connect();
     const migrator = isolated.createMigrator({
       directory: resolve('database/main/migrations'),
       packageName: 'crm',
@@ -8653,98 +8622,92 @@ it('reverses the CRM migration on a real SQLite database', async () => {
     expect(await isolated.builder().hasCollection('crmLeads')).toBe(false);
     expect(await isolated.builder().hasCollection('crmAccounts')).toBe(false);
   } finally {
-    await isolated.destroy();
+    await test.destroy();
   }
 });
 
-it('rewrites legacy epoch timestamps so repository reads succeed', async () => {
-  const isolated = createDatabaseManager(
-    defineDatabase({
-      drivers: { sqlite },
-      default: 'main',
-      connections: {
-        main: {
-          dialect: 'sqlite',
-          filename: ':memory:',
-          schemaManagement: 'managed',
-        },
-      },
-    }),
-  );
-  try {
-    await isolated.connect();
-    const schedulerRoot = resolve(
-      'node_modules/@nocobase/app-plugin-scheduler',
-    );
-    await isolated
-      .createMigrator({
-        sources: [
-          {
-            packageName: 'scheduler',
-            directory: resolve(schedulerRoot, 'dist/database/migrations'),
-          },
-          {
-            packageName: 'crm',
-            directory: resolve('database/main/migrations'),
-          },
-        ],
-      })
-      .latest();
-    const query = isolated.query();
-    const started = Date.UTC(2026, 8, 13, 1, 30, 28, 587);
-    // What the scheduler's first release and the CRM's first provisioning
-    // wrote: a Date through the raw query builder, stored as a number.
-    await query
-      .insertInto('scheduleSyncLocks')
-      .values({ appName: 'main', createdAt: started, updatedAt: started })
-      .execute();
-    await query
-      .insertInto('crmSettings')
-      .values({ id: 'legacy', value: '{}', updatedAt: started })
-      .execute();
-    await legacyTimestampsMigration.up({
-      builder: isolated.builder(),
-      query,
-      connection: isolated.connection(),
-    });
-    const lock = await query
-      .selectFrom('scheduleSyncLocks')
-      .selectAll()
-      .where('appName', '=', 'main')
-      .executeTakeFirstOrThrow();
-    expect(lock.createdAt).toBe('2026-09-13T01:30:28.587Z');
-    expect(lock.updatedAt).toBe('2026-09-13T01:30:28.587Z');
-    const setting = await query
-      .selectFrom('crmSettings')
-      .selectAll()
-      .where('id', '=', 'legacy')
-      .executeTakeFirstOrThrow();
-    expect(setting.updatedAt).toBe('2026-09-13T01:30:28.587Z');
-    // The scheduler now reads its lock through the repository at startup.
-    const read = await isolated
-      .connection()
-      .repository('scheduleSyncLocks')
-      .findOne({ filter: { appName: 'main' } });
-    expect(read?.createdAt).toBeTruthy();
-    // Already an instant: left alone on a second run.
-    await legacyTimestampsMigration.up({
-      builder: isolated.builder(),
-      query,
-      connection: isolated.connection(),
-    });
-    expect(
-      (
-        await query
-          .selectFrom('crmSettings')
-          .select('updatedAt')
-          .where('id', '=', 'legacy')
-          .executeTakeFirstOrThrow()
-      ).updatedAt,
-    ).toBe('2026-09-13T01:30:28.587Z');
-  } finally {
-    await isolated.destroy();
-  }
-});
+// Epoch numbers in timestamp columns are what older code left in SQLite,
+// which stores whatever it is given; no other database accepts one, so
+// there is nothing of the kind to rewrite there.
+it.skipIf(testDatabaseDialect() !== 'sqlite')(
+  'rewrites legacy epoch timestamps so repository reads succeed',
+  async () => {
+    const test = await createTestDatabase();
+    const isolated = test.database;
+    try {
+      const schedulerRoot = resolve(
+        'node_modules/@nocobase/app-plugin-scheduler',
+      );
+      await isolated
+        .createMigrator({
+          sources: [
+            {
+              packageName: 'scheduler',
+              directory: resolve(schedulerRoot, 'dist/database/migrations'),
+            },
+            {
+              packageName: 'crm',
+              directory: resolve('database/main/migrations'),
+            },
+          ],
+        })
+        .latest();
+      const query = isolated.query();
+      const started = Date.UTC(2026, 8, 13, 1, 30, 28, 587);
+      // What the scheduler's first release and the CRM's first provisioning
+      // wrote: a Date through the raw query builder, stored as a number.
+      await query
+        .insertInto('scheduleSyncLocks')
+        .values({ appName: 'main', createdAt: started, updatedAt: started })
+        .execute();
+      await query
+        .insertInto('crmSettings')
+        .values({ id: 'legacy', value: '{}', updatedAt: started })
+        .execute();
+      await legacyTimestampsMigration.up({
+        builder: isolated.builder(),
+        query,
+        connection: isolated.connection(),
+      });
+      const lock = await query
+        .selectFrom('scheduleSyncLocks')
+        .selectAll()
+        .where('appName', '=', 'main')
+        .executeTakeFirstOrThrow();
+      expect(lock.createdAt).toBe('2026-09-13T01:30:28.587Z');
+      expect(lock.updatedAt).toBe('2026-09-13T01:30:28.587Z');
+      const setting = await query
+        .selectFrom('crmSettings')
+        .selectAll()
+        .where('id', '=', 'legacy')
+        .executeTakeFirstOrThrow();
+      expect(setting.updatedAt).toBe('2026-09-13T01:30:28.587Z');
+      // The scheduler now reads its lock through the repository at startup.
+      const read = await isolated
+        .connection()
+        .repository('scheduleSyncLocks')
+        .findOne({ filter: { appName: 'main' } });
+      expect(read?.createdAt).toBeTruthy();
+      // Already an instant: left alone on a second run.
+      await legacyTimestampsMigration.up({
+        builder: isolated.builder(),
+        query,
+        connection: isolated.connection(),
+      });
+      expect(
+        (
+          await query
+            .selectFrom('crmSettings')
+            .select('updatedAt')
+            .where('id', '=', 'legacy')
+            .executeTakeFirstOrThrow()
+        ).updatedAt,
+      ).toBe('2026-09-13T01:30:28.587Z');
+    } finally {
+      await test.destroy();
+    }
+  },
+);
 
 describe('approval notifications', () => {
   const approvalFor = async (crm: CrmService, name: string) => {
@@ -8768,7 +8731,11 @@ describe('approval notifications', () => {
         .selectFrom('crmOutbox')
         .select(['id', 'event', 'recipientId', 'createdAt'])
         .where('recordId', '=', recordId)
+        // Messages queued at the same instant have no order of their own;
+        // by event and recipient, so every database lists them alike.
         .orderBy('createdAt')
+        .orderBy('event')
+        .orderBy('recipientId')
         .execute()
     ).map((r) => [toText(r.event), toText(r.recipientId), toText(r.id)]);
 
@@ -8839,7 +8806,11 @@ describe('record notifications', () => {
         .selectFrom('crmOutbox')
         .select(['id', 'event', 'recipientId', 'createdAt'])
         .where('recordId', '=', recordId)
+        // Messages queued at the same instant have no order of their own;
+        // by event and recipient, so every database lists them alike.
         .orderBy('createdAt')
+        .orderBy('event')
+        .orderBy('recipientId')
         .execute()
     ).map((r) => [toText(r.event), toText(r.recipientId), toText(r.id)]);
 
@@ -9982,7 +9953,8 @@ describe('opportunity signals', () => {
           .query()
           .insertInto('crmHistory')
           .values({
-            id: `deal-signal-${deal}-${requests.length}`,
+            // A history id holds at most 36 characters.
+            id: `deal-signal-${deal.slice(0, 8)}-${requests.length}`,
             entity: 'opportunities',
             recordId: deal,
             actorId: by.id,
@@ -9994,7 +9966,7 @@ describe('opportunity signals', () => {
             createdAt: new Date().toISOString(),
           })
           .execute();
-        return { id: `deal-signal-${deal}` };
+        return { id: `deal-signal-${deal.slice(0, 8)}` };
       },
     } as unknown as OpportunityEvaluator;
     await scanDealSignals(service, evaluator, new Date(), 1000);
@@ -12104,7 +12076,8 @@ describe('task preparation', () => {
           .query()
           .insertInto('crmHistory')
           .values({
-            id: `prep-${taskId}`,
+            // A history id holds at most 36 characters.
+            id: `prep-${taskId.slice(0, 8)}`,
             entity: 'tasks',
             recordId: taskId,
             actorId: by.id,
@@ -12116,7 +12089,7 @@ describe('task preparation', () => {
             createdAt: new Date().toISOString(),
           })
           .execute();
-        return { id: `prep-${taskId}` };
+        return { id: `prep-${taskId.slice(0, 8)}` };
       },
     } as unknown as TaskPreparer;
     await scanTaskPreparation(service, preparer, now, 1000);
@@ -13371,7 +13344,12 @@ describe('WhatsApp', () => {
     const now = new Date();
     await deliver(
       delivery({ waId: '447700900123', userId: 'GB.1001', name: 'Olivia' }, [
-        text('wamid.lead-1', 'Is the on-premises edition available?', now),
+        // A second apart: messages of the same instant have no order.
+        text(
+          'wamid.lead-1',
+          'Is the on-premises edition available?',
+          new Date(now.getTime() - 1000),
+        ),
         text('wamid.lead-2', 'We are 40 people.', now),
       ]),
     );

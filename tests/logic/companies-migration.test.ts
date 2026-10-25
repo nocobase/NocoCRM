@@ -1,36 +1,28 @@
 // @vitest-environment node
 
-import sqlite from '@nocobase/db-sqlite';
-import { createDatabaseManager, defineDatabase } from '@nocobase/db';
-import type { Knex } from 'knex';
+import { createTestDatabase } from '@nocobase/app-testing/server';
+import type { DatabaseConnection } from '@nocobase/db';
 import { expect, it } from 'vitest';
 import migration from '../../database/main/migrations/202610100001_crm_companies.js';
 
 const now = '2026-10-01T00:00:00.000Z';
 
-async function columns(client: Knex, table: string): Promise<string[]> {
-  const rows: { name: string }[] = await client.raw(
-    `pragma table_info(${table})`,
-  );
-  return rows.map((row) => row.name);
+// A table's columns in order, through the connection's schema inspector so
+// every dialect reports them alike.
+async function columns(
+  connection: DatabaseConnection,
+  table: string,
+): Promise<string[]> {
+  const physical = await connection.schemaInspector.getPhysicalCollection({
+    tableName: table,
+  });
+  return (physical?.columns ?? []).map((column) => column.columnName);
 }
 
 it('renames accounts to companies and back, keeping the data and mail entries’ mailbox', async () => {
-  const isolated = createDatabaseManager(
-    defineDatabase({
-      drivers: { sqlite },
-      default: 'main',
-      connections: {
-        main: {
-          dialect: 'sqlite',
-          filename: ':memory:',
-          schemaManagement: 'managed',
-        },
-      },
-    }),
-  );
+  const test = await createTestDatabase();
+  const isolated = test.database;
   try {
-    await isolated.connect();
     const builder = isolated.builder();
     const connection = isolated.connection();
     const query = isolated.query();
@@ -182,7 +174,6 @@ it('renames accounts to companies and back, keeping the data and mail entries’
       })
       .execute();
 
-    const client = await connection.client<Knex>();
     const history = async (): Promise<Record<string, unknown>[]> =>
       (
         await query
@@ -212,7 +203,10 @@ it('renames accounts to companies and back, keeping the data and mail entries’
     expect(
       await query.selectFrom('crmCompanies').select(['id', 'name']).execute(),
     ).toEqual([{ id: 'a1', name: 'Acme' }]);
-    expect(await columns(client, 'crm_contacts')).toEqual(['id', 'company_id']);
+    expect(await columns(isolated.connection(), 'crm_contacts')).toEqual([
+      'id',
+      'company_id',
+    ]);
     expect(
       await query
         .selectFrom('crmTasks')
@@ -274,7 +268,10 @@ it('renames accounts to companies and back, keeping the data and mail entries’
     expect(
       await query.selectFrom('crmAccounts').select(['id', 'name']).execute(),
     ).toEqual([{ id: 'a1', name: 'Acme' }]);
-    expect(await columns(client, 'crm_contacts')).toEqual(['id', 'account_id']);
+    expect(await columns(isolated.connection(), 'crm_contacts')).toEqual([
+      'id',
+      'account_id',
+    ]);
     expect(
       await query
         .selectFrom('crmOpportunities')
@@ -291,7 +288,7 @@ it('renames accounts to companies and back, keeping the data and mail entries’
       records: [{ entity: 'accounts' }, { entity: 'leads' }],
     });
   } finally {
-    await isolated.destroy();
+    await test.destroy();
   }
 });
 

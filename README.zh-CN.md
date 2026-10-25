@@ -25,10 +25,10 @@ pnpm install
 ### 3. 生成配置
 
 ```bash
-pnpm nocobase config init
+pnpm nocobase config init --dialect sqlite
 ```
 
-这会生成配置文件 `config.yml`，其中的 `secrets` 节包括一个自动生成的密钥，用来加密保存模型密钥、邮箱密码等。`config.yml` 不会提交到 Git。
+这会生成配置文件 `config.yml`，其中的 `secrets` 节包括一个自动生成的密钥，用来加密保存模型密钥、邮箱密码等。`config.yml` 不会提交到 Git。`--dialect sqlite` 表示数据保存在一个文件里；要改用 PostgreSQL 或 MySQL，见[配置](#配置)里的“数据库”。
 
 ### 4. 启动应用
 
@@ -75,15 +75,16 @@ pnpm dev
 
 ### 常见问题
 
-| 遇到的情况                        | 怎么办                                                                                                                    |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm install` 拒绝运行或提示版本 | 使用 Node.js 24 或更高版本和 pnpm 11（第 1 步）。                                                                         |
-| 页面打不开                        | 使用 `pnpm dev` 打印的 `Local:` 地址，包括 `/main/`。同一个目录只能运行一个 `pnpm dev`，先停掉另一个。                    |
-| 提示"助手暂时不可用"              | 还没有接入模型。在 **Agent 团队 → 模型** 里添加一个模型服务并填入密钥。                                                   |
-| 忘记管理员密码                    | 让另一位管理员在 **设置 → 用户** 里重置。本地使用的话，也可以按下面的方法重新开始，并在 `config.yml` 里设新密码。         |
-| 已保存的密钥或邮箱不能用了        | `config.yml` 丢了或被重新生成。恢复备份的 `config.yml`，或者重新填写密钥、重新连接邮箱。                                  |
-| 想从空数据库重新开始              | 停掉 `pnpm dev`，删除 `storage/crm.sqlite`、`storage/objects/` 和 `storage/ai-files/`，再重新启动。这会删除所有本地数据。 |
-| 想更新到最新版本                  | `git pull`，然后 `pnpm install` 和 `pnpm dev`。数据库变更会在启动时自动应用；如果数据重要，请先备份 `storage/`。          |
+| 遇到的情况                        | 怎么办                                                                                                                                                        |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm install` 拒绝运行或提示版本 | 使用 Node.js 24 或更高版本和 pnpm 11（第 1 步）。                                                                                                             |
+| 页面打不开                        | 使用 `pnpm dev` 打印的 `Local:` 地址，包括 `/main/`。同一个目录只能运行一个 `pnpm dev`，先停掉另一个。                                                        |
+| 提示"助手暂时不可用"              | 还没有接入模型。在 **Agent 团队 → 模型** 里添加一个模型服务并填入密钥。                                                                                       |
+| 忘记管理员密码                    | 让另一位管理员在 **设置 → 用户** 里重置。本地使用的话，也可以按下面的方法重新开始，并在 `config.yml` 里设新密码。                                             |
+| 已保存的密钥或邮箱不能用了        | `config.yml` 丢了或被重新生成。恢复备份的 `config.yml`，或者重新填写密钥、重新连接邮箱。                                                                      |
+| 想从空数据库重新开始              | 停掉 `pnpm dev`，删除 `storage/crm.sqlite`、`storage/objects/` 和 `storage/ai-files/`，再重新启动。这会删除所有本地数据。                                     |
+| 想更新到最新版本                  | `git pull`，然后 `pnpm install` 和 `pnpm dev`。数据库变更会在启动时自动应用；如果数据重要，请先备份 `storage/`。                                              |
+| 启动时提示迁移的 checksum 不一致  | 新版本改写了数据库已经执行过的迁移，但它做的事没有变（为了也能在 PostgreSQL 和 MySQL 上运行）。在终端里运行一次 `pnpm nocobase db repair`，记下新的写法即可。 |
 
 ## Agent
 
@@ -136,7 +137,14 @@ CRM 的所有 AI 都基于 Agents 插件，使用为应用配置的模型服务�
 
 **访问地址。** `APP_BASE_PATH` 是挂载路径（默认 `/main`），`APP_PUBLIC_ORIGIN` 是不含路径的公开源地址。
 
-**数据库。** 默认使用 SQLite，文件为 `storage/crm.sqlite`；启动时自动执行迁移。使用 PostgreSQL 时，添加 `@nocobase/db-postgres` 并运行 `pnpm nocobase config init --dialect postgres --force`。
+**数据库。** 默认使用 SQLite，文件为 `storage/crm.sqlite`；启动时自动执行迁移。NocoCRM 也可以运行在 PostgreSQL 和 MySQL 上（MariaDB 使用 MySQL 驱动）。这两个驱动只为开发和测试安装，构建出的包只带 SQLite；要使用其中一个：
+
+1. 用 `pnpm add --save-prod @nocobase/db-postgres`（或 `@nocobase/db-mysql`）把驱动移到构建时打包的 dependencies 里。
+2. 创建一个空数据库（MySQL 使用 `utf8mb4` 字符集），以及一个可以在其中建表的用户。
+3. 用 `pnpm nocobase config init --dialect postgres`（或 `mysql`；已有 `config.yml` 时加 `--force` 替换）生成配置，用 `pnpm nocobase config set database.connections.main.host=… database.connections.main.port=… database.connections.main.database=… database.connections.main.username=…` 设置连接，用 `pnpm nocobase config set --from-env database.connections.main.password=<环境变量名>` 设置密码，再用 `pnpm nocobase config check` 检查。
+4. 用 `pnpm dev` 启动，或按下文构建和部署：第一次启动会建表。在 PostgreSQL 上，它还会在连接的 schema 里添加两个小函数，以及使用它们的 `json` 与 `text` 之间的 `LIKE` 运算符，让 CRM 能像在 SQLite 和 MySQL 上一样匹配 JSON 列。
+
+环境变量 `DB_DIALECT`、`DB_HOST`、`DB_PORT`、`DB_DATABASE`、`DB_USERNAME` 和 `DB_PASSWORD` 会覆盖 `config.yml`。更换数据库不会迁移数据：新库是空的，可以用 **设置 → 演示数据** 填充。测试默认在 SQLite 上运行；`NOCOBASE_TEST_DB_DIALECT=postgres` 让数据库测试在 PostgreSQL 服务器上运行（服务器读自 `PGHOST`、`PGPORT`、`PGUSER`、`PGPASSWORD` 和 `PGDATABASE`，每个测试使用自己的 schema），`NOCOBASE_TEST_DB_DIALECT=mysql` 则在 MySQL 服务器上运行（`MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_ADMIN_USER` 和 `MYSQL_ADMIN_PASSWORD`，每个测试使用自己的数据库）。
 
 ## 基于 NocoBase 3
 
@@ -171,7 +179,7 @@ pnpm build --target linux-x64 --tar   # 生成 storage/exports/dist.tar.gz
   npx @nocobase/app-installer@beta upgrade --dir /srv/nocobase/crm --archive dist.tar.gz
   ```
 
-- **手动部署。** 解压后在 `dist/` 里运行 `pnpm nocobase config init` 和 `pnpm nocobase config check`，再用进程管理器运行 `node ./dist/server/standalone.js`；更新时保留 `dist/` 旁边的 `config.yml` 和 `storage/`。
+- **手动部署。** 解压后在 `dist/` 里运行 `pnpm nocobase config init`（构建包里有不止一个数据库驱动时加上 `--dialect`）和 `pnpm nocobase config check`，再用进程管理器运行 `node ./dist/server/standalone.js`；更新时保留 `dist/` 旁边的 `config.yml` 和 `storage/`。
 
 如果要通过 CDN 提供前端静态文件，构建时设置 `CDN_BASE_URL=https://cdn.example.com/crm/v1/ pnpm build`，把 `dist/client/` 按原路径上传到 CDN，并允许应用的源地址跨域访问；服务器上也要保留 `dist/client/`，它仍然负责返回 HTML。
 

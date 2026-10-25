@@ -148,17 +148,14 @@ async function rename(
   const keys = HISTORY_KEYS.map(
     ([oldKey, newKey]) => [pick(oldKey, newKey), pick(newKey, oldKey)] as const,
   );
-  const entries = new Map<unknown, Record<string, unknown>>();
-  for (const column of ['changes', 'previous'])
-    for (const [key] of keys)
-      for (const row of await query
-        .selectFrom('crmHistory')
-        .select(['id', 'changes', 'previous'])
-        .where('action', '!=', 'mail')
-        .where(column, 'like', `%${key}%`)
-        .execute())
-        entries.set(row.id, row);
-  for (const entry of entries.values()) {
+  // Every entry is read rather than matched with LIKE, which PostgreSQL has
+  // no form of for a JSON column; renameKeys passes over those without one.
+  const entries = await query
+    .selectFrom('crmHistory')
+    .select(['id', 'changes', 'previous'])
+    .where('action', '!=', 'mail')
+    .execute();
+  for (const entry of entries) {
     const changes = renameKeys(parse(entry.changes), keys);
     const previous = renameKeys(parse(entry.previous), keys);
     if (!changes && !previous) continue;
