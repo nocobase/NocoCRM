@@ -2187,6 +2187,8 @@ async function populate(
         contacts,
         leads,
         hworldPeople: projects.hworldPeople,
+        gacPeople: projects.gacPeople,
+        newHopePeople: projects.newHopePeople,
       },
       (part) => {
         manifest.whatsapp = part;
@@ -2324,6 +2326,16 @@ async function populate(
             360000,
             12,
           ],
+          // GAC's legal manager on the contract's data security clause.
+          ['dataSecurity', projects.gacDeal, projects.gacPeople[1], 1200000, 3],
+          // New Hope's project manager, the expansion's interview ahead.
+          [
+            'interviewPrep',
+            projects.expansion,
+            projects.newHopePeople[1],
+            150000,
+            6,
+          ],
         ] as const
       ).map(([topic, deal, contact, amount, lastDay]) => ({
         topic,
@@ -2388,6 +2400,7 @@ async function populate(
       aboutDeal('discount', 2, 0, 3),
       aboutDeal('securityReview', 2, 1, 6),
       aboutDeal('trialFeedback', 3, 1, 4),
+      aboutDeal('clientProject', 28, 0, 3),
       aboutDeal('needsRecap', 4, 0, 2),
       aboutDeal('budgetPaused', 7, 0, 8),
       aboutDeal('discovery', 24, 0, 3),
@@ -2399,6 +2412,7 @@ async function populate(
       // Won and lost.
       aboutDeal('onboarding', 5, 0, 15),
       aboutDeal('supportQuestion', 5, 1, 6),
+      aboutDeal('reconciliation', 22, 1, 5),
       aboutDeal('kickoff', 6, 0, 1),
       aboutDeal('invoice', 6, 0, 2),
       aboutDeal('declined', 8, 0, 21),

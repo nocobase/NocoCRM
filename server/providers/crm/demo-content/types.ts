@@ -106,6 +106,10 @@ export type DemoMailTopic =
   | 'vendorOnboarding'
   | 'supportQuestion'
   | 'invoice'
+  | 'clientProject'
+  | 'reconciliation'
+  | 'dataSecurity'
+  | 'interviewPrep'
   // With a lead.
   | 'firstReply'
   | 'meeting'

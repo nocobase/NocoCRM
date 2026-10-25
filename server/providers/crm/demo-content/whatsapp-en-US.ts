@@ -10,7 +10,7 @@ export const enWhatsApp: DemoContent['whatsapp'] = {
     // Shanghai Electric's decision maker, about the deal at proposal.
     {
       messages: [
-        "Hello, this is Sarah Chen from Shanghai Electric's information centre. I picked up your brochure at the industrial expo.",
+        "Hello, this is Sarah Collins from Shanghai Electric's information centre. I picked up your brochure at the industrial expo.",
         'Hi Sarah, thanks for your interest in NocoBase. Could you tell me what you are looking to solve?',
         'Our plants still have shift leaders filling in production reports in Excel, and month-end reconciliation is painful.',
         'Equipment inspections are on paper too, and the problems found are never followed through.',
@@ -188,6 +188,163 @@ export const enWhatsApp: DemoContent['whatsapp'] = {
         'One server is down; requests moved to the other two with no errors.',
         "Good. I'll write up a report for Chen.",
         'Thanks for your work! Let me know if the report needs our architecture diagram.',
+      ],
+    },
+    // Intime's decision maker, the upgrade's contract being stamped.
+    {
+      messages: [
+        'Legal has finished the contract and has no comments. It goes for stamping this week.',
+        "Great, thank you Jessica! Send me the scan once it's stamped and I'll schedule the upgrade.",
+        'Stamping is in the queue, probably early next week. Does the upgrade need downtime?',
+        'No downtime. We run the upgrade after 10 pm and the stores work as usual the next day.',
+        'Good, then the evening after the contract comes back.',
+        'Noted. Our engineer will confirm the data backup with Michael the day before.',
+      ],
+    },
+    // Digital China's technical manager, the client project's licence.
+    {
+      messages: [
+        "Hi, the branch performance app we're building for a bank client is installed in the validation environment. How is the licence bound to a server?",
+        "Hi Steven, the licence is bound to the server's machine code. Export it from the licence page in Settings and send it to me, and I'll generate the licence file.",
+        "I've emailed you the machine code.",
+        'The licence file is in your inbox. Import it and restart once, and it takes effect.',
+        'Imported, all fine. The client asks whether the performance scores can be calculated automatically every month.',
+        "Yes: a scheduled workflow works out the scores from the indicator formulas on the first of each month and writes them back. I'll put an example together for you.",
+        'Great, thanks.',
+        'The example is in your inbox: the scoring workflow and a monthly ranking table.',
+      ],
+    },
+    // XJTLU's head of IT, after the converted lead brought her in.
+    {
+      messages: [
+        "Hello, this is Lisa Warren from XJTLU's IT office. Ryan Cooper passed your proposal on to me.",
+        'Hi Lisa! Could we find a time to talk about the admissions dashboard?',
+        'Tomorrow afternoon works. What matters most to us is whether each programme’s application figures can update automatically every day.',
+        "They can: a daily sync with the admissions system's API, and the dashboard grouped by programme and region. Tomorrow at 3 pm online, then.",
+        'The registry would like to see the scheduling too. Could you demo it again next week?',
+        "Of course. I'll prepare a scheduling demo focused on classroom clashes and teaching-hour limits. Would a morning next week suit?",
+        'Any morning next week works; send me an invite once you pick one.',
+        'Will do; the invite comes as soon as the time is set.',
+      ],
+    },
+    // XGIMI's head of IT, after the upgrade went live.
+    {
+      messages: [
+        'Since the upgrade the delivery workbench works well; the project managers say the board is much clearer.',
+        'Great to hear, Rebecca! Let me know whenever something needs adjusting.',
+        'Could we give our outside installation contractors accounts that only see the projects they are assigned?',
+        "Yes: give the contractors a role whose data scope is the projects assigned to them, and open only a few fields. I'll write up the steps for you.",
+        'Thanks, appreciated.',
+        'The steps are in your inbox; the setup takes about ten minutes.',
+        'The contractor accounts are set up and working. We may add an after-sales module at the end of the year; let’s talk then.',
+        "Sounds good. Let's meet before the year end to map out the after-sales needs first.",
+      ],
+    },
+    // NARI's head of IT: the platform paused, the dashboard going ahead.
+    {
+      messages: [
+        "Hi, the platform's budget is still waiting for group approval, probably not before the first quarter next year.",
+        "Understood, Melissa. We'll park the platform and pick up the original plan once it's approved.",
+        'The inspection dashboard, though, fits our department’s own budget, so we can start that now.',
+        "Good. Professional is enough for the dashboard; I'll send you a requirements list to confirm first.",
+        'The requirements list looks fine. Also, our safety department wants a training and exam system. Could you quote it together?',
+        "Yes, we have a ready template for safety training: Standard plus implementation gets it live. I'll send both quotes this week.",
+      ],
+    },
+    // Guangzhou Restaurant's head of IT, on the dealer portal after it went live.
+    {
+      messages: [
+        "Hi, about the dealer management system: we've decided to extend the existing portal for now rather than run it separately.",
+        'Understood, Victoria. Whenever the portal needs extending, we’re here.',
+        'Dealer orders on the portal have grown a lot lately, and month-end reconciliation is slow. Can it be improved?',
+        "Yes: generate the statements every night, so dealers confirm them the next day. I'll have our engineer work it out with Paul.",
+        'Good, Paul Jennings looks after the technical side; contact him directly.',
+        "The statements are now generated every night, and Paul's team has signed it off.",
+        'Got it, thanks.',
+        'You’re welcome. Get in touch any time.',
+      ],
+    },
+    // GAC's head of digital, the contract in legal review.
+    {
+      messages: [
+        'We received the revised contract. Linda is still reviewing the data security clause.',
+        'Thanks, Victor. Linda can come to us directly with any questions, and our legal team can join a call too.',
+        'Linda would like to go through the clauses with your legal team in person.',
+        "Of course. Our legal team is free the next two days; I'll arrange the time with Linda.",
+        "We've been through the clauses and are largely aligned. Next week it goes for sign-off.",
+        'Excellent, thank you Victor! Tell me if anything else is needed for the sign-off.',
+      ],
+    },
+    // New Hope's project manager, before the expansion's interview.
+    {
+      messages: [
+        'I emailed you the quality check forms yesterday. The head of our quality department will join the interview too.',
+        "Got them, Frank, and they're very welcome. The interview takes about two hours; we'll send the question list first.",
+        'The interview is at 10 am on the day we agreed. We’ll be waiting at the Chengdu headquarters.',
+        'Great, two of us will be on site. Could the quality department look over a few items on the list beforehand?',
+      ],
+    },
+    // A lead referred by United Family's head of IT.
+    {
+      messages: [
+        'Hello, this is Laura Hughes from United Family’s IT department. Amanda Ross suggested I contact you.',
+        'Hi Laura! Amanda mentioned your evaluation. Is there anything I should prepare first?',
+        "I'd like to confirm on-premises deployment and single sign-on first. I've written the details in an email.",
+        "I've replied by email: both are supported, with the deployment guide attached.",
+      ],
+    },
+    // A delivery partner's lead, asking for the partner terms.
+    {
+      messages: [
+        'Hi, this is Kevin Foster from Kingsoft Office. Could you send me your partner terms?',
+        "Hi Kevin, they're in your inbox. Delivery partners can license per project.",
+        'Read them. Per-project licensing suits us well. Our technical lead, Ethan Walsh, will be in touch.',
+        "Great, I'll look out for Ethan.",
+      ],
+    },
+    // A nurtured lead building a prototype on the community edition.
+    {
+      messages: [
+        "Hi, we met at the expo. I'm building an R&D project management prototype on the community edition, and the sprint board is done.",
+        'Hi Adam! Ask me any time you get stuck.',
+        'Can subtasks be expanded on the board?',
+        'Use a tree table: the board cards show the subtask count, and opening one shows the details. I’ve emailed you the setup.',
+        "Thanks. Once the project's approved we'll talk properly.",
+        'Sounds good, I look forward to it.',
+      ],
+    },
+    // A nurtured lead collecting industry cases.
+    {
+      messages: [
+        'Hi, could you send me a few property management case studies?',
+        'Hi Megan, two case studies on property and construction management are in your inbox.',
+        "Got them; they'll help with next year's planning.",
+        "Great. I'll send you a new case study every quarter.",
+      ],
+    },
+    // An invalid lead, looking for freelance work.
+    {
+      messages: [
+        'Hi, I have two years of NocoBase plugin development experience. Do you have any freelance or contract work?',
+        'Hello, thanks for your interest. We have no freelance openings at the moment; please follow the careers and partner pages on our website.',
+      ],
+    },
+    // The delivery partner's technical lead, on plugin development.
+    {
+      messages: [
+        "Hi, I'm Ethan Walsh, Kevin Foster's colleague. Where can I read the plugin development docs?",
+        "Hi Ethan, they're on the developer pages of our website. I'll send you the link and an example plugin repository.",
+        "Got it. I'll take a look and come back to you next week.",
+        'Sure, ask any time.',
+      ],
+    },
+    // A new trial, asking about month-end reports.
+    {
+      messages: [
+        'Hi, I found this number on your website. Our team would like to try it first. Is there a trial environment?',
+        'Hi Brian, the trial logins are in your inbox. You could start by importing your customer and project spreadsheets.',
+        'Imported, very easy. Can the month-end reports be produced automatically?',
+        "Yes, set them to generate on the last day of each month. I'll book twenty minutes tomorrow to show you.",
       ],
     },
   ],

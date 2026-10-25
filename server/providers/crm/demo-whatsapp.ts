@@ -28,12 +28,14 @@ export interface DemoWhatsAppManifest {
 const demoNumbers = ['+1 555 010 0199', '+44 7700 900123'];
 
 // Who a conversation is with: a demo contact (by company and person), a
-// demo lead, one of the importer's H World people, or a customer nobody
-// linked, by their number when WhatsApp gives one.
+// demo lead, one of the importer's H World, GAC or New Hope people, or a
+// customer nobody linked, by their number when WhatsApp gives one.
 type Customer =
   | { contact: [number, number] }
   | { lead: number }
   | { hworld: number }
+  | { gac: number }
+  | { newHope: number }
   | { phone?: string; state: 'unlinked' | 'dismissed' };
 
 // Each message: who wrote it, then its day and time of day; the texts are
@@ -249,6 +251,180 @@ export const demoWhatsAppSchedule: {
       ['out', -22, 22, 42],
     ],
   },
+  // A conversation with every other company, its deals in their stages.
+  {
+    customer: { contact: [1, 0] },
+    number: 0,
+    messages: [
+      ['in', -6, 10, 20],
+      ['out', -6, 10, 45],
+      ['in', -3, 15, 10],
+      ['out', -3, 15, 30],
+      ['in', -3, 15, 42],
+      ['out', -2, 9, 15],
+    ],
+  },
+  {
+    customer: { contact: [3, 1] },
+    number: 0,
+    messages: [
+      ['in', -9, 14, 0],
+      ['out', -9, 14, 25],
+      ['in', -9, 15, 2],
+      ['out', -9, 16, 10],
+      ['in', -5, 11, 30],
+      ['out', -5, 11, 50],
+      ['in', -5, 12, 5],
+      ['out', -4, 10, 0],
+    ],
+  },
+  {
+    customer: { contact: [4, 0] },
+    number: 0,
+    messages: [
+      ['in', -8, 9, 40],
+      ['out', -8, 10, 5],
+      ['in', -8, 10, 20],
+      ['out', -8, 10, 35],
+      ['in', -4, 16, 30],
+      ['out', -4, 16, 50],
+      ['in', -3, 9, 10],
+      ['out', -3, 9, 20],
+    ],
+  },
+  {
+    customer: { contact: [5, 0] },
+    number: 0,
+    messages: [
+      ['in', -15, 11, 0],
+      ['out', -15, 11, 20],
+      ['in', -10, 17, 40],
+      ['out', -10, 18, 5],
+      ['in', -10, 18, 20],
+      ['out', -9, 10, 15],
+      ['in', -2, 14, 30],
+      ['out', -2, 14, 50],
+    ],
+  },
+  {
+    customer: { contact: [6, 0] },
+    number: 0,
+    messages: [
+      ['in', -7, 10, 10],
+      ['out', -7, 10, 30],
+      ['in', -7, 10, 45],
+      ['out', -7, 11, 0],
+      ['in', -2, 15, 20],
+      ['out', -2, 15, 40],
+    ],
+  },
+  {
+    customer: { contact: [7, 0] },
+    number: 0,
+    messages: [
+      ['in', -20, 10, 0],
+      ['out', -20, 10, 25],
+      ['in', -12, 16, 0],
+      ['out', -12, 16, 30],
+      ['in', -12, 16, 45],
+      ['out', -5, 11, 10],
+      ['in', -5, 11, 30],
+      ['out', -5, 11, 40],
+    ],
+  },
+  {
+    customer: { gac: 0 },
+    number: 0,
+    messages: [
+      ['in', -6, 19, 30],
+      ['out', -6, 19, 45],
+      ['in', -4, 9, 15],
+      ['out', -4, 9, 30],
+      ['in', -2, 18, 10],
+      ['out', -2, 18, 25],
+    ],
+  },
+  {
+    customer: { newHope: 1 },
+    number: 0,
+    messages: [
+      ['in', -7, 14, 0],
+      ['out', -7, 14, 20],
+      ['in', -1, 16, 20],
+      ['out', -1, 16, 40],
+    ],
+  },
+  // A few lines with the leads being followed up, after each came in.
+  {
+    customer: { lead: 6 },
+    number: 0,
+    messages: [
+      ['in', -11, 10, 0],
+      ['out', -11, 10, 20],
+      ['in', -11, 10, 40],
+      ['out', -10, 9, 30],
+    ],
+  },
+  {
+    customer: { lead: 7 },
+    number: 0,
+    messages: [
+      ['in', -7, 15, 0],
+      ['out', -7, 15, 20],
+      ['in', -6, 11, 0],
+      ['out', -6, 11, 15],
+    ],
+  },
+  {
+    customer: { lead: 9 },
+    number: 0,
+    messages: [
+      ['in', -18, 13, 0],
+      ['out', -18, 13, 30],
+      ['in', -14, 21, 0],
+      ['out', -13, 9, 20],
+      ['in', -13, 9, 40],
+      ['out', -13, 9, 50],
+    ],
+  },
+  {
+    customer: { lead: 10 },
+    number: 0,
+    messages: [
+      ['in', -7, 11, 0],
+      ['out', -7, 11, 30],
+      ['in', -7, 11, 40],
+      ['out', -7, 11, 45],
+    ],
+  },
+  {
+    customer: { lead: 11 },
+    number: 0,
+    messages: [
+      ['in', -9, 22, 10],
+      ['out', -8, 9, 30],
+    ],
+  },
+  {
+    customer: { lead: 13 },
+    number: 0,
+    messages: [
+      ['in', -3, 20, 10],
+      ['out', -3, 20, 30],
+      ['in', -3, 20, 45],
+      ['out', -3, 20, 50],
+    ],
+  },
+  {
+    customer: { lead: 15 },
+    number: 0,
+    messages: [
+      ['in', -2, 10, 30],
+      ['out', -2, 10, 50],
+      ['in', -1, 15, 0],
+      ['out', -1, 15, 20],
+    ],
+  },
 ];
 
 export async function populateDemoWhatsApp(
@@ -260,6 +436,8 @@ export async function populateDemoWhatsApp(
     contacts: Row[][];
     leads: Row[];
     hworldPeople: Row[];
+    gacPeople: Row[];
+    newHopePeople: Row[];
   },
   // Called with what removal deletes before any of it is written.
   record: (manifest: DemoWhatsAppManifest) => void,
@@ -299,7 +477,11 @@ export async function populateDemoWhatsApp(
           ? input.leads[customer.lead]
           : 'hworld' in customer
             ? input.hworldPeople[customer.hworld]
-            : undefined;
+            : 'gac' in customer
+              ? input.gacPeople[customer.gac]
+              : 'newHope' in customer
+                ? input.newHopePeople[customer.newHope]
+                : undefined;
     const phoneOf = linked
       ? linked.phone
         ? `+86 ${toText(linked.phone)}`

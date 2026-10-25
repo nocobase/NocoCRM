@@ -485,6 +485,86 @@ export const zhMail: DemoContent['mail'] = {
       },
     ],
   },
+  clientProject: {
+    subject: '{{deal}}：授权与上线时间',
+    messages: [
+      {
+        from: 'other',
+        body: '{{owner}}您好，\n\n我们给银行客户做的网点绩效项目已经在验证环境跑通，客户计划下月初上线。想确认两件事：一是这个项目的授权能否在年底前开票；二是上线后的一年里，客户如果再增加两个分行，是否需要另购授权。\n\n{{customer}}\n{{company}}',
+      },
+      {
+        from: 'owner',
+        body: '{{customer}}您好，\n\n授权可以本月签约、年底前开票。授权按服务器计算，增加分行只要还在同一套服务器上，就不需要另购，{{amount}} 的报价不变。正式报价单我明天发您。\n\n{{owner}}',
+      },
+      {
+        from: 'other',
+        body: '好的，报价单收到后我们走内部审批，大概需要一周。\n\n{{customer}}',
+      },
+      {
+        from: 'owner',
+        body: '{{customer}}您好，\n\n报价单已经发您，审批中需要我们补充材料随时告诉我。\n\n{{owner}}',
+      },
+    ],
+  },
+  reconciliation: {
+    subject: '{{deal}}：对账单改为每日生成',
+    messages: [
+      {
+        from: 'owner',
+        body: '{{customer}}您好，\n\n按邓经理的要求，我们准备把经销商对账单改为每晚自动生成，经销商第二天在门户里确认。改动只涉及对账单的生成方式，不影响现有的订单和价格。测试环境已经改好，请您安排验收。\n\n{{owner}}',
+      },
+      {
+        from: 'other',
+        body: '{{owner}}您好，\n\n测试环境看过了，生成的数据和手工对账一致。有一点：退货要按退货当天计入对账单，而不是按原订单的日期，麻烦再调整一下。\n\n{{customer}}\n{{company}}',
+      },
+      {
+        from: 'owner',
+        body: '{{customer}}您好，\n\n退货已经改为按退货日期计入，测试环境已更新。您确认后我们安排周末上线。\n\n{{owner}}',
+      },
+      {
+        from: 'other',
+        body: '验收通过，可以上线。\n\n{{customer}}',
+      },
+    ],
+  },
+  dataSecurity: {
+    subject: '{{deal}}：数据安全条款',
+    messages: [
+      {
+        from: 'owner',
+        body: '{{customer}}您好，\n\n按上次沟通，合同修订稿新增了第 9 条数据安全条款：数据存放在贵司自有机房，我方工程师只在贵司授权和陪同下远程访问，所有操作留审计日志。请您审阅。\n\n{{owner}}',
+      },
+      {
+        from: 'other',
+        body: '{{owner}}您好，\n\n条款的方向没问题，还有两点需要补充：一是服务结束后数据的交还和销毁方式；二是贵司人员变动时的保密义务。我们想和贵司法务当面过一遍。\n\n{{customer}}\n{{company}}',
+      },
+      {
+        from: 'owner',
+        body: '{{customer}}您好，\n\n两点我们都同意补充。我方法务这两天都有空，会议时间您来定。\n\n{{owner}}',
+      },
+      {
+        from: 'other',
+        body: '那就定在后天下午。补充的条款麻烦会前发一版。\n\n{{customer}}',
+      },
+    ],
+  },
+  interviewPrep: {
+    subject: '{{deal}}：需求访谈准备',
+    messages: [
+      {
+        from: 'other',
+        body: '{{owner}}您好，\n\n附上饲料厂现在用的三张质检表：原料入厂检验、生产过程抽检和成品出厂检验。质检部希望检验结果能和养殖场的数据关联起来，出现批次问题时能追到用料的养殖场。\n\n{{customer}}\n{{company}}',
+      },
+      {
+        from: 'owner',
+        body: '{{customer}}您好，\n\n表格收到了。我们按三张表整理了一版问题清单：检验项目怎么配置、不合格品怎么处理，以及批次和养殖场怎么对应，附在后面，访谈时逐项确认。\n\n{{owner}}',
+      },
+      {
+        from: 'other',
+        body: '清单看过了，我们会请质检部和两个饲料厂的厂长一起参加。\n\n{{customer}}',
+      },
+    ],
+  },
   leadMigration: {
     subject: '订单和库存数据迁移',
     messages: [

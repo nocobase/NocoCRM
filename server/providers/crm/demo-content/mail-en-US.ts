@@ -485,6 +485,86 @@ export const enMail: DemoContent['mail'] = {
       },
     ],
   },
+  clientProject: {
+    subject: '{{deal}}: licence and go-live',
+    messages: [
+      {
+        from: 'other',
+        body: "Hi {{owner}},\n\nThe branch performance project for our bank client now runs end to end in the validation environment, and the client plans to go live early next month. Two questions: can this project's licence be invoiced before the year end, and if the client adds two more branches within a year of going live, do they need another licence?\n\n{{customer}}\n{{company}}",
+      },
+      {
+        from: 'owner',
+        body: "Hi {{customer}},\n\nWe can sign this month and invoice before the year end. Licences are per server, so more branches on the same servers need no extra licence, and the quote of {{amount}} stands. I'll send the formal quotation tomorrow.\n\n{{owner}}",
+      },
+      {
+        from: 'other',
+        body: 'Thanks. Once we have the quotation it goes through our internal approval, which takes about a week.\n\n{{customer}}',
+      },
+      {
+        from: 'owner',
+        body: 'Hi {{customer}},\n\nThe quotation is in your inbox. If the approval needs anything more from us, just let me know.\n\n{{owner}}',
+      },
+    ],
+  },
+  reconciliation: {
+    subject: '{{deal}}: daily dealer statements',
+    messages: [
+      {
+        from: 'owner',
+        body: "Hi {{customer}},\n\nAs Victoria asked, we're changing the dealer statements to be generated automatically every night, for dealers to confirm in the portal the next day. Only how the statements are produced changes; orders and prices stay as they are. The test environment is ready for your acceptance check.\n\n{{owner}}",
+      },
+      {
+        from: 'other',
+        body: 'Hi {{owner}},\n\nWe checked the test environment and the figures match our manual reconciliation. One thing: returns should count on the day they are returned, not on the original order date. Could you adjust that?\n\n{{customer}}\n{{company}}',
+      },
+      {
+        from: 'owner',
+        body: "Hi {{customer}},\n\nReturns now count on their return date, and the test environment is updated. Once you confirm, we'll release it at the weekend.\n\n{{owner}}",
+      },
+      {
+        from: 'other',
+        body: 'Accepted; please go ahead.\n\n{{customer}}',
+      },
+    ],
+  },
+  dataSecurity: {
+    subject: '{{deal}}: data security clause',
+    messages: [
+      {
+        from: 'owner',
+        body: 'Hi {{customer}},\n\nAs discussed, the revised contract adds clause 9 on data security: the data stays in your own data centre, our engineers access it remotely only with your authorisation and in your presence, and every action is kept in the audit log. Please review it.\n\n{{owner}}',
+      },
+      {
+        from: 'other',
+        body: "Hi {{owner}},\n\nThe clause is in the right direction, but two points need adding: how data is returned and destroyed when the service ends, and your staff's confidentiality obligations when people change roles. We'd like to go through it with your legal team in person.\n\n{{customer}}\n{{company}}",
+      },
+      {
+        from: 'owner',
+        body: 'Hi {{customer}},\n\nWe agree to add both. Our legal team is free over the next two days; please choose the time.\n\n{{owner}}',
+      },
+      {
+        from: 'other',
+        body: 'Then the day after tomorrow in the afternoon. Please send the added wording before the meeting.\n\n{{customer}}',
+      },
+    ],
+  },
+  interviewPrep: {
+    subject: '{{deal}}: preparing the interview',
+    messages: [
+      {
+        from: 'other',
+        body: "Hi {{owner}},\n\nAttached are the three quality check forms our feed mills use today: incoming raw materials, in-process sampling and finished goods release. The quality department would like the results linked with the farms' data, so that a batch problem can be traced back to the farms that used it.\n\n{{customer}}\n{{company}}",
+      },
+      {
+        from: 'owner',
+        body: "Hi {{customer}},\n\nThanks for the forms. We've drafted a question list from them: how check items are configured, how non-conforming goods are handled, and how batches map to farms. It's below, and we'll go through it item by item at the interview.\n\n{{owner}}",
+      },
+      {
+        from: 'other',
+        body: "We've read the list. The quality department and the managers of two feed mills will join us.\n\n{{customer}}",
+      },
+    ],
+  },
   leadMigration: {
     subject: 'Moving orders and stock data',
     messages: [
