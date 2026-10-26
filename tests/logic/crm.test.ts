@@ -3508,7 +3508,9 @@ describe('CRM API security and domain rules', () => {
       service.summarize(actor('outsider'), 'opportunities', {}, {}),
     ).rejects.toMatchObject({ code: 'forbidden' });
   });
-  it('exposes the CRM roles per user to the Users page and keeps the last administrator', async () => {
+  it('exposes the CRM roles per user to the Users page and keeps the last administrator', async ({
+    onTestFinished,
+  }) => {
     await authorization.permissionSets.create({
       key: 'member',
       title: 'Member',
@@ -3516,6 +3518,27 @@ describe('CRM API security and domain rules', () => {
     });
     const scope = createCrmUserRoleScope(authorization);
     const connection = database.connection();
+    // Role removal needs its own user: later tests rely on the shared sales
+    // representatives retaining their access, including when an assertion fails.
+    const userId = 'role-scope-user';
+    await database
+      .query()
+      .insertInto('user')
+      .values({
+        id: userId,
+        name: 'Role scope user',
+        username: userId,
+        email: `${userId}@example.test`,
+      })
+      .execute();
+    onTestFinished(async () => {
+      await scope.replace(userId, [], connection);
+      await database
+        .query()
+        .deleteFrom('user')
+        .where('id', '=', userId)
+        .execute();
+    });
     expect((await scope.options()).map((o) => o.value)).toEqual([
       'member',
       'crm-sales-representative',
@@ -3530,36 +3553,35 @@ describe('CRM API security and domain rules', () => {
     ]);
     // The chosen roles replace the held ones; a user may hold several, and
     // their grants add up.
-    await scope.replace('other', 'crm-sales-manager', connection);
-    expect(await scope.get('other', connection)).toEqual(['crm-sales-manager']);
+    await scope.replace(userId, 'crm-sales-manager', connection);
+    expect(await scope.get(userId, connection)).toEqual(['crm-sales-manager']);
     await scope.replace(
-      'other',
+      userId,
       ['crm-sales-manager', 'crm-sales-representative'],
       connection,
     );
-    expect(await scope.get('other', connection)).toEqual([
+    expect(await scope.get(userId, connection)).toEqual([
       'crm-sales-representative',
       'crm-sales-manager',
     ]);
     expect(
-      (await service.users(actor('admin'))).find((u) => u.id === 'other')
-        ?.roles,
+      (await service.users(actor('admin'))).find((u) => u.id === userId)?.roles,
     ).toEqual(['sales-representative', 'sales-manager']);
-    expect(await capability(actor('other'), 'assign')).toBe(true);
-    await scope.replace('other', ['crm-sales-representative'], connection);
-    expect(await scope.get('other', connection)).toEqual([
+    expect(await capability(actor(userId), 'assign')).toBe(true);
+    await scope.replace(userId, ['crm-sales-representative'], connection);
+    expect(await scope.get(userId, connection)).toEqual([
       'crm-sales-representative',
     ]);
     await expect(
-      scope.replace('other', 'editor', connection),
+      scope.replace(userId, 'editor', connection),
     ).rejects.toMatchObject({ code: 'INVALID_ROLE_SCOPE_VALUE' });
     expect(scope.defaultValue).toEqual(['member']);
-    await scope.replace('other', ['member'], connection);
-    expect(await scope.get('other', connection)).toEqual(['member']);
-    expect(await capability(actor('other'), 'assign')).toBe(false);
-    await scope.replace('other', [], connection);
-    expect(await scope.get('other', connection)).toEqual([]);
-    expect(await capability(actor('other'), 'assign')).toBe(false);
+    await scope.replace(userId, ['member'], connection);
+    expect(await scope.get(userId, connection)).toEqual(['member']);
+    expect(await capability(actor(userId), 'assign')).toBe(false);
+    await scope.replace(userId, [], connection);
+    expect(await scope.get(userId, connection)).toEqual([]);
+    expect(await capability(actor(userId), 'assign')).toBe(false);
     // The only administrator stays one, and stays enabled.
     await expect(
       scope.replace('admin', 'crm-sales-manager', connection),
