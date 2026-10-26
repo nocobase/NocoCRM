@@ -36,17 +36,43 @@ export async function namePlaceholderModel(
 ): Promise<void> {
   const placeholder = placeholderModel(app);
   if (!placeholder) return;
-  let update = query
-    .updateTable('agConversations')
-    .set(placeholder)
+  if (conversationIds && !conversationIds.length) return;
+  let unnamed = query
+    .selectFrom('agConversations')
+    .select(['id', 'metadata'])
     .where((eb) =>
       eb.or([eb('model', 'is', null), eb('modelService', 'is', null)]),
-    )
-    // The assistant's conversations: native chats of an online agent.
-    .where('metadata', 'like', '%onlineAgent%');
-  if (conversationIds) {
-    if (!conversationIds.length) return;
-    update = update.where('id', 'in', [...conversationIds]);
+    );
+  if (conversationIds)
+    unnamed = unnamed.where('id', 'in', [...conversationIds]);
+  // The assistant's conversations: native chats of an online agent, told by
+  // their metadata, read here rather than matched in SQL, which reads a JSON
+  // column alike on no two databases.
+  const ids = (await unnamed.execute())
+    .filter((row) => onlineAgent(row.metadata))
+    .map((row) => String(row.id));
+  if (!ids.length) return;
+  await query
+    .updateTable('agConversations')
+    .set(placeholder)
+    .where('id', 'in', ids)
+    .execute();
+}
+
+// Whether a conversation's metadata names an online agent, however it is
+// stored (an object, its JSON text, or that text as a JSON string).
+function onlineAgent(metadata: unknown): boolean {
+  let value = metadata;
+  for (let depth = 0; depth < 3 && typeof value === 'string'; depth++) {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return false;
+    }
   }
-  await update.execute();
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    Object.hasOwn(value, 'onlineAgent')
+  );
 }

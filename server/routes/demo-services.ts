@@ -16,6 +16,7 @@ import {
   ASSISTANT_SCOPE,
   assistantActor,
 } from '../providers/crm-agents/assistant.js';
+import { jsonTextLike } from '../providers/crm/json-text.js';
 import { jsonValue } from '../providers/crm/values.js';
 import {
   namePlaceholderModel,
@@ -362,17 +363,19 @@ export function demoServices(app: Application): {
     ? {
         async removeOrphans() {
           const store = app.container.resolve(inAppNotificationStoreToken);
-          const query = app.container.resolve(crmToken).database.query();
+          const database = app.container.resolve(crmToken).database;
+          const query = database.query();
           const items = await query
             .selectFrom('notificationInAppItems')
             .select(['id', 'userId', 'target'])
             // A record's page, /<entity>/<id>, or under /crm as a notice
             // sent before 2026-10-19 names it.
-            .where((eb) =>
-              eb.or(
-                Object.keys(RECORD_TABLES).map((entity) =>
-                  eb('target', 'like', `%/${entity}/%`),
-                ),
+            .where(
+              await jsonTextLike(
+                database.connection(),
+                'notificationInAppItems',
+                'target',
+                Object.keys(RECORD_TABLES).map((entity) => `%/${entity}/%`),
               ),
             )
             .execute();

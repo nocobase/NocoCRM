@@ -448,7 +448,11 @@ export async function populateDemoWhatsApp(
     customerIds: [],
   };
   record(manifest);
-  for (const [index, numberId] of manifest.numberIds.entries())
+  for (const [index, numberId] of manifest.numberIds.entries()) {
+    // Created as it was connected, ten days apart, so the numbers list in
+    // their order on every database (which orders rows of one instant as it
+    // likes).
+    const connectedAt = input.at(-30 + index * 10, 9, 0);
     await query
       .insertInto('crmWaNumbers')
       .values({
@@ -459,11 +463,12 @@ export async function populateDemoWhatsApp(
         mode: 'demo',
         status: 'CONNECTED',
         qualityRating: 'GREEN',
-        connectedAt: input.at(-30 + index * 10, 9, 0),
-        createdAt: now,
+        connectedAt,
+        createdAt: connectedAt,
         updatedAt: now,
       })
       .execute();
+  }
   for (const [
     index,
     { number, customer, messages, media },

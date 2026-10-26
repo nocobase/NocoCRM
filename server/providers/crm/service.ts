@@ -88,6 +88,7 @@ import {
   type Entity,
   type NotificationKind,
 } from './schema.js';
+import { jsonTextLike } from './json-text.js';
 
 // The approval statuses that carry a message, named by the status.
 const approvalEvents = ['pending', 'withdrawn', 'approved', 'rejected'];
@@ -746,20 +747,23 @@ export class CrmService {
       const bare = id.replace(/[%_"\\]/g, '');
       return [`%"${bare}"%`, `%"${bare}_"%`];
     };
-    if (options.participantId && entity === 'tasks') {
-      const likes = participantLikes(options.participantId);
-      select = select.where((eb) =>
-        eb.or(likes.map((like) => eb('internalParticipants', 'like', like))),
+    // The text match runs per database (json-text.ts).
+    const takingPart = (id: string) =>
+      jsonTextLike(
+        this.database.connection(),
+        'crmTasks',
+        'internalParticipants',
+        participantLikes(id),
       );
+    if (options.participantId && entity === 'tasks') {
+      const participant = await takingPart(options.participantId);
+      select = select.where((eb) => participant(eb));
     }
     if (options.involvedId && entity === 'tasks') {
       const id = options.involvedId;
-      const likes = participantLikes(id);
+      const participant = await takingPart(id);
       select = select.where((eb) =>
-        eb.or([
-          eb('ownerId', '=', id),
-          ...likes.map((like) => eb('internalParticipants', 'like', like)),
-        ]),
+        eb.or([eb('ownerId', '=', id), participant(eb)]),
       );
     }
     // An approval is mine whether I asked for it or decide it.
@@ -2101,7 +2105,14 @@ export class CrmService {
       .selectFrom('crmHistory')
       .select(['entity', 'recordId', 'changes'])
       .where('action', '=', 'comment')
-      .where('changes', 'like', `%${id}%`)
+      .where(
+        await jsonTextLike(
+          this.database.connection(),
+          'crmHistory',
+          'changes',
+          [`%${id}%`],
+        ),
+      )
       .execute();
     for (const comment of comments) {
       if (
@@ -2476,7 +2487,6 @@ export class CrmService {
       .where('entity', '=', entity)
       .where('recordId', '=', id)
       .where('action', '=', 'comment')
-      .where('changes', 'like', '%attachments%')
       .orderBy('createdAt', 'desc')
       .execute();
     return rows.flatMap((row) =>

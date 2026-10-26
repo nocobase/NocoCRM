@@ -14,6 +14,7 @@ import { normalizePhone } from '../phone.js';
 import { samePhone } from '../lead-merge.js';
 import { CrmError, toText, type Entity } from '../schema.js';
 import type { CrmService } from '../service.js';
+import { jsonTextLike } from '../json-text.js';
 import { jsonValue } from '../values.js';
 import { resolveTitles } from '../titles.js';
 import {
@@ -1054,7 +1055,14 @@ export class WhatsAppService {
     const deals = await query
       .selectFrom('crmOpportunities')
       .select(['id', 'contacts'])
-      .where('contacts', 'like', `%${contactId}%`)
+      .where(
+        await jsonTextLike(
+          this.service.database.connection(),
+          'crmOpportunities',
+          'contacts',
+          [`%${contactId}%`],
+        ),
+      )
       .execute();
     return deals
       .filter((deal) => {
