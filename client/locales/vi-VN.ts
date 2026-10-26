@@ -504,7 +504,7 @@ const viVN: AppResource = {
     participants: {
       rep: 'Sophie Bennett',
       leadAgent: 'AI theo dõi khách hàng tiềm năng',
-      prepAgent: 'AI chuẩn bị công việc',
+      prepAgent: 'Trợ lý công việc AI',
       dealAgent: 'AI theo dõi cơ hội',
       approvalAgent: 'AI xem xét phê duyệt',
       manager: 'Daniel Brooks',

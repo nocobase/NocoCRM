@@ -466,7 +466,7 @@ const wording = {
       skill: ['Skill: Review an approval', '技能：审批辅助'],
     },
     tasks: {
-      title: ['Task preparation', '任务准备'],
+      title: ['Task assistant', '任务助手'],
       skill: ['Skill: Prepare a task', '技能：任务准备'],
     },
     // The company signals' check (company-signals.ts), its runs the checks.

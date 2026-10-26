@@ -500,7 +500,7 @@ const koKR: AppResource = {
     participants: {
       rep: 'Sophie Bennett',
       leadAgent: 'AI 리드 후속 조치',
-      prepAgent: 'AI 작업 준비',
+      prepAgent: 'AI 작업 어시스턴트',
       dealAgent: 'AI 영업 기회 후속 조치',
       approvalAgent: 'AI 승인 검토',
       manager: 'Daniel Brooks',

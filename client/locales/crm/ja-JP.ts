@@ -307,7 +307,7 @@ export const crmJaJP: CrmWording = {
       skill: 'スキル：承認をレビュー',
     },
     tasks: {
-      title: 'タスクの準備',
+      title: 'タスクアシスタント',
       skill: 'スキル：タスクを準備',
     },
     signals: {

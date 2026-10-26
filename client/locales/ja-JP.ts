@@ -506,7 +506,7 @@ const jaJP: AppResource = {
     participants: {
       rep: 'Sophie Bennett',
       leadAgent: 'AI リードフォローアップ',
-      prepAgent: 'AI タスク準備',
+      prepAgent: 'AI タスクアシスタント',
       dealAgent: 'AI 商談フォローアップ',
       approvalAgent: 'AI 承認レビュー',
       manager: 'Daniel Brooks',

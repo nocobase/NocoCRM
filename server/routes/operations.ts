@@ -679,7 +679,7 @@ export function registerOperationRoutes(
       summary: 'Have the AI prepare a task',
       operationId: 'prepareTask',
       description:
-        'The Task preparation agent prepares it in the background, for its owner only, while it is open; with `revise`, redoes a waiting preparation as asked. Asked from a conversation, what it prepares is told back to that conversation once it is ready.',
+        'The Task assistant agent prepares it in the background, for its owner only, while it is open; with `revise`, redoes a waiting preparation as asked. Asked from a conversation, what it prepares is told back to that conversation once it is ready.',
       ...runCommand(AI_WORK_ACTION, {
         command: 'tasks request-preparation',
       }),

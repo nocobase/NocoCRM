@@ -507,7 +507,7 @@ const ptBR: AppResource = {
     participants: {
       rep: 'Sophie Bennett',
       leadAgent: 'Acompanhamento de leads com IA',
-      prepAgent: 'Preparação de tarefas com IA',
+      prepAgent: 'Assistente de tarefas com IA',
       dealAgent: 'Acompanhamento de oportunidades com IA',
       approvalAgent: 'Análise de aprovação com IA',
       manager: 'Daniel Brooks',

@@ -513,7 +513,7 @@ const deDE: AppResource = {
     participants: {
       rep: 'Sophie Bennett',
       leadAgent: 'KI-Nachfassen (Lead)',
-      prepAgent: 'KI-Aufgabenvorbereitung',
+      prepAgent: 'KI-Aufgabenassistent',
       dealAgent: 'KI-Nachfassen (Verkaufschance)',
       approvalAgent: 'KI-Genehmigungsprüfung',
       manager: 'Daniel Brooks',

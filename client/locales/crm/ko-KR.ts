@@ -305,7 +305,7 @@ export const crmKoKR: CrmWording = {
       skill: '스킬: 승인 검토',
     },
     tasks: {
-      title: '작업 준비',
+      title: '작업 어시스턴트',
       skill: '스킬: 작업 준비',
     },
     signals: {

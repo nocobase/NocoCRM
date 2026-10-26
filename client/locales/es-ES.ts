@@ -507,7 +507,7 @@ const esES: AppResource = {
     participants: {
       rep: 'Sophie Bennett',
       leadAgent: 'Seguimiento de leads con IA',
-      prepAgent: 'Preparación de tareas con IA',
+      prepAgent: 'Asistente de tareas con IA',
       dealAgent: 'Seguimiento de oportunidades con IA',
       approvalAgent: 'Revisión de aprobaciones con IA',
       manager: 'Daniel Brooks',

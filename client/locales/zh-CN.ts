@@ -45,7 +45,7 @@ const zhCN: AppResource = {
     participants: {
       rep: '王小芳',
       leadAgent: 'AI 线索跟进',
-      prepAgent: 'AI 任务准备',
+      prepAgent: 'AI 任务助手',
       dealAgent: 'AI 商机跟进',
       approvalAgent: 'AI 审批建议',
       manager: '李明',

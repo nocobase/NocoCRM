@@ -316,7 +316,7 @@ export const crmDeDE: CrmWording = {
       skill: 'Skill: Eine Genehmigung prüfen',
     },
     tasks: {
-      title: 'Aufgabenvorbereitung',
+      title: 'Aufgabenassistent',
       skill: 'Skill: Eine Aufgabe vorbereiten',
     },
     signals: {

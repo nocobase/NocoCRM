@@ -309,7 +309,7 @@ export const crmViVN: CrmWording = {
       skill: 'Kỹ năng: Xem xét phê duyệt',
     },
     tasks: {
-      title: 'Chuẩn bị công việc',
+      title: 'Trợ lý công việc',
       skill: 'Kỹ năng: Chuẩn bị công việc',
     },
     signals: {

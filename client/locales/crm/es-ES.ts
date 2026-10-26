@@ -311,7 +311,7 @@ export const crmEsES: CrmWording = {
       skill: 'Habilidad: revisar una aprobación',
     },
     tasks: {
-      title: 'Preparación de tareas',
+      title: 'Asistente de tareas',
       skill: 'Habilidad: preparar una tarea',
     },
     signals: {

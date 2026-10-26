@@ -507,7 +507,7 @@ const ruRU: AppResource = {
     participants: {
       rep: 'Sophie Bennett',
       leadAgent: 'ИИ-сопровождение лидов',
-      prepAgent: 'ИИ-подготовка к задачам',
+      prepAgent: 'ИИ-помощник по задачам',
       dealAgent: 'ИИ-сопровождение сделок',
       approvalAgent: 'ИИ-проверка согласований',
       manager: 'Daniel Brooks',

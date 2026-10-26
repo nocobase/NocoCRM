@@ -55,7 +55,7 @@ const enUS = {
     participants: {
       rep: 'Sophie Bennett',
       leadAgent: 'AI lead follow-up',
-      prepAgent: 'AI task preparation',
+      prepAgent: 'AI task assistant',
       dealAgent: 'AI opportunity follow-up',
       approvalAgent: 'AI approval review',
       manager: 'Daniel Brooks',

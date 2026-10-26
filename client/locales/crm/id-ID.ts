@@ -310,7 +310,7 @@ export const crmIdID: CrmWording = {
       skill: 'Skill: Meninjau persetujuan',
     },
     tasks: {
-      title: 'Persiapan tugas',
+      title: 'Asisten tugas',
       skill: 'Skill: Mempersiapkan tugas',
     },
     signals: {

@@ -509,7 +509,7 @@ const frFR: AppResource = {
     participants: {
       rep: 'Sophie Bennett',
       leadAgent: 'Suivi des prospects IA',
-      prepAgent: 'Préparation des tâches IA',
+      prepAgent: 'Assistant de tâches IA',
       dealAgent: 'Suivi des opportunités IA',
       approvalAgent: 'Analyse des approbations IA',
       manager: 'Daniel Brooks',

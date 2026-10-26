@@ -312,7 +312,7 @@ export const crmFrFR: CrmWording = {
       skill: 'Compétence : examiner une approbation',
     },
     tasks: {
-      title: 'Préparation des tâches',
+      title: 'Assistant de tâches',
       skill: 'Compétence : préparer une tâche',
     },
     signals: {

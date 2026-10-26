@@ -298,7 +298,7 @@ export const crmZhTW: CrmWording = {
       skill: '技能：審批輔助',
     },
     tasks: {
-      title: '任務準備',
+      title: '任務助理',
       skill: '技能：任務準備',
     },
     signals: {

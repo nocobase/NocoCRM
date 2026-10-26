@@ -476,7 +476,7 @@ const zhTW: AppResource = {
     participants: {
       rep: '王小芳',
       leadAgent: 'AI 線索跟進',
-      prepAgent: 'AI 任務準備',
+      prepAgent: 'AI 任務助理',
       dealAgent: 'AI 商機跟進',
       approvalAgent: 'AI 審批建議',
       manager: '李明',

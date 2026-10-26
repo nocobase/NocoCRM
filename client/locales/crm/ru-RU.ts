@@ -309,7 +309,7 @@ export const crmRuRU: CrmWording = {
       skill: 'Навык: проверка согласования',
     },
     tasks: {
-      title: 'Подготовка к задачам',
+      title: 'Помощник по задачам',
       skill: 'Навык: подготовка к задаче',
     },
     signals: {

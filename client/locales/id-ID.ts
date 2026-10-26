@@ -507,7 +507,7 @@ const idID: AppResource = {
     participants: {
       rep: 'Sophie Bennett',
       leadAgent: 'Tindak lanjut prospek AI',
-      prepAgent: 'Persiapan tugas AI',
+      prepAgent: 'Asisten tugas AI',
       dealAgent: 'Tindak lanjut peluang AI',
       approvalAgent: 'Tinjauan persetujuan AI',
       manager: 'Daniel Brooks',
