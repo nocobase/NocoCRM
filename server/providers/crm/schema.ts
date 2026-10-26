@@ -520,6 +520,8 @@ const LANGUAGE_TIME_ZONES: readonly [string, string][] = [
   ['pt-BR', 'America/Sao_Paulo'],
   ['id', 'Asia/Jakarta'],
   ['vi', 'Asia/Ho_Chi_Minh'],
+  ['ko', 'Asia/Seoul'],
+  ['ru', 'Europe/Moscow'],
 ];
 export function defaultTimeZoneFor(locale: string | undefined): string {
   return (

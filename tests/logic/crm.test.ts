@@ -945,6 +945,8 @@ describe('CRM API security and domain rules', () => {
     // Where the language's own currency is not offered, and in English.
     expect(at('zh-TW')).toBe('USD');
     expect(at('pt-BR')).toBe('USD');
+    expect(at('ko-KR')).toBe('USD');
+    expect(at('ru-RU')).toBe('USD');
     expect(at('en-US')).toBe('USD');
     expect(at('')).toBe('USD');
   });
@@ -961,6 +963,8 @@ describe('CRM API security and domain rules', () => {
     expect(at('pt-BR')).toBe('America/Sao_Paulo');
     expect(at('id-ID')).toBe('Asia/Jakarta');
     expect(at('vi-VN')).toBe('Asia/Ho_Chi_Minh');
+    expect(at('ko-KR')).toBe('Asia/Seoul');
+    expect(at('ru-RU')).toBe('Europe/Moscow');
     expect(at('en-US')).toBe('America/New_York');
     expect(at('')).toBe('America/New_York');
   });

@@ -139,7 +139,7 @@ The follow-ups, reviews and briefs land in the owner's **Inbox → AI suggestion
 - **Approvals.** Who may decide approvals can be set.
 - **Roles.** Administrator, sales manager and salesperson, enforced per record by the server and adjustable on **Settings → Roles**.
 - **LinkedIn.** Leads, contacts and companies keep a LinkedIn address, used to find duplicates and filled by the AI when pasted text includes one.
-- **Languages.** The interface is in 10 languages: English, Simplified Chinese, Traditional Chinese, Japanese, German, French, Spanish, Brazilian Portuguese, Indonesian and Vietnamese. The demo data and the AI working language are English or Chinese.
+- **Languages.** The interface is in 12 languages: English, Simplified Chinese, Traditional Chinese, Japanese, Korean, German, French, Spanish, Brazilian Portuguese, Russian, Indonesian and Vietnamese. The demo data and the AI working language are English or Chinese.
 
 ## Configuration
 
@@ -179,7 +179,7 @@ NocoBase 3 is an application foundation for building business software with codi
 | Lifecycle library                                    | The approvals' states and transitions, what each transition sets off, the approver rule, and the diagram on Settings → Approval process |
 | Scheduler                                            | The daily follow-up checks, task preparation and company signal checks                                                                  |
 | Mail plugin                                          | Each user's mailbox: sync, reading, writing and sending                                                                                 |
-| File and i18n plugins                                | Attachments and their previews, the 10 interface languages                                                                              |
+| File and i18n plugins                                | Attachments and their previews, the 12 interface languages                                                                              |
 | Database Explorer                                    | Read-only browsing of the application's collections                                                                                     |
 
 ## Deployment
