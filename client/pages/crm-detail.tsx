@@ -1,4 +1,5 @@
 import { copyText } from '@nocobase/app-client';
+import { scrollWithinView } from '../components/crm/scroll-within-view.js';
 import { isDemoReadOnlyError } from '#lib/demo-mode';
 import {
   stepsToPageBefore,
@@ -2732,7 +2733,7 @@ function CommentThread({
       const nodes = document.querySelectorAll<HTMLElement>(
         `[data-comment="${CSS.escape(id)}"]`,
       );
-      nodes[0]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      if (nodes[0]) scrollWithinView(nodes[0], { block: 'nearest' });
       flash(nodes);
     });
   };
@@ -3250,7 +3251,7 @@ export function HistoryFeed({
       // A reply into the middle of the view, its thread around it; an
       // entry to the top, under the comment box.
       if (!seen)
-        node.scrollIntoView({
+        scrollWithinView(node, {
           behavior: 'smooth',
           block: focus === entryId ? 'start' : 'center',
         });
