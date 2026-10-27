@@ -1,3 +1,4 @@
+import fileUi from '../extensions/nocobase-file-component-ui/locales/vi-VN.js';
 import type { AppResource } from './en-US.js';
 import { crmViVN } from './crm/vi-VN.js';
 import settingsViVN from './settings/vi-VN.js';
@@ -8,6 +9,7 @@ import settingsViVN from './settings/vi-VN.js';
 // here; a template upgrade that adds keys fails the type check until they
 // are translated.
 const viVN: AppResource = {
+  ...fileUi,
   'auth.passwordResetSuccess':
     'Mật khẩu của bạn đã được đặt lại. Hãy đăng nhập bằng mật khẩu mới.',
   'auth.requestNewResetLink': 'Yêu cầu liên kết đặt lại mới',

@@ -1,3 +1,4 @@
+import fileUi from '../extensions/nocobase-file-component-ui/locales/es-ES.js';
 import type { AppResource } from './en-US.js';
 import { crmEsES } from './crm/es-ES.js';
 import settingsEsES from './settings/es-ES.js';
@@ -8,6 +9,7 @@ import settingsEsES from './settings/es-ES.js';
 // here; a template upgrade that adds keys fails the type check until they
 // are translated.
 const esES: AppResource = {
+  ...fileUi,
   'auth.passwordResetSuccess':
     'Se ha restablecido tu contraseña. Inicia sesión con la nueva contraseña.',
   'auth.requestNewResetLink': 'Solicitar un nuevo enlace de restablecimiento',

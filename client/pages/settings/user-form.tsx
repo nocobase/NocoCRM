@@ -174,6 +174,11 @@ export function RoleSelection({
           </ComboboxList>
         </ComboboxContent>
       </Combobox>
+      {scope.key === 'app' && selected.length === 0 && (
+        <p className='text-sm text-muted-foreground'>
+          {t('settings.noRoleAccess')}
+        </p>
+      )}
     </div>
   );
 }

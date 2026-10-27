@@ -1,3 +1,4 @@
+import fileUi from '../extensions/nocobase-file-component-ui/locales/ja-JP.js';
 import type { AppResource } from './en-US.js';
 import { crmJaJP } from './crm/ja-JP.js';
 import settingsJaJP from './settings/ja-JP.js';
@@ -8,6 +9,7 @@ import settingsJaJP from './settings/ja-JP.js';
 // here; a template upgrade that adds keys fails the type check until they
 // are translated.
 const jaJP: AppResource = {
+  ...fileUi,
   'auth.passwordResetSuccess':
     'パスワードがリセットされました。新しいパスワードでログインしてください。',
   'auth.requestNewResetLink': 'リセットリンクを再申請',

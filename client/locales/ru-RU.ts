@@ -1,3 +1,4 @@
+import fileUi from '../extensions/nocobase-file-component-ui/locales/ru-RU.js';
 import type { AppResource } from './en-US.js';
 import { crmRuRU } from './crm/ru-RU.js';
 import settingsRuRU from './settings/ru-RU.js';
@@ -8,6 +9,7 @@ import settingsRuRU from './settings/ru-RU.js';
 // here; a template upgrade that adds keys fails the type check until they
 // are translated.
 const ruRU: AppResource = {
+  ...fileUi,
   'auth.passwordResetSuccess': 'Ваш пароль сброшен. Войдите с новым паролем.',
   'auth.requestNewResetLink': 'Запросить новую ссылку для сброса',
   'auth.preparingSession': 'Подготовка сеанса…',

@@ -4,7 +4,7 @@ Read this before adding or changing a component, a shadcn primitive, a UI Librar
 
 ## Imports
 
-Use package-local imports such as `#components/ui/button` and `#extensions/nocobase-auth-forms/form-parts`. `package.json#imports` declares their targets, and `components.json` uses the same prefixes for shadcn generation. Keep directory entry points explicitly mapped to their index files: this application maps `#extensions/nocobase-file-component-ui`, the Registry copy it imports as a whole. An import names the module without its `.js` suffix, which the map adds. Do not add a Vite alias or TypeScript `paths` mapping for these imports.
+Use package-local imports such as `#components/ui/button` and `#extensions/nocobase-auth-forms/form-parts`. `package.json#imports` declares their targets, and `components.json` uses the same prefixes for shadcn generation. Keep directory entry points explicitly mapped to their index files: this application maps `#extensions/nocobase-file-component-ui`, the UI Library source it imports as a whole. An import names the module without its `.js` suffix, which the map adds. Do not add a Vite alias or TypeScript `paths` mapping for these imports.
 
 ## shadcn/ui primitives
 
@@ -38,3 +38,7 @@ The default brand palette and density live in `client/theme/themes/*.css`; share
 The UI Library's `lifecycle-diagram` (with `flow-diagram` and `flow-layout`, in `client/components/`, as the CLI wrote them, at the version template 1.0.0-beta.75 ships) draws a record lifecycle read only; its `@xyflow/react` and `elkjs` are client packages, so they sit in `devDependencies`, and its `flowDiagram.*` copy comes from `client/locales/system/`, which `en-US.ts` and `zh-CN.ts` spread before rewording the empty, loading and help lines, and which the other languages translate in full.
 
 `client/components/record-link.tsx` (the template's `RecordLink`, which the prepared Users page names users with) carries one application change: under the pointer it takes the primary colour without an underline, as the CRM's own record names do (`RecordLink` in `client/components/crm/common.tsx`); keyboard focus keeps the template's underline and outline. Use it for a record name in a table outside the CRM's record pages; the CRM's pages keep their own.
+
+## File UI source
+
+Template beta.83 tracks `@nocobase/file-component-ui` in `client/extensions/nocobase-file-component-ui/`. Merge its `fileUi` resources into every application locale; the CRM also supplies Korean and Russian. Preserve the CRM Markdown renderer and centred media in the preview content. `FileList` composes the shared `AttachmentList` and forwards custom downloads into the preview toolbar and fallback. CRM record attachments continue to use their existing application components.

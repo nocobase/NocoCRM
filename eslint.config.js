@@ -7,6 +7,8 @@ export default createApplicationConfig({
     'client-old/**',
     'public/r/**',
     'storage/**',
+    // Internal workspace packages own their lint and TypeScript configurations.
+    'packages/**',
     // The NocoSolution clone: another repository's documents and scripts.
     'nocosolution/**',
   ],

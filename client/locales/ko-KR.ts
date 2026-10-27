@@ -1,3 +1,4 @@
+import fileUi from '../extensions/nocobase-file-component-ui/locales/ko-KR.js';
 import type { AppResource } from './en-US.js';
 import { crmKoKR } from './crm/ko-KR.js';
 import settingsKoKR from './settings/ko-KR.js';
@@ -8,6 +9,7 @@ import settingsKoKR from './settings/ko-KR.js';
 // here; a template upgrade that adds keys fails the type check until they
 // are translated.
 const koKR: AppResource = {
+  ...fileUi,
   'auth.passwordResetSuccess':
     '비밀번호가 재설정되었습니다. 새 비밀번호로 로그인하세요.',
   'auth.requestNewResetLink': '새 재설정 링크 요청',

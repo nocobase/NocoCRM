@@ -1,3 +1,4 @@
+import fileUi from '../extensions/nocobase-file-component-ui/locales/id-ID.js';
 import type { AppResource } from './en-US.js';
 import { crmIdID } from './crm/id-ID.js';
 import settingsIdID from './settings/id-ID.js';
@@ -8,6 +9,7 @@ import settingsIdID from './settings/id-ID.js';
 // here; a template upgrade that adds keys fails the type check until they
 // are translated.
 const idID: AppResource = {
+  ...fileUi,
   'auth.passwordResetSuccess':
     'Kata sandi Anda telah diatur ulang. Masuk dengan kata sandi baru Anda.',
   'auth.requestNewResetLink': 'Minta tautan atur ulang baru',

@@ -145,6 +145,9 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   clearHint:
     'Versuchen Sie eine andere Suche oder setzen Sie die Filter zurück.',
   noUsers: 'Noch keine Benutzer',
+  noRoleAccess:
+    'Diese Person kann sich weiterhin anmelden und die Kontogrundfunktionen nutzen. Rollen gewähren keinen geschäftlichen Zugriff.',
+  noAssignedRoles: 'Keine zugewiesenen Rollen',
   noRoles: 'Noch keine Rollen',
   create: 'Erstellen',
   edit: 'Bearbeiten',

@@ -11,7 +11,7 @@ This repository is a NocoBase Solution. The NocoSolution repository is cloned in
 
 This is a NocoBase 3 application. Do not apply globally installed NocoBase 2 Skills. You are building the application itself — its pages, its API, its database tables. Everything under this directory is application-owned source code that you may edit directly.
 
-Do not create a plugin to add a feature. Plugins are separately published packages for capabilities shared across several applications; building one for this application's own feature adds a package boundary, a version, and a release process to work that belongs in `client/` and `server/`. Create one only when the user explicitly asks for a reusable published package.
+Do not create a plugin to add a feature. Plugins are separately published packages for capabilities shared across several applications; building one for this application's own feature adds a package boundary, a version, and a release process to work that belongs in `client/` and `server/`. Create one only when the user explicitly asks for a reusable published package. Ordinary internal workspace packages under `packages/` may share code without becoming plugins or being published; follow [internal packages](.agents/rules/workspace.md) when the application needs that boundary.
 
 The Workflow plugin is not a dependency of this application: template 1.0.0-beta.60 removed it and `server/config/workflow.ts`, and the CRM's notifications are its own code (see [the CRM server rules](.agents/rules/crm-server.md)); a database from before keeps the plugin's tables, which nothing reads. Nor is the AI Employee plugin: the CRM's AI (its assistant, follow-ups, approval reviews, task preparation and captures) is built on the Agents plugin, and `server/config/ai.ts` is the application's own section, holding the model services that plugin is given.
 
@@ -30,6 +30,8 @@ This file stays at most 32 KB and must not grow without bound, because every age
 - `tests/logic/agents-md.test.ts` enforces the size limit and checks that the links here and in `.agents/rules/` resolve.
 
 ## Load the development skills
+
+For creating or maintaining a plugin in this App, read [the project plugin development Skill](.agents/skills/nocobase-app-plugin-development/SKILL.md). It ships with `@nocobase/app-skills`; do not install a global copy. If an older global Skill has the same name, read this project's file by path and follow the upgrade Skill's migration guidance to retire the global copy after verifying the replacement.
 
 `pnpm install` runs `pnpm nocobase skills sync` through the application's `postinstall` hook. If `.agents/skills/nocobase-app-development/` is missing, install dependencies from the application root; if install scripts were disabled or synchronized Skills are stale, run `pnpm nocobase skills sync` explicitly.
 
@@ -125,6 +127,7 @@ When the built-in mechanism genuinely cannot express what is being asked, changi
 
 | Read                                                                               | When                                                                                                                                        |
 | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| [.agents/rules/workspace.md](.agents/rules/workspace.md)                           | Adding internal packages or changing workspace development and validation                                                                   |
 | [.agents/rules/components.md](.agents/rules/components.md)                         | Adding or changing a component, a shadcn primitive, a UI Library item, or the visual design                                                 |
 | [.agents/rules/shell.md](.agents/rules/shell.md)                                   | Changing layouts, the header, sidebar, breadcrumbs, the account menu or loading indicators                                                  |
 | [.agents/rules/build-and-deploy.md](.agents/rules/build-and-deploy.md)             | Changing the build, packing a deployment, `CDN_BASE_URL`, or building for another platform                                                  |

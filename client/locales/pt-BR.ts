@@ -1,3 +1,4 @@
+import fileUi from '../extensions/nocobase-file-component-ui/locales/pt-BR.js';
 import type { AppResource } from './en-US.js';
 import { crmPtBR } from './crm/pt-BR.js';
 import settingsPtBR from './settings/pt-BR.js';
@@ -8,6 +9,7 @@ import settingsPtBR from './settings/pt-BR.js';
 // here; a template upgrade that adds keys fails the type check until they
 // are translated.
 const ptBR: AppResource = {
+  ...fileUi,
   'auth.passwordResetSuccess':
     'Sua senha foi redefinida. Entre com a nova senha.',
   'auth.requestNewResetLink': 'Solicitar um novo link de redefinição',

@@ -133,6 +133,9 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   noResults: '일치하는 결과가 없습니다',
   clearHint: '다른 검색어를 사용하거나 필터를 지우세요.',
   noUsers: '아직 사용자가 없습니다',
+  noRoleAccess:
+    '이 사용자는 계속 로그인하고 계정 기본 기능을 사용할 수 있습니다. 역할을 통한 업무 접근 권한은 없습니다.',
+  noAssignedRoles: '할당된 역할 없음',
   noRoles: '아직 역할이 없습니다',
   create: '만들기',
   edit: '편집',

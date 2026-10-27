@@ -578,6 +578,7 @@ it.each([false, true])(
       );
       await user.keyboard('{Escape}');
       expect(roles).not.toHaveTextContent('Member');
+      expect(screen.getByText(enUS.settings.noRoleAccess)).toBeVisible();
     }
     await user.type(
       screen.getByRole('textbox', { name: 'Name *' }),

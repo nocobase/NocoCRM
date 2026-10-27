@@ -219,6 +219,10 @@ Behind a reverse proxy, keep the public host and protocol and pass WebSocket upg
 | `pnpm nocobase db apply` | Apply pending migrations without restarting |
 | `pnpm nocobase --help`   | List every other command                    |
 
+### Internal packages and test environments
+
+Internal packages may live in `packages/*`; run their checks with `pnpm check:packages`. See [internal packages](.agents/rules/workspace.md). The CRM retains its test paths: `tests/logic/` covers server and project behavior, and `tests/components/` covers client behavior. Vitest separates Node and client projects; client tests that start an application use the server module environment with jsdom. Legacy client logic keeps its existing paths under `tests/logic/` and is explicitly selected by the client project. Put new shared helpers in `tests/helpers/`.
+
 ## License
 
 MIT

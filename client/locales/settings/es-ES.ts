@@ -139,6 +139,9 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   noResults: 'No hay resultados coincidentes',
   clearHint: 'Prueba con otra búsqueda o borra los filtros.',
   noUsers: 'Aún no hay usuarios',
+  noRoleAccess:
+    'Este usuario puede seguir iniciando sesión y usando las funciones básicas de su cuenta. Los roles no le conceden acceso de negocio.',
+  noAssignedRoles: 'Sin roles asignados',
   noRoles: 'Aún no hay roles',
   create: 'Crear',
   edit: 'Editar',

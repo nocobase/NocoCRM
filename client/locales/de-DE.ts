@@ -1,3 +1,4 @@
+import fileUi from '../extensions/nocobase-file-component-ui/locales/de-DE.js';
 import type { AppResource } from './en-US.js';
 import { crmDeDE } from './crm/de-DE.js';
 import settingsDeDE from './settings/de-DE.js';
@@ -8,6 +9,7 @@ import settingsDeDE from './settings/de-DE.js';
 // here; a template upgrade that adds keys fails the type check until they
 // are translated.
 const deDE: AppResource = {
+  ...fileUi,
   'auth.passwordResetSuccess':
     'Ihr Passwort wurde zurückgesetzt. Melden Sie sich mit Ihrem neuen Passwort an.',
   'auth.requestNewResetLink': 'Neuen Link zum Zurücksetzen anfordern',

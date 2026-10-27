@@ -1,3 +1,4 @@
+import fileUi from '../extensions/nocobase-file-component-ui/locales/zh-TW.js';
 import type { AppResource } from './en-US.js';
 import { crmZhTW } from './crm/zh-TW.js';
 import settingsZhTW from './settings/zh-TW.js';
@@ -8,6 +9,7 @@ import settingsZhTW from './settings/zh-TW.js';
 // here; a template upgrade that adds keys fails the type check until they
 // are translated.
 const zhTW: AppResource = {
+  ...fileUi,
   'auth.passwordResetSuccess': '密碼已重設，請用新密碼登入。',
   'auth.requestNewResetLink': '重新申請重設連結',
   'auth.preparingSession': '正在準備登入工作階段…',

@@ -1,3 +1,4 @@
+import fileUi from '../extensions/nocobase-file-component-ui/locales/fr-FR.js';
 import type { AppResource } from './en-US.js';
 import { crmFrFR } from './crm/fr-FR.js';
 import settingsFrFR from './settings/fr-FR.js';
@@ -8,6 +9,7 @@ import settingsFrFR from './settings/fr-FR.js';
 // here; a template upgrade that adds keys fails the type check until they
 // are translated.
 const frFR: AppResource = {
+  ...fileUi,
   'auth.passwordResetSuccess':
     'Votre mot de passe a été réinitialisé. Connectez-vous avec votre nouveau mot de passe.',
   'auth.requestNewResetLink': 'Demander un nouveau lien de réinitialisation',
