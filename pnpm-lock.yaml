@@ -22,13 +22,13 @@ importers:
         specifier: ^4.0.91
         version: 4.0.91(zod@4.6.5)
       '@nocobase/app-cli':
-        specifier: ^1.0.0-beta.30
+        specifier: ^1.0.0-beta.29
         version: 1.0.0-beta.30(@nocobase/app-server@3.0.0-beta.4(b4e4efd8aebe8caf0699bf1e1ee5f5d0))(@nocobase/db@1.0.0-beta.23(better-sqlite3@13.0.3)(mysql2@3.24.6(@types/node@24.13.3))(pg-query-stream@4.17.1(pg@8.23.1))(pg@8.23.1))(@nocobase/dev-config@0.1.0-beta.25(3d4bb79727d9c6fc4733d8afd0423344))(prettier@3.9.6)(tar@7.5.22)(tsc-alias@1.9.4)(tsx@4.23.13)(typescript@6.0.3)(vite@6.4.3(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)(yaml@2.9.1))
       '@nocobase/app-cli-client':
         specifier: ^0.1.0-beta.16
         version: 0.1.0-beta.16
       '@nocobase/app-plugin-agents':
-        specifier: ^1.0.0-beta.29
+        specifier: ^1.0.0-beta.27
         version: 1.0.0-beta.29(459d991667787273536160880a34cbb7)
       '@nocobase/app-plugin-api-keys':
         specifier: ^1.0.0-beta.19
@@ -37,7 +37,7 @@ importers:
         specifier: ^2.0.0-beta.15
         version: 2.0.0-beta.15(852e727d3c119dbe2f5c63672dccaad2)
       '@nocobase/app-plugin-authorization':
-        specifier: ^1.0.0-beta.33
+        specifier: ^1.0.0-beta.32
         version: 1.0.0-beta.33(a254e71d6c3a1af80a193b06abcca8c9)
       '@nocobase/app-plugin-authz-default-access':
         specifier: ^1.0.0-beta.16
@@ -79,10 +79,10 @@ importers:
         specifier: ^1.0.0-beta.20
         version: 1.0.0-beta.20(df0f4e2c26d3e38ca6155c8834c98a25)
       '@nocobase/app-plugin-users':
-        specifier: ^2.0.0-beta.11
+        specifier: ^2.0.0-beta.10
         version: 2.0.0-beta.11(dc3a4a36b713c10dd5fe0da9722aa66d)
       '@nocobase/app-server':
-        specifier: ^3.0.0-beta.4
+        specifier: ^3.0.0-beta.3
         version: 3.0.0-beta.4(b4e4efd8aebe8caf0699bf1e1ee5f5d0)
       '@nocobase/authorization':
         specifier: ^1.0.0-beta.15
@@ -94,7 +94,7 @@ importers:
         specifier: ^0.1.0-beta.3
         version: 0.1.0-beta.3
       '@nocobase/db':
-        specifier: ^1.0.0-beta.23
+        specifier: ^1.0.0-beta.22
         version: 1.0.0-beta.23(better-sqlite3@13.0.3)(mysql2@3.24.6(@types/node@24.13.3))(pg-query-stream@4.17.1(pg@8.23.1))(pg@8.23.1)
       '@nocobase/db-sqlite':
         specifier: ^0.1.0-beta.6
@@ -155,7 +155,7 @@ importers:
         specifier: ^1.6.0
         version: 1.8.0(@date-fns/tz@1.5.0)(@types/react@19.2.18)(date-fns@4.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@nocobase/app-client':
-        specifier: ^4.0.0-beta.4
+        specifier: ^4.0.0-beta.3
         version: 4.0.0-beta.4(@noble/hashes@2.3.0)(@nocobase/i18n@2.0.0-beta.1(hono@4.13.7)(react-i18next@17.0.13(i18next@26.4.2(typescript@6.0.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3))(react@19.2.8)(typescript@6.0.3))(@nocobase/repository-input@0.1.0-beta.3)(@nocobase/service-provider@0.0.2-beta.2)(@tanstack/react-query@5.102.8(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react-i18next@17.0.13(i18next@26.4.2(typescript@6.0.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3))(react-router@7.18.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)
       '@nocobase/app-plugin-template-print':
         specifier: 0.0.2-beta.2
