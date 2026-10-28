@@ -12,9 +12,9 @@ App CLI `1.0.0-beta.30` and DB `1.0.0-beta.23`. Review the Agents migration
 notes and preview both pending tasks and checksum drift before upgrading an
 existing deployment.
 
-Only Demo Mode's declared version is changed for this upgrade. The other
-packages keep their existing manifest ranges; the lockfile resolves the
-compatible peer versions required by the plugin's published package metadata.
+Keep the required peer minimums explicit in the application manifest and
+lock their compatible versions. This upgrade covers Demo Mode and its required
+dependencies; it does not upgrade the application template or unrelated packages.
 
 Use the plugin's `isDemoMode(container)` on the server and `useDemoMode()`
 on the client. The startup public configuration supplies the client flag;
