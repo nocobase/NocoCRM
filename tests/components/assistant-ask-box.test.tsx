@@ -20,9 +20,10 @@ function english(key: string): string {
   return typeof value === 'string' ? value : key;
 }
 
-// The workspace as the pages read it; a demo site's says so.
-const metadata = vi.hoisted(() => ({
-  current: undefined as { demoSite?: boolean } | undefined,
+// The startup mode is independent of workspace loading.
+const demo = vi.hoisted(() => ({ enabled: false }));
+vi.mock('@nocobase/app-plugin-demo-mode/client', () => ({
+  useDemoMode: () => demo.enabled,
 }));
 
 vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
@@ -32,7 +33,7 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
     ...actual,
     useCrmText: () => ({ text: english, language: 'en-US' }),
     // No workspace here: no background agent to leave out of the chat.
-    useMetadata: () => ({ data: metadata.current }),
+    useMetadata: () => ({ data: undefined }),
   };
 });
 // The assistant on the Agents plugin, with two models (tests/setup/agent-chat-fake).
@@ -144,7 +145,7 @@ describe("the overview's ask box", () => {
 
   it('opens the panel on the question on a read-only demo site, sending nothing', async () => {
     const user = userEvent.setup();
-    metadata.current = { demoSite: true };
+    demo.enabled = true;
     try {
       render(<AssistantAskBox />);
       const input = screen.getByRole('textbox', {
@@ -162,7 +163,7 @@ describe("the overview's ask box", () => {
       });
       expect(input).toHaveValue('');
     } finally {
-      metadata.current = undefined;
+      demo.enabled = false;
     }
   });
 

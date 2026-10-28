@@ -16,7 +16,7 @@ import { PageFrameContext } from '../../components/page-frame.js';
 import { LinkTabs } from '../../components/crm/link-tabs.js';
 import { Loading } from '../../components/crm/common.js';
 import { useCrmText } from '../../components/crm/api.js';
-import { demoEnvironmentEnabled } from '../../lib/demo-environment.js';
+import { useDemoMode } from '@nocobase/app-plugin-demo-mode/client';
 
 // Settings, the menu's one entry for them: the pages that configure the CRM
 // and its people, a tab each, at the addresses they had as entries of their
@@ -53,7 +53,7 @@ const TABS: readonly Tab[] = [
 export default function SettingsPage(): ReactElement {
   const { text } = useCrmText();
   const { t: demoText } = useTranslation('@nocobase/app-plugin-demo-mode');
-  const demoMode = demoEnvironmentEnabled();
+  const demoMode = useDemoMode();
   const { pathname } = useLocation();
   // The same checks as the tabs' routes in client/routes.ts; API keys are
   // everyone's own.

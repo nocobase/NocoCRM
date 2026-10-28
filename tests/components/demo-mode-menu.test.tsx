@@ -1,3 +1,4 @@
+import { enableDemoMode } from '../setup/demo-mode.js';
 import demoMode from '@nocobase/app-plugin-demo-mode/client';
 import {
   answerApi,
@@ -23,11 +24,10 @@ it('mounts the plugin menu and allows retry after a failed switch', async () => 
   const view = await renderWithApp(<HeaderActions />, {
     route: '/leads?view=board#selected',
     plugins: [demoMode()],
+    services: enableDemoMode,
     fetch: answerApi((call) => {
       requests.push(call);
       switch (call.path) {
-        case 'demoMode/status':
-          return { data: { enabled: true } };
         case 'demoMode/accounts':
           return {
             data: [
@@ -77,6 +77,7 @@ it('mounts the plugin menu and allows retry after a failed switch', async () => 
       }),
     ]),
   );
+  expect(requests.some(({ path }) => path === 'demoMode/status')).toBe(false);
   expect(requests).toContainEqual({
     method: 'POST',
     path: 'demoMode/accounts/sales/signIn',
@@ -89,22 +90,13 @@ it('mounts the plugin menu and allows retry after a failed switch', async () => 
 });
 
 it('keeps ordinary application headers free of demo controls', async () => {
-  const api = vi.fn(({ path }: ApiCall) =>
-    path === 'demoMode/status'
-      ? { data: { enabled: false } }
-      : new Response(null, { status: 404 }),
-  );
+  const api = vi.fn(() => new Response(null, { status: 404 }));
   await renderWithApp(<HeaderActions />, {
     route: '/leads',
     plugins: [demoMode()],
     fetch: answerApi(api),
   });
-  await waitFor(() =>
-    expect(api).toHaveBeenCalledWith({
-      method: 'GET',
-      path: 'demoMode/status',
-    }),
-  );
+  expect(api).not.toHaveBeenCalled();
   expect(
     screen.queryByRole('button', { name: /Demo mode/ }),
   ).not.toBeInTheDocument();

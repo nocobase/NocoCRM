@@ -5,10 +5,30 @@ through `server/config/demo-mode.ts` and `NOCOBASE_DEMO_MODE`. Follow the
 [Demo Mode Skill](../skills/nocobase-app-plugin-demo-mode/SKILL.md) for deployment
 configuration, quick sign-in and daily reset.
 
-Demo Mode `0.2.0-beta.1` is paired with Agents `1.0.0-beta.26`, satisfying
-its Agents peer dependency. The compatible authentication group is Authentication
-`2.0.0-beta.15`, Authorization `1.0.0-beta.32`, and Users `2.0.0-beta.10`. See [the Agents upgrade notes](crm-assistant.md)
-before applying the plugin's data migrations to an existing deployment.
+Demo Mode `0.2.0-beta.5` uses Agents `1.0.0-beta.29`, Users
+`2.0.0-beta.11`, Authorization `1.0.0-beta.33`, Authentication
+`2.0.0-beta.15`, App Client `4.0.0-beta.4`, App Server `3.0.0-beta.4`,
+App CLI `1.0.0-beta.30` and DB `1.0.0-beta.23`. Review the Agents migration
+notes and preview both pending tasks and checksum drift before upgrading an
+existing deployment.
+
+Use the plugin's `isDemoMode(container)` on the server and `useDemoMode()`
+on the client. The startup public configuration supplies the client flag;
+there is no CRM workspace `demoSite` field or application-owned mode helper.
+`server/app.ts` registers `demoEffectsGuard()` after i18n and before route
+handlers, for the shared `CRM_PATHS` plus Mail and Agents. Authentication,
+Demo Mode management and Users preferences retain their own APIs. Keep
+`server/routes/crm-paths.ts` current when adding a CRM route; authorization
+and the effects guard consume the same paths. The plugin supplies the
+localized refusal and its toast signal. Retain the CRM's background-work
+checks and form draft recovery, which the request guard does not replace.
+
+The plugin also owns HTTPS partitioned authentication cookies and visitor
+session preferences through the Users API (locale, theme mode and preset).
+Do not duplicate these policies in application configuration or grant
+preference-table writes. The existing theme controls use localStorage and
+language switching uses the I18n client; the plugin does not replace those
+controls or their ordinary application behavior.
 
 The CRM registers its existing story as the `crm` dataset in
 `server/providers/crm/demo-presentation.ts`; `demo-lifecycle.ts` adapts generation
@@ -42,7 +62,7 @@ On a demo site the assistant takes no question, yet its ask boxes (the dock
 and the overview's box) stay open to one: sending opens the panel on a new
 conversation with the question in its composer and the page's record pinned,
 creating nothing (`useAskDraft` in `client/components/crm/assistant-ask.ts`,
-`useDemoSite`), the composer saying why it goes no further
+`useDemoMode`), the composer saying why it goes no further
 (`agentPanel.demoSite`); the global search's answer stays off. A read must not
 write on a demo site: the plan list reads a pending plan past its time as
 expired without storing it, which a decision then does (`CrmPlans.list`).

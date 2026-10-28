@@ -22,6 +22,8 @@ import {
   type AppRuntimeContext,
 } from '@nocobase/app-server/runtime';
 import { spaRootRoutes } from '@nocobase/app-server/spa';
+import { demoEffectsGuard } from '@nocobase/app-plugin-demo-mode/server';
+import { CRM_PATHS } from './routes/crm-paths.js';
 
 export function createApp(runtime: AppRuntimeContext): Application {
   const app = createAppFromRuntime(runtime);
@@ -44,6 +46,13 @@ export function createApp(runtime: AppRuntimeContext): Application {
   app.addHttpMiddleware(requestLoggingMiddleware);
   app.addHttpMiddleware(sessionHttpMiddleware);
   app.addHttpMiddleware(i18nHttpMiddleware);
+  // Application change: refuse CRM, Mail and Agents external effects before
+  // handlers run. The plugin's SQL guard alone cannot protect these effects.
+  app.addHttpMiddleware(
+    demoEffectsGuard({
+      paths: [...CRM_PATHS, 'agents', 'mail'].map((path) => `/api/${path}/*`),
+    }),
+  );
   app.addRoutes(healthCheckApiRoutes);
   app.addRuntimeContributions(runtime);
   app.addRoutes(spaRootRoutes);

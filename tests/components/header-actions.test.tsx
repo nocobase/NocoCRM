@@ -22,6 +22,9 @@ const state = vi.hoisted(() => ({
   toggleChat: vi.fn(),
   openChat: vi.fn(),
 }));
+vi.mock('@nocobase/app-plugin-demo-mode/client', () => ({
+  useDemoMode: () => state.demoSite,
+}));
 vi.mock('@nocobase/app-plugin-agents/client/chat', () => ({
   useChatPanel: () => ({
     open: state.open,
@@ -44,7 +47,6 @@ vi.mock('@nocobase/app-plugin-agents/client/chat', () => ({
 }));
 vi.mock('../../client/components/crm/agent-chat/ask.js', () => ({
   useAgentReadiness: () => state.readiness,
-  useDemoSite: () => state.demoSite,
   listedConversations: (pages: { items: unknown[] }[] | undefined) =>
     (pages ?? []).flatMap((page) => page.items),
 }));

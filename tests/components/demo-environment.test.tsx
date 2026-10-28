@@ -1,3 +1,4 @@
+import { enableDemoMode } from '../setup/demo-mode.js';
 import { apiClientToken } from '@nocobase/app-client';
 import {
   AuthorizationClient,
@@ -38,6 +39,7 @@ it.each([
       locale,
       plugins: [demoMode()],
       services: (app) => {
+        enableDemoMode(app);
         app.container.singleton(
           authorizationClientToken,
           (resolver) =>
@@ -48,8 +50,6 @@ it.each([
         switch (path) {
           case 'authorization/permissions':
             return { data: { unrestricted: true, permissions: [] } };
-          case 'demoMode/status':
-            return { data: { enabled: true } };
           case 'demoMode/data':
             return {
               data: {

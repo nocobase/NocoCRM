@@ -12,7 +12,7 @@ import {
 import { authorizationToken } from '@nocobase/app-plugin-authorization';
 import { notificationServiceToken } from '@nocobase/app-plugin-notification/server';
 import { schedulerServiceToken } from '@nocobase/app-plugin-scheduler/server/tokens';
-import { isDemoMode } from './demo-mode.js';
+import { isDemoMode } from '@nocobase/app-plugin-demo-mode/server';
 import { scanLeadSignals } from './lead-signals.js';
 import { sweepFiles } from './file-sweep.js';
 import { sweepSearchAnswers } from '../crm-agents/search-answers.js';
@@ -304,7 +304,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
     // what it started, and may switch it off on the scheduled tasks page.
     // At nine in the morning of the CRM's time zone as it stands at boot.
     if (
-      !isDemoMode(this.app) &&
+      !isDemoMode(this.app.container) &&
       this.app.container.has(schedulerServiceToken)
     ) {
       const scheduler = this.app.container.resolve(schedulerServiceToken);
@@ -550,7 +550,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
     // The follow-ups run as tasks of the jobs service (follow-up-jobs.ts):
     // kept across a restart, as many at once as `crmFollowUps` allows.
     if (
-      !isDemoMode(this.app) &&
+      !isDemoMode(this.app.container) &&
       this.app.container.has(jobExecutorServiceToken)
     ) {
       const executor = this.app.container
@@ -688,7 +688,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
     // A read-only demo site (Demo Mode) starts no follow-up: no work runs
     // there beyond what its data shows.
     timeline.customerReplied = (_mailboxOwnerId, target) =>
-      isDemoMode(this.app) ? undefined : customerReplied(target);
+      isDemoMode(this.app.container) ? undefined : customerReplied(target);
     const whatsapp = this.app.container.resolve(whatsappToken);
     whatsapp.customerReplied = customerReplied;
     whatsapp.publicBasePath = toText(this.app.publicBasePath ?? '');
@@ -722,7 +722,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
     every(60_000, () => timeline.syncAll());
     // Request write protection does not cover background work. A demo site
     // keeps WhatsApp's deliveries and media fetching off.
-    if (isDemoMode(this.app)) return;
+    if (isDemoMode(this.app.container)) return;
     // WhatsApp deliveries read, their media fetched within Meta's five
     // minutes, and the follow-ups of customers gone quiet started.
     every(10_000, () => whatsapp.process());

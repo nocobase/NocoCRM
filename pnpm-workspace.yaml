@@ -415,6 +415,17 @@ minimumReleaseAgeExclude:
   - '@nocobase/app-plugin-foundation@0.1.0-beta.9'
   - '@nocobase/app-plugin-notification@2.0.0-beta.1'
   - '@nocobase/app-skills@0.1.0-beta.53'
+  - '@nocobase/agent-protocol@0.1.0-beta.16'
+  - '@nocobase/api-client@1.0.0-beta.6'
+  - '@nocobase/app-cli-client@0.1.0-beta.17'
+  - '@nocobase/app-cli@1.0.0-beta.30'
+  - '@nocobase/app-client@4.0.0-beta.4'
+  - '@nocobase/app-plugin-agents@1.0.0-beta.29'
+  - '@nocobase/app-plugin-authorization@1.0.0-beta.33'
+  - '@nocobase/app-plugin-demo-mode@0.2.0-beta.5'
+  - '@nocobase/app-plugin-users@2.0.0-beta.11'
+  - '@nocobase/app-server@3.0.0-beta.4'
+  - '@nocobase/db@1.0.0-beta.23'
 
 # One SQLite binding for the whole tree: the NocoBase packages accept 12 or 13,
 # and loading two builds of the native addon in one process crashes it.

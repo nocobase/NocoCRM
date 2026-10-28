@@ -1,3 +1,4 @@
+import { useDemoMode } from '@nocobase/app-plugin-demo-mode/client';
 import {
   CHAT_PANEL_ATTRIBUTE,
   useChatPanel,
@@ -10,7 +11,6 @@ import {
   useAgentReadiness,
   useAskAgent,
   useAskFiles,
-  useDemoSite,
 } from './agent-chat/ask.js';
 import type { Entity } from './api.js';
 import type { CurrentRecord } from './current-record.js';
@@ -100,7 +100,7 @@ export function useAskDraft(
   const { models, model, select } = useAgentModels(readiness.agent);
   const askAgent = useAskAgent();
   const panel = useChatPanel();
-  const demo = useDemoSite();
+  const demo = useDemoMode();
   const [value, setValue] = useState('');
   const [sending, setSending] = useState(false);
   const blocked = disabled || sending || files.uploading;

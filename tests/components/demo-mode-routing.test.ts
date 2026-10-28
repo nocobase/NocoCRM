@@ -1,6 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import type { AppClientRouteDefinition } from '@nocobase/app-client/plugins';
-import { demoEnvironmentEnabled } from '../../client/lib/demo-environment.js';
 
 afterEach(() => document.getElementById('nocobase-runtime-config')?.remove());
 
@@ -23,7 +22,6 @@ it.each([true, false])(
       public: { demoMode: { enabled } },
     });
     document.head.append(config);
-    expect(demoEnvironmentEnabled()).toBe(enabled);
     vi.resetModules();
     const { default: contributions } = await import('../../client/routes.js');
     const matches = contributions

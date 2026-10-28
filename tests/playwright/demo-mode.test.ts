@@ -207,13 +207,13 @@ test('anonymous home entry opens Super Admin and preserves an existing salespers
     ['sophie', 'wangxiaofang'].includes(account.username),
   )!;
   expect(sales).toBeDefined();
+  // Keep the browser's partition key when replacing its HTTPS demo session.
+  // APIRequestContext would add an unpartitioned cookie beside the old one.
   expect(
-    (
-      await context.request.post(
-        `${api}/demoMode/accounts/${sales.username}/signIn`,
-        { headers: { Origin: origin! } },
-      )
-    ).status(),
+    await page.evaluate(
+      async (url) => (await fetch(url, { method: 'POST' })).status,
+      `${api}/demoMode/accounts/${sales.username}/signIn`,
+    ),
   ).toBe(200);
   await page.goto(`${origin}/main/`);
   await expect(

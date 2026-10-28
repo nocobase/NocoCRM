@@ -22,6 +22,10 @@ const state = vi.hoisted(() => ({
   demoSite: false,
 }));
 
+vi.mock('@nocobase/app-plugin-demo-mode/client', () => ({
+  useDemoMode: () => state.demoSite,
+}));
+
 // The crm locale's English text by its dotted key, with {{name}} filled in.
 function english(key: string, options: Record<string, unknown> = {}): string {
   let value: unknown = crmEn;
@@ -42,11 +46,7 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
     // No workspace here but the dock's switch: no background agent to
     // leave out of the chat.
     useMetadata: () => ({
-      data: state.demoSite
-        ? { demoSite: true, settings: {} }
-        : state.dock
-          ? undefined
-          : { settings: { assistantDock: false } },
+      data: state.dock ? undefined : { settings: { assistantDock: false } },
     }),
   };
 });

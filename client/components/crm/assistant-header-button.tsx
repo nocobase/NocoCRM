@@ -1,3 +1,4 @@
+import { useDemoMode } from '@nocobase/app-plugin-demo-mode/client';
 import {
   useChatPanel,
   useConversationList,
@@ -7,11 +8,7 @@ import type { ReactElement } from 'react';
 import { Button } from '../ui/button.js';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip.js';
 import { toText, useCrmText } from './api.js';
-import {
-  listedConversations,
-  useAgentReadiness,
-  useDemoSite,
-} from './agent-chat/ask.js';
+import { listedConversations, useAgentReadiness } from './agent-chat/ask.js';
 
 // The assistant from the header, beside the appearance button, on every
 // page, the ones the dock leaves out (assistant-dock.tsx) included. It
@@ -23,7 +20,7 @@ import {
 // them unless one of them is already open (the one it remembers may be
 // gone: the demo is reset daily, and another account has its own).
 export function AssistantHeaderButton(): ReactElement | null {
-  return useDemoSite() ? <DemoHeaderButton /> : <HeaderButton />;
+  return useDemoMode() ? <DemoHeaderButton /> : <HeaderButton />;
 }
 
 // The demo site's: the conversations listed only there, so the button

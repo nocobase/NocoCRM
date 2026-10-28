@@ -1,3 +1,4 @@
+import { useDemoMode } from '@nocobase/app-plugin-demo-mode/client';
 import { Button } from '#components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '#components/ui/dialog';
 import {
@@ -40,7 +41,6 @@ import {
 import {
   listedConversations,
   useAgentReadiness,
-  useDemoSite,
   useAssistantDescription,
   useAssistantName,
   useCrmChatAgents,
@@ -148,7 +148,7 @@ function PanelBody({ modal = false }: { modal?: boolean }): ReactElement {
   const panel = useChatPanel();
   const agents = useCrmChatAgents();
   const readiness = useAgentReadiness();
-  const demo = useDemoSite();
+  const demo = useDemoMode();
   const list = useConversationList({});
   // The page's drawer when it draws one, else the panel's own (one
   // `?open=` never opens two).

@@ -53,7 +53,7 @@ import {
 import { SKILLS_MARKER } from '../providers/crm-agents/library.js';
 import { pendingDecisions } from '../providers/crm/lead-evaluation.js';
 import { mailTimelineToken } from '../providers/crm/mail-timeline.js';
-import { isDemoMode } from '../providers/crm/demo-mode.js';
+import { isDemoMode } from '@nocobase/app-plugin-demo-mode/server';
 import { noticesOf } from '../providers/crm/notices.js';
 import {
   CrmError,
@@ -126,26 +126,6 @@ import {
 import type { DatabaseAuthorizationConditions } from '@nocobase/app-plugin-authorization/server';
 import { APPROVAL_LIFECYCLE } from '../lifecycles/approvals.js';
 
-// The paths these routes own, which the guard (context.ts) is installed on.
-export const WORKSPACE_PATHS = [
-  'workspace',
-  'systemSettings',
-  'demoData',
-  'approvalLifecycle',
-  'approverRule',
-  'geography',
-  'search',
-  'dashboard',
-  'decisions',
-  'notices',
-  'aiAgents',
-  'attachments',
-  'mailTimeline',
-  'colleagues',
-  'searchAnswers',
-  'duplicateCheck',
-];
-
 const MAX_FILE = 20 * 1024 * 1024;
 const total = z.object({ total: z.number().int() });
 const settingsOnly =
@@ -192,7 +172,7 @@ export function registerWorkspaceRoutes(
     async (c) => {
       const actor = c.get('actor');
       // Reading the workspace must not persist preferences in a read-only demo.
-      if (!isDemoMode(app)) await service.rememberLocale(actor);
+      if (!isDemoMode(app.container)) await service.rememberLocale(actor);
       const permissions: Record<string, unknown> = {};
       // What the person may read, kept for the page-context resolvers of
       // the Agents plugin (CrmService.rememberReads).
@@ -246,8 +226,6 @@ export function registerWorkspaceRoutes(
             : {}),
           // Whether the pages offer the assistant at all.
           assistant: await service.assistantEnabled(),
-          // A read-only demo site refuses every question before it is sent.
-          demoSite: isDemoMode(app),
           // Whether the company's WhatsApp number is connected, or the demo
           // dataset's number holds conversations, so records show their
           // WhatsApp tab (whatsapp/service.ts).

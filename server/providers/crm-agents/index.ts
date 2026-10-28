@@ -1,5 +1,5 @@
 import { SEARCH_SOURCE } from './search-answers.js';
-import { isDemoMode } from '../crm/demo-mode.js';
+import { isDemoMode } from '@nocobase/app-plugin-demo-mode/server';
 import type { Application } from '@nocobase/app-server/application';
 import { loggingToken } from '@nocobase/app-server/logging';
 import {
@@ -108,7 +108,8 @@ export default class CrmAgentsProvider extends ServiceProvider<Application> {
       saved?.(settings);
     };
     // A read-only demo must not provision real model credentials.
-    if (!isDemoMode(this.app)) await provisionModelServices(this.app, agents);
+    if (!isDemoMode(this.app.container))
+      await provisionModelServices(this.app, agents);
     await provisionSkills(
       agents,
       database,

@@ -1,3 +1,4 @@
+import { useDemoMode } from '@nocobase/app-plugin-demo-mode/client';
 import { Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { useLocation } from 'react-router';
@@ -11,12 +12,7 @@ import {
 } from '../ui/tooltip.js';
 import { toText, useCrmText, useMetadata, type Entity } from './api.js';
 import { usePanelOpen, useAskDraft, useFocusReturn } from './assistant-ask.js';
-import {
-  recordPin,
-  useAgentReadiness,
-  useDemoSite,
-  useDiscuss,
-} from './agent-chat/ask.js';
+import { recordPin, useAgentReadiness, useDiscuss } from './agent-chat/ask.js';
 import { AskComposer } from './assistant-ask-composer.js';
 import { useCurrentRecord, type CurrentRecord } from './current-record.js';
 
@@ -105,7 +101,7 @@ export function AssistantDock(): ReactElement | null {
   const { data: meta } = useMetadata();
   // A demo site takes no question, but the dock stays open to one: sending
   // opens the panel on it (useAskDraft), which says why it goes no further.
-  const demo = useDemoSite();
+  const demo = useDemoMode();
   const unavailable =
     readiness.state === 'unavailable' && !demo ? readiness.reason : undefined;
   const draft = useAskDraft(record, readiness.state !== 'ready' && !demo);

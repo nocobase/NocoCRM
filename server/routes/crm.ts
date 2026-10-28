@@ -19,28 +19,21 @@ import { registerRecordMailRoutes } from './record-mail.js';
 import { registerRecordRoutes } from './records.js';
 import { registerSignalRoutes } from './signals.js';
 import { registerWhatsAppRoutes } from './whatsapp.js';
-import { registerWorkspaceRoutes, WORKSPACE_PATHS } from './workspace.js';
+import { registerWorkspaceRoutes } from './workspace.js';
+import { CRM_PATHS } from './crm-paths.js';
 import { HistoryEntry } from './schemas/common.js';
 import { CommentParams, UpdateCommentInput } from './schemas/comments.js';
 
 // The CRM's routes at the application's root: the records (/leads,
 // /companies, /contacts, /opportunities, /tasks, /approvals and
-// /comments) and the workspace's own (WORKSPACE_PATHS). The guard is
+// /comments) and the workspace's own (CRM_PATHS). The guard is
 // installed on exactly these paths, so nothing else under /api passes
 // through it.
 export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
   (app) => {
     const router = new Hono<CrmEnv>();
     const service = app.container.resolve(crmToken);
-    for (const path of [
-      ...entities,
-      'comments',
-      'plans',
-      'signals',
-      'whatsapp',
-      ...WORKSPACE_PATHS,
-    ])
-      router.use(`/${path}/*`, ...crmGuard(app));
+    for (const path of CRM_PATHS) router.use(`/${path}/*`, ...crmGuard(app));
     router.onError(crmErrorHandler);
 
     registerWorkspaceRoutes(app, router);

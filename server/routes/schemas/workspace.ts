@@ -115,10 +115,6 @@ export const Workspace = z
     assistant: z.boolean().meta({
       description: "Whether the CRM's AI employee is switched on.",
     }),
-    demoSite: z.boolean().optional().meta({
-      description:
-        'Whether this is a read-only demo site (Demo Mode), where the assistant takes no questions.',
-    }),
     agents: AgentSwitchesSchema,
     workAgentNames: z
       .record(
