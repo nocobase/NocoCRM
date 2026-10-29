@@ -1,0 +1,627 @@
+{
+  "kind": "Offline phase attribution from unchanged v2 reports; not a new measurement",
+  "limitations": [
+    "reset bucket mixes plugin work before/between/after callbacks and settleMail",
+    "No timestamp, paired heap/RSS sample or heap-space breakdown was saved for a peak",
+    "Heap and RSS maxima may occur at different times; a phase maximum is not that phase live-object size",
+    "Allocation profiles retained already-collected samples and contain no retainer edges or object identities",
+    "Milestone heap drops show changing occupancy, not the identities or reachability of collected objects"
+  ],
+  "reports": [
+    {
+      "name": "pilot-v2-base",
+      "sourceSha256": "6b6804a59a0e413fe969eb774656678fd2ed092c038b1c0b0b6a5a22c050f062",
+      "largestHeapRound": 4,
+      "largestRssRound": 1,
+      "rounds": [
+        {
+          "round": 1,
+          "heapPeakMiB": 218.37683868408203,
+          "heapBuckets": ["generate"],
+          "rssPeakMiB": 456.609375,
+          "rssBuckets": ["clear"],
+          "largestRecordedGenerationMilestone": {
+            "fraction": 0.455,
+            "elapsedMs": 630.0459170000104,
+            "heapMiB": 209.16364288330078
+          },
+          "lastGenerationMilestone": {
+            "fraction": 1,
+            "elapsedMs": 1155.5940830000036,
+            "heapMiB": 163.109375
+          },
+          "generationHeapDropsOver10MiB": [
+            {
+              "fromFraction": 0.455,
+              "toFraction": 0.5900000000000001,
+              "dropMiB": 14.842643737792969,
+              "intervalMs": 121.25287499999104
+            },
+            {
+              "fromFraction": 0.5900000000000001,
+              "toFraction": 0.6350000000000001,
+              "dropMiB": 10.88104248046875,
+              "intervalMs": 212.76604100000986
+            },
+            {
+              "fromFraction": 0.8240000000000001,
+              "toFraction": 0.8600000000000001,
+              "dropMiB": 47.12471008300781,
+              "intervalMs": 18.805125000013504
+            },
+            {
+              "fromFraction": 0.905,
+              "toFraction": 1,
+              "dropMiB": 21.813270568847656,
+              "intervalMs": 95.2744160000002
+            }
+          ]
+        },
+        {
+          "round": 2,
+          "heapPeakMiB": 226.8887481689453,
+          "heapBuckets": ["reset"],
+          "rssPeakMiB": 445.171875,
+          "rssBuckets": ["reset"],
+          "largestRecordedGenerationMilestone": {
+            "fraction": 0.788,
+            "elapsedMs": 968.1714589999901,
+            "heapMiB": 219.9696502685547
+          },
+          "lastGenerationMilestone": {
+            "fraction": 1,
+            "elapsedMs": 1128.5767090000008,
+            "heapMiB": 189.52337646484375
+          },
+          "generationHeapDropsOver10MiB": [
+            {
+              "fromFraction": 0.455,
+              "toFraction": 0.5900000000000001,
+              "dropMiB": 31.28509521484375,
+              "intervalMs": 145.46337499999208
+            },
+            {
+              "fromFraction": 0.788,
+              "toFraction": 0.8240000000000001,
+              "dropMiB": 45.011474609375,
+              "intervalMs": 13.779583000010462
+            },
+            {
+              "fromFraction": 0.905,
+              "toFraction": 1,
+              "dropMiB": 22.977981567382812,
+              "intervalMs": 91.9925840000069
+            }
+          ]
+        },
+        {
+          "round": 3,
+          "heapPeakMiB": 226.25135803222656,
+          "heapBuckets": ["reset"],
+          "rssPeakMiB": 436.21875,
+          "rssBuckets": ["reset", "clear"],
+          "largestRecordedGenerationMilestone": {
+            "fraction": 0.905,
+            "elapsedMs": 1205.5580830000108,
+            "heapMiB": 217.0792007446289
+          },
+          "lastGenerationMilestone": {
+            "fraction": 1,
+            "elapsedMs": 1311.8395829999936,
+            "heapMiB": 193.81808471679688
+          },
+          "generationHeapDropsOver10MiB": [
+            {
+              "fromFraction": 0.455,
+              "toFraction": 0.5900000000000001,
+              "dropMiB": 29.094818115234375,
+              "intervalMs": 156.4859170000127
+            },
+            {
+              "fromFraction": 0.7520000000000001,
+              "toFraction": 0.788,
+              "dropMiB": 42.332366943359375,
+              "intervalMs": 18.72087499999907
+            },
+            {
+              "fromFraction": 0.905,
+              "toFraction": 1,
+              "dropMiB": 23.26111602783203,
+              "intervalMs": 106.28149999998277
+            }
+          ]
+        },
+        {
+          "round": 4,
+          "heapPeakMiB": 229.02999877929688,
+          "heapBuckets": ["reset"],
+          "rssPeakMiB": 437.109375,
+          "rssBuckets": ["reset"],
+          "largestRecordedGenerationMilestone": {
+            "fraction": 0.455,
+            "elapsedMs": 621.6191669999971,
+            "heapMiB": 218.63186645507812
+          },
+          "lastGenerationMilestone": {
+            "fraction": 1,
+            "elapsedMs": 1136.2925000000105,
+            "heapMiB": 182.98585510253906
+          },
+          "generationHeapDropsOver10MiB": [
+            {
+              "fromFraction": 0.455,
+              "toFraction": 0.5900000000000001,
+              "dropMiB": 10.35052490234375,
+              "intervalMs": 125.65133300001617
+            },
+            {
+              "fromFraction": 0.5900000000000001,
+              "toFraction": 0.6350000000000001,
+              "dropMiB": 12.466079711914062,
+              "intervalMs": 198.6340419999906
+            },
+            {
+              "fromFraction": 0.8240000000000001,
+              "toFraction": 0.8600000000000001,
+              "dropMiB": 37.98479461669922,
+              "intervalMs": 19.130124999996042
+            },
+            {
+              "fromFraction": 0.905,
+              "toFraction": 1,
+              "dropMiB": 22.526344299316406,
+              "intervalMs": 93.5664580000157
+            }
+          ]
+        },
+        {
+          "round": 5,
+          "heapPeakMiB": 210.93080139160156,
+          "heapBuckets": ["generate"],
+          "rssPeakMiB": 436.3125,
+          "rssBuckets": ["clear"],
+          "largestRecordedGenerationMilestone": {
+            "fraction": 0.8240000000000001,
+            "elapsedMs": 1018.5999590000138,
+            "heapMiB": 203.39482879638672
+          },
+          "lastGenerationMilestone": {
+            "fraction": 1,
+            "elapsedMs": 1187.0053340000159,
+            "heapMiB": 162.0326919555664
+          },
+          "generationHeapDropsOver10MiB": [
+            {
+              "fromFraction": 0.455,
+              "toFraction": 0.5900000000000001,
+              "dropMiB": 17.026832580566406,
+              "intervalMs": 130.27262500001234
+            },
+            {
+              "fromFraction": 0.8240000000000001,
+              "toFraction": 0.8600000000000001,
+              "dropMiB": 46.63525390625,
+              "intervalMs": 20.67479099999764
+            },
+            {
+              "fromFraction": 0.905,
+              "toFraction": 1,
+              "dropMiB": 22.543731689453125,
+              "intervalMs": 104.81266700002016
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "pilot-v2-db-overlay",
+      "sourceSha256": "d8390a1319c3f38bcd8a1765ccebad9fcc65e9ef596ef729988c69d3af57c293",
+      "largestHeapRound": 2,
+      "largestRssRound": 1,
+      "rounds": [
+        {
+          "round": 1,
+          "heapPeakMiB": 238.57430267333984,
+          "heapBuckets": ["generate"],
+          "rssPeakMiB": 480.75,
+          "rssBuckets": ["clear"],
+          "largestRecordedGenerationMilestone": {
+            "fraction": 0.5900000000000001,
+            "elapsedMs": 1090.6492080000025,
+            "heapMiB": 238.52608489990234
+          },
+          "lastGenerationMilestone": {
+            "fraction": 1,
+            "elapsedMs": 1607.3486660000053,
+            "heapMiB": 200.66200256347656
+          },
+          "generationHeapDropsOver10MiB": [
+            {
+              "fromFraction": 0.5900000000000001,
+              "toFraction": 0.6350000000000001,
+              "dropMiB": 23.81529998779297,
+              "intervalMs": 286.49870799999917
+            },
+            {
+              "fromFraction": 0.788,
+              "toFraction": 0.8240000000000001,
+              "dropMiB": 41.18999481201172,
+              "intervalMs": 20.50900000000547
+            },
+            {
+              "fromFraction": 0.905,
+              "toFraction": 1,
+              "dropMiB": 24.07738494873047,
+              "intervalMs": 110.4049159999995
+            }
+          ]
+        },
+        {
+          "round": 2,
+          "heapPeakMiB": 246.77053833007812,
+          "heapBuckets": ["generate"],
+          "rssPeakMiB": 431.34375,
+          "rssBuckets": ["clear"],
+          "largestRecordedGenerationMilestone": {
+            "fraction": 0.365,
+            "elapsedMs": 709.9079169999895,
+            "heapMiB": 246.72212982177734
+          },
+          "lastGenerationMilestone": {
+            "fraction": 1,
+            "elapsedMs": 1944.0047090000007,
+            "heapMiB": 179.03185272216797
+          },
+          "generationHeapDropsOver10MiB": [
+            {
+              "fromFraction": 0.365,
+              "toFraction": 0.455,
+              "dropMiB": 78.12152862548828,
+              "intervalMs": 358.00379200000316
+            },
+            {
+              "fromFraction": 0.5900000000000001,
+              "toFraction": 0.6350000000000001,
+              "dropMiB": 13.800788879394531,
+              "intervalMs": 409.7059580000059
+            },
+            {
+              "fromFraction": 0.788,
+              "toFraction": 0.8240000000000001,
+              "dropMiB": 41.350738525390625,
+              "intervalMs": 16.858457999987877
+            },
+            {
+              "fromFraction": 0.905,
+              "toFraction": 1,
+              "dropMiB": 24.48729705810547,
+              "intervalMs": 139.4065840000112
+            }
+          ]
+        },
+        {
+          "round": 3,
+          "heapPeakMiB": 229.76870727539062,
+          "heapBuckets": ["reset"],
+          "rssPeakMiB": 405.03125,
+          "rssBuckets": ["reset"],
+          "largestRecordedGenerationMilestone": {
+            "fraction": 0.5900000000000001,
+            "elapsedMs": 823.2673750000249,
+            "heapMiB": 228.08895111083984
+          },
+          "lastGenerationMilestone": {
+            "fraction": 1,
+            "elapsedMs": 1344.214250000019,
+            "heapMiB": 193.181884765625
+          },
+          "generationHeapDropsOver10MiB": [
+            {
+              "fromFraction": 0.365,
+              "toFraction": 0.455,
+              "dropMiB": 30.745643615722656,
+              "intervalMs": 132.12650000001304
+            },
+            {
+              "fromFraction": 0.5900000000000001,
+              "toFraction": 0.6350000000000001,
+              "dropMiB": 19.88811492919922,
+              "intervalMs": 254.51599999997416
+            },
+            {
+              "fromFraction": 0.788,
+              "toFraction": 0.8240000000000001,
+              "dropMiB": 40.88196563720703,
+              "intervalMs": 18.50587500000256
+            },
+            {
+              "fromFraction": 0.905,
+              "toFraction": 1,
+              "dropMiB": 24.67059326171875,
+              "intervalMs": 109.80874999999651
+            }
+          ]
+        },
+        {
+          "round": 4,
+          "heapPeakMiB": 222.99906158447266,
+          "heapBuckets": ["generate"],
+          "rssPeakMiB": 405.484375,
+          "rssBuckets": ["clear"],
+          "largestRecordedGenerationMilestone": {
+            "fraction": 0.365,
+            "elapsedMs": 541.5278749999998,
+            "heapMiB": 222.9509506225586
+          },
+          "lastGenerationMilestone": {
+            "fraction": 1,
+            "elapsedMs": 1348.6160830000008,
+            "heapMiB": 196.69927978515625
+          },
+          "generationHeapDropsOver10MiB": [
+            {
+              "fromFraction": 0.365,
+              "toFraction": 0.455,
+              "dropMiB": 34.091957092285156,
+              "intervalMs": 141.57091700000456
+            },
+            {
+              "fromFraction": 0.6350000000000001,
+              "toFraction": 0.7160000000000001,
+              "dropMiB": 49.36408233642578,
+              "intervalMs": 17.085791999998037
+            },
+            {
+              "fromFraction": 0.905,
+              "toFraction": 1,
+              "dropMiB": 21.140060424804688,
+              "intervalMs": 105.64145799999824
+            }
+          ]
+        },
+        {
+          "round": 5,
+          "heapPeakMiB": 219.82929229736328,
+          "heapBuckets": ["generate"],
+          "rssPeakMiB": 390.40625,
+          "rssBuckets": ["reset"],
+          "largestRecordedGenerationMilestone": {
+            "fraction": 0.905,
+            "elapsedMs": 1089.3909169999824,
+            "heapMiB": 216.5423812866211
+          },
+          "lastGenerationMilestone": {
+            "fraction": 1,
+            "elapsedMs": 1182.5217089999933,
+            "heapMiB": 195.90715789794922
+          },
+          "generationHeapDropsOver10MiB": [
+            {
+              "fromFraction": 0.455,
+              "toFraction": 0.5900000000000001,
+              "dropMiB": 11.492034912109375,
+              "intervalMs": 131.7960000000021
+            },
+            {
+              "fromFraction": 0.6350000000000001,
+              "toFraction": 0.7160000000000001,
+              "dropMiB": 51.907249450683594,
+              "intervalMs": 11.904999999998836
+            },
+            {
+              "fromFraction": 0.905,
+              "toFraction": 1,
+              "dropMiB": 20.635223388671875,
+              "intervalMs": 93.13079200001084
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "pilot-v2-app-candidate",
+      "sourceSha256": "e6b72b80a37c0bcbb564b677b04f6c2017515af528df7ce50b362042bb0f20ed",
+      "largestHeapRound": 3,
+      "largestRssRound": 1,
+      "rounds": [
+        {
+          "round": 1,
+          "heapPeakMiB": 234.38880157470703,
+          "heapBuckets": ["generate"],
+          "rssPeakMiB": 460.90625,
+          "rssBuckets": ["clear"],
+          "largestRecordedGenerationMilestone": {
+            "fraction": 0.6350000000000001,
+            "elapsedMs": 1084.143916999994,
+            "heapMiB": 234.3892364501953
+          },
+          "lastGenerationMilestone": {
+            "fraction": 1,
+            "elapsedMs": 1366.0559589999903,
+            "heapMiB": 172.6071014404297
+          },
+          "generationHeapDropsOver10MiB": [
+            {
+              "fromFraction": 0.455,
+              "toFraction": 0.5900000000000001,
+              "dropMiB": 20.61444854736328,
+              "intervalMs": 130.53679199999897
+            },
+            {
+              "fromFraction": 0.6350000000000001,
+              "toFraction": 0.7160000000000001,
+              "dropMiB": 49.240516662597656,
+              "intervalMs": 19.864499999996042
+            },
+            {
+              "fromFraction": 0.788,
+              "toFraction": 0.8240000000000001,
+              "dropMiB": 35.808990478515625,
+              "intervalMs": 27.08458400001109
+            },
+            {
+              "fromFraction": 0.905,
+              "toFraction": 1,
+              "dropMiB": 24.837112426757812,
+              "intervalMs": 133.0037089999969
+            }
+          ]
+        },
+        {
+          "round": 2,
+          "heapPeakMiB": 233.39788818359375,
+          "heapBuckets": ["generate"],
+          "rssPeakMiB": 433.90625,
+          "rssBuckets": ["reset"],
+          "largestRecordedGenerationMilestone": {
+            "fraction": 0.905,
+            "elapsedMs": 1284.1367919999902,
+            "heapMiB": 230.0176010131836
+          },
+          "lastGenerationMilestone": {
+            "fraction": 1,
+            "elapsedMs": 1402.6497919999965,
+            "heapMiB": 209.65262603759766
+          },
+          "generationHeapDropsOver10MiB": [
+            {
+              "fromFraction": 0.455,
+              "toFraction": 0.5900000000000001,
+              "dropMiB": 22.486114501953125,
+              "intervalMs": 150.1643330000079
+            },
+            {
+              "fromFraction": 0.6350000000000001,
+              "toFraction": 0.7160000000000001,
+              "dropMiB": 45.34269714355469,
+              "intervalMs": 10.435708000004524
+            },
+            {
+              "fromFraction": 0.905,
+              "toFraction": 1,
+              "dropMiB": 20.364974975585938,
+              "intervalMs": 118.51300000000629
+            }
+          ]
+        },
+        {
+          "round": 3,
+          "heapPeakMiB": 235.9935760498047,
+          "heapBuckets": ["generate"],
+          "rssPeakMiB": 434.125,
+          "rssBuckets": ["reset"],
+          "largestRecordedGenerationMilestone": {
+            "fraction": 0.905,
+            "elapsedMs": 1012.8513329999987,
+            "heapMiB": 232.59652709960938
+          },
+          "lastGenerationMilestone": {
+            "fraction": 1,
+            "elapsedMs": 1118.0310000000172,
+            "heapMiB": 211.90113830566406
+          },
+          "generationHeapDropsOver10MiB": [
+            {
+              "fromFraction": 0.455,
+              "toFraction": 0.5900000000000001,
+              "dropMiB": 22.182167053222656,
+              "intervalMs": 120.6933330000029
+            },
+            {
+              "fromFraction": 0.6350000000000001,
+              "toFraction": 0.7160000000000001,
+              "dropMiB": 46.216041564941406,
+              "intervalMs": 9.780374999972992
+            },
+            {
+              "fromFraction": 0.905,
+              "toFraction": 1,
+              "dropMiB": 20.695388793945312,
+              "intervalMs": 105.17966700001853
+            }
+          ]
+        },
+        {
+          "round": 4,
+          "heapPeakMiB": 234.03522491455078,
+          "heapBuckets": ["generate"],
+          "rssPeakMiB": 433.734375,
+          "rssBuckets": ["clear"],
+          "largestRecordedGenerationMilestone": {
+            "fraction": 0.905,
+            "elapsedMs": 1283.2669590000005,
+            "heapMiB": 230.71118927001953
+          },
+          "lastGenerationMilestone": {
+            "fraction": 1,
+            "elapsedMs": 1476.20883399999,
+            "heapMiB": 210.4690399169922
+          },
+          "generationHeapDropsOver10MiB": [
+            {
+              "fromFraction": 0.455,
+              "toFraction": 0.5900000000000001,
+              "dropMiB": 23.05182647705078,
+              "intervalMs": 130.69154100000742
+            },
+            {
+              "fromFraction": 0.6350000000000001,
+              "toFraction": 0.7160000000000001,
+              "dropMiB": 47.30928039550781,
+              "intervalMs": 16.94929200000479
+            },
+            {
+              "fromFraction": 0.905,
+              "toFraction": 1,
+              "dropMiB": 20.242149353027344,
+              "intervalMs": 192.94187499998952
+            }
+          ]
+        },
+        {
+          "round": 5,
+          "heapPeakMiB": 229.2212371826172,
+          "heapBuckets": ["generate"],
+          "rssPeakMiB": 421.71875,
+          "rssBuckets": ["generate"],
+          "largestRecordedGenerationMilestone": {
+            "fraction": 0.5900000000000001,
+            "elapsedMs": 845.4865830000199,
+            "heapMiB": 229.16920471191406
+          },
+          "lastGenerationMilestone": {
+            "fraction": 1,
+            "elapsedMs": 1513.6062500000116,
+            "heapMiB": 161.87706756591797
+          },
+          "generationHeapDropsOver10MiB": [
+            {
+              "fromFraction": 0.05,
+              "toFraction": 0.365,
+              "dropMiB": 44.177978515625,
+              "intervalMs": 460.65562500001397
+            },
+            {
+              "fromFraction": 0.5900000000000001,
+              "toFraction": 0.6350000000000001,
+              "dropMiB": 45.942649841308594,
+              "intervalMs": 420.71266699998523
+            },
+            {
+              "fromFraction": 0.8240000000000001,
+              "toFraction": 0.8600000000000001,
+              "dropMiB": 47.09684753417969,
+              "intervalMs": 23.550041000009514
+            },
+            {
+              "fromFraction": 0.905,
+              "toFraction": 1,
+              "dropMiB": 22.189842224121094,
+              "intervalMs": 123.1927919999871
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

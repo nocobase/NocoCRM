@@ -332,8 +332,12 @@ started for this candidate. Its source was restored byte for byte, hash
 Raw [baseline](demo-reset-20261029-v2/pilot-v2-base/result.json) and
 [candidate](demo-reset-20261029-v2/pilot-v2-app-candidate/result.json) reports
 retain all five rounds and phase/milestone samples. In three baseline rounds the
-heap maximum occurred after generation, during Mail convergence; a generator-only
-allocation improvement would not automatically reduce that full-reset peak.
+heap maximum was in the mixed `reset` bucket, outside the clear/generate callbacks.
+That bucket also includes plugin work before, between and after those callbacks;
+v2 did not separately tag `settleMail`. It cannot prove those peaks occurred
+after generation or in Mail convergence. See the
+[peak attribution audit](demo-reset-peak-investigation.md) for the correction,
+the missing live-object evidence and the bounded next diagnostic.
 
 ## V3 verification limits and remaining acceptance work
 

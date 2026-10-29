@@ -15,3 +15,5 @@
   unproven peak-memory reduction.
 - Capture final worker OS high-water RSS and abnormal exits in the resource
   launcher, enforce exact story counts, and tighten fixed regression budgets.
+- Clarify mixed reset-phase attribution and prepare a separately coordinated,
+  single-reset diagnostic for application object lifetimes and natural GC.
