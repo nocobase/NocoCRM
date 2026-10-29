@@ -1,4 +1,6 @@
 import type { Application } from '@nocobase/app-server/application';
+import { mailServiceToken } from '@nocobase/app-plugin-mail/server';
+import { waitForDemoMailboxRemoval } from './demo-mail-cleanup.js';
 import { driveManagerToken } from '@nocobase/app-server/drive';
 import type { DemoImportContext } from '@nocobase/app-plugin-demo-mode/server/tokens';
 import { authorizationToken } from '@nocobase/app-plugin-authorization/server';
@@ -13,6 +15,8 @@ import {
 } from './demo.js';
 import { DEMO_MAIL_ROW, setDemoMailLanguage } from './demo-mail.js';
 import { whatsappToken } from './whatsapp/service.js';
+
+const DEMO_BATCH_SIZE = 200;
 
 export async function generateDemo(
   app: Application,
@@ -65,11 +69,21 @@ export async function generateDemo(
     'crmTasks',
     'crmApprovals',
   ]) {
-    const rows = await query.selectFrom(table).select('id').execute();
-    await context.track(
-      table,
-      rows.map((row) => String(row.id)),
-    );
+    let cursor: string | undefined;
+    for (;;) {
+      let selection = query.selectFrom(table).select('id');
+      if (cursor !== undefined) selection = selection.where('id', '>', cursor);
+      const rows = await selection
+        .orderBy('id', 'asc')
+        .limit(DEMO_BATCH_SIZE)
+        .execute();
+      if (!rows.length) break;
+      await context.track(
+        table,
+        rows.map((row) => String(row.id)),
+      );
+      cursor = String(rows[rows.length - 1].id);
+    }
   }
   await context.progress(1);
 }
@@ -78,59 +92,65 @@ export async function generateDemo(
 export async function clearDemoBusiness(app: Application): Promise<void> {
   const crm = app.container.resolve(crmToken);
   const query = crm.database.query();
-  const { demoMailboxes, demoChats, demoInbox } = demoServices(app);
-  if (demoMailboxes) {
+  const { demoChats, demoInbox } = demoServices(app);
+  if (app.container.has(mailServiceToken)) {
+    const mail = app.container.resolve(mailServiceToken);
     const accounts = await query
       .selectFrom('mailAccounts')
-      .select(['id', 'userId'])
+      .select(['id', 'userId', 'status'])
       .where('providerType', '=', 'crm-demo')
       .execute();
-    for (const account of accounts)
-      await demoMailboxes.remove(String(account.userId), String(account.id));
-    // Mail removes its messages asynchronously. Wait before reconnecting the same
-    // fictional addresses, otherwise generation can silently lose a mailbox.
-    const deadline = Date.now() + 180_000;
-    while (
-      accounts.length &&
-      (
-        await query
-          .selectFrom('mailAccounts')
-          .select('id')
-          .where(
-            'id',
-            'in',
-            accounts.map((account) => String(account.id)),
-          )
-          .execute()
-      ).length
-    ) {
-      if (Date.now() > deadline)
-        throw new Error('Demo mailbox cleanup did not complete.');
-      await new Promise((resolve) => setTimeout(resolve, 500));
+    for (const account of accounts) {
+      // A retry may observe an already-running removal. Do not re-submit it:
+      // it may finish between this snapshot and removeAccount's lookup.
+      if (account.status !== 'removing')
+        await mail.removeAccount(
+          { actorId: String(account.userId) },
+          String(account.id),
+        );
+    }
+    await waitForDemoMailboxRemoval(
+      mail,
+      accounts.map((account) => ({
+        id: String(account.id),
+        userId: String(account.userId),
+      })),
+    );
+  }
+
+  if (demoChats) {
+    // Delete from the front, without offsets that skip rows as they disappear.
+    for (;;) {
+      const chats = await query
+        .selectFrom('agConversations')
+        .select('id')
+        .where('source', 'in', ['crm', 'crm-search'])
+        .orderBy('id', 'asc')
+        .limit(DEMO_BATCH_SIZE)
+        .execute();
+      if (!chats.length) break;
+      await demoChats.remove(chats.map((row) => String(row.id)));
     }
   }
-  if (demoChats) {
-    const chats = await query
-      .selectFrom('agConversations')
-      .select('id')
-      .where('source', 'in', ['crm', 'crm-search'])
+  for (;;) {
+    const files = await query
+      .selectFrom('crmFiles')
+      .select(['id', 'disk', 'key'])
+      .orderBy('id', 'asc')
+      .limit(DEMO_BATCH_SIZE)
       .execute();
-    await demoChats.remove(chats.map((row) => String(row.id)));
-  }
-  const files = await query
-    .selectFrom('crmFiles')
-    .select(['id', 'disk', 'key'])
-    .execute();
-  for (const file of files) {
-    await app.container
-      .resolve(driveManagerToken)
-      .use(String(file.disk))
-      .delete(String(file.key));
-    await query
-      .deleteFrom('crmFileUploads')
-      .where('id', '=', file.id)
-      .execute();
-    await query.deleteFrom('crmFiles').where('id', '=', file.id).execute();
+    if (!files.length) break;
+    for (const file of files) {
+      await app.container
+        .resolve(driveManagerToken)
+        .use(String(file.disk))
+        .delete(String(file.key));
+      await query
+        .deleteFrom('crmFileUploads')
+        .where('id', '=', file.id)
+        .execute();
+      await query.deleteFrom('crmFiles').where('id', '=', file.id).execute();
+    }
   }
   await crm.database.transaction(async ({ query: q }) => {
     for (const table of [
