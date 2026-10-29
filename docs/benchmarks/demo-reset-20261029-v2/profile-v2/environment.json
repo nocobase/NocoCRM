@@ -1,0 +1,15 @@
+{
+  "head": "9b2479886a750eabcb11219539dcf42714280769",
+  "sourceRevision": "working-tree",
+  "startedAt": "2026-10-29T07:54:51.610283+00:00",
+  "sourceSha256": "b106555a74cbb0a1c6b459d24708c841c19f1702fd4d289cc2bc210f4fc4b84a",
+  "lockSha256": "2b62328831c2d6c97b24ad3da17e7f04304752f4990350882bb61f05a32e7b5a",
+  "workerSha256": "cada46647ed50ae3ccec6c4d96af485bd25e6c9a7ba756fd95d59d73e85148bf",
+  "platform": "macOS-27.0-arm64-arm-64bit",
+  "machine": "arm64",
+  "cpuCount": 10,
+  "node": "v24.22.1",
+  "profile": true,
+  "sharedHost": true,
+  "lock": "/tmp/demo-reset-resource-benchmark.lock"
+}

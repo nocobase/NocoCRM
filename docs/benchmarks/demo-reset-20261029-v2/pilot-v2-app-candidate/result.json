@@ -1,0 +1,504 @@
+{
+  "node": "v24.22.1",
+  "profile": false,
+  "measurementWindow": "demo.reset plus settleMail; excludes integrity queries and explicit GC",
+  "initialRetainedMiB": 153.4178237915039,
+  "counts": {
+    "crmLeads": 18,
+    "crmCompanies": 11,
+    "crmContacts": 22,
+    "crmOpportunities": 34,
+    "crmTasks": 117,
+    "crmApprovals": 6,
+    "crmHistory": 593,
+    "crmWaMessages": 222,
+    "agConversations": 4,
+    "agConversationMessages": 10
+  },
+  "mailRows": 162,
+  "rounds": [
+    {
+      "round": 1,
+      "elapsedMs": 37988.084959,
+      "peakHeapMiB": 234.38880157470703,
+      "peakRssMiB": 460.90625,
+      "retainedHeapMiB": 147.26305389404297,
+      "phases": {
+        "reset": {
+          "ms": 0,
+          "peakHeapMiB": 210.2547149658203,
+          "peakRssMiB": 460.796875
+        },
+        "clear": {
+          "ms": 35175.116708,
+          "peakHeapMiB": 216.34835052490234,
+          "peakRssMiB": 460.90625
+        },
+        "generate": {
+          "ms": 1373.4111249999987,
+          "peakHeapMiB": 234.38880157470703,
+          "peakRssMiB": 433.484375
+        },
+        "verification": {
+          "ms": 0,
+          "peakHeapMiB": 181.9452362060547,
+          "peakRssMiB": 433.515625
+        }
+      },
+      "milestones": [
+        {
+          "fraction": 0.05,
+          "elapsedMs": 137.2041249999893,
+          "heapMiB": 163.85313415527344
+        },
+        {
+          "fraction": 0.365,
+          "elapsedMs": 513.5990419999871,
+          "heapMiB": 195.9363555908203
+        },
+        {
+          "fraction": 0.455,
+          "elapsedMs": 642.9812919999968,
+          "heapMiB": 220.121826171875
+        },
+        {
+          "fraction": 0.5900000000000001,
+          "elapsedMs": 773.5180839999957,
+          "heapMiB": 199.50737762451172
+        },
+        {
+          "fraction": 0.6350000000000001,
+          "elapsedMs": 1084.143916999994,
+          "heapMiB": 234.3892364501953
+        },
+        {
+          "fraction": 0.7160000000000001,
+          "elapsedMs": 1104.00841699999,
+          "heapMiB": 185.14871978759766
+        },
+        {
+          "fraction": 0.7520000000000001,
+          "elapsedMs": 1116.6599169999972,
+          "heapMiB": 188.2922821044922
+        },
+        {
+          "fraction": 0.788,
+          "elapsedMs": 1137.574499999988,
+          "heapMiB": 194.88211822509766
+        },
+        {
+          "fraction": 0.8240000000000001,
+          "elapsedMs": 1164.659083999999,
+          "heapMiB": 159.07312774658203
+        },
+        {
+          "fraction": 0.8600000000000001,
+          "elapsedMs": 1185.3140839999978,
+          "heapMiB": 169.36624145507812
+        },
+        {
+          "fraction": 0.8600000000000001,
+          "elapsedMs": 1195.1746669999993,
+          "heapMiB": 173.40277099609375
+        },
+        {
+          "fraction": 0.905,
+          "elapsedMs": 1233.0522499999934,
+          "heapMiB": 197.4442138671875
+        },
+        {
+          "fraction": 1,
+          "elapsedMs": 1366.0559589999903,
+          "heapMiB": 172.6071014404297
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "elapsedMs": 37911.86554100001,
+      "peakHeapMiB": 233.39788818359375,
+      "peakRssMiB": 433.90625,
+      "retainedHeapMiB": 147.65367126464844,
+      "phases": {
+        "reset": {
+          "ms": 0,
+          "peakHeapMiB": 222.2614517211914,
+          "peakRssMiB": 433.90625
+        },
+        "clear": {
+          "ms": 35050.35179100001,
+          "peakHeapMiB": 204.6790313720703,
+          "peakRssMiB": 432.03125
+        },
+        "generate": {
+          "ms": 1410.5926670000044,
+          "peakHeapMiB": 233.39788818359375,
+          "peakRssMiB": 429.0625
+        },
+        "verification": {
+          "ms": 0,
+          "peakHeapMiB": 175.19796752929688,
+          "peakRssMiB": 433.65625
+        }
+      },
+      "milestones": [
+        {
+          "fraction": 0.05,
+          "elapsedMs": 150.00074999999197,
+          "heapMiB": 154.60698699951172
+        },
+        {
+          "fraction": 0.365,
+          "elapsedMs": 560.3564999999944,
+          "heapMiB": 186.55216217041016
+        },
+        {
+          "fraction": 0.455,
+          "elapsedMs": 730.6735419999895,
+          "heapMiB": 209.23391723632812
+        },
+        {
+          "fraction": 0.5900000000000001,
+          "elapsedMs": 880.8378749999974,
+          "heapMiB": 186.747802734375
+        },
+        {
+          "fraction": 0.6350000000000001,
+          "elapsedMs": 1176.3702499999927,
+          "heapMiB": 221.69409942626953
+        },
+        {
+          "fraction": 0.7160000000000001,
+          "elapsedMs": 1186.8059579999972,
+          "heapMiB": 176.35140228271484
+        },
+        {
+          "fraction": 0.7520000000000001,
+          "elapsedMs": 1193.8907499999914,
+          "heapMiB": 179.4515838623047
+        },
+        {
+          "fraction": 0.788,
+          "elapsedMs": 1206.3915419999976,
+          "heapMiB": 185.89183044433594
+        },
+        {
+          "fraction": 0.8240000000000001,
+          "elapsedMs": 1219.763957999996,
+          "heapMiB": 192.4393768310547
+        },
+        {
+          "fraction": 0.8600000000000001,
+          "elapsedMs": 1239.5759169999947,
+          "heapMiB": 202.63050079345703
+        },
+        {
+          "fraction": 0.8600000000000001,
+          "elapsedMs": 1247.5067500000005,
+          "heapMiB": 206.5832977294922
+        },
+        {
+          "fraction": 0.905,
+          "elapsedMs": 1284.1367919999902,
+          "heapMiB": 230.0176010131836
+        },
+        {
+          "fraction": 1,
+          "elapsedMs": 1402.6497919999965,
+          "heapMiB": 209.65262603759766
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "elapsedMs": 37849.54608300001,
+      "peakHeapMiB": 235.9935760498047,
+      "peakRssMiB": 434.125,
+      "retainedHeapMiB": 147.9876251220703,
+      "phases": {
+        "reset": {
+          "ms": 0,
+          "peakHeapMiB": 224.8485870361328,
+          "peakRssMiB": 434.125
+        },
+        "clear": {
+          "ms": 35072.282875000004,
+          "peakHeapMiB": 210.08560943603516,
+          "peakRssMiB": 433.15625
+        },
+        "generate": {
+          "ms": 1123.2672080000048,
+          "peakHeapMiB": 235.9935760498047,
+          "peakRssMiB": 427.9375
+        },
+        "verification": {
+          "ms": 0,
+          "peakHeapMiB": 176.02428436279297,
+          "peakRssMiB": 434.21875
+        }
+      },
+      "milestones": [
+        {
+          "fraction": 0.05,
+          "elapsedMs": 137.76366600001347,
+          "heapMiB": 158.11473846435547
+        },
+        {
+          "fraction": 0.365,
+          "elapsedMs": 478.3277910000179,
+          "heapMiB": 188.36003875732422
+        },
+        {
+          "fraction": 0.455,
+          "elapsedMs": 593.6997080000001,
+          "heapMiB": 211.84432983398438
+        },
+        {
+          "fraction": 0.5900000000000001,
+          "elapsedMs": 714.393041000003,
+          "heapMiB": 189.66216278076172
+        },
+        {
+          "fraction": 0.6350000000000001,
+          "elapsedMs": 914.9164160000219,
+          "heapMiB": 224.77301025390625
+        },
+        {
+          "fraction": 0.7160000000000001,
+          "elapsedMs": 924.6967909999948,
+          "heapMiB": 178.55696868896484
+        },
+        {
+          "fraction": 0.7520000000000001,
+          "elapsedMs": 931.0541249999951,
+          "heapMiB": 181.6700210571289
+        },
+        {
+          "fraction": 0.788,
+          "elapsedMs": 943.522500000021,
+          "heapMiB": 188.1959457397461
+        },
+        {
+          "fraction": 0.8240000000000001,
+          "elapsedMs": 955.7633330000099,
+          "heapMiB": 194.75460815429688
+        },
+        {
+          "fraction": 0.8600000000000001,
+          "elapsedMs": 973.1030000000028,
+          "heapMiB": 204.9715805053711
+        },
+        {
+          "fraction": 0.8600000000000001,
+          "elapsedMs": 980.43179100001,
+          "heapMiB": 208.93982696533203
+        },
+        {
+          "fraction": 0.905,
+          "elapsedMs": 1012.8513329999987,
+          "heapMiB": 232.59652709960938
+        },
+        {
+          "fraction": 1,
+          "elapsedMs": 1118.0310000000172,
+          "heapMiB": 211.90113830566406
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "elapsedMs": 37896.75829200001,
+      "peakHeapMiB": 234.03522491455078,
+      "peakRssMiB": 433.734375,
+      "retainedHeapMiB": 148.26148986816406,
+      "phases": {
+        "reset": {
+          "ms": 0,
+          "peakHeapMiB": 217.362060546875,
+          "peakRssMiB": 433.625
+        },
+        "clear": {
+          "ms": 34971.03033400001,
+          "peakHeapMiB": 209.35720825195312,
+          "peakRssMiB": 433.734375
+        },
+        "generate": {
+          "ms": 1488.9894160000258,
+          "peakHeapMiB": 234.03522491455078,
+          "peakRssMiB": 422.0625
+        },
+        "verification": {
+          "ms": 0,
+          "peakHeapMiB": 198.32754516601562,
+          "peakRssMiB": 381.453125
+        }
+      },
+      "milestones": [
+        {
+          "fraction": 0.05,
+          "elapsedMs": 141.92787499999395,
+          "heapMiB": 159.3062973022461
+        },
+        {
+          "fraction": 0.365,
+          "elapsedMs": 568.3694590000086,
+          "heapMiB": 190.60287475585938
+        },
+        {
+          "fraction": 0.455,
+          "elapsedMs": 695.3088339999958,
+          "heapMiB": 212.5350799560547
+        },
+        {
+          "fraction": 0.5900000000000001,
+          "elapsedMs": 826.0003750000033,
+          "heapMiB": 189.4832534790039
+        },
+        {
+          "fraction": 0.6350000000000001,
+          "elapsedMs": 1114.3981670000067,
+          "heapMiB": 224.54574584960938
+        },
+        {
+          "fraction": 0.7160000000000001,
+          "elapsedMs": 1131.3474590000114,
+          "heapMiB": 177.23646545410156
+        },
+        {
+          "fraction": 0.7520000000000001,
+          "elapsedMs": 1145.3696669999918,
+          "heapMiB": 180.30750274658203
+        },
+        {
+          "fraction": 0.788,
+          "elapsedMs": 1163.6274170000106,
+          "heapMiB": 186.74635314941406
+        },
+        {
+          "fraction": 0.8240000000000001,
+          "elapsedMs": 1180.6353750000126,
+          "heapMiB": 193.2470932006836
+        },
+        {
+          "fraction": 0.8600000000000001,
+          "elapsedMs": 1207.026125000004,
+          "heapMiB": 203.40504455566406
+        },
+        {
+          "fraction": 0.8600000000000001,
+          "elapsedMs": 1222.1500839999935,
+          "heapMiB": 207.33673095703125
+        },
+        {
+          "fraction": 0.905,
+          "elapsedMs": 1283.2669590000005,
+          "heapMiB": 230.71118927001953
+        },
+        {
+          "fraction": 1,
+          "elapsedMs": 1476.20883399999,
+          "heapMiB": 210.4690399169922
+        }
+      ]
+    },
+    {
+      "round": 5,
+      "elapsedMs": 37943.521416,
+      "peakHeapMiB": 229.2212371826172,
+      "peakRssMiB": 421.71875,
+      "retainedHeapMiB": 148.50196838378906,
+      "phases": {
+        "reset": {
+          "ms": 0,
+          "peakHeapMiB": 207.95591735839844,
+          "peakRssMiB": 411.078125
+        },
+        "clear": {
+          "ms": 35056.091916000005,
+          "peakHeapMiB": 206.4002227783203,
+          "peakRssMiB": 398.84375
+        },
+        "generate": {
+          "ms": 1519.5338749999937,
+          "peakHeapMiB": 229.2212371826172,
+          "peakRssMiB": 421.71875
+        },
+        "verification": {
+          "ms": 0,
+          "peakHeapMiB": 170.10663604736328,
+          "peakRssMiB": 374.375
+        }
+      },
+      "milestones": [
+        {
+          "fraction": 0.05,
+          "elapsedMs": 135.20850000000792,
+          "heapMiB": 215.24853515625
+        },
+        {
+          "fraction": 0.365,
+          "elapsedMs": 595.8641250000219,
+          "heapMiB": 171.070556640625
+        },
+        {
+          "fraction": 0.455,
+          "elapsedMs": 725.2300830000022,
+          "heapMiB": 193.2939224243164
+        },
+        {
+          "fraction": 0.5900000000000001,
+          "elapsedMs": 845.4865830000199,
+          "heapMiB": 229.16920471191406
+        },
+        {
+          "fraction": 0.6350000000000001,
+          "elapsedMs": 1266.1992500000051,
+          "heapMiB": 183.22655487060547
+        },
+        {
+          "fraction": 0.7160000000000001,
+          "elapsedMs": 1278.2970420000202,
+          "heapMiB": 187.48031616210938
+        },
+        {
+          "fraction": 0.7520000000000001,
+          "elapsedMs": 1285.945458000002,
+          "heapMiB": 190.59317779541016
+        },
+        {
+          "fraction": 0.788,
+          "elapsedMs": 1300.9533750000119,
+          "heapMiB": 197.1133041381836
+        },
+        {
+          "fraction": 0.8240000000000001,
+          "elapsedMs": 1316.7856670000183,
+          "heapMiB": 203.75686645507812
+        },
+        {
+          "fraction": 0.8600000000000001,
+          "elapsedMs": 1340.3357080000278,
+          "heapMiB": 156.66001892089844
+        },
+        {
+          "fraction": 0.8600000000000001,
+          "elapsedMs": 1349.4299170000013,
+          "heapMiB": 160.64942169189453
+        },
+        {
+          "fraction": 0.905,
+          "elapsedMs": 1390.4134580000245,
+          "heapMiB": 184.06690979003906
+        },
+        {
+          "fraction": 1,
+          "elapsedMs": 1513.6062500000116,
+          "heapMiB": 161.87706756591797
+        }
+      ]
+    }
+  ],
+  "allPeakHeapMiB": 293.5192337036133,
+  "allPeakRssMiB": 607.890625,
+  "osMaxRssKiB": 622496
+}

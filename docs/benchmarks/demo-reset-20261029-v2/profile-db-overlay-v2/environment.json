@@ -1,0 +1,27 @@
+{
+  "dbOverlay": {
+    "enabled": true,
+    "version": "1.0.0-beta.23",
+    "path": "/Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/node_modules/.pnpm/@nocobase+db@1.0.0-beta.23_better-sqlite3@13.0.3_mysql2@3.24.6_@types+node@24.13.3__pg-_14a59c0097f5be66c07f8a03a27e6fe5/node_modules/@nocobase/db/dist/src/collection/registry/registry.js",
+    "originalSha256": "36023c87a5b58ae46ac9b23b4c2d17eaf80dd4afdc4573d5f8d38ad1584a5551",
+    "patchedSha256": "57a70f1c3a468436343a2625f891d5f470bab7751b36b15067a34596001e0a88",
+    "originalMethod": "    async get(name) {\n        return (await this.getResolution(name))?.collection;\n    }",
+    "patchedMethod": "    async get(name) {\n        const result = await this.getResolutionInternal(name);\n        return result ? structuredClone(result.collection) : undefined;\n    }",
+    "patchSha256": "accb1f4bd3d0c30daffc0c1dfcc01f33895833b7d5b9687fb87b11fb1d8a2cbb",
+    "originalLinkCount": 1,
+    "diagnosticOnly": true
+  },
+  "head": "9b2479886a750eabcb11219539dcf42714280769",
+  "sourceRevision": "working-tree",
+  "startedAt": "2026-10-29T08:09:32.607214+00:00",
+  "sourceSha256": "b106555a74cbb0a1c6b459d24708c841c19f1702fd4d289cc2bc210f4fc4b84a",
+  "lockSha256": "2b62328831c2d6c97b24ad3da17e7f04304752f4990350882bb61f05a32e7b5a",
+  "workerSha256": "cada46647ed50ae3ccec6c4d96af485bd25e6c9a7ba756fd95d59d73e85148bf",
+  "platform": "macOS-27.0-arm64-arm-64bit",
+  "machine": "arm64",
+  "cpuCount": 10,
+  "node": "v24.22.1",
+  "profile": true,
+  "sharedHost": true,
+  "lock": "/tmp/demo-reset-resource-benchmark.lock"
+}

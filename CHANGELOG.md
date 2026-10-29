@@ -10,3 +10,6 @@
 - Add real application lifecycle coverage and an opt-in five-round reset
   resource gate with isolated SQLite/storage, fixed Node, explicit budgets,
   session/account integrity assertions and reproducible baseline comparison.
+- Separate reset measurement from verification, add opt-in allocation/CPU/Intl
+  diagnostics, and retain rejected memory candidates without claiming an
+  unproven peak-memory reduction.

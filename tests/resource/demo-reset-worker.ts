@@ -30,6 +30,7 @@ const results: Record<string, unknown>[] = [];
 let phase = 'boot';
 let peakHeap = 0;
 let peakRss = 0;
+let activeReset = false;
 let allHeap = 0;
 let allRss = 0;
 const phases: Record<
@@ -38,8 +39,10 @@ const phases: Record<
 > = {};
 const sample = () => {
   const memory = process.memoryUsage();
-  peakHeap = Math.max(peakHeap, memory.heapUsed);
-  peakRss = Math.max(peakRss, memory.rss);
+  if (activeReset) {
+    peakHeap = Math.max(peakHeap, memory.heapUsed);
+    peakRss = Math.max(peakRss, memory.rss);
+  }
   allHeap = Math.max(allHeap, memory.heapUsed);
   allRss = Math.max(allRss, memory.rss);
   const current = (phases[phase] ??= { ms: 0, peakHeapMiB: 0, peakRssMiB: 0 });
@@ -192,11 +195,22 @@ try {
     for (const key of Object.keys(phases)) delete phases[key];
     phase = 'reset';
     milestones = [];
+    const stopProfile =
+      process.env.CRM_RESET_PROFILE === '1' && round === 1
+        ? await (
+            await import('./demo-reset-profile.js')
+          ).profileReset(process.argv[2], () => phase)
+        : undefined;
+    activeReset = true;
+    sample();
     const start = performance.now();
     await demo.reset(String(actor.id), 'en-US', { wait: true });
     await settleMail();
     const elapsedMs = performance.now() - start;
     sample();
+    activeReset = false;
+    await stopProfile?.();
+    phase = 'verification';
     assert.equal((await demo.status()).state, 'ready');
     assert.deepEqual(await counts(), expected);
     assert.deepEqual(
@@ -282,6 +296,9 @@ try {
   );
   const report = {
     node: process.version,
+    profile: process.env.CRM_RESET_PROFILE === '1',
+    measurementWindow:
+      'demo.reset plus settleMail; excludes integrity queries and explicit GC',
     initialRetainedMiB,
     counts: expected,
     mailRows,

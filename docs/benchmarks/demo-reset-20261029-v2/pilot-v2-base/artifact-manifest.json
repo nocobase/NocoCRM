@@ -1,0 +1,18 @@
+{
+  "result.json": {
+    "sha256": "6b6804a59a0e413fe969eb774656678fd2ed092c038b1c0b0b6a5a22c050f062",
+    "bytes": 13540
+  },
+  "run.log": {
+    "sha256": "149b11c9ea06c997e89ee13bded60eb4139bc4b040e74980e3a8e1b222b94ee1",
+    "bytes": 91508
+  },
+  "db-restoration.json": {
+    "sha256": "274805f9596c24d9635b3cdde6d7d8d0648477afadb40df968b46b8c36265051",
+    "bytes": 138
+  },
+  "environment.json": {
+    "sha256": "3e8ef7a575d5d7ee8fd0636fa3bceae55fd0391d82872bde5fbcb5ba2bf73714",
+    "bytes": 1603
+  }
+}

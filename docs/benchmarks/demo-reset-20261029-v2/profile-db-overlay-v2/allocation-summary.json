@@ -1,0 +1,147 @@
+{
+  "kind": "sampled cumulative allocation, not peak memory",
+  "totalBytes": 1032851056,
+  "largestSelfAllocations": [
+    ["structuredClone node:internal/worker/js_transferable:113", 131984008],
+    [
+      "prototype._query file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/node_modules/.pnpm/@nocobase+db-sqlite@0.1.0-beta.6_@nocobase+db@1.0.0-beta.23_better-sqlite3@13.0.3_mysql_de8796fe7f9cce79c74511bd92534c8e/node_modules/@nocobase/db-sqlite/dist/src/precise-integers.js:21",
+      36364096
+    ],
+    [
+      "toSQL /Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/node_modules/.pnpm/knex@3.3.0_better-sqlite3@13.0.3_mysql2@3.24.6_@types+node@24.13.3__pg-query-stream@4.17.1_pg@8.23.1__pg@8.23.1/node_modules/knex/lib/raw.js:74",
+      35336808
+    ],
+    [
+      "createExpressionBuilder file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/node_modules/.pnpm/@nocobase+db@1.0.0-beta.23_better-sqlite3@13.0.3_mysql2@3.24.6_@types+node@24.13.3__pg-_14a59c0097f5be66c07f8a03a27e6fe5/node_modules/@nocobase/db/dist/src/query/internal/knex/adapter.js:887",
+      30723728
+    ],
+    ["replace :0", 29605136],
+    [
+      "decimalField file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/node_modules/.pnpm/@nocobase+db@1.0.0-beta.23_better-sqlite3@13.0.3_mysql2@3.24.6_@types+node@24.13.3__pg-_14a59c0097f5be66c07f8a03a27e6fe5/node_modules/@nocobase/db/dist/src/query/internal/knex/adapter.js:2122",
+      29128064
+    ],
+    [
+      "mapStringSelection file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/node_modules/.pnpm/@nocobase+db@1.0.0-beta.23_better-sqlite3@13.0.3_mysql2@3.24.6_@types+node@24.13.3__pg-_14a59c0097f5be66c07f8a03a27e6fe5/node_modules/@nocobase/db/dist/src/query/internal/knex/adapter.js:1652",
+      25842928
+    ],
+    ["next :0", 25675560],
+    [
+      "prepareDecimalSelections file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/node_modules/.pnpm/@nocobase+db@1.0.0-beta.23_better-sqlite3@13.0.3_mysql2@3.24.6_@types+node@24.13.3__pg-_14a59c0097f5be66c07f8a03a27e6fe5/node_modules/@nocobase/db/dist/src/query/internal/knex/adapter.js:2156",
+      22382152
+    ],
+    [
+      "wrapIdentifierImpl /Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/node_modules/.pnpm/knex@3.3.0_better-sqlite3@13.0.3_mysql2@3.24.6_@types+node@24.13.3__pg-query-stream@4.17.1_pg@8.23.1__pg@8.23.1/node_modules/knex/lib/dialects/sqlite3/index.js:90",
+      16888264
+    ],
+    [
+      "toSQL /Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/node_modules/.pnpm/knex@3.3.0_better-sqlite3@13.0.3_mysql2@3.24.6_@types+node@24.13.3__pg-query-stream@4.17.1_pg@8.23.1__pg@8.23.1/node_modules/knex/lib/query/querycompiler.js:117",
+      15858592
+    ],
+    [
+      "query /Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/node_modules/.pnpm/knex@3.3.0_better-sqlite3@13.0.3_mysql2@3.24.6_@types+node@24.13.3__pg-query-stream@4.17.1_pg@8.23.1__pg@8.23.1/node_modules/knex/lib/client.js:174",
+      12497560
+    ],
+    ["then :0", 12329664],
+    ["join :0", 11634800],
+    [
+      "readFields file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/node_modules/.pnpm/@nocobase+db@1.0.0-beta.23_better-sqlite3@13.0.3_mysql2@3.24.6_@types+node@24.13.3__pg-_14a59c0097f5be66c07f8a03a27e6fe5/node_modules/@nocobase/db/dist/src/metadata/validation.js:108",
+      11423536
+    ],
+    [
+      "resolveColumn file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/node_modules/.pnpm/@nocobase+db@1.0.0-beta.23_better-sqlite3@13.0.3_mysql2@3.24.6_@types+node@24.13.3__pg-_14a59c0097f5be66c07f8a03a27e6fe5/node_modules/@nocobase/db/dist/src/collection/resolver/resolver.js:178",
+      11299400
+    ],
+    [
+      "prepare /Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/node_modules/.pnpm/better-sqlite3@13.0.3/node_modules/better-sqlite3/lib/methods/wrappers.js:4",
+      10979160
+    ],
+    ["split :0", 10919168],
+    [
+      "ensureConnection /Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/node_modules/.pnpm/knex@3.3.0_better-sqlite3@13.0.3_mysql2@3.24.6_@types+node@24.13.3__pg-query-stream@4.17.1_pg@8.23.1__pg@8.23.1/node_modules/knex/lib/execution/runner.js:299",
+      10842128
+    ],
+    ["random :0", 10490272]
+  ],
+  "nearestApplicationCallers": [
+    [
+      "get file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/server/providers/crm/service.ts:1",
+      24178272
+    ],
+    [
+      "settings file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/server/providers/crm/service.ts:1",
+      5398992
+    ],
+    [
+      " file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/server/providers/crm/demo.ts:1",
+      5295128
+    ],
+    [
+      "save file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/server/providers/crm/service.ts:1",
+      4241848
+    ],
+    [
+      "fieldsFor file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/server/providers/crm/schema.ts:1",
+      3913040
+    ],
+    [
+      "recordNotifications file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/server/providers/crm/service.ts:1",
+      3653888
+    ],
+    [
+      "decodeRow file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/server/providers/crm/values.ts:1",
+      3313408
+    ],
+    [
+      "jsonValue file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/server/providers/crm/values.ts:1",
+      2931880
+    ],
+    [
+      "waitForDemoMailboxRemoval file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/server/providers/crm/demo-mail-cleanup.ts:1",
+      2794624
+    ],
+    [
+      " file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/server/providers/crm/values.ts:1",
+      2623728
+    ],
+    [
+      "populate file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/server/providers/crm/demo.ts:1",
+      1969696
+    ],
+    [
+      "enqueue file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/server/providers/crm/service.ts:1",
+      1742256
+    ],
+    [
+      " file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/server/providers/crm/index.ts:1",
+      1609664
+    ],
+    [
+      "conditions file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/server/providers/crm/authorization.ts:1",
+      1411992
+    ],
+    [
+      "queueMessage file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/server/providers/crm/service.ts:1",
+      1283272
+    ],
+    [
+      "history file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/server/providers/crm/service.ts:1",
+      1217504
+    ],
+    [
+      "populateDemoWhatsApp file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/server/providers/crm/demo-whatsapp.ts:1",
+      918952
+    ],
+    [
+      " file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/server/providers/crm/demo-mail.ts:1",
+      721752
+    ],
+    [
+      " file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/server/providers/crm/demo.ts:7",
+      660176
+    ],
+    [
+      "capability file:///Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/server/providers/crm/authorization.ts:1",
+      658256
+    ]
+  ]
+}
