@@ -1,0 +1,41 @@
+{
+  "diagnosticOnly": true,
+  "measuredResets": 1,
+  "warmupResets": 0,
+  "initialImport": true,
+  "finalClear": false,
+  "forcedGC": false,
+  "startedAt": "2026-10-29T10:05:22.724694+00:00",
+  "sourceProbes": [
+    {
+      "file": "server/providers/crm/demo.ts",
+      "originalSha256": "b711998715d4bc4ba1321c9e3fc8d8952445b34d9e7fec62c8a3aa33bb3848b2",
+      "instrumentedSha256": "5ac689ae155f988eb25fd2e202f964f486a5a157c3dd1cf4a712c73b4df407aa"
+    },
+    {
+      "file": "server/providers/crm/index.ts",
+      "originalSha256": "0f22fc624c0ea2c4c0216f2d24819cfd156b4c28dc775a6b6663c91080097905",
+      "instrumentedSha256": "9b68be50f70a5df471f7bd5458eafafcd29b3859be58b712c81f7b041357e9b3"
+    },
+    {
+      "file": "server/providers/crm/demo-mail.ts",
+      "originalSha256": "e0e72c59de1beb7f0f8da227f97a07349e0c62b4212610fa3ed92c9f19fab138",
+      "instrumentedSha256": "fb95a360b3cbeb6311713756e771d4aed3c03ef652d88b99b085ad708cf9af64"
+    },
+    {
+      "file": "server/providers/crm/service.ts",
+      "originalSha256": "fe63a3162a396bca7199de24d133cb1c2c67ce449f4f747ec0309d4ba2b649b0",
+      "instrumentedSha256": "325255c8090ff02aea1a29a87b505a47c58db4eb61454b4b16d0c468f79a4696"
+    }
+  ],
+  "head": "7a6be136871f1746632e79acfb84ec646af2b16f",
+  "node": "v24.22.1",
+  "registrySha256": "36023c87a5b58ae46ac9b23b4c2d17eaf80dd4afdc4573d5f8d38ad1584a5551",
+  "lockfileSha256": "2b62328831c2d6c97b24ad3da17e7f04304752f4990350882bb61f05a32e7b5a",
+  "scriptSha256": {
+    "demo-reset-peak.py": "df10cf57bb2abcee2e0fb8d93d04a964ab32c1c5d7c885ca9baf1ff4bce48778",
+    "demo-reset-peak-worker.ts": "9229ec52e0844d06af244fe59b32abc8d2d300cf60e69621f29f41daa78792df",
+    "peak-observer.ts": "4a81a1b8b88e1d6ebe6ff42ab8e0c17a5a3dc1b8ad504b1f0e9c72c8df8225e4",
+    "resource_process.py": "686285487855895e4c138838937fd906edfc0a8a6fc1732e43d0f406cfd6de6b"
+  }
+}

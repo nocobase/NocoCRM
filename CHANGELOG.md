@@ -17,3 +17,5 @@
   launcher, enforce exact story counts, and tighten fixed regression budgets.
 - Clarify mixed reset-phase attribution and prepare a separately coordinated,
   single-reset diagnostic for application object lifetimes and natural GC.
+- Record the completed one-reset diagnostic, synchronous sampling limits, and
+  bounded application payloads without claiming a peak-memory improvement.

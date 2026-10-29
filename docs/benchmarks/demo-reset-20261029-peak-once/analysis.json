@@ -1,0 +1,946 @@
+{
+  "diagnosticOnly": true,
+  "sourceSha256": {
+    "observation.json": "db21276e38f9826f6c17f0b80e52a9ad1ca327eb4c78acd2a354550c96e9f606",
+    "reset.cpuprofile": "e581682571d611e1327cdd1f94fe8e35aae0bed8854fee2df14ded8818e98a17"
+  },
+  "scope": "All saved timer/phase, synchronous probe-before, milestone and checkpoint observations; sampled lower bounds, not exact continuous peaks",
+  "allObservationHeapPeak": {
+    "elapsedMs": 35365.950083,
+    "phase": "generate",
+    "origin": "probe:notification.capture",
+    "heapUsedMiB": 252.87281799316406,
+    "rssMiB": 558.875,
+    "heapTotalMiB": 324.703125,
+    "externalMiB": 88.10773181915283,
+    "arrayBuffersMiB": 64.64629077911377
+  },
+  "allObservationRssPeak": {
+    "elapsedMs": 36820.064041,
+    "phase": "settleMail",
+    "origin": "timer/phase",
+    "heapUsedMiB": 238.71866607666016,
+    "rssMiB": 570.6875,
+    "heapTotalMiB": 326.171875,
+    "externalMiB": 88.11211109161377,
+    "arrayBuffersMiB": 64.6506700515747
+  },
+  "timerAndPhaseOnlyHeapPeak": {
+    "elapsedMs": 36820.064041,
+    "phase": "settleMail",
+    "origin": null,
+    "heapUsedMiB": 238.71866607666016,
+    "rssMiB": 570.6875,
+    "heapTotalMiB": 326.171875,
+    "externalMiB": 88.11211109161377,
+    "arrayBuffersMiB": 64.6506700515747
+  },
+  "byPhase": {
+    "reset-pre-clear": {
+      "observationCount": 2,
+      "firstElapsedMs": -0.087083999999777,
+      "lastElapsedMs": 0.0,
+      "heapPeak": {
+        "elapsedMs": 0.0,
+        "phase": "reset-pre-clear",
+        "origin": "checkpoint:reset-start",
+        "heapUsedMiB": 185.5864028930664,
+        "rssMiB": 565.40625,
+        "heapTotalMiB": 355.453125,
+        "externalMiB": 88.24223613739014,
+        "arrayBuffersMiB": 64.78107738494873
+      },
+      "rssPeak": {
+        "elapsedMs": -0.087083999999777,
+        "phase": "reset-pre-clear",
+        "origin": "timer/phase",
+        "heapUsedMiB": 185.5694580078125,
+        "rssMiB": 565.40625,
+        "heapTotalMiB": 355.453125,
+        "externalMiB": 88.24219799041748,
+        "arrayBuffersMiB": 64.78107738494873
+      }
+    },
+    "clear": {
+      "observationCount": 3371,
+      "firstElapsedMs": 2.3065830000005008,
+      "lastElapsedMs": 34980.753416,
+      "heapPeak": {
+        "elapsedMs": 4647.9721660000005,
+        "phase": "clear",
+        "origin": "timer/phase",
+        "heapUsedMiB": 226.0857696533203,
+        "rssMiB": 547.265625,
+        "heapTotalMiB": 355.453125,
+        "externalMiB": 88.24380016326904,
+        "arrayBuffersMiB": 64.78264141082764
+      },
+      "rssPeak": {
+        "elapsedMs": 3195.916166,
+        "phase": "clear",
+        "origin": "timer/phase",
+        "heapUsedMiB": 220.19535064697266,
+        "rssMiB": 566.109375,
+        "heapTotalMiB": 355.453125,
+        "externalMiB": 88.24380016326904,
+        "arrayBuffersMiB": 64.78264141082764
+      }
+    },
+    "reset-between-clear-generate": {
+      "observationCount": 1,
+      "firstElapsedMs": 34980.796833,
+      "lastElapsedMs": 34980.796833,
+      "heapPeak": {
+        "elapsedMs": 34980.796833,
+        "phase": "reset-between-clear-generate",
+        "origin": "timer/phase",
+        "heapUsedMiB": 221.3173599243164,
+        "rssMiB": 547.125,
+        "heapTotalMiB": 315.453125,
+        "externalMiB": 88.10898303985596,
+        "arrayBuffersMiB": 64.6475419998169
+      },
+      "rssPeak": {
+        "elapsedMs": 34980.796833,
+        "phase": "reset-between-clear-generate",
+        "origin": "timer/phase",
+        "heapUsedMiB": 221.3173599243164,
+        "rssMiB": 547.125,
+        "heapTotalMiB": 315.453125,
+        "externalMiB": 88.10898303985596,
+        "arrayBuffersMiB": 64.6475419998169
+      }
+    },
+    "generate": {
+      "observationCount": 222,
+      "firstElapsedMs": 34984.700208,
+      "lastElapsedMs": 36141.571791,
+      "heapPeak": {
+        "elapsedMs": 35365.950083,
+        "phase": "generate",
+        "origin": "probe:notification.capture",
+        "heapUsedMiB": 252.87281799316406,
+        "rssMiB": 558.875,
+        "heapTotalMiB": 324.703125,
+        "externalMiB": 88.10773181915283,
+        "arrayBuffersMiB": 64.64629077911377
+      },
+      "rssPeak": {
+        "elapsedMs": 36043.866541,
+        "phase": "generate",
+        "origin": "timer/phase",
+        "heapUsedMiB": 227.66284942626953,
+        "rssMiB": 569.828125,
+        "heapTotalMiB": 325.015625,
+        "externalMiB": 88.11085987091064,
+        "arrayBuffersMiB": 64.64941883087158
+      }
+    },
+    "reset-after-generate": {
+      "observationCount": 1,
+      "firstElapsedMs": 36141.582791,
+      "lastElapsedMs": 36141.582791,
+      "heapPeak": {
+        "elapsedMs": 36141.582791,
+        "phase": "reset-after-generate",
+        "origin": "timer/phase",
+        "heapUsedMiB": 204.09857940673828,
+        "rssMiB": 569.296875,
+        "heapTotalMiB": 324.859375,
+        "externalMiB": 88.1083574295044,
+        "arrayBuffersMiB": 64.64691638946533
+      },
+      "rssPeak": {
+        "elapsedMs": 36141.582791,
+        "phase": "reset-after-generate",
+        "origin": "timer/phase",
+        "heapUsedMiB": 204.09857940673828,
+        "rssMiB": 569.296875,
+        "heapTotalMiB": 324.859375,
+        "externalMiB": 88.1083574295044,
+        "arrayBuffersMiB": 64.64691638946533
+      }
+    },
+    "settleMail": {
+      "observationCount": 168,
+      "firstElapsedMs": 36148.874333,
+      "lastElapsedMs": 37781.752583,
+      "heapPeak": {
+        "elapsedMs": 36820.064041,
+        "phase": "settleMail",
+        "origin": "timer/phase",
+        "heapUsedMiB": 238.71866607666016,
+        "rssMiB": 570.6875,
+        "heapTotalMiB": 326.171875,
+        "externalMiB": 88.11211109161377,
+        "arrayBuffersMiB": 64.6506700515747
+      },
+      "rssPeak": {
+        "elapsedMs": 36820.064041,
+        "phase": "settleMail",
+        "origin": "timer/phase",
+        "heapUsedMiB": 238.71866607666016,
+        "rssMiB": 570.6875,
+        "heapTotalMiB": 326.171875,
+        "externalMiB": 88.11211109161377,
+        "arrayBuffersMiB": 64.6506700515747
+      }
+    }
+  },
+  "probeShapes": {
+    "story.content": {
+      "calls": 1,
+      "maxUtf16PayloadBytes": 639436,
+      "maxObjects": 554,
+      "maxArraySlots": 640
+    },
+    "notification.capture": {
+      "calls": 132,
+      "maxUtf16PayloadBytes": 3984,
+      "maxObjects": 4,
+      "maxArraySlots": 2
+    },
+    "story.transactionRoots": {
+      "calls": 1,
+      "maxUtf16PayloadBytes": 74404,
+      "maxObjects": 354,
+      "maxArraySlots": 317
+    },
+    "transaction.result": {
+      "calls": 11,
+      "maxUtf16PayloadBytes": 15394,
+      "maxObjects": 37,
+      "maxArraySlots": 14
+    },
+    "transaction.callbacksReady": {
+      "calls": 11,
+      "maxUtf16PayloadBytes": 0,
+      "maxObjects": 1,
+      "maxArraySlots": 131
+    },
+    "transaction.release": {
+      "calls": 11,
+      "maxUtf16PayloadBytes": 0,
+      "maxObjects": 1,
+      "maxArraySlots": 131
+    },
+    "story-35": {
+      "calls": 1,
+      "maxUtf16PayloadBytes": 74404,
+      "maxObjects": 354,
+      "maxArraySlots": 317
+    },
+    "story.projectResult": {
+      "calls": 1,
+      "maxUtf16PayloadBytes": 15394,
+      "maxObjects": 37,
+      "maxArraySlots": 14
+    },
+    "story-65": {
+      "calls": 1,
+      "maxUtf16PayloadBytes": 91818,
+      "maxObjects": 422,
+      "maxArraySlots": 384
+    },
+    "mail.conversations": {
+      "calls": 1,
+      "maxUtf16PayloadBytes": 7338,
+      "maxObjects": 124,
+      "maxArraySlots": 69
+    },
+    "mail.store": {
+      "calls": 1,
+      "maxUtf16PayloadBytes": 121462,
+      "maxObjects": 1562,
+      "maxArraySlots": 609
+    },
+    "mail.serialized": {
+      "calls": 1,
+      "maxUtf16PayloadBytes": 312308,
+      "maxObjects": 0,
+      "maxArraySlots": 0
+    },
+    "provider.store": {
+      "calls": 6,
+      "maxUtf16PayloadBytes": 121462,
+      "maxObjects": 1626,
+      "maxArraySlots": 621
+    },
+    "provider.mailbox": {
+      "calls": 6,
+      "maxUtf16PayloadBytes": 46782,
+      "maxObjects": 531,
+      "maxArraySlots": 207
+    },
+    "provider.page": {
+      "calls": 6,
+      "maxUtf16PayloadBytes": 43628,
+      "maxObjects": 501,
+      "maxArraySlots": 198
+    },
+    "story-90": {
+      "calls": 1,
+      "maxUtf16PayloadBytes": 92208,
+      "maxObjects": 428,
+      "maxArraySlots": 389
+    }
+  },
+  "notificationHolding": {
+    "maxDistinctCapturedRowsPerTransaction": 131,
+    "maxSummedUtf16PayloadBytes": 224156,
+    "atHeapPeak": {
+      "observedRowsIncludingCurrentCapture": 99,
+      "summedUtf16PayloadBytes": 178604
+    },
+    "nextCapture": {
+      "elapsedMs": 35368.558166,
+      "phase": "generate",
+      "origin": "notification.capture",
+      "heapUsedMiB": 194.77745819091797,
+      "rssMiB": 559.6875,
+      "heapTotalMiB": 326.703125,
+      "externalMiB": 88.10773181915283,
+      "arrayBuffersMiB": 64.64629077911377
+    },
+    "heapDropBeforeNextCaptureMiB": 58.095359802246094,
+    "nextCaptureRowCount": 100,
+    "gcEventsBetweenTheseCaptures": [
+      {
+        "startTime": 42348.78275,
+        "duration": 0.9189170002937317,
+        "detail": {
+          "kind": 1,
+          "flags": 0
+        }
+      }
+    ],
+    "queueReleaseElapsedMs": 35470.759916,
+    "capturedRootOverlapWithObservedStory": [],
+    "capturedDescendantOverlapWithObservedStory": 0
+  },
+  "observer": {
+    "payloadWalks": 192,
+    "summedWalkMs": 10.166836000033072,
+    "truncatedWalks": 0,
+    "naturalGcEvents": 21,
+    "cpuStartUncertaintyMs": 205.65504200000032
+  },
+  "cpu": {
+    "generate": {
+      "samplesConservativelyInsidePhase": 768,
+      "topSelf": [
+        {
+          "frame": [
+            "",
+            "",
+            0
+          ],
+          "samples": 306
+        },
+        {
+          "frame": [
+            "structuredClone",
+            "node:internal/worker/js_transferable",
+            113
+          ],
+          "samples": 123
+        },
+        {
+          "frame": [
+            "(idle)",
+            "",
+            0
+          ],
+          "samples": 62
+        },
+        {
+          "frame": [
+            "prototype._query",
+            "@nocobase/db-sqlite/dist/src/precise-integers.js",
+            21
+          ],
+          "samples": 23
+        },
+        {
+          "frame": [
+            "prepare",
+            "better-sqlite3/lib/methods/wrappers.js",
+            4
+          ],
+          "samples": 23
+        },
+        {
+          "frame": [
+            "(garbage collector)",
+            "",
+            0
+          ],
+          "samples": 18
+        },
+        {
+          "frame": [
+            "(program)",
+            "",
+            0
+          ],
+          "samples": 15
+        },
+        {
+          "frame": [
+            "snakeCase",
+            "@nocobase/db/dist/src/naming/utils.js",
+            1
+          ],
+          "samples": 14
+        },
+        {
+          "frame": [
+            "mapStringSelection",
+            "@nocobase/db/dist/src/query/internal/knex/adapter.js",
+            1652
+          ],
+          "samples": 9
+        },
+        {
+          "frame": [
+            "toSQL",
+            "knex/lib/raw.js",
+            74
+          ],
+          "samples": 7
+        },
+        {
+          "frame": [
+            "rowFactory",
+            "better-sqlite3/lib/database.js",
+            94
+          ],
+          "samples": 6
+        },
+        {
+          "frame": [
+            "applySelectionExpression",
+            "@nocobase/db/dist/src/query/internal/knex/adapter.js",
+            1063
+          ],
+          "samples": 5
+        }
+      ],
+      "topInclusive": [
+        {
+          "frame": [
+            "(root)",
+            "",
+            0
+          ],
+          "samples": 768
+        },
+        {
+          "frame": [
+            "ensureConnection",
+            "knex/lib/execution/runner.js",
+            299
+          ],
+          "samples": 396
+        },
+        {
+          "frame": [
+            "ensureConnectionCallback",
+            "knex/lib/execution/internal/ensure-connection-callback.js",
+            1
+          ],
+          "samples": 394
+        },
+        {
+          "frame": [
+            "query",
+            "knex/lib/client.js",
+            174
+          ],
+          "samples": 367
+        },
+        {
+          "frame": [
+            "prototype._query",
+            "@nocobase/db-sqlite/dist/src/precise-integers.js",
+            21
+          ],
+          "samples": 364
+        },
+        {
+          "frame": [
+            "executeQuery",
+            "knex/lib/execution/internal/query-executioner.js",
+            36
+          ],
+          "samples": 364
+        },
+        {
+          "frame": [
+            "query",
+            "knex/lib/execution/runner.js",
+            135
+          ],
+          "samples": 361
+        },
+        {
+          "frame": [
+            "",
+            "",
+            0
+          ],
+          "samples": 315
+        },
+        {
+          "frame": [
+            "runMicrotasks",
+            "",
+            0
+          ],
+          "samples": 215
+        },
+        {
+          "frame": [
+            "runNextTicks",
+            "node:internal/process/task_queues",
+            63
+          ],
+          "samples": 215
+        },
+        {
+          "frame": [
+            "processImmediate",
+            "node:internal/timers",
+            525
+          ],
+          "samples": 215
+        },
+        {
+          "frame": [
+            "",
+            "knex/lib/execution/transaction.js",
+            375
+          ],
+          "samples": 124
+        },
+        {
+          "frame": [
+            "trxClient.query",
+            "knex/lib/execution/transaction.js",
+            373
+          ],
+          "samples": 124
+        },
+        {
+          "frame": [
+            "structuredClone",
+            "node:internal/worker/js_transferable",
+            113
+          ],
+          "samples": 123
+        },
+        {
+          "frame": [
+            "getResolution",
+            "@nocobase/db/dist/src/collection/registry/registry.js",
+            53
+          ],
+          "samples": 119
+        },
+        {
+          "frame": [
+            "prepare",
+            "better-sqlite3/lib/methods/wrappers.js",
+            4
+          ],
+          "samples": 67
+        },
+        {
+          "frame": [
+            "(idle)",
+            "",
+            0
+          ],
+          "samples": 62
+        },
+        {
+          "frame": [
+            "executeTakeFirst",
+            "@nocobase/db/dist/src/query/internal/knex/adapter.js",
+            181
+          ],
+          "samples": 41
+        },
+        {
+          "frame": [
+            "buildSelectQuery",
+            "@nocobase/db/dist/src/query/internal/knex/adapter.js",
+            259
+          ],
+          "samples": 34
+        },
+        {
+          "frame": [
+            "applySelections",
+            "@nocobase/db/dist/src/query/internal/knex/adapter.js",
+            1033
+          ],
+          "samples": 30
+        },
+        {
+          "frame": [
+            "toSQL",
+            "knex/lib/query/querycompiler.js",
+            117
+          ],
+          "samples": 29
+        },
+        {
+          "frame": [
+            "toSQL",
+            "knex/lib/query/querybuilder.js",
+            83
+          ],
+          "samples": 29
+        },
+        {
+          "frame": [
+            "applySelectionExpression",
+            "@nocobase/db/dist/src/query/internal/knex/adapter.js",
+            1063
+          ],
+          "samples": 27
+        },
+        {
+          "frame": [
+            "",
+            "knex/lib/query/querycompiler.js",
+            183
+          ],
+          "samples": 20
+        },
+        {
+          "frame": [
+            "select",
+            "knex/lib/query/querycompiler.js",
+            175
+          ],
+          "samples": 20
+        }
+      ]
+    },
+    "settleMail": {
+      "samplesConservativelyInsidePhase": 1134,
+      "topSelf": [
+        {
+          "frame": [
+            "(idle)",
+            "",
+            0
+          ],
+          "samples": 982
+        },
+        {
+          "frame": [
+            "",
+            "",
+            0
+          ],
+          "samples": 36
+        },
+        {
+          "frame": [
+            "(program)",
+            "",
+            0
+          ],
+          "samples": 34
+        },
+        {
+          "frame": [
+            "memoryUsage",
+            "",
+            0
+          ],
+          "samples": 12
+        },
+        {
+          "frame": [
+            "listOnTimeout",
+            "node:internal/timers",
+            623
+          ],
+          "samples": 8
+        },
+        {
+          "frame": [
+            "structuredClone",
+            "node:internal/worker/js_transferable",
+            113
+          ],
+          "samples": 8
+        },
+        {
+          "frame": [
+            "",
+            "tests/resource/peak-observer.ts",
+            1
+          ],
+          "samples": 5
+        },
+        {
+          "frame": [
+            "getLibuvNow",
+            "",
+            0
+          ],
+          "samples": 3
+        },
+        {
+          "frame": [
+            "now",
+            "",
+            0
+          ],
+          "samples": 3
+        },
+        {
+          "frame": [
+            "popAsyncContext",
+            "node:internal/async_hooks",
+            562
+          ],
+          "samples": 2
+        },
+        {
+          "frame": [
+            "settleMail",
+            "tests/resource/demo-reset-peak-worker.ts",
+            1
+          ],
+          "samples": 2
+        },
+        {
+          "frame": [
+            "percolateDown",
+            "node:internal/priority_queue",
+            38
+          ],
+          "samples": 2
+        }
+      ],
+      "topInclusive": [
+        {
+          "frame": [
+            "(root)",
+            "",
+            0
+          ],
+          "samples": 1134
+        },
+        {
+          "frame": [
+            "(idle)",
+            "",
+            0
+          ],
+          "samples": 982
+        },
+        {
+          "frame": [
+            "",
+            "tests/resource/peak-observer.ts",
+            1
+          ],
+          "samples": 46
+        },
+        {
+          "frame": [
+            "processTimers",
+            "node:internal/timers",
+            603
+          ],
+          "samples": 40
+        },
+        {
+          "frame": [
+            "ensureConnectionCallback",
+            "knex/lib/execution/internal/ensure-connection-callback.js",
+            1
+          ],
+          "samples": 40
+        },
+        {
+          "frame": [
+            "ensureConnection",
+            "knex/lib/execution/runner.js",
+            299
+          ],
+          "samples": 40
+        },
+        {
+          "frame": [
+            "listOnTimeout",
+            "node:internal/timers",
+            623
+          ],
+          "samples": 38
+        },
+        {
+          "frame": [
+            "query",
+            "knex/lib/client.js",
+            174
+          ],
+          "samples": 38
+        },
+        {
+          "frame": [
+            "prototype._query",
+            "@nocobase/db-sqlite/dist/src/precise-integers.js",
+            21
+          ],
+          "samples": 37
+        },
+        {
+          "frame": [
+            "executeQuery",
+            "knex/lib/execution/internal/query-executioner.js",
+            36
+          ],
+          "samples": 37
+        },
+        {
+          "frame": [
+            "",
+            "",
+            0
+          ],
+          "samples": 36
+        },
+        {
+          "frame": [
+            "query",
+            "knex/lib/execution/runner.js",
+            135
+          ],
+          "samples": 36
+        },
+        {
+          "frame": [
+            "(program)",
+            "",
+            0
+          ],
+          "samples": 34
+        },
+        {
+          "frame": [
+            "",
+            "knex/lib/execution/transaction.js",
+            375
+          ],
+          "samples": 22
+        },
+        {
+          "frame": [
+            "trxClient.query",
+            "knex/lib/execution/transaction.js",
+            373
+          ],
+          "samples": 22
+        },
+        {
+          "frame": [
+            "memoryUsage",
+            "",
+            0
+          ],
+          "samples": 12
+        },
+        {
+          "frame": [
+            "memoryUsage",
+            "node:internal/process/per_thread",
+            216
+          ],
+          "samples": 12
+        },
+        {
+          "frame": [
+            "prepare",
+            "better-sqlite3/lib/methods/wrappers.js",
+            4
+          ],
+          "samples": 9
+        },
+        {
+          "frame": [
+            "getResolution",
+            "@nocobase/db/dist/src/collection/registry/registry.js",
+            53
+          ],
+          "samples": 9
+        },
+        {
+          "frame": [
+            "structuredClone",
+            "node:internal/worker/js_transferable",
+            113
+          ],
+          "samples": 8
+        },
+        {
+          "frame": [
+            "now",
+            "node:internal/perf/performance",
+            137
+          ],
+          "samples": 6
+        },
+        {
+          "frame": [
+            "",
+            "server/providers/crm/index.ts",
+            1
+          ],
+          "samples": 5
+        },
+        {
+          "frame": [
+            "settleMail",
+            "tests/resource/demo-reset-peak-worker.ts",
+            1
+          ],
+          "samples": 4
+        },
+        {
+          "frame": [
+            "getLibuvNow",
+            "",
+            0
+          ],
+          "samples": 3
+        },
+        {
+          "frame": [
+            "now",
+            "",
+            0
+          ],
+          "samples": 3
+        }
+      ]
+    }
+  },
+  "limitations": [
+    "No HeapProfiler API, forced GC or heap snapshot; CPU and memory/ownership observations only",
+    "No generic retainer graph or exact live-object/retained sizes; unobserved roots and shared strings remain unknown",
+    "CPU profiler and synchronous payload walks perturb timing and allocation; no acceptance peaks",
+    "Payload shapes hold no business references after the synchronous callback returns",
+    "Captured by afterCommit does not imply retained only by afterCommit; numeric object identities mark observed overlaps",
+    "Synchronous probes observe transient peaks that a 10ms timer can miss; scopes must not be mixed with v2 acceptance reports",
+    "CPU sampling shows execution, not allocation size or exact owners of live memory",
+    "An absent observed identity overlap does not prove exclusive retention"
+  ]
+}

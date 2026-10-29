@@ -1,0 +1,40 @@
+{
+  "sourcesRestored": true,
+  "originalRegistrySha256": "36023c87a5b58ae46ac9b23b4c2d17eaf80dd4afdc4573d5f8d38ad1584a5551",
+  "temporaryRootsRemoved": [
+    "/var/folders/9c/5r5n_ymj6ll2s7d1nlbfv2p80000gn/T/crm-peak-diagnostic-63ms5v7d"
+  ],
+  "worker": {
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "tests/resource/demo-reset-peak-worker.ts",
+      "/Users/gchust/.t3/worktrees/NocoCRM/fix-demo-reset-resource-nococrm-20261029/storage/demo-benchmark/peak-once"
+    ],
+    "returnCode": 0,
+    "timedOut": false,
+    "elapsedSeconds": 44.946602792,
+    "osMaxRssMiB": 648.984375,
+    "rssScope": "wait4 rusage for the entire worker process, including imports, boot and teardown"
+  },
+  "integrity": {
+    "counts": {
+      "crmLeads": 18,
+      "crmCompanies": 11,
+      "crmContacts": 22,
+      "crmOpportunities": 34,
+      "crmTasks": 117,
+      "crmApprovals": 6,
+      "crmHistory": 593,
+      "crmWaMessages": 222,
+      "agConversations": 4,
+      "agConversationMessages": 10,
+      "mailMessages": 162
+    },
+    "measuredResets": 1,
+    "warmupResets": 0,
+    "passed": true
+  },
+  "finishedAt": "2026-10-29T10:06:07.733201+00:00"
+}

@@ -1,0 +1,22 @@
+{
+  "finishedAt": "2026-10-29T10:06:07.733201+00:00",
+  "sources": {
+    "service.ts": {
+      "matchesOriginal": true,
+      "restoredSha256": "fe63a3162a396bca7199de24d133cb1c2c67ce449f4f747ec0309d4ba2b649b0"
+    },
+    "demo-mail.ts": {
+      "matchesOriginal": true,
+      "restoredSha256": "e0e72c59de1beb7f0f8da227f97a07349e0c62b4212610fa3ed92c9f19fab138"
+    },
+    "index.ts": {
+      "matchesOriginal": true,
+      "restoredSha256": "0f22fc624c0ea2c4c0216f2d24819cfd156b4c28dc775a6b6663c91080097905"
+    },
+    "demo.ts": {
+      "matchesOriginal": true,
+      "restoredSha256": "b711998715d4bc4ba1321c9e3fc8d8952445b34d9e7fec62c8a3aa33bb3848b2"
+    }
+  },
+  "unchangedRegistrySha256": "36023c87a5b58ae46ac9b23b4c2d17eaf80dd4afdc4573d5f8d38ad1584a5551"
+}

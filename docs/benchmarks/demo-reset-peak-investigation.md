@@ -1,8 +1,8 @@
 # CRM reset peak attribution audit
 
-Status: **peak-memory acceptance remains unmet**. This is an offline investigation
-of existing v2 evidence and preparation for one explicitly coordinated diagnostic
-reset. It is not another benchmark, an optimization, or an accepted baseline.
+Status: **peak-memory acceptance remains unmet**. This records an offline
+investigation of existing v2 evidence and one completed, explicitly coordinated
+diagnostic reset. It is not an optimization comparison or an accepted baseline.
 The duplicate-read application candidate remains withdrawn. The narrow DB clone
 patch remains diagnostic and is absent from the installed dependencies.
 
@@ -127,9 +127,10 @@ together.
 
 ## Prepared minimum diagnostic window
 
-The coordinator accepted this request at the end of the resource queue, but has
-**not released the window**. No process has entered `flock` or started the app.
-The prepared command must only run after an explicit release:
+The following command was frozen at application commit
+`7a6be136871f1746632e79acfb84ec646af2b16f`. After the coordinator explicitly released
+the window, it ran once on 2026-10-29. The completion evidence is below; no repeat
+or additional resource task is authorized by this record.
 
 ```sh
 python3 tests/resource/demo-reset-peak.py storage/demo-benchmark/peak-once --approved-window
@@ -190,3 +191,127 @@ small or do not overlap the observed peak, report that the evidence does not
 support an application streaming/projection change. If one dominates, propose
 that precise lifetime/representation change and its integrity checks before a
 plain pilot. Generic registry/Mail execution improvements remain upstream.
+
+## Completed single-reset observation
+
+The shared lock was held from **10:05:22.711659 to 10:06:07.733393 UTC**.
+The worker exited normally in 44.947 seconds, below its 180-second deadline.
+It used Node v24.22.1, the unchanged published dependency lockfile, the same
+shared Apple M4 / macOS 27 arm64 / 16 GiB host, temporary SQLite/storage, full
+English import, and exactly one reset plus Mail convergence. No additional
+warm-up reset, final clear, HeapProfiler call, snapshot or explicit GC ran.
+All exact story counts, five unique replacement mail accounts, completed cleanup,
+stable user identities and existing administrator/salesperson sessions passed.
+All four instrumented source files were restored byte for byte; the original DB
+registry SHA remained unchanged. The observed temporary root was removed before
+the parent exited and released the lock. No resource process was restarted.
+
+Raw observations and the CPU profile are losslessly gzip-compressed in
+[the artifact directory](demo-reset-20261029-peak-once/manifest.json), alongside
+the environment/source/script hashes, exact probe patches, run log, integrity,
+exit, restoration and temporary-cleanup receipts. Uncompressed SHA256 hashes are
+also recorded. Reproduce the analysis **without running the application**:
+
+```sh
+python3 tests/resource/analyze-peak-observation.py docs/benchmarks/demo-reset-20261029-peak-once
+```
+
+### Phase attribution and sampling scope
+
+The reset window lasted about 37.782 seconds. These are maxima of **all saved
+observations**, combining the 10 ms timer/phase samples with synchronous probe
+boundaries, milestones and heap-space checkpoints. They are sampled lower bounds,
+not continuous peaks or before/after acceptance numbers.
+
+| Phase       | Observed heap max MiB | Observed RSS max MiB |
+| ----------- | --------------------: | -------------------: |
+| Clear       |               226.086 |              566.109 |
+| Generate    |           **252.873** |              569.828 |
+| Settle Mail |               238.719 |          **570.688** |
+
+The highest heap observation was at reset +35.365950 s, during the first large
+story transaction, before its notification callbacks ran. RSS reached its maximum
+at +36.820064 s in `settleMail`, about 0.678 s after generation ended. These are
+different instants. The 10 ms timer/phase series alone would instead report its
+highest heap as 238.719 MiB in `settleMail`: it missed the higher, synchronous
+generation observation. This is a concrete sampling limitation, not a reason to
+rewrite or mix scopes with the frozen v2 results.
+
+The entire process's `wait4` RSS high-water was 648.984 MiB, including imports,
+initialization, precondition import, profiler setup and teardown. `wait4` supplies
+no peak timestamp, so that number cannot be assigned to a reset phase. RSS was
+already 565.406 MiB at reset start. External memory was 88.242 MiB and array
+buffers 64.781 MiB there; the corresponding values at the heap maximum were
+88.108 and 64.646 MiB. Those sizable categories predate this reset; no native
+allocation owner was identified. Array buffers are a subset of external memory
+and must not be added to it.
+
+### Observed coexistence and the application candidates
+
+At the highest heap boundary, 99 distinct notification row captures had been
+observed, including the current row about to enter the callback queue. Their
+summed per-row UTF-16 payload estimate was **178,604 bytes (0.170 MiB)**.
+The transaction eventually held 131 distinct captured rows, with a maximum
+summed estimate of **224,156 bytes (0.214 MiB)**. These estimates exclude object
+headers and may overcount strings shared between rows; they are not retained sizes.
+
+A natural minor GC began 1.560 ms after the highest heap observation. At the next
+capture boundary, 2.608 ms after that observation, heap had fallen from 252.873
+to 194.777 MiB, a 58.095 MiB drop, while the same queue was still accumulating rows
+(100 observed captures). Its callback loop did not finish until +35.470760 s.
+The queue's strong holding path therefore persisted across this large occupancy
+drop. This supports investigating short-lived allocation/GC timing; it does not
+establish notification rows as the dominant peak payload or identify everything
+that was collected.
+
+The observed story arrays at transaction end contained no captured row root or
+descendant identities. That narrow result does not establish exclusive retention:
+strings, unobserved roots and engine-internal references remain outside the probe.
+The later project transaction returned a 15,394-byte payload estimate and had no
+observed `recordNotifications` captures. Source reachability alone had not shown
+that it would populate this particular callback queue.
+
+Other measured application payloads were similarly bounded:
+
+| Observed value                   | Maximum UTF-16 payload estimate | Timing / scope                                      |
+| -------------------------------- | ------------------------------: | --------------------------------------------------- |
+| Full story content               |                   639,436 bytes | Before the first story transaction                  |
+| Story arrays and manifest        |                    92,208 bytes | Maximum across three generation checkpoints         |
+| Constructed Mail store           |                   121,462 bytes | At +35.939897 s, after the highest heap observation |
+| Serialized Mail store            |                   312,308 bytes | At +35.940736 s                                     |
+| Provider's parsed complete store |                   121,462 bytes | Six reads across generation and Mail convergence    |
+| Returned provider page           |                    43,628 bytes | Maximum across six page observations                |
+
+The new store and serialized JSON were constructed more than half a second after
+the generation heap maximum, so they cannot explain that earlier peak. At the
+RSS plateau, the last provider whole-store/page observations were about 10 ms
+before the maximum timer sample. The code materializes the complete parsed store
+before selecting a mailbox; the measurements do not establish that all six parsed
+stores were simultaneously reachable. Numeric IDs do not report collection or
+prove when an unreturned mailbox became unreachable. There is currently no
+evidence that splitting this small store would materially lower the full-reset peak.
+
+### CPU context, limits and next decision
+
+CPU start was bracketed with a 205.655 ms uncertainty interval. The offline analyzer
+only attributes a sample to a phase when its entire possible timestamp interval
+falls inside that phase. Among 768 such generation samples, 123 had
+`structuredClone` as the self frame, 119 included registry `getResolution`, and
+364 included the SQLite query wrapper. These overlapping stack counts describe
+execution, not allocation bytes or live ownership. They are consistent with the
+older DB allocation profiles, but do not overturn the unsuccessful exact narrow-
+clone pilot or prove any new upstream peak benefit. No new DB cache or overlay was
+introduced. The diagnostic itself performed 192 payload walks (10.167 ms total;
+none truncated), collected 21 natural GC events, and retained numeric metadata.
+Its allocation/timing perturbation remains a limitation.
+
+**No application streaming/projection candidate is justified as a peak fix by this
+window.** Notification capture narrowing may be a separate small correctness-
+preserving improvement, but these observations do not justify presenting it as
+the required memory optimization. Whole-store splitting is likewise unsupported
+as a material peak fix. The remaining attribution gap is which short-lived allocations account for the
+occupancy around repeated queries, plus native/resident-page ownership; this
+instrument deliberately cannot provide an exact retainer graph. These results are
+shared with the framework investigation, without claiming its gains in this PR.
+No additional diagnostic, plain pilot or three-pair benchmark is queued. The CRM
+PR remains Draft and **peak-memory acceptance remains unmet**.
