@@ -13,3 +13,5 @@
 - Separate reset measurement from verification, add opt-in allocation/CPU/Intl
   diagnostics, and retain rejected memory candidates without claiming an
   unproven peak-memory reduction.
+- Capture final worker OS high-water RSS and abnormal exits in the resource
+  launcher, enforce exact story counts, and tighten fixed regression budgets.

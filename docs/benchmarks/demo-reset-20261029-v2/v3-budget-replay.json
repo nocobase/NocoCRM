@@ -1,0 +1,30 @@
+{
+  "kind": "Offline replay of v2 measurements, not a new process/resource run; final parent wait4 application metric remains unmeasured",
+  "budgets": {
+    "resetHeapMiB": 300,
+    "resetRssMiB": 640,
+    "allSampledHeapMiB": 384,
+    "allSampledRssMiB": 832,
+    "osMaxRssMiB": 832,
+    "retainedHeapMiB": 192,
+    "retainedGrowthMiB": 16,
+    "resetMs": 180000
+  },
+  "reports": [
+    {
+      "report": "docs/benchmarks/demo-reset-20261029-v2/pilot-v2-base/result.json",
+      "sha256": "6b6804a59a0e413fe969eb774656678fd2ed092c038b1c0b0b6a5a22c050f062",
+      "passed": true
+    },
+    {
+      "report": "docs/benchmarks/demo-reset-20261029-v2/pilot-v2-db-overlay/result.json",
+      "sha256": "d8390a1319c3f38bcd8a1765ccebad9fcc65e9ef596ef729988c69d3af57c293",
+      "passed": true
+    },
+    {
+      "report": "docs/benchmarks/demo-reset-20261029-v2/pilot-v2-app-candidate/result.json",
+      "sha256": "e6b72b80a37c0bcbb564b677b04f6c2017515af528df7ce50b362042bb0f20ed",
+      "passed": true
+    }
+  ]
+}

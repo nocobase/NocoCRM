@@ -25,6 +25,18 @@ assert.ok(global.gc, 'Run with --expose-gc');
 globalThis.fetch = async () => {
   throw new Error('External HTTP is forbidden in the resource fixture');
 };
+// Fixed regression limits, reviewed against the full-story observations.
+// Passing these limits is not evidence of a before/after improvement.
+const budgets = {
+  resetHeapMiB: 300,
+  resetRssMiB: 640,
+  allSampledHeapMiB: 384,
+  allSampledRssMiB: 832,
+  osMaxRssMiB: 832,
+  retainedHeapMiB: 192,
+  retainedGrowthMiB: 16,
+  resetMs: 180_000,
+};
 const mib = (bytes: number) => bytes / 1024 ** 2;
 const results: Record<string, unknown>[] = [];
 let phase = 'boot';
@@ -171,16 +183,22 @@ try {
     .orderBy('id', 'asc')
     .execute();
   const expected = await counts();
-  assert.equal(expected.crmLeads, 18);
-  assert.equal(expected.crmCompanies, 11);
-  assert.equal(expected.crmContacts, 22);
-  assert.equal(expected.crmOpportunities, 34);
-  assert.equal(expected.crmApprovals, 6);
-  assert.ok(expected.crmHistory > 0 && expected.agConversationMessages > 0);
+  assert.deepEqual(expected, {
+    crmLeads: 18,
+    crmCompanies: 11,
+    crmContacts: 22,
+    crmOpportunities: 34,
+    crmTasks: 117,
+    crmApprovals: 6,
+    crmHistory: 593,
+    crmWaMessages: 222,
+    agConversations: 4,
+    agConversationMessages: 10,
+  });
   const mailRows = (
     await query.selectFrom('mailMessages').select('id').execute()
   ).length;
-  assert.ok(mailRows > 0);
+  assert.equal(mailRows, 162);
   await demo.reset(String(actor.id), 'en-US', { wait: true }); // warm-up
   await settleMail();
   const initialRetainedMiB = await retained();
@@ -273,11 +291,15 @@ try {
     };
     results.push(row);
     console.log(JSON.stringify(row));
-    assert.ok(elapsedMs < 180_000, 'Reset time budget exceeded');
-    assert.ok(peakHeap < 768 * 1024 ** 2, 'Heap budget exceeded');
-    assert.ok(peakRss < 1200 * 1024 ** 2, 'RSS budget exceeded');
+    assert.ok(elapsedMs < budgets.resetMs, 'Reset time budget exceeded');
     assert.ok(
-      retainedHeapMiB < 384 && retainedHeapMiB - initialRetainedMiB < 64,
+      mib(peakHeap) < budgets.resetHeapMiB,
+      'Reset heap budget exceeded',
+    );
+    assert.ok(mib(peakRss) < budgets.resetRssMiB, 'Reset RSS budget exceeded');
+    assert.ok(
+      retainedHeapMiB < budgets.retainedHeapMiB &&
+        retainedHeapMiB - initialRetainedMiB < budgets.retainedGrowthMiB,
       'Retained heap budget exceeded',
     );
   }
@@ -288,14 +310,27 @@ try {
     0,
   );
   assert.equal((await admin.fetch('/demoMode/data')).status, 200);
-  assert.ok(allHeap < 768 * 1024 ** 2, 'Whole-process heap budget exceeded');
-  assert.ok(allRss < 1200 * 1024 ** 2, 'Whole-process RSS budget exceeded');
   assert.ok(
-    process.resourceUsage().maxRSS < 1200 * 1024,
+    mib(allHeap) < budgets.allSampledHeapMiB,
+    'All-phase sampled heap budget exceeded',
+  );
+  assert.ok(
+    mib(allRss) < budgets.allSampledRssMiB,
+    'All-phase sampled RSS budget exceeded',
+  );
+  assert.ok(
+    process.resourceUsage().maxRSS < budgets.osMaxRssMiB * 1024,
     'OS RSS budget exceeded',
   );
   const report = {
     node: process.version,
+    measurementVersion: 3,
+    budgets,
+    samplingIntervalMs: 10,
+    warmupResets: 1,
+    measuredResets: 5,
+    allSamplingWindow:
+      'after static imports through final-clear verification, before teardown; parent wait4 separately covers the entire process',
     profile: process.env.CRM_RESET_PROFILE === '1',
     measurementWindow:
       'demo.reset plus settleMail; excludes integrity queries and explicit GC',

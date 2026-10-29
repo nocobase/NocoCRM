@@ -11,6 +11,7 @@ import platform
 import subprocess
 from contextlib import ExitStack
 from db_overlay import registry_overlay, atomic_replace
+from resource_process import run_worker
 import signal
 import tempfile
 
@@ -22,6 +23,8 @@ parser.add_argument('--profile', action='store_true', help='Diagnostic first-res
 parser.add_argument('--db-overlay', action='store_true', help='Diagnostic upstream DB get() patch; atomic local replacement, restored in finally')
 parser.add_argument('--app-candidate', type=Path, help='Pilot-only replacement for CRM demo.ts; restored after the worker')
 args = parser.parse_args()
+if args.db_overlay and args.app_candidate:
+    parser.error('Measure dependency and application candidates separately')
 output = args.output.resolve()
 revision = args.revision
 # This comparison changes only the audited application module, never dependencies.
@@ -37,6 +40,7 @@ with open('/tmp/demo-reset-resource-benchmark.lock', 'a') as lock:
     def git(*args):
         return subprocess.check_output(['git', *args], cwd=root, text=True).strip()
     print(f'Acquired resource lock at {datetime.now(timezone.utc).isoformat()}; expected hold about 5 minutes (worker only)', flush=True)
+    assert not any(output.iterdir()), 'Choose an empty output directory; old reports must not satisfy a new run'
     overlays = ExitStack()
     original = source.read_bytes()
     demo_source = root / 'server/providers/crm/demo.ts'
@@ -65,6 +69,9 @@ with open('/tmp/demo-reset-resource-benchmark.lock', 'a') as lock:
             'sourceSha256': hashlib.sha256((root / 'server/providers/crm/demo-lifecycle.ts').read_bytes()).hexdigest(),
             'lockSha256': hashlib.sha256((root / 'pnpm-lock.yaml').read_bytes()).hexdigest(),
             'workerSha256': hashlib.sha256((root / 'tests/resource/demo-reset-worker.ts').read_bytes()).hexdigest(),
+            'launcherSha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+            'resourceProcessSha256': hashlib.sha256((root / 'tests/resource/resource_process.py').read_bytes()).hexdigest(),
+            'command': ['python3', *os.sys.argv],
             'platform': platform.platform(), 'machine': platform.machine(), 'cpuCount': os.cpu_count(),
             'node': subprocess.check_output(['node', '--version'], text=True).strip(),
             'profile': args.profile, 'sharedHost': True, 'lock': '/tmp/demo-reset-resource-benchmark.lock',
@@ -76,12 +83,17 @@ with open('/tmp/demo-reset-resource-benchmark.lock', 'a') as lock:
             if args.profile:
                 env['CRM_RESET_PROFILE'] = '1'
             with open(output / 'run.log', 'w') as log:
-                try:
-                    result = subprocess.run(['node', '--expose-gc', '--import', 'tsx', 'tests/resource/demo-reset-worker.ts', str(output / 'result.json')], cwd=root, env=env, stdout=log, stderr=subprocess.STDOUT, timeout=1200)
-                    assert result.returncode == 0, f'Worker exited {result.returncode}; see {output / "run.log"}'
-                    assert (output / 'result.json').is_file(), 'Worker exited without completing assertions'
-                except subprocess.TimeoutExpired:
-                    raise SystemExit('Resource worker exceeded 1200 seconds')
+                receipt = run_worker(
+                    ['node', '--expose-gc', '--import', 'tsx', 'tests/resource/demo-reset-worker.ts', str(output / 'result.json')],
+                    cwd=root, env=env, log=log, timeout=1200,
+                )
+                receipt['finishedAt'] = datetime.now(timezone.utc).isoformat()
+                (output / 'process.json').write_text(json.dumps(receipt, indent=2) + '\n')
+                assert not receipt['timedOut'], 'Resource worker exceeded 1200 seconds'
+                assert receipt['returnCode'] == 0, f'Worker exited {receipt["returnCode"]}; see {output / "run.log"}'
+                assert (output / 'result.json').is_file(), 'Worker exited without completing assertions'
+                report = json.loads((output / 'result.json').read_text())
+                assert receipt['osMaxRssMiB'] < report['budgets']['osMaxRssMiB'], 'Full-process OS RSS budget exceeded'
         print(f'PASS: {output / "result.json"}', flush=True)
     finally:
         try:
@@ -90,5 +102,10 @@ with open('/tmp/demo-reset-resource-benchmark.lock', 'a') as lock:
             if candidate is not None:
                 atomic_replace(demo_source, demo_original, demo_mode)
                 assert demo_source.read_bytes() == demo_original
+                (output / 'app-restoration.json').write_text(json.dumps({
+                    'restoredSha256': hashlib.sha256(demo_source.read_bytes()).hexdigest(),
+                    'matchesOriginal': True,
+                }, indent=2) + '\n')
             if revision:
                 source.write_bytes(original)
+    print(f'Releasing resource lock at {datetime.now(timezone.utc).isoformat()}', flush=True)

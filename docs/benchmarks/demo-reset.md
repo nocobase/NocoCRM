@@ -48,28 +48,38 @@ mismatch is rejected. No checkout or node_modules copy is created.
 Both invocations hold `/tmp/demo-reset-resource-benchmark.lock`, shared with the
 other solutions' benchmarks. This serializes participating heavy benchmarks; it
 does not make the shared machine idle. Each output directory has raw `result.json`,
-`environment.json` (source/worker/lock hashes and timestamp) and `run.log`.
+`environment.json` (source/worker/lock hashes and timestamp), `run.log`, and
+`process.json` (final worker exit/timeout and OS high-water receipt). Use an empty
+output directory: previous results cannot satisfy a new run's completion check.
 The optional **Demo reset resource budget** workflow runs the changed version and
 uploads these artifacts. It never updates or accepts a baseline automatically.
 
 ## Budgets and instrumentation
 
-- Whole application: sampled heap < **768 MiB**, sampled and OS high-water RSS
-  < **1200 MiB**, including boot, import, warm-up, reset and final clear.
+- Every measured reset: sampled heap < **300 MiB**, sampled RSS < **640 MiB**.
+- Across boot, import, warm-up, reset and final clear: sampled heap < **384 MiB**,
+  sampled RSS < **832 MiB**. Parent-collected, full-process OS RSS < **832 MiB**.
 - Every measured reset, including waiting for its mail synchronization: < **180 s**.
-- After each quiescent round: GC-retained heap < **384 MiB**, and growth from the
-  warmed baseline < **64 MiB**.
+- After each quiescent round: GC-retained heap < **192 MiB**, and growth from the
+  warmed baseline < **16 MiB**.
 - Mail must settle within **120 s**. Worker timeout is **1200 s**; a signal,
   nonzero exit, missing final report or failed integrity assertion fails the gate.
 
-The budgets leave headroom above local observations for runtime/host variance,
-while bounding the full application below the reported ~1.5 GiB incident heap.
-They are a regression guard, not a demonstrated safe capacity for production.
+These v3 limits leave approximately 22–33% above the largest uninstrumented v2
+heap/RSS observations, and are fixed rather than automatically derived on each
+run. Retained-growth and time limits separately detect stalled or accumulating
+resets. They are a regression guard, not evidence of optimization or a demonstrated
+safe capacity for production. Historical v1/v2 runs used broader 768/1200 MiB
+heap/RSS and 384/64 MiB retained/growth guards; those passing limits never
+established a memory benefit.
 No heap-size increase is supplied. Node runs with `--expose-gc` solely for retained
 measurements after work settles. There is **no forced GC during reset**. Heap/RSS
 are sampled every 10 ms and at generation progress boundaries; short synchronous
-heap peaks may be missed. `resourceUsage().maxRSS` additionally captures the OS
-process RSS high-water mark. These are different metrics, not interchangeable.
+heap peaks may be missed. Node's `resourceUsage().maxRSS` records an OS high-water
+observation before teardown. The v3 parent also uses `wait4` after the worker
+exits to capture its complete lifetime, including static imports and teardown,
+with platform-specific units normalized to MiB. These are different metrics,
+not interchangeable.
 Progress milestones expose generation intervals without altering the business
 path. Import dependencies load before the JS sampler; OS RSS covers that too.
 
@@ -166,6 +176,9 @@ run after that boundary. The historical v1 round peaks also included verificatio
 do not mix these scopes. Sampling all-process heap/RSS continues outside the reset
 window. In v2, Node's OS high-water observation is taken before application
 teardown, so it is not a parent-collected final process-lifetime observation.
+The exact v2 harness is preserved at commit
+`61416b43f2fe0bb8e8664243295d45ff52957d6d`; use that harness revision when
+reproducing the v2 numbers below, not a mixture of v2 and v3 workers.
 
 `--profile` enables `CRM_RESET_PROFILE=1` for the first measured reset only. It
 records a CPU profile, sampled cumulative allocations (including objects already
@@ -321,3 +334,28 @@ Raw [baseline](demo-reset-20261029-v2/pilot-v2-base/result.json) and
 retain all five rounds and phase/milestone samples. In three baseline rounds the
 heap maximum occurred after generation, during Mail convergence; a generator-only
 allocation improvement would not automatically reduce that full-reset peak.
+
+## V3 verification limits and remaining acceptance work
+
+V3 adds the parent `wait4` receipt, the tighter budgets above, and exact initial
+counts for every story table and all 162 mail messages. Counts are no longer
+accepted merely because later resets reproduce an accidentally smaller first
+import. A failed, signalled, timed-out or report-less process fails the launcher;
+interruption reaps its own child before restoring an overlay. Six lightweight
+tests cover final OS high-water after memory release, nonzero/signal exits,
+timeout, hard-link isolation and exceptional restoration, and external symlink
+refusal. Scoped TypeScript and ESLint also pass.
+
+The recorded uninstrumented v2 reports were replayed against the new numeric
+guards and exact counts. That is validation of the thresholds, **not another
+resource measurement**. No new full v3 application process was launched after
+the coordinated CRM window ended; the final parent-collected application RSS
+measurement is therefore still unverified. The next authorized resource window
+must use one identical final harness for both sides.
+
+Neither investigated candidate passed the peak-memory pilot requirement. The
+production generator and published framework dependencies remain unchanged.
+Correctness and bounded cleanup improvements remain in this PR, but peak-memory
+acceptance is **not met**. There are no three independent AB/BA pairs and no
+claim that an unpublished framework patch fixes the CRM peak. A new measured
+hotspot and a successful plain pilot must precede any formal repeated comparison.
