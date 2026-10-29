@@ -1,9 +1,8 @@
 import type { Application } from '@nocobase/app-server/application';
-import { mailServiceToken } from '@nocobase/app-plugin-mail/server';
-import { waitForDemoMailboxRemoval } from './demo-mail-cleanup.js';
 import { driveManagerToken } from '@nocobase/app-server/drive';
 import type { DemoImportContext } from '@nocobase/app-plugin-demo-mode/server/tokens';
 import { authorizationToken } from '@nocobase/app-plugin-authorization/server';
+import { mailServiceToken } from '@nocobase/app-plugin-mail/server';
 import { demoServices } from '../../routes/demo-services.js';
 import { crmToken } from './index.js';
 import { crmActor, roleKey } from './authorization.js';
@@ -14,6 +13,7 @@ import {
   DEMO_MARKER,
 } from './demo.js';
 import { DEMO_MAIL_ROW, setDemoMailLanguage } from './demo-mail.js';
+import { removeDemoMailboxes } from './demo-mail-cleanup.js';
 import { whatsappToken } from './whatsapp/service.js';
 
 const DEMO_BATCH_SIZE = 200;
@@ -100,20 +100,14 @@ export async function clearDemoBusiness(app: Application): Promise<void> {
       .select(['id', 'userId', 'status'])
       .where('providerType', '=', 'crm-demo')
       .execute();
-    for (const account of accounts) {
-      // A retry may observe an already-running removal. Do not re-submit it:
-      // it may finish between this snapshot and removeAccount's lookup.
-      if (account.status !== 'removing')
-        await mail.removeAccount(
-          { actorId: String(account.userId) },
-          String(account.id),
-        );
-    }
-    await waitForDemoMailboxRemoval(
+    // Also when the demo provider is switched off: its old mailboxes still
+    // hold the fictional addresses the next import connects.
+    await removeDemoMailboxes(
       mail,
       accounts.map((account) => ({
         id: String(account.id),
         userId: String(account.userId),
+        status: String(account.status),
       })),
     );
   }
