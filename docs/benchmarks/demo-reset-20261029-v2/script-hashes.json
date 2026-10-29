@@ -1,6 +1,0 @@
-{
-  "tests/resource/demo-reset-worker.ts": "cada46647ed50ae3ccec6c4d96af485bd25e6c9a7ba756fd95d59d73e85148bf",
-  "tests/resource/demo-reset-profile.ts": "c9bbef121cd29b3d6b327ed4bccb1a1c66107f8c8597806770a01e303f199510",
-  "tests/resource/demo-reset.py": "b6cdeafc05583cc8ef1a389afbbe8633ec9d07ba5ea3f06c78aaaa73c1dc3a77",
-  "tests/resource/db_overlay.py": "a6f498e0d6b4ec741ea4b783dc3aa12f20bb487d0916bb8703b3bed81fce9b26"
-}

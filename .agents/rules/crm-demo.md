@@ -86,19 +86,3 @@ The demo dataset brings two WhatsApp numbers too (`server/providers/crm/demo-wha
 The demo's companies are real, well-known Chinese companies (both languages, the English under their official English names): their names, cities, industries, rough sizes and real websites are public facts, while the people, deals and what happened with them are invented and kept neutral (no competitor chosen, budget cut, funding, incident or other claim that could read as a fact about the company; a lost or churned one built its own system instead). The contacts' email addresses stay at `<domain>.example`, never a real company's. Each lead's industry and city are `leadPlaces` in `demo.ts`. One project company, GAC, carries a real, neutral company signal with its real sources and date (`project.signals`; no model runs); removing the demo deletes its companies' signals. See [crm-signals.md](crm-signals.md).
 
 LinkedIn addresses in the dataset: a company's is its real LinkedIn page (`DemoCompany.linkedin`) only where a search showed the page as that company's own, left out otherwise rather than guessed (Intime, Guangzhou Restaurant and XJTLU have none); a person's, since the people are made up, is `demoProfile(mailbox)` in `server/providers/crm/demo.ts`, `https://www.linkedin.com/in/nococrm-demo-<mailbox>`, an address no real profile has, as their email is at a `.example` domain: every primary contact and the other contact at every other company, the importer's projects' primary contacts, and the leads that came by exhibition, outreach or a partner.
-
-Dedicated-demo cleanup waits for Mail's accounts to disappear before generation
-can reuse their addresses. Existing `removing` accounts are not resubmitted;
-cleanup still runs if the fictional provider is now disabled. The Mail public
-`removalFailed` flag fails the reset with an account ID and recovery guidance;
-Mail continues to own its background retry. A pending worker has the original
-180-second deadline, measured monotonically, with pending IDs in its error.
-Never bypass this wait or delete Mail's tables from application code.
-Conversation/file cleanup and the six business tracking tables use batches of 200. Cleanup reads from the front as it deletes; tracking uses an ID cursor.
-
-`tests/resource/demo-reset.py` is the opt-in full-application resource gate,
-with Node 24.22.1, the real English story, real Mail background processing and
-five measured resets after warm-up. It holds the shared local benchmark lock.
-See [the resource protocol](../../docs/benchmarks/demo-reset.md) for budgets,
-reproduction, raw measurements and limits. The normal logic suite also covers
-mailbox failure/timeout and cleanup across a batch boundary.
