@@ -2806,11 +2806,15 @@ export class CrmService {
     return comment;
   }
   async checkApprover(actor: Actor, id: string): Promise<void> {
-    if (id === actor.id) throw new CrmError('selfApproval');
-    // The same rule the pickers apply: an active sales manager.
+    // The same rule the pickers apply (approverChoices in
+    // client/components/crm/approver-choices.ts): an active user the approver
+    // rule names who holds `approve`, and oneself only when no one else is.
     const users = await this.users(actor);
-    if (!users.some((u) => u.id === id && !u.disabled && u.canApprove))
+    const approvers = users.filter((u) => !u.disabled && u.canApprove);
+    if (!approvers.some((u) => u.id === id))
       throw new CrmError('invalidApprover');
+    if (id === actor.id && approvers.some((u) => u.id !== actor.id))
+      throw new CrmError('selfApproval');
   }
   async approvalAction(
     actor: Actor,
@@ -2850,11 +2854,9 @@ export class CrmService {
       if (!['approve', 'reject'].includes(action))
         throw new CrmError('invalidInput');
       await requireCapability(actor, 'approve');
-      if (
-        record.approverId !== actor.id ||
-        record.ownerId === actor.id ||
-        record.status !== 'pending'
-      )
+      // Their own request too, when they were its approver: checkApprover
+      // let them be chosen only while no one else could approve.
+      if (record.approverId !== actor.id || record.status !== 'pending')
         throw new CrmError('forbidden', 403);
       status = action === 'approve' ? 'approved' : 'rejected';
     }

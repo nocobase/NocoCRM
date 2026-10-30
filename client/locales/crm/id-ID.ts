@@ -2675,7 +2675,8 @@ export const crmIdID: CrmWording = {
     opportunityHasTasks:
       'Peluang ini memiliki tugas dengan perusahaannya saat ini, sehingga tidak dapat dipindahkan ke perusahaan lain.',
     endBeforeStart: 'Waktu selesai harus setelah waktu tugas.',
-    selfApproval: 'Anda tidak dapat menyetujui permintaan Anda sendiri.',
+    selfApproval:
+      'Ada orang lain yang dapat menyetujui, jadi Anda tidak dapat memilih diri sendiri sebagai penyetuju.',
     approvalOpportunity:
       'Persetujuan hanya dapat diajukan untuk peluang yang boleh Anda edit.',
     invalidApprover:

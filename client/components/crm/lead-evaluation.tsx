@@ -80,6 +80,7 @@ import {
   useRefresh,
   type CrmRecord,
 } from './api.js';
+import { approverChoices } from './approver-choices.js';
 import { useAgentWords } from './work-agent-name.js';
 import { AgentWords } from './work-agent.js';
 import { cardPin, recordPin } from './agent-chat/ask.js';
@@ -664,10 +665,9 @@ export function VerdictPanel({
       ? carriedChanges(existing, verdict, plan, overdue).none
       : false;
   // The approvals the accept would submit, as ticked, each with its
-  // approver (a sales manager other than the reader by default).
-  const approvers = meta.users.filter(
-    (u) => !u.disabled && u.canApprove && u.id !== meta.userId,
-  );
+  // approver (someone other than the reader, unless no one else may
+  // approve).
+  const approvers = approverChoices(meta.users, meta.userId);
   const submitting = (
     verdict && isDeal(verdict) ? (verdict.approvals ?? []) : []
   ).flatMap((approval, index) => {
@@ -2520,9 +2520,7 @@ function ProposedApprovals({
   const { data: meta } = useMetadata();
   const { text } = useCrmText();
   if (!meta) return null;
-  const approvers = meta.users.filter(
-    (u) => !u.disabled && u.canApprove && u.id !== meta.userId,
-  );
+  const approvers = approverChoices(meta.users, meta.userId);
   const submitted = new Map(
     (entry.ai.submittedApprovals ?? []).map((s) => [s.index, s.id]),
   );

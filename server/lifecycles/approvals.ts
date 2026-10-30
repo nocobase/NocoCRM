@@ -92,10 +92,14 @@ const applicantOnly = ({ record, actor }: TransitionContext<ApprovalTypes>) =>
     message: 'Only the applicant can do this.',
   };
 
+// The approver decides, the applicant too when they are it: who may be
+// chosen (oneself only when no one else may approve) is checked when the
+// approver is saved and when the request is submitted (CrmService
+// .checkApprover).
 const approverOnly = ({ record, actor }: TransitionContext<ApprovalTypes>) =>
-  (actor.id === record.approverId && actor.id !== record.ownerId) || {
+  actor.id === record.approverId || {
     code: 'forbidden',
-    message: 'Only the approver, who is not the applicant, can decide.',
+    message: 'Only the approver can decide.',
   };
 
 const decided = ({ input, now }: TransitionContext<ApprovalTypes>) => ({

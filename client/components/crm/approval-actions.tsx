@@ -54,11 +54,10 @@ export function ApprovalActions({
   const applicant = approval.ownerId === meta.userId;
   const canSubmit = applicant && ['draft', 'withdrawn'].includes(status);
   const canWithdraw = applicant && status === 'pending';
+  // The approver decides, the applicant too when they are it (chosen only
+  // because no one else could approve, approver-choices.ts).
   const canDecide =
-    meta.approve &&
-    approval.approverId === meta.userId &&
-    approval.ownerId !== meta.userId &&
-    status === 'pending';
+    meta.approve && approval.approverId === meta.userId && status === 'pending';
   // An administrator may delete an approval in any state.
   const canDelete =
     withDelete &&

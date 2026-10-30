@@ -9,6 +9,7 @@ import { FileDropZone } from './attachments.js';
 import { CommentFiles } from './comment-files.js';
 import { ConfirmDialog } from './confirm-dialog.js';
 import { editsAll, fieldLabelKey, toText } from './api.js';
+import { approverChoices } from './approver-choices.js';
 import { CountryChoice, SubdivisionChoice } from './geography.js';
 import {
   Fragment,
@@ -641,13 +642,15 @@ export function RecordForm({
   const names = titles ?? {};
   const choices = (field: Field): { value: string; label: string }[] => {
     if (field.relation === 'users')
-      return (meta?.users ?? [])
+      return (
+        field.key === 'approverId'
+          ? approverChoices(meta?.users ?? [], meta?.userId)
+          : (meta?.users ?? [])
+      )
         .filter(
           (u) =>
             !u.disabled &&
             u.roles.length &&
-            (field.key !== 'approverId' ||
-              (u.id !== meta?.userId && u.canApprove)) &&
             // Only sellers own records; an administrator is not offered.
             (field.key !== 'ownerId' ||
               entity === 'approvals' ||

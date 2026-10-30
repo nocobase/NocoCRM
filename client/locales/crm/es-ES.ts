@@ -2691,7 +2691,8 @@ export const crmEsES: CrmWording = {
     opportunityHasTasks:
       'Esta oportunidad tiene tareas con su empresa actual, así que no puede pasar a otra empresa.',
     endBeforeStart: 'La hora de fin debe ser posterior a la hora de la tarea.',
-    selfApproval: 'No puedes aprobar tu propia solicitud.',
+    selfApproval:
+      'Hay otras personas que pueden aprobar, así que no puedes elegirte como aprobador.',
     approvalOpportunity:
       'Solo se puede crear una aprobación para una oportunidad que puedas editar.',
     invalidApprover:

@@ -2699,7 +2699,8 @@ export const crmFrFR: CrmWording = {
       'Cette opportunité a des tâches liées à son entreprise actuelle ; elle ne peut pas être rattachée à une autre entreprise.',
     endBeforeStart:
       "L'heure de fin doit être postérieure à l'heure de la tâche.",
-    selfApproval: 'Vous ne pouvez pas approuver votre propre demande.',
+    selfApproval:
+      'D’autres personnes peuvent approuver : vous ne pouvez pas vous choisir comme approbateur.',
     approvalOpportunity:
       'Une approbation ne peut être demandée que pour une opportunité que vous pouvez modifier.',
     invalidApprover:

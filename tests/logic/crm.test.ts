@@ -1528,7 +1528,7 @@ describe('CRM API security and domain rules', () => {
       ),
     ).rejects.toMatchObject({ code: 'opportunityHasTasks' });
   });
-  it('enforces approval ownership, lock states, assigned approver and no self approval', async () => {
+  it('enforces approval ownership, lock states, assigned approver and self approval only without another approver', async () => {
     const company = await service.save(actor('rep'), 'companies', {
       name: 'Approval company',
     });
@@ -1585,15 +1585,52 @@ describe('CRM API security and domain rules', () => {
     await expect(
       service.approvalAction(actor('manager'), approval.id, 'reject'),
     ).rejects.toMatchObject({ code: 'forbidden' });
-    await expect(
-      service.save(actor('manager'), 'approvals', {
-        name: 'Self',
-        opportunityId: opportunity.id,
-        topic: 'discount',
-        description: 'Terms',
-        approverId: 'manager',
-      }),
-    ).rejects.toMatchObject({ code: 'selfApproval' });
+    // The only one who may approve may choose themselves, and decide.
+    const own = await service.save(actor('manager'), 'approvals', {
+      name: 'Self',
+      opportunityId: opportunity.id,
+      topic: 'discount',
+      description: 'Terms',
+      approverId: 'manager',
+    });
+    await service.approvalAction(actor('manager'), toText(own.id), 'submit');
+    expect(
+      (
+        await service.approvalAction(
+          actor('manager'),
+          toText(own.id),
+          'approve',
+        )
+      ).status,
+    ).toBe('approved');
+    // Once someone else may approve, oneself is refused, on saving and on
+    // submitting a draft saved before.
+    const draft = await service.save(actor('manager'), 'approvals', {
+      name: 'Self draft',
+      opportunityId: opportunity.id,
+      topic: 'discount',
+      approverId: 'manager',
+    });
+    // A second sales manager, for this check only.
+    const second = await authorization.permissionSets.assign({
+      permissionSet: roleKey('sales-manager'),
+      subject: { type: 'user', id: 'other' },
+    });
+    try {
+      await expect(
+        service.save(actor('manager'), 'approvals', {
+          name: 'Self again',
+          opportunityId: opportunity.id,
+          topic: 'discount',
+          approverId: 'manager',
+        }),
+      ).rejects.toMatchObject({ code: 'selfApproval' });
+      await expect(
+        service.approvalAction(actor('manager'), toText(draft.id), 'submit'),
+      ).rejects.toMatchObject({ code: 'selfApproval' });
+    } finally {
+      await authorization.permissionSets.revoke(second.id);
+    }
     // Each step's message was queued once it committed.
     const outbox = await database
       .query()
