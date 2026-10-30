@@ -70,7 +70,16 @@ test('generates only sales accounts and keeps the importing administrator outsid
   const demo = app.container.resolve(demoDataToken);
   await demo.importNow(String(root.id), 'zh-CN');
   expect((await demo.status()).state).toBe('ready');
-  expect((await demo.status()).counts).toMatchObject({ '@user': 4 });
+  // The plugin's own summary, keyed as the settings page labels it.
+  expect((await demo.status()).counts).toMatchObject({
+    accounts: 4,
+    crmLeads: 18,
+    crmCompanies: 11,
+    crmContacts: 22,
+    crmOpportunities: 34,
+    crmTasks: 117,
+    crmApprovals: 6,
+  });
   const users = await connection.query.selectFrom('user').selectAll().execute();
   expect(users).toHaveLength(5);
   expect(users.find((user) => user.id === root.id)).toMatchObject(root);

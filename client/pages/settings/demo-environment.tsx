@@ -18,7 +18,7 @@ const counts: Record<string, string> = {
   crmOpportunities: 'entities.opportunities',
   crmTasks: 'entities.tasks',
   crmApprovals: 'entities.approvals',
-  '@user': 'navigation.users',
+  accounts: 'navigation.users',
 };
 
 export default function DemoEnvironmentPage(): ReactElement {

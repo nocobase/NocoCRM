@@ -1,3 +1,4 @@
+import { useDemoMode } from '@nocobase/app-plugin-demo-mode/client';
 import { useEffect, useState, type ReactElement } from 'react';
 import { Link } from 'react-router';
 import { Database, X } from 'lucide-react';
@@ -29,12 +30,12 @@ function readDismissed(): boolean {
 export function DemoBanner(): ReactElement | null {
   const { text } = useCrmText();
   const metadata = useMetadata().data;
-  const demoMode = useCrmQuery<{ enabled: boolean }>('demoMode/status').data;
+  const demoMode = useDemoMode();
   const [dismissed, setDismissed] = useState(readDismissed);
   const queryClient = useQueryClient();
   const scopeKey = useCrmScopeKey();
   const offered =
-    demoMode?.enabled === false &&
+    !demoMode &&
     Boolean(metadata?.settingsAccess) &&
     metadata?.demoPresent === false;
   const status = useCrmQuery<DemoStatus>('demoData', offered, {

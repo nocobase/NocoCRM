@@ -20,23 +20,6 @@ export function existingCrmDemo(app: Application): DemoDataset {
         password: demoPassword(username),
       }));
     },
-    counts: async ({ records }) => {
-      const visible = new Set([
-        'crmLeads',
-        'crmCompanies',
-        'crmContacts',
-        'crmOpportunities',
-        'crmTasks',
-        'crmApprovals',
-        '@user',
-      ]);
-      const counts: Record<string, number> = {};
-      for (const { collection } of records) {
-        if (visible.has(collection))
-          counts[collection] = (counts[collection] ?? 0) + 1;
-      }
-      return counts;
-    },
     generate: (context) => generateDemo(app, context),
     clear: () => clearDemoBusiness(app),
   };
