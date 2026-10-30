@@ -2529,7 +2529,7 @@ export const crmZhTW: CrmWording = {
     leadOrCompany: '任務關聯線索，或關聯公司及其商機，二者不能同時關聯。',
     opportunityHasTasks: '此商機已有與目前公司的任務，不能更換到其他公司。',
     endBeforeStart: '結束時間不能早於任務時間。',
-    selfApproval: '不能審批自己發起的申請。',
+    selfApproval: '有其他人可以審批時，不能選自己為審批人。',
     approvalOpportunity: '只能為自己負責的商機發起審批。',
     invalidApprover: '請從可審批的人中選擇審批人（在設定 → 審批流程中設定）。',
     signalsUnavailable:

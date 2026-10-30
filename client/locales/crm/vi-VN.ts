@@ -2663,7 +2663,8 @@ export const crmViVN: CrmWording = {
     opportunityHasTasks:
       'Cơ hội này có công việc gắn với công ty hiện tại, nên không thể chuyển sang công ty khác.',
     endBeforeStart: 'Thời gian kết thúc phải sau thời gian của công việc.',
-    selfApproval: 'Bạn không thể phê duyệt yêu cầu của chính mình.',
+    selfApproval:
+      'Đã có người khác có thể phê duyệt, nên bạn không thể chọn chính mình làm người phê duyệt.',
     approvalOpportunity:
       'Chỉ có thể tạo phê duyệt cho cơ hội mà bạn được phép chỉnh sửa.',
     invalidApprover:

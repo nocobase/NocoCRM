@@ -83,15 +83,15 @@ describe('the approvals lifecycle', () => {
     expect(
       await refusal(kit.fire(approval, 'withdraw', {}, { actor: 'manager' })),
     ).toEqual({ code: 'GUARD_REJECTED', blocker: 'approvalLocked' });
-    // Nor is the approver's own request theirs to decide.
+    // An applicant who is their request's approver decides it: whether
+    // they may be chosen is CrmService.checkApprover's (only when no one
+    // else may approve), not the lifecycle's.
     const own = await kit.start(
       { ownerId: 'manager', approverId: 'manager' },
       { actor: 'manager' },
     );
     await kit.fire(own, 'submit', {}, { actor: 'manager' });
-    expect(
-      await refusal(kit.fire(own, 'approve', {}, { actor: 'manager' })),
-    ).toEqual({ code: 'GUARD_REJECTED', blocker: 'forbidden' });
+    await kit.fire(own, 'approve', {}, { actor: 'manager' });
   });
 
   it('asks for an approver before a submission, and refuses moves the state does not allow', async () => {

@@ -2674,7 +2674,8 @@ export const crmPtBR: CrmWording = {
       'Esta oportunidade tem tarefas com a empresa atual, por isso não pode ser movida para outra empresa.',
     endBeforeStart:
       'O horário de término deve ser posterior ao horário da tarefa.',
-    selfApproval: 'Você não pode aprovar a sua própria solicitação.',
+    selfApproval:
+      'Há outras pessoas que podem aprovar, então você não pode se escolher como aprovador.',
     approvalOpportunity:
       'Uma aprovação só pode ser criada para uma oportunidade que você pode editar.',
     invalidApprover:

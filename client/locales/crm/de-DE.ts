@@ -2713,7 +2713,8 @@ export const crmDeDE: CrmWording = {
     opportunityHasTasks:
       'Diese Verkaufschance hat Aufgaben mit ihrem aktuellen Unternehmen und kann daher nicht zu einem anderen Unternehmen verschoben werden.',
     endBeforeStart: 'Die Endzeit muss nach der Zeit der Aufgabe liegen.',
-    selfApproval: 'Sie können Ihren eigenen Antrag nicht genehmigen.',
+    selfApproval:
+      'Andere können genehmigen, daher können Sie sich nicht selbst als Genehmiger wählen.',
     approvalOpportunity:
       'Eine Genehmigung kann nur für eine Verkaufschance angefordert werden, die Sie bearbeiten dürfen.',
     invalidApprover:

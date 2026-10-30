@@ -4,6 +4,7 @@ import type settingsEnUS from '../system/settings-en-US.js';
 // The template's Settings copy (client/locales/system/settings-en-US.ts): the
 // prepared Users and Roles pages and the permission editor, in ru-RU.
 const settings: LocaleResource<typeof settingsEnUS> = {
+  listChanged: 'Список изменился. Повторите попытку.',
   setup: {
     title: 'Предварительные условия функции',
     checking: 'Проверка текущей конфигурации…',
@@ -196,6 +197,13 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   dataRanges: 'Диапазоны данных ({{count}})',
   selectVisiblePermissions: 'Выбрать видимые разрешения в «{{name}}»',
   permissionSummary: 'Включено {{enabled}} из {{total}}',
+  permissionAll: 'Все',
+  permissionGranted: 'Предоставлено',
+  permissionUngranted: 'Не предоставлено',
+  permissionStatus: 'Статус доступа',
+  permissionClearSearch: 'Очистить поиск',
+  permissionCollapseAll: 'Свернуть все',
+  permissionExpandAll: 'Развернуть все',
   preservedRecordScope: 'Сохранить текущую конфигурацию',
   noRecordScope: 'Использовать правила по умолчанию',
   permissionFilter: {

@@ -17,6 +17,15 @@ const idID: AppResource = {
   'auth.connectionFailed': 'Tidak dapat terhubung',
   'auth.connectionFailedDescription':
     'Koneksi waktu nyata tidak dapat disiapkan. Coba lagi untuk masuk ke aplikasi, atau keluar.',
+  formFeedback: {
+    field: 'Nilai ini ditolak. Periksa lalu coba lagi.',
+    invalid: 'Periksa kolom yang ditandai lalu coba lagi.',
+    failed: 'Tidak dapat menyimpan. Masukan Anda tetap tersimpan. Coba lagi.',
+    network:
+      'Tidak dapat terhubung. Periksa koneksi Anda lalu coba lagi. Masukan Anda tetap tersimpan.',
+    denied:
+      'Akses Anda saat ini tidak memungkinkan pengiriman formulir ini. Masukan Anda tetap tersimpan.',
+  },
   'deviceApproval.title': 'Otorisasi perangkat',
   'deviceApproval.description':
     'Baris perintah atau perangkat lain meminta untuk masuk sebagai Anda. Setujui hanya jika Anda sendiri yang memulai proses masuk ini.',

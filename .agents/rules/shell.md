@@ -43,3 +43,7 @@ The header actions mount `DemoModeMenu` from
 account controls. Keep the Client registration as `demoMode()`. The plugin owns
 the demo notice, account loading, switching and translated copy, and renders
 nothing outside Demo Mode. The avatar menu has no second account switcher.
+
+## List context
+
+Keep the identity-keyed `SessionPreparation` boundary: mounted private list conditions and ancestor query memory must be discarded when the signed-in user changes. Public list state uses `useTableUrlState`; tabbed datasets use `useListTabs`, with complete owned parameter keys and permission-filtered tabs. Follow the synchronized [list navigation rules](../skills/nocobase-app-development/references/frontend/references/child-routes.md#list-tab-breadcrumbs-and-private-conditions). Default back links use an empty ancestor query when no source visit exists; explicit return destinations remain application-owned.

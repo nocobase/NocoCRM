@@ -4,6 +4,7 @@ import type settingsEnUS from '../system/settings-en-US.js';
 // The template's Settings copy (client/locales/system/settings-en-US.ts): the
 // prepared Users and Roles pages and the permission editor, in fr-FR.
 const settings: LocaleResource<typeof settingsEnUS> = {
+  listChanged: 'La liste a changé. Réessayez.',
   setup: {
     title: 'Prérequis de la fonctionnalité',
     checking: 'Vérification de la configuration actuelle…',
@@ -195,6 +196,13 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   selectVisiblePermissions:
     'Sélectionner les autorisations visibles dans {{name}}',
   permissionSummary: '{{enabled}} sur {{total}} activées',
+  permissionAll: 'Tout',
+  permissionGranted: 'Accordé',
+  permissionUngranted: 'Non accordé',
+  permissionStatus: 'État de l’autorisation',
+  permissionClearSearch: 'Effacer la recherche',
+  permissionCollapseAll: 'Tout replier',
+  permissionExpandAll: 'Tout déplier',
   preservedRecordScope: 'Conserver la configuration existante',
   noRecordScope: 'Utiliser les règles par défaut',
   permissionFilter: {

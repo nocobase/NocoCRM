@@ -2629,7 +2629,7 @@ export const crmKoKR: CrmWording = {
     opportunityHasTasks:
       '이 영업 기회에는 현재 회사와 관련된 작업이 있어 다른 회사로 옮길 수 없습니다.',
     endBeforeStart: '종료 시간은 작업 시간 이후여야 합니다.',
-    selfApproval: '자신의 요청은 승인할 수 없습니다.',
+    selfApproval: '다른 승인자가 있을 때는 자신을 승인자로 선택할 수 없습니다.',
     approvalOpportunity:
       '승인은 편집할 수 있는 영업 기회에 대해서만 요청할 수 있습니다.',
     invalidApprover:

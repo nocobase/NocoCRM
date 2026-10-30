@@ -17,6 +17,16 @@ const koKR: AppResource = {
   'auth.connectionFailed': '연결할 수 없습니다',
   'auth.connectionFailedDescription':
     '실시간 연결을 준비할 수 없습니다. 다시 시도해 애플리케이션에 들어가거나 로그아웃하세요.',
+  formFeedback: {
+    field: '이 값이 거부되었습니다. 확인한 후 다시 시도하세요.',
+    invalid: '표시된 항목을 확인한 후 다시 시도하세요.',
+    failed:
+      '저장하지 못했습니다. 입력한 내용은 유지되었습니다. 다시 시도하세요.',
+    network:
+      '연결할 수 없습니다. 연결을 확인한 후 다시 시도하세요. 입력한 내용은 유지되었습니다.',
+    denied:
+      '현재 권한으로는 이 양식을 제출할 수 없습니다. 입력한 내용은 유지되었습니다.',
+  },
   'deviceApproval.title': '기기 인증',
   'deviceApproval.description':
     '명령줄이나 다른 기기에서 내 계정으로 로그인하려고 합니다. 직접 로그인을 시작한 경우에만 승인하세요.',

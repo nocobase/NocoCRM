@@ -2652,7 +2652,7 @@ export const crmJaJP: CrmWording = {
     opportunityHasTasks:
       'この商談には現在の会社とのタスクがあるため、別の会社に移動できません。',
     endBeforeStart: '終了日時はタスクの日時より後にしてください。',
-    selfApproval: '自分の申請は承認できません。',
+    selfApproval: 'ほかに承認できる人がいる場合は、自分を承認者に選べません。',
     approvalOpportunity: '承認は、編集権限のある商談に対してのみ申請できます。',
     invalidApprover:
       '承認できるユーザーの中から承認者を選択してください（設定 → 承認プロセスで設定）。',

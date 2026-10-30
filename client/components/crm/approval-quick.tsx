@@ -9,6 +9,7 @@ import {
   useMetadata,
   type Data,
 } from './api.js';
+import { approverChoices } from './approver-choices.js';
 import { recordTitle } from './lookups.js';
 import { useDebounced, useMatches } from './record-search.js';
 import { TaskSearchChip, type SearchOption } from './task-quick.js';
@@ -54,9 +55,8 @@ export function ApprovalChips({
     ? (known[dealId] ?? names[dealId] ?? deals.titles[dealId] ?? '')
     : '';
   const topic = options.find((o) => o.value === input.topic)?.label;
-  const approvers = meta.users.filter(
-    (u) =>
-      !u.disabled && u.roles.length && u.canApprove && u.id !== meta.userId,
+  const approvers = approverChoices(meta.users, meta.userId).filter(
+    (u) => u.roles.length,
   );
   const approver = approvers.find((u) => u.id === input.approverId)?.name;
   return (

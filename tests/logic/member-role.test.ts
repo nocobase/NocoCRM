@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { randomUUID } from 'node:crypto';
 import { expect } from 'vitest';
 import { register } from 'tsx/esm/api';
 import { createAppTest } from '@nocobase/app-testing/server';
@@ -15,17 +16,37 @@ import { authorizationToken } from '@nocobase/app-plugin-authorization';
 import { createStandaloneServer } from '../../server/standalone.js';
 
 register();
+const createOperationKey = () => `${Date.now()}.${randomUUID()}`;
 const test = createAppTest({
   scope: 'test',
   createServer: createStandaloneServer,
   config: {
     app: { publicOrigin: 'http://localhost' },
     auth: { secret: 'test-auth-secret-at-least-32-characters' },
+    // Application change: a developer's SMTP_PASSWORD (.env.local) makes the
+    // system mailer's channel, which then needs its provider; a local one
+    // that is never used here (as tests/logic/authorization-assignment-safety.test.ts).
+    notification: {
+      channels: {
+        'system-email': {
+          type: 'smtp',
+          host: 'localhost',
+          port: 465,
+          secure: true,
+          auth: { user: 'test@example.test', pass: 'test-password' },
+          from: 'test@example.test',
+        },
+      },
+    },
   },
 });
 const json = (body: unknown, method = 'POST') => ({
   method,
-  headers: { 'content-type': 'application/json', origin: 'http://localhost' },
+  headers: {
+    'content-type': 'application/json',
+    origin: 'http://localhost',
+    'Idempotency-Key': createOperationKey(),
+  },
   body: JSON.stringify(body),
 });
 

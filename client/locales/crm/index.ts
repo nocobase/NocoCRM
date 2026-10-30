@@ -3441,8 +3441,8 @@ const wording = {
       '结束时间不能早于任务时间。',
     ],
     selfApproval: [
-      'You cannot approve your own request.',
-      '不能审批自己发起的申请。',
+      'Someone else can approve, so you cannot choose yourself as the approver.',
+      '有其他人可以审批时，不能选自己为审批人。',
     ],
     approvalOpportunity: [
       'An approval can only be raised for an opportunity you may edit.',

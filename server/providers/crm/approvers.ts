@@ -12,8 +12,8 @@ import { CrmError } from './schema.js';
 // is saved or submitted (CrmService.checkApprover). Resolved before a
 // transaction opens, from the users CrmService.users lists, since who holds
 // a role and a capability is not read inside SQLite's one transaction. The
-// applicant is excluded where a request is known (`selfApproval`), not
-// here.
+// applicant, where a request is known, may be chosen only when no one else
+// is named (`selfApproval`), which is checked there, not here.
 
 export interface ApproverCandidate {
   readonly id: string;
