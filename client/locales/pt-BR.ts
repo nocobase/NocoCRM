@@ -17,6 +17,16 @@ const ptBR: AppResource = {
   'auth.connectionFailed': 'Não foi possível conectar',
   'auth.connectionFailedDescription':
     'Não foi possível preparar a conexão em tempo real. Tente novamente para entrar no aplicativo ou saia.',
+  formFeedback: {
+    field: 'Este valor foi recusado. Verifique-o e tente novamente.',
+    invalid: 'Verifique os campos destacados e tente novamente.',
+    failed:
+      'Não foi possível salvar. O que você digitou foi mantido. Tente novamente.',
+    network:
+      'Não foi possível conectar. Verifique sua conexão e tente novamente. O que você digitou foi mantido.',
+    denied:
+      'Com seu acesso atual, você não pode enviar este formulário. O que você digitou foi mantido.',
+  },
   'deviceApproval.title': 'Autorizar um dispositivo',
   'deviceApproval.description':
     'Uma linha de comando ou outro dispositivo pediu para entrar com a sua conta. Aprove somente se você mesmo iniciou o acesso.',

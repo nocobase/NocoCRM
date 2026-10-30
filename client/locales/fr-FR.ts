@@ -17,6 +17,16 @@ const frFR: AppResource = {
   'auth.connectionFailed': 'Connexion impossible',
   'auth.connectionFailedDescription':
     'La connexion en temps réel n’a pas pu être établie. Réessayez pour accéder à l’application, ou déconnectez-vous.',
+  formFeedback: {
+    field: 'Cette valeur a été refusée. Vérifiez-la et réessayez.',
+    invalid: 'Vérifiez les champs signalés et réessayez.',
+    failed:
+      'Enregistrement impossible. Votre saisie a été conservée. Réessayez.',
+    network:
+      'Connexion impossible. Vérifiez votre connexion et réessayez. Votre saisie a été conservée.',
+    denied:
+      'Votre accès actuel ne vous permet pas d’envoyer ce formulaire. Votre saisie a été conservée.',
+  },
   'deviceApproval.title': 'Autoriser un appareil',
   'deviceApproval.description':
     "Une ligne de commande ou un autre appareil demande à se connecter en votre nom. N'approuvez que si vous avez vous-même lancé la connexion.",

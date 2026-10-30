@@ -4,6 +4,7 @@ import type settingsEnUS from '../system/settings-en-US.js';
 // The template's Settings copy (client/locales/system/settings-en-US.ts): the
 // prepared Users and Roles pages and the permission editor, in zh-TW.
 const settings: LocaleResource<typeof settingsEnUS> = {
+  listChanged: '清單已變更，請重試。',
   setup: {
     title: '功能前置條件',
     checking: '正在檢查目前設定…',
@@ -179,6 +180,13 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   dataRanges: '資料範圍（{{count}}）',
   selectVisiblePermissions: '選取「{{name}}」中顯示的權限',
   permissionSummary: '已啟用 {{enabled}} / {{total}}',
+  permissionAll: '全部',
+  permissionGranted: '已授權',
+  permissionUngranted: '未授權',
+  permissionStatus: '授權狀態',
+  permissionClearSearch: '清除搜尋',
+  permissionCollapseAll: '全部收合',
+  permissionExpandAll: '全部展開',
   preservedRecordScope: '保留現有設定',
   noRecordScope: '使用預設規則',
   permissionFilter: {
