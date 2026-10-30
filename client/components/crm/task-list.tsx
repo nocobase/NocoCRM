@@ -603,12 +603,14 @@ function TaskTable({
                   <TableRow className='border-border hover:bg-transparent'>
                     <TableCell colSpan={5} className='h-9 p-0'>
                       {/* Folds the group away and back, remembered in this
-                          browser. */}
+                          browser. The cell's own inline padding
+                          (client/styles.css) lines the arrow up with the
+                          rows' checkboxes. */}
                       <button
                         type='button'
                         aria-expanded={!folded.has(group)}
                         onClick={() => toggleGroup(group)}
-                        className={`flex h-9 w-full items-center gap-1.5 px-4 text-left text-xs font-medium transition-colors hover:text-foreground ${
+                        className={`flex h-9 w-full items-center gap-1.5 text-left text-xs font-medium transition-colors hover:text-foreground ${
                           group === 'overdue'
                             ? 'text-destructive'
                             : 'text-muted-foreground'
