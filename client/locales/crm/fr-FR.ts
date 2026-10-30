@@ -1192,7 +1192,7 @@ export const crmFrFR: CrmWording = {
     aiTab: "Organiser avec l'IA",
     formTab: 'Remplir un formulaire',
     placeholder:
-      "Collez n'importe quoi : un e-mail, une conversation, des notes de salon ou d'appel. L'IA transforme chaque personne en prospect, et vous vérifiez avant l'enregistrement.",
+      "Collez n'importe quoi : un e-mail, une conversation, des notes de salon ou d'appel. L'IA transforme chaque demande en prospect (les personnes d'une même entreprise pour un même besoin en un seul), et vous vérifiez avant l'enregistrement.",
     input: 'Texte à organiser',
     organise: "Organiser avec l'IA",
     organising: "L'IA organise…",
@@ -1202,6 +1202,8 @@ export const crmFrFR: CrmWording = {
     fillRequired: 'Encore obligatoires : {{fields}}',
     duplicates: 'Peut-être déjà dans le CRM :',
     mergeInto: 'Fusionner dans celui-ci…',
+    samePerson: '(même personne)',
+    sameCompany: '(même entreprise)',
     merged: 'Fusionné',
     found:
       "L'IA a trouvé {{count}} prospect(s). Vérifiez-les, puis créez ceux que vous voulez.",

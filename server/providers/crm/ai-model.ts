@@ -215,7 +215,8 @@ export async function recordUse(
 // in the CRM's time zone (dates such as "next Tuesday" in what it reads are
 // reckoned from it), the work's agent's instructions, how to settle
 // what the material leaves open (DECIDING) and the deployment's business
-// guidance (guidance.ts); null when there is no
+// guidance (guidance.ts), then the method skill a work follows throughout
+// (`method`, the form capture's); null when there is no
 // model to ask.
 export async function openSession(
   container: ServiceResolver,
@@ -223,7 +224,8 @@ export async function openSession(
     timeZone,
     guidance,
     work,
-  }: { timeZone: string; guidance: string; work: Work },
+    method,
+  }: { timeZone: string; guidance: string; work: Work; method?: string },
 ): Promise<ModelSession | null> {
   const run = await crmRun(container, work).catch(() => null);
   if (!run) return null;
@@ -243,6 +245,7 @@ export async function openSession(
     instructions,
     DECIDING,
     guidance,
+    method ? `# Method\n\n${method}` : '',
   ]
     .filter(Boolean)
     .join('\n\n');

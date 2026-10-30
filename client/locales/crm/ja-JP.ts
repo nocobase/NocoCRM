@@ -1174,7 +1174,7 @@ export const crmJaJP: CrmWording = {
     aiTab: 'AI で整理',
     formTab: 'フォームに入力',
     placeholder:
-      'メール、チャット、展示会や電話のメモなど、何でも貼り付けてください。AI が一人ずつリードに整理し、保存前にあなたが確認します。',
+      'メール、チャット、展示会や電話のメモなど、何でも貼り付けてください。AI が案件ごとにリードに整理し（同じ会社の同じニーズの人たちは 1 件にまとめます）、保存前にあなたが確認します。',
     input: '整理するテキスト',
     organise: 'AI で整理',
     organising: 'AI が整理しています…',
@@ -1184,6 +1184,8 @@ export const crmJaJP: CrmWording = {
     fillRequired: '未入力の必須項目：{{fields}}',
     duplicates: 'CRM にすでに存在する可能性があります：',
     mergeInto: 'このレコードに統合…',
+    samePerson: '（同一人物）',
+    sameCompany: '（同じ会社）',
     merged: '統合済み',
     found:
       'AI が {{count}} 件のリードを見つけました。確認して、必要なものを作成してください。',

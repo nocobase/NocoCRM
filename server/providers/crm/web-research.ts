@@ -202,7 +202,7 @@ export async function searchWeb(
       index: page.index as number,
       title: typeof page.title === 'string' ? page.title : url,
       url,
-      site: typeof page.site_name === 'string' ? page.site_name : '',
+      site: siteName(page.site_name, url),
     });
   }
   return {
@@ -307,7 +307,7 @@ async function searchWithDeepSeek(
           index: pages.length + 1,
           title: text(result.title) || url,
           url,
-          site: text(result.site_name) || siteOf(url),
+          site: siteName(result.site_name, url),
         };
         pages.push(page);
         byKey.set(key, page);
@@ -408,6 +408,25 @@ async function searchWithDeepSeek(
       outputTokens: result.outputTokens,
     },
   };
+}
+
+// A result's site as a person reads it. DeepSeek's search sends some
+// sites' names as the hex of their UTF-8 bytes ("e59c86e9809ae9809fe98092"
+// for 圆通速递), which is decoded; hex that is not text is a name of its
+// own, kept; no name at all gives way to the page's domain.
+export function siteName(raw: unknown, url: string): string {
+  const name = typeof raw === 'string' ? raw.trim() : '';
+  if (!name) return siteOf(url);
+  if (!/^(?:[0-9a-f]{2}){3,}$/iu.test(name)) return name;
+  try {
+    const decoded = new TextDecoder('utf-8', { fatal: true }).decode(
+      Uint8Array.from(name.match(/../gu) ?? [], (byte) => parseInt(byte, 16)),
+    );
+    // Text, not bytes that happen to decode: a letter of some script.
+    return /\p{L}/u.test(decoded) && !/\p{Cc}/u.test(decoded) ? decoded : name;
+  } catch {
+    return name;
+  }
 }
 
 function siteOf(url: string): string {

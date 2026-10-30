@@ -26,7 +26,25 @@ import {
   type CrmRecord,
   type Data,
 } from './api.js';
+import { captureLabels } from './capture-labels.js';
 import { WorkAgentLabel } from './work-agent.js';
+
+// The fields the web look-up fills (PROFILE_FIELDS in
+// server/providers/crm/company-profile.ts), whose labels it is sent.
+const PROFILE_FIELDS = [
+  'name',
+  'website',
+  'linkedin',
+  'industry',
+  'employees',
+  'annualRevenue',
+  'currency',
+  'country',
+  'state',
+  'city',
+  'address',
+  'description',
+];
 
 // "New company" with the AI (server/providers/crm/company-profile.ts): the
 // person names the company, adds what they know if they like, and the
@@ -114,6 +132,13 @@ export function CompanyCaptureDialog({
         {
           name: draft.name.trim(),
           ...(draft.note.trim() ? { note: draft.note.trim() } : {}),
+          labels: captureLabels(
+            'companies',
+            PROFILE_FIELDS,
+            meta?.definitions.companies.fields ?? [],
+            meta?.settings.options ?? {},
+            text,
+          ),
         },
       );
       setProfile(data);
@@ -339,7 +364,7 @@ export function CompanyCaptureDialog({
                     </p>
                   )}
                 </div>
-                <div className='grid gap-2 border-t pt-3'>
+                <div className='grid gap-2 pt-3'>
                   <Label htmlFor='company-capture-again'>
                     {text('companyCapture.name')}
                   </Label>

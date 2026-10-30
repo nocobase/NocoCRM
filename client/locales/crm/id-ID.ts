@@ -1189,7 +1189,7 @@ export const crmIdID: CrmWording = {
     aiTab: 'Susun dengan AI',
     formTab: 'Isi formulir',
     placeholder:
-      'Tempel apa saja: email, obrolan, catatan dari pameran atau panggilan. AI mengubah setiap orang menjadi prospek, dan Anda memeriksanya sebelum disimpan.',
+      'Tempel apa saja: email, obrolan, catatan dari pameran atau panggilan. AI mengubah setiap permintaan menjadi prospek (orang-orang dari satu perusahaan dengan kebutuhan yang sama menjadi satu), dan Anda memeriksanya sebelum disimpan.',
     input: 'Teks untuk disusun',
     organise: 'Susun dengan AI',
     organising: 'AI sedang menyusun…',
@@ -1199,6 +1199,8 @@ export const crmIdID: CrmWording = {
     fillRequired: 'Masih wajib diisi: {{fields}}',
     duplicates: 'Mungkin sudah ada di CRM:',
     mergeInto: 'Gabungkan ke sini…',
+    samePerson: '(orang yang sama)',
+    sameCompany: '(perusahaan yang sama)',
     merged: 'Digabungkan',
     found:
       'AI menemukan {{count}} prospek. Periksa, lalu buat yang Anda inginkan.',

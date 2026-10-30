@@ -5,7 +5,7 @@ import {
   type ServiceResolver,
   type ServiceToken,
 } from '@nocobase/service-provider';
-import { readSkill, recordUse, sourceOf } from './ai-model.js';
+import { openSession, readSkill, recordUse, sourceOf } from './ai-model.js';
 import { agentOn, agentSwitches, AGENT_TRIGGERS } from './agents.js';
 import { compileFilter, conditions, type Actor } from './authorization.js';
 import {
@@ -14,7 +14,18 @@ import {
   profileQuestion,
   readProfile,
   type CompanyProfile,
+  PROFILE_FIELDS,
+  PROFILE_HINTS,
+  profileOf,
+  profileReadingShape,
+  profileTask,
 } from './company-profile.js';
+import {
+  captureFields,
+  captureLabels,
+  captureRequest,
+  todayIn,
+} from './form-capture.js';
 import { sameCompany } from './lead-merge.js';
 import { CrmError, toText } from './schema.js';
 import type { CrmService } from './service.js';
@@ -336,7 +347,7 @@ export class CompanySignals {
 
   async profile(
     actor: Actor,
-    input: { name: string; note?: string },
+    input: { name: string; note?: string; labels?: unknown },
   ): Promise<CompanyProfile & { duplicates: { id: string; name: string }[] }> {
     await conditions(actor, 'companies', 'create');
     const name = input.name.trim();
@@ -344,28 +355,40 @@ export class CompanySignals {
     const searcher = await this.searcher();
     if (!searcher) throw new CrmError('signalsUnavailable', 409);
     const settings = await this.service.settings();
+    // In the language the name was typed in, as a capture writes in its
+    // text's: a name in Chinese characters is looked up in Chinese, any
+    // other in the AI's language.
+    const chinese =
+      /\p{Script=Han}/u.test(name) || settings.aiLanguage.startsWith('zh');
     try {
       const answer = await this.ask(
         searcher,
         profileQuestion(
           { name, note: (input.note ?? '').trim() },
-          // In the language the name was typed in, as a capture writes in
-          // its text's: a name in Chinese characters is looked up in
-          // Chinese, any other in the AI's language.
-          /\p{Script=Han}/u.test(name) || settings.aiLanguage.startsWith('zh'),
+          chinese,
           citesUrls(searcher) ? 'urls' : 'refs',
         ),
         true,
         '',
         PROFILE_URL_FIELDS,
       );
-      let profile = readProfile(answer);
+      // The form filled from what the search found, by the form-capture
+      // skill as a new lead's or opportunity's; without a model to read
+      // it, the search's own answer as the form's.
+      let profile =
+        (await this.readProfileFound(answer, {
+          name,
+          note: (input.note ?? '').trim(),
+          chinese,
+          labels: captureLabels(input.labels),
+          settings,
+        })) ?? readProfile(answer);
       // An answer in prose: reshaped without searching, its [ref_n] marks
       // still naming the first answer's pages.
       if (!profile) {
         const reshaped = await this.ask(
           searcher,
-          profileJsonQuestion(answer.text),
+          profileJsonQuestion(answer.text, chinese),
           false,
         );
         profile = readProfile({ ...reshaped, pages: answer.pages });
@@ -399,6 +422,69 @@ export class CompanySignals {
         ? new CrmError('signalsFailed', 503, undefined, error.message)
         : error;
     }
+  }
+
+  // The search's findings read into the company form by the form-capture
+  // skill, with the work agent's model (recorded as its use); null when
+  // there is none to ask or its reply cannot be read, the search's own
+  // answer then standing.
+  private async readProfileFound(
+    answer: WebAnswer,
+    input: {
+      name: string;
+      note: string;
+      chinese: boolean;
+      labels: Record<string, string>;
+      settings: Awaited<ReturnType<CrmService['settings']>>;
+    },
+  ): Promise<CompanyProfile | null> {
+    const container = this.options.container;
+    if (!container) return null;
+    const session = await openSession(container, {
+      timeZone: input.settings.timeZone,
+      guidance: '',
+      work: 'signals',
+      method: await readSkill(container, 'form-capture'),
+    }).catch(() => null);
+    if (!session) return null;
+    const fields = captureFields(
+      'companies',
+      PROFILE_FIELDS,
+      input.settings,
+      input.labels,
+      PROFILE_HINTS,
+      // Required on the form, not of what the web may tell.
+      { name: { required: true } },
+    );
+    const read = await session
+      .askJson(
+        captureRequest({
+          task: profileTask(input.chinese),
+          language: input.chinese ? 'zh-CN' : 'en-US',
+          context: {
+            fields,
+            web: {
+              found: answer.text,
+              pages: answer.pages.map(({ index, title, url, site }) => ({
+                ref: index,
+                title,
+                site,
+                url,
+              })),
+            },
+            today: todayIn(input.settings.timeZone),
+          },
+          material: [input.name, input.note].filter(Boolean).join('\n'),
+        }),
+        profileReadingShape,
+        AbortSignal.timeout(120_000),
+      )
+      .catch(() => null);
+    if (!read) return null;
+    return profileOf(
+      { ...read.values, uncertain: read.uncertain, sources: read.sources },
+      answer.pages,
+    );
   }
 
   // A lead follow-up's look-up of its company (lead-research.ts), asked

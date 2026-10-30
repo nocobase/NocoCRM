@@ -99,6 +99,9 @@ export const CompanyProfileInput = z
       .max(LONG_TEXT_LIMIT)
       .optional()
       .describe('What the person adds about it (its city, its website).'),
+    // The labels the dialog shows: a field's under its key, an option's
+    // under `key.value`, for the AI to name them by.
+    labels: z.record(z.string(), z.string()).optional(),
   })
   .meta({ ref: 'CrmCompanyProfileInput' });
 
