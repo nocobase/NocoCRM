@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import { randomUUID } from 'node:crypto';
 import { register } from 'tsx/esm/api';
 import { expect, it } from 'vitest';
 import { createAppTest } from '@nocobase/app-testing/server';
@@ -92,6 +93,8 @@ test('shows editable Member defaults and keeps an explicitly roleless person wit
       headers: {
         'content-type': 'application/json',
         Origin: 'http://localhost',
+        // Each user write is one operation (template 1.0.0-beta.84).
+        'Idempotency-Key': `${Date.now()}.${randomUUID()}`,
       },
       body: JSON.stringify(body),
     });

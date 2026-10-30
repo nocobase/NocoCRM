@@ -16,6 +16,13 @@ const zhTW: AppResource = {
   'auth.connectionFailed': '連線失敗',
   'auth.connectionFailedDescription':
     '即時連線暫時無法準備就緒。請重試後進入應用程式，或登出。',
+  formFeedback: {
+    field: '此欄位的值未通過驗證，請檢查並修改後重試。',
+    invalid: '請檢查標示的欄位後重試。',
+    failed: '儲存失敗，已保留您的輸入，請重試。',
+    network: '無法連線，請檢查網路後重試。已保留您的輸入。',
+    denied: '目前的權限無法提交此表單。已保留您的輸入。',
+  },
   'deviceApproval.title': '授權裝置',
   'deviceApproval.description':
     '一個命令列或其他裝置要求以你的身分登入。只有在登入是你自己發起的時候才批准。',

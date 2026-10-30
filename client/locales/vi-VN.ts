@@ -17,6 +17,15 @@ const viVN: AppResource = {
   'auth.connectionFailed': 'Không thể kết nối',
   'auth.connectionFailedDescription':
     'Không thể chuẩn bị kết nối thời gian thực. Hãy thử lại để vào ứng dụng hoặc đăng xuất.',
+  formFeedback: {
+    field: 'Giá trị này đã bị từ chối. Hãy kiểm tra và thử lại.',
+    invalid: 'Hãy kiểm tra các trường được đánh dấu rồi thử lại.',
+    failed: 'Không thể lưu. Nội dung bạn nhập vẫn được giữ lại. Hãy thử lại.',
+    network:
+      'Không thể kết nối. Hãy kiểm tra kết nối rồi thử lại. Nội dung bạn nhập vẫn được giữ lại.',
+    denied:
+      'Với quyền truy cập hiện tại, bạn không thể gửi biểu mẫu này. Nội dung bạn nhập vẫn được giữ lại.',
+  },
   'deviceApproval.title': 'Cấp quyền cho thiết bị',
   'deviceApproval.description':
     'Một dòng lệnh hoặc thiết bị khác đang yêu cầu đăng nhập bằng tài khoản của bạn. Chỉ chấp thuận nếu chính bạn đã bắt đầu đăng nhập.',

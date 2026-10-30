@@ -17,6 +17,16 @@ const esES: AppResource = {
   'auth.connectionFailed': 'No se pudo conectar',
   'auth.connectionFailedDescription':
     'No se pudo preparar la conexión en tiempo real. Vuelve a intentarlo para entrar en la aplicación o cierra la sesión.',
+  formFeedback: {
+    field: 'Este valor no se ha aceptado. Revísalo e inténtalo de nuevo.',
+    invalid: 'Revisa los campos marcados e inténtalo de nuevo.',
+    failed:
+      'No se ha podido guardar. Se ha conservado lo que has escrito. Inténtalo de nuevo.',
+    network:
+      'No se puede conectar. Comprueba tu conexión e inténtalo de nuevo. Se ha conservado lo que has escrito.',
+    denied:
+      'Con tu acceso actual no puedes enviar este formulario. Se ha conservado lo que has escrito.',
+  },
   'deviceApproval.title': 'Autorizar un dispositivo',
   'deviceApproval.description':
     'Una línea de comandos u otro dispositivo ha solicitado iniciar sesión en tu nombre. Apruébalo solo si has iniciado tú mismo el inicio de sesión.',

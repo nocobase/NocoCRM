@@ -17,6 +17,17 @@ const deDE: AppResource = {
   'auth.connectionFailed': 'Verbindung nicht möglich',
   'auth.connectionFailedDescription':
     'Die Echtzeitverbindung konnte nicht hergestellt werden. Versuchen Sie es erneut, um die Anwendung zu öffnen, oder melden Sie sich ab.',
+  formFeedback: {
+    field:
+      'Dieser Wert wurde abgelehnt. Prüfen Sie ihn und versuchen Sie es erneut.',
+    invalid: 'Prüfen Sie die markierten Felder und versuchen Sie es erneut.',
+    failed:
+      'Speichern nicht möglich. Ihre Eingaben bleiben erhalten. Versuchen Sie es erneut.',
+    network:
+      'Keine Verbindung möglich. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut. Ihre Eingaben bleiben erhalten.',
+    denied:
+      'Mit Ihrem aktuellen Zugriff können Sie dieses Formular nicht senden. Ihre Eingaben bleiben erhalten.',
+  },
   'deviceApproval.title': 'Gerät autorisieren',
   'deviceApproval.description':
     'Eine Befehlszeile oder ein anderes Gerät möchte sich in Ihrem Namen anmelden. Genehmigen Sie dies nur, wenn Sie die Anmeldung selbst gestartet haben.',

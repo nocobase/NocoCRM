@@ -4,6 +4,7 @@ import type settingsEnUS from '../system/settings-en-US.js';
 // The template's Settings copy (client/locales/system/settings-en-US.ts): the
 // prepared Users and Roles pages and the permission editor, in ja-JP.
 const settings: LocaleResource<typeof settingsEnUS> = {
+  listChanged: '一覧が変更されました。もう一度お試しください。',
   setup: {
     title: '機能の前提条件',
     checking: '現在の設定を確認しています…',
@@ -194,6 +195,13 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   dataRanges: 'データ範囲（{{count}}）',
   selectVisiblePermissions: '「{{name}}」で表示中の権限を選択',
   permissionSummary: '{{total}} 件中 {{enabled}} 件が有効',
+  permissionAll: 'すべて',
+  permissionGranted: '付与済み',
+  permissionUngranted: '未付与',
+  permissionStatus: '付与状況',
+  permissionClearSearch: '検索をクリア',
+  permissionCollapseAll: 'すべて折りたたむ',
+  permissionExpandAll: 'すべて展開',
   preservedRecordScope: '既存の設定を維持',
   noRecordScope: '既定のルールを使う',
   permissionFilter: {

@@ -4,6 +4,7 @@ import type settingsEnUS from '../system/settings-en-US.js';
 // The template's Settings copy (client/locales/system/settings-en-US.ts): the
 // prepared Users and Roles pages and the permission editor, in ko-KR.
 const settings: LocaleResource<typeof settingsEnUS> = {
+  listChanged: '목록이 변경되었습니다. 다시 시도하세요.',
   setup: {
     title: '기능 사전 요구 사항',
     checking: '현재 설정을 확인하는 중…',
@@ -187,6 +188,13 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   dataRanges: '데이터 범위 ({{count}})',
   selectVisiblePermissions: '{{name}}에서 표시된 권한 선택',
   permissionSummary: '{{total}}개 중 {{enabled}}개 사용',
+  permissionAll: '전체',
+  permissionGranted: '부여됨',
+  permissionUngranted: '미부여',
+  permissionStatus: '부여 상태',
+  permissionClearSearch: '검색 지우기',
+  permissionCollapseAll: '모두 접기',
+  permissionExpandAll: '모두 펼치기',
   preservedRecordScope: '기존 설정 유지',
   noRecordScope: '기본 규칙 사용',
   permissionFilter: {

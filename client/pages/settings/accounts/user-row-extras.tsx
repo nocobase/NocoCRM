@@ -1,6 +1,6 @@
 // A row's Reset password and Delete on the prepared Users page
 // (user-extras.tsx says what the CRM adds there and why).
-import { useToaster } from '@nocobase/app-client';
+import { useSubmission, useToaster } from '@nocobase/app-client';
 import type { ManagedUser } from '@nocobase/app-plugin-users/client/user-client';
 import { useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
@@ -32,13 +32,23 @@ export function useUserExtras(
   const canReset = useUserPermission('reset-password', user.id);
   const canDelete = useUserPermission('delete', user.id);
   const [deleting, setDeleting] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [requestBusy, setRequestBusy] = useState(false);
   const [error, setError] = useState<string>();
+  // As the page's own row actions: one operation key per deletion.
+  const submission = useSubmission();
+  const busy = requestBusy || submission.submitting;
   const remove = async (): Promise<void> => {
-    setBusy(true);
+    setRequestBusy(true);
     setError(undefined);
     try {
-      await client.remove(user.id);
+      const done = await submission.run(
+        { action: 'delete', id: user.id },
+        async (key) => {
+          await client.remove(user.id, key);
+          return true;
+        },
+      );
+      if (!done) return;
       toaster.show({
         type: 'success',
         title: text('users.toasts.deleted', { name: user.name }),
@@ -56,7 +66,7 @@ export function useUserExtras(
               : text('common.failed'),
       );
     } finally {
-      setBusy(false);
+      setRequestBusy(false);
     }
   };
   const items = (

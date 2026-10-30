@@ -1,6 +1,7 @@
 // Reset password (/settings/users/:userId/password): a new password, typed
 // twice, for the user loaded afresh.
-import { useToaster } from '@nocobase/app-client';
+import { useSubmission, useToaster } from '@nocobase/app-client';
+import { useAuthentication } from '@nocobase/app-plugin-authentication/client';
 import { useMemo, useState, type ReactElement } from 'react';
 import { useParams } from 'react-router';
 import { z } from 'zod';
@@ -34,6 +35,11 @@ export default function ResetPasswordDialog(): ReactElement {
   );
   const form = useFormState(schema, { password: '', confirm: '' }, FORM_ID);
   const [rootError, setRootError] = useState<string>();
+  const { session } = useAuthentication();
+  // One operation key per reset, so a repeated Save cannot send it twice.
+  const submission = useSubmission({
+    scope: `${session?.user.id}:settings:user-password:${userId}`,
+  });
 
   async function submit(): Promise<boolean> {
     if (!user) return false;
@@ -41,7 +47,14 @@ export default function ResetPasswordDialog(): ReactElement {
     if (!values) return false;
     setRootError(undefined);
     try {
-      await client.resetPassword(user.id, values.password);
+      const done = await submission.run(
+        { id: user.id, password: values.password },
+        async (key) => {
+          await client.resetPassword(user.id, values.password, key);
+          return true;
+        },
+      );
+      if (!done) return false;
       toaster.show({
         type: 'success',
         title: text('users.toasts.password', { name: user.name }),

@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { randomUUID } from 'node:crypto';
 import { register } from 'tsx/esm/api';
 import { expect } from 'vitest';
 import { createAppTest } from '@nocobase/app-testing/server';
@@ -159,6 +160,9 @@ test('demo keeps reads available and refuses mutations even for root', async ({
       headers: {
         'content-type': 'application/json',
         origin: 'http://localhost',
+        // A standard write carries its operation key (template
+        // 1.0.0-beta.84), so it is the demo guard that refuses it.
+        'Idempotency-Key': `${Date.now()}.${randomUUID()}`,
       },
       body: JSON.stringify(json),
     });

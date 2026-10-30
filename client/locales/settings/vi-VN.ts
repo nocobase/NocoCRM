@@ -4,6 +4,7 @@ import type settingsEnUS from '../system/settings-en-US.js';
 // The template's Settings copy (client/locales/system/settings-en-US.ts): the
 // prepared Users and Roles pages and the permission editor, in vi-VN.
 const settings: LocaleResource<typeof settingsEnUS> = {
+  listChanged: 'Danh sách đã thay đổi. Hãy thử lại.',
   setup: {
     title: 'Điều kiện tiên quyết của tính năng',
     checking: 'Đang kiểm tra cấu hình hiện tại…',
@@ -193,6 +194,13 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   dataRanges: 'Phạm vi dữ liệu ({{count}})',
   selectVisiblePermissions: 'Chọn các quyền đang hiển thị trong {{name}}',
   permissionSummary: 'Đã bật {{enabled}}/{{total}}',
+  permissionAll: 'Tất cả',
+  permissionGranted: 'Đã cấp',
+  permissionUngranted: 'Chưa cấp',
+  permissionStatus: 'Trạng thái cấp quyền',
+  permissionClearSearch: 'Xóa tìm kiếm',
+  permissionCollapseAll: 'Thu gọn tất cả',
+  permissionExpandAll: 'Mở rộng tất cả',
   preservedRecordScope: 'Giữ cấu hình hiện có',
   noRecordScope: 'Dùng quy tắc mặc định',
   permissionFilter: {
