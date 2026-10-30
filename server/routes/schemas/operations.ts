@@ -135,6 +135,9 @@ export const CaptureLeadsInput = z.strictObject({
     )
     .max(20)
     .optional(),
+  // The labels the dialog shows: a field's under its key, an option's
+  // under `key.value`, for the AI to name them by.
+  labels: z.record(z.string(), z.string()).optional(),
 });
 
 export const CapturedLeads = z
@@ -168,6 +171,9 @@ export const CaptureOpportunityInput = z.strictObject({
   // included; the capture reads the opportunity's fields from it.
   deal: JsonObject.optional(),
   companyId: z.string().optional(),
+  // The labels the dialog shows: a field's under its key, an option's
+  // under `key.value`, for the AI to name them by.
+  labels: z.record(z.string(), z.string()).optional(),
 });
 
 export const CapturedOpportunity = z

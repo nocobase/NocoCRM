@@ -1140,7 +1140,7 @@ export const crmZhTW: CrmWording = {
     aiTab: 'AI 整理',
     formTab: '表單填寫',
     placeholder:
-      '貼上任何內容：郵件、聊天記錄、展覽或電話記錄。AI 會把每個人整理成一筆線索，你核對後再儲存。',
+      '貼上任何內容：郵件、聊天記錄、展覽或電話記錄。AI 會把每件事整理成一筆線索（同一家公司為同一個需求來的幾個人合成一筆），你核對後再儲存。',
     input: '要整理的內容',
     organise: 'AI 整理',
     organising: 'AI 正在整理…',
@@ -1150,6 +1150,8 @@ export const crmZhTW: CrmWording = {
     fillRequired: '需補充必填項：{{fields}}',
     duplicates: 'CRM 裡可能已有：',
     mergeInto: '合併到這筆…',
+    samePerson: '（同一人）',
+    sameCompany: '（同公司）',
     merged: '已合併',
     found: 'AI 整理出 {{count}} 筆線索，核對後建立需要的。',
     forAll: '統一設定',

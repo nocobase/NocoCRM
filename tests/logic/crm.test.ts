@@ -2075,6 +2075,104 @@ describe('CRM API security and domain rules', () => {
     }
   });
 
+  it('reads what the search found into the company form by the form-capture skill, in the language asked for', async () => {
+    // The same search, and a model to read its findings with.
+    const { fetch: searchFetch } = (
+      signals as unknown as { options: { fetch: typeof fetch } }
+    ).options;
+    const readerContainer = new ServiceContainer();
+    const { calls, prompts } = fakeModel(readerContainer, {
+      values: {
+        name: '资料科技有限公司',
+        website: 'https://profile.example.cn',
+        industry: 'technology',
+        employees: '201-500',
+        annualRevenue: 50000000,
+        currency: 'CNY',
+        country: 'CN',
+        state: '浙江省',
+        city: '杭州',
+        address: '中国浙江省杭州市西湖区文三路 1 号',
+        description: '为连锁酒店做办公软件。',
+      },
+      uncertain: ['employees', 'bogus'],
+      sources: [2],
+      said: null,
+    });
+    const reading = new CompanySignals(
+      service,
+      () => ({
+        kind: 'dashscope' as const,
+        service: 'qwen',
+        model: 'qwen3.8-flash',
+        apiKey: 'key',
+      }),
+      { fetch: searchFetch, container: readerContainer },
+    );
+    const findings = {
+      text: 'Profile Co Ltd makes office software for hotel chains [ref_2].',
+      pages: [
+        {
+          index: 1,
+          title: 'Unrelated',
+          url: 'https://n.example.cn/x',
+          site: 'News',
+        },
+        {
+          index: 2,
+          title: 'About Profile Co',
+          url: 'https://profile.example.cn/about',
+          site: 'Profile',
+        },
+      ],
+    };
+    web.answers.push(findings);
+    const profile = await reading.profile(actor('rep'), {
+      name: '资料科技',
+      labels: { name: '名称', description: '介绍' },
+    });
+    // The form's values in Chinese, checked as the form's.
+    expect(profile.input).toMatchObject({
+      name: '资料科技有限公司',
+      state: 'CN-33',
+      city: '杭州',
+      address: '西湖区文三路 1 号',
+      annualRevenue: 50000000,
+      description: '为连锁酒店做办公软件。',
+    });
+    expect(profile.uncertain).toEqual(['employees']);
+    expect(profile.sources.map((page) => page.url)).toEqual([
+      'https://profile.example.cn/about',
+    ]);
+    // By the skill, with the form's fields, their labels and the findings.
+    expect(calls[0].system).toContain('# Method');
+    expect(prompts[0]).toContain('Write every text value in Chinese');
+    expect(prompts[0]).toContain('"label":"名称"');
+    expect(prompts[0]).toContain('[ref_2]');
+    expect(prompts[0]).toContain('"ref":2');
+
+    // A reading that cannot be read: the search's own answer stands.
+    const unread = new ServiceContainer();
+    fakeModel(unread, { asText: 'no JSON here' });
+    const fallback = new CompanySignals(
+      service,
+      () => ({
+        kind: 'dashscope' as const,
+        service: 'qwen',
+        model: 'qwen3.8-flash',
+        apiKey: 'key',
+      }),
+      { fetch: searchFetch, container: unread },
+    );
+    web.answers.push({
+      text: JSON.stringify({ name: 'Fallback Co', uncertain: [], sources: [] }),
+      pages: [],
+    });
+    expect(
+      (await fallback.profile(actor('rep'), { name: 'Fallback Co' })).input,
+    ).toEqual({ name: 'Fallback Co' });
+  });
+
   it('logs each check and lists them, leaving the deals to their daily pass', async () => {
     const company = await service.save(actor('rep'), 'companies', {
       name: 'Acting Co',
@@ -3772,11 +3870,17 @@ describe('CRM lead capture', () => {
   // each turn answers `result` as JSON, or `{ asText }` as that text.
   const capturing = (result: unknown) => {
     const container = new ServiceContainer();
-    const { prompts: runs, warnings } = fakeModel(container, result);
-    return { container, runs, warnings };
+    const { prompts: runs, calls, warnings } = fakeModel(container, result);
+    return { container, runs, calls, warnings };
   };
+  // A lead as the answer gives it (the form-capture skill): its ref, the
+  // form's values and the fields to check.
+  const form = ({
+    ref = null,
+    uncertain = [],
+    ...values
+  }: Record<string, unknown>) => ({ ref, values, uncertain });
   const blank = {
-    ref: null,
     name: null,
     company: null,
     jobTitle: null,
@@ -3792,7 +3896,6 @@ describe('CRM lead capture', () => {
     industry: null,
     employees: null,
     source: null,
-    uncertain: [],
   };
   const pasted = '展会上加了华锐精工的周立和陈芳，周立想私有化部署。';
 
@@ -3804,7 +3907,7 @@ describe('CRM lead capture', () => {
       await service.save(actor('rep'), 'companies', { name: '华锐精工' });
       const { container, runs } = capturing({
         leads: [
-          {
+          form({
             ...blank,
             name: ' 周立 ',
             company: '华锐精工',
@@ -3819,9 +3922,9 @@ describe('CRM lead capture', () => {
             // A field the text did not give is not reported as a doubt,
             // nor is one the lead has no such field for.
             uncertain: ['jobTitle', 'jobTitle', 'email', 'nonsense'],
-          },
+          }),
           // A region that does not resolve is left out.
-          {
+          form({
             ...blank,
             name: '陈芳',
             company: '华锐精工',
@@ -3829,11 +3932,11 @@ describe('CRM lead capture', () => {
             country: 'Atlantis',
             state: '浙江省',
             linkedin: ' linkedin.com/in/chen-fang ',
-          },
+          }),
           // Nothing the form could use: dropped.
-          { ...blank, uncertain: ['name'] },
+          form({ ...blank, uncertain: ['name'] }),
         ],
-        reply: null,
+        said: null,
       });
       const { leads } = await captureLeads(
         service,
@@ -3844,6 +3947,10 @@ describe('CRM lead capture', () => {
       );
       expect(runs).toHaveLength(1);
       expect(runs[0]).toContain(pasted);
+      // One lead per enquiry, not per person.
+      expect(runs[0]).toContain(
+        'The people of one company about the same need make one lead',
+      );
       expect(leads).toHaveLength(2);
       expect(leads[0].input).toEqual({
         name: '周立',
@@ -3881,9 +3988,9 @@ describe('CRM lead capture', () => {
       .spyOn(service, 'assistantEnabled')
       .mockResolvedValue(true);
     try {
-      const lead = { ...blank, name: '王磊', company: '丰禾物流' };
+      const lead = form({ ...blank, name: '王磊', company: '丰禾物流' });
       const { container } = capturing({
-        asText: `整理如下：\n\n\`\`\`json\n${JSON.stringify({ leads: [lead], reply: null })}\n\`\`\`\n\n说明：来源看不出。`,
+        asText: `整理如下：\n\n\`\`\`json\n${JSON.stringify({ leads: [lead], said: null })}\n\`\`\`\n\n说明：来源看不出。`,
       });
       const { leads } = await captureLeads(
         service,
@@ -3905,13 +4012,13 @@ describe('CRM lead capture', () => {
     try {
       const { container, runs } = capturing({
         leads: [
-          { ...blank, ref: 'r1', name: '周立', jobTitle: 'IT 总监' },
+          form({ ...blank, ref: 'r1', name: '周立', jobTitle: 'IT 总监' }),
           // A key the client never sent is a new lead, not a revision.
-          { ...blank, ref: 'unknown', name: '刘洋' },
+          form({ ...blank, ref: 'unknown', name: '刘洋' }),
           // The salesperson may not assign: an owner is not kept.
-          { ...blank, ref: null, name: '陈芳', ownerId: 'other' },
+          form({ ...blank, ref: null, name: '陈芳', ownerId: 'other' }),
         ],
-        reply: '已把周立的职位改为 IT 总监，并加上了刘洋和陈芳。',
+        said: '已把周立的职位改为 IT 总监，并加上了刘洋和陈芳。',
       });
       const result = await captureLeads(
         service,
@@ -3925,8 +4032,8 @@ describe('CRM lead capture', () => {
         'UTC',
       );
       expect(runs[0]).toContain('周立的职位是 IT 总监');
-      expect(runs[0]).toContain('"ref": "r1"');
-      expect(runs[0]).not.toContain("ownerId is the lead's owner");
+      expect(runs[0]).toContain('"ref":"r1"');
+      expect(runs[0]).not.toContain('"key":"ownerId"');
       expect(result.reply).toContain('IT 总监');
       const [revised, added, third] = result.leads;
       // A revision carries every field the AI writes, null where empty, so
@@ -3943,10 +4050,10 @@ describe('CRM lead capture', () => {
       // owner outside them is dropped.
       const assigning = capturing({
         leads: [
-          { ...blank, name: '王磊', ownerId: 'rep' },
-          { ...blank, name: '张总', ownerId: 'outsider' },
+          form({ ...blank, name: '王磊', ownerId: 'rep' }),
+          form({ ...blank, name: '张总', ownerId: 'outsider' }),
         ],
-        reply: null,
+        said: null,
       });
       const assigned = await captureLeads(
         service,
@@ -3955,7 +4062,7 @@ describe('CRM lead capture', () => {
         { text: pasted },
         'UTC',
       );
-      expect(assigning.runs[0]).toContain("ownerId is the lead's owner");
+      expect(assigning.runs[0]).toContain('"key":"ownerId"');
       expect(assigned.leads[0].input.ownerId).toBe('rep');
       expect(assigned.leads[1].input).not.toHaveProperty('ownerId');
 
@@ -3980,6 +4087,86 @@ describe('CRM lead capture', () => {
       ).rejects.toMatchObject({ code: 'invalidInput', field: 'leads' });
     } finally {
       enabled.mockRestore();
+    }
+  });
+
+  it("gives the model the form's own fields with the labels it shows, and keeps what an adjustment leaves out", async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    const before = await service.settings();
+    try {
+      // A source the company added on the settings page is offered too.
+      vi.spyOn(service, 'settings').mockResolvedValue({
+        ...before,
+        options: { ...before.options, source: ['website', 'wechat'] },
+      });
+      const users = await service.users(actor('manager'));
+      const rep = users.find((u) => toText(u.id) === 'rep');
+      const { container, runs, calls } = capturing({
+        leads: [
+          // The owner by the name the review shows; the job title left
+          // out, so it keeps the person's.
+          {
+            ref: 'r1',
+            values: { name: '周立', source: 'wechat', ownerId: rep?.name },
+            uncertain: [],
+          },
+        ],
+        said: '已改为微信来源。',
+      });
+      const result = await captureLeads(
+        service,
+        container,
+        actor('manager'),
+        {
+          text: pasted,
+          instruction: '来源是微信',
+          labels: { source: '来源', 'source.wechat': '微信', jobTitle: '职位' },
+          leads: [
+            { ref: 'r1', name: '周立', jobTitle: 'IT 经理', ownerId: 'rep' },
+          ],
+        },
+        'UTC',
+      );
+      expect(calls[0].system).toContain('# Method');
+      const context = JSON.parse(
+        /<context>\n([\s\S]*?)\n<\/context>/.exec(runs[0])?.[1] ?? '{}',
+      ) as {
+        fields: {
+          key: string;
+          label: string;
+          options?: { value: string; label: string }[];
+          hint?: string;
+        }[];
+        records?: { users: string[] };
+        form: { ref: string; values: Record<string, unknown> }[];
+      };
+      const source = context.fields.find((f) => f.key === 'source');
+      expect(source?.label).toBe('来源');
+      expect(source?.options).toContainEqual({
+        value: 'wechat',
+        label: '微信',
+      });
+      expect(source?.hint).toContain('exhibition');
+      // A field the dialog sent no label for is named by its key.
+      expect(context.fields.find((f) => f.key === 'city')?.label).toBe('city');
+      // The owner as the form shows it, by name, and the salespeople.
+      expect(context.form[0].values.ownerId).toBe(toText(rep?.name));
+      expect(context.records?.users).toContain(toText(rep?.name));
+      expect(result.leads[0]).toMatchObject({
+        ref: 'r1',
+        input: {
+          source: 'wechat',
+          jobTitle: 'IT 经理',
+          phone: null,
+          ownerId: 'rep',
+        },
+      });
+      expect(result.reply).toBe('已改为微信来源。');
+    } finally {
+      enabled.mockRestore();
+      vi.mocked(service.settings).mockRestore();
     }
   });
 
@@ -9714,17 +9901,19 @@ describe('CRM opportunity capture', () => {
         source: 'website',
       });
       const container = new ServiceContainer();
-      const { prompts } = fakeModel(container, {
+      const { prompts, calls } = fakeModel(container, {
         deal: {
-          name: '仓库系统（专业版）',
-          company: '商机整理精工',
-          businessType: 'expansion',
-          amount: '300000',
-          currency: 'CNY',
-          expectedCloseAt: '2026-11-30',
-          stage: 'qualification',
-          source: null,
-          description: '想把仓库搬上来',
+          values: {
+            name: '仓库系统（专业版）',
+            company: '商机整理精工',
+            businessType: 'expansion',
+            amount: '300000',
+            currency: 'CNY',
+            expectedCloseAt: '2026-11-30',
+            stage: 'qualification',
+            source: null,
+            description: '想把仓库搬上来',
+          },
           people: [
             {
               name: '陈整理',
@@ -9743,7 +9932,7 @@ describe('CRM opportunity capture', () => {
           ],
           uncertain: ['expectedCloseAt'],
         },
-        reply: null,
+        said: null,
       });
       const { deal } = await captureOpportunity(
         service,
@@ -9753,8 +9942,11 @@ describe('CRM opportunity capture', () => {
         'Asia/Shanghai',
       );
       expect(prompts[0]).toContain(
-        'Organise the text below into one sales opportunity',
+        'Organise the material into one sales opportunity',
       );
+      // By the form-capture skill, given as the method.
+      expect(calls[0].system).toContain('# Method');
+      expect(calls[0].system).toContain('What the person must check');
       expect(deal.companies).toEqual([{ id: company.id, name: company.name }]);
       expect(deal.input).toMatchObject({
         companyId: company.id,
@@ -9808,8 +10000,10 @@ describe('CRM opportunity capture', () => {
         },
         'Asia/Shanghai',
       );
-      expect(prompts[1]).toContain('"name": "陈整理"');
-      expect(prompts[1]).toContain('"name": "孙新人"');
+      expect(prompts[1]).toContain('"name":"陈整理"');
+      expect(prompts[1]).toContain('"name":"孙新人"');
+      // The form as it stands names its company.
+      expect(prompts[1]).toContain('"company":"商机整理精工有限公司"');
       expect(prompts[1]).not.toContain('"contacts"');
       expect(adjusted.deal.input.contacts).toEqual(deal.input.contacts);
       // Another company picked: nobody matches there.
@@ -12816,6 +13010,7 @@ describe("The assistant's conversations on the Agents plugin", () => {
       'approval-review',
       'task-preparation',
       'company-signals',
+      'form-capture',
     ]);
     const marker = await database
       .query()
@@ -12876,6 +13071,7 @@ describe("The assistant's conversations on the Agents plugin", () => {
       'approval-review',
       'task-preparation',
       'company-signals',
+      'form-capture',
     ]);
     const marker = await database
       .query()
@@ -12891,6 +13087,7 @@ describe("The assistant's conversations on the Agents plugin", () => {
         'approval-review': 'skill-2',
         'task-preparation': 'skill-3',
         'company-signals': 'skill-4',
+        'form-capture': 'skill-5',
       },
     });
   });
@@ -12942,7 +13139,8 @@ describe("The assistant's conversations on the Agents plugin", () => {
     const fakeAgents = {
       skills: {
         list: () => Promise.resolve([]),
-        create: () => Promise.reject(new Error('nothing to add')),
+        // Form capture, shipped later, is added as new.
+        create: () => Promise.resolve({ id: 'added' }),
         get: (id: string) => {
           const skill = library[id];
           return skill

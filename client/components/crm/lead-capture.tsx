@@ -33,7 +33,9 @@ import {
   useMetadata,
   useRefresh,
   type Data,
+  type Metadata,
 } from './api.js';
+import { captureLabels } from './capture-labels.js';
 import { WorkAgentLabel } from './work-agent.js';
 import { LONG_TEXT_LIMIT } from '../../../server/providers/crm/limits.js';
 
@@ -78,6 +80,19 @@ const AI_FIELDS = [
   'ownerId',
 ];
 const SELLER_ROLES = ['sales-representative', 'sales-manager'];
+
+// The lead form's labels, for AI organise to name its fields by.
+const leadLabels = (
+  meta: Metadata | undefined,
+  text: (key: string, options?: Record<string, unknown>) => string,
+): Record<string, string> =>
+  captureLabels(
+    'leads',
+    AI_FIELDS,
+    meta?.definitions.leads.fields ?? [],
+    meta?.settings.options ?? {},
+    text,
+  );
 
 // One lead in the review.
 interface ReviewRow {
@@ -300,7 +315,7 @@ export function LeadCaptureDialog({
       const { data } = await api<{ data: { leads: CapturedLead[] } }>(
         'leads/capture',
         'POST',
-        { text: pasted },
+        { text: pasted, labels: leadLabels(meta, text) },
       );
       if (!data.leads.length) setError({ code: 'captureNothing' });
       else {
@@ -504,6 +519,7 @@ function CaptureReview({
       }>('leads/capture', 'POST', {
         text: pasted,
         instruction: said,
+        labels: leadLabels(meta, text),
         leads: rows
           .filter((row) => !row.createdId)
           .map((row) => ({
@@ -850,7 +866,7 @@ function CaptureReview({
               </div>
             )}
           </div>
-          <div className='grid gap-2 border-t pt-3'>
+          <div className='grid gap-2 pt-3'>
             <h3 className='flex items-center gap-1.5 text-sm font-medium'>
               <Sparkles className='size-4 text-primary' />
               {text('leadCapture.adjustTitle')}
@@ -974,6 +990,18 @@ export function CaptureNotice({
               >
                 {`${text(`entity.${d.entity}`)} ${d.name}`}
               </Link>
+              {d.entity !== 'companies' && (
+                <span>
+                  {/* Why it is listed: the same person, or only the same
+                      company, which is not merged. */}
+                  {language.startsWith('zh') ? '' : ' '}
+                  {text(
+                    d.matched?.[0] === 'company'
+                      ? 'leadCapture.sameCompany'
+                      : 'leadCapture.samePerson',
+                  )}
+                </span>
+              )}
               {d.entity === 'leads' && d.mergeable && onMerge ? (
                 <Button
                   type='button'

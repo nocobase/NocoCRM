@@ -3,6 +3,7 @@ import { MockLanguageModelV4 } from 'ai/test';
 import { describe, expect, it } from 'vitest';
 import {
   PROFILE_URL_FIELDS,
+  profileJsonQuestion,
   profileQuestion,
   readProfile,
 } from '../../server/providers/crm/company-profile.js';
@@ -153,5 +154,26 @@ describe('a company profile searched through the model gateway', () => {
         address: '浙江省杭州市',
       }),
     ).not.toHaveProperty('address');
+  });
+});
+
+describe("the profile's language", () => {
+  it('is asked for first and last, and kept when a prose answer is reshaped', () => {
+    const question = profileQuestion(
+      { name: '圆通速递', note: '' },
+      true,
+      'urls',
+    );
+    const lines = question.split('\n');
+    expect(lines[0]).toContain('Write everything in Chinese');
+    expect(
+      lines.filter((line) => line.includes('Write everything in Chinese')),
+    ).toHaveLength(2);
+    expect(profileJsonQuestion('YTO Express is…', true)).toContain(
+      'Write everything in Chinese, whatever language the pages are in',
+    );
+    expect(profileJsonQuestion('圆通速递是…', false)).toContain(
+      'Write everything in English',
+    );
   });
 });

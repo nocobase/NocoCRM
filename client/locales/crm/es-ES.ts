@@ -1199,7 +1199,7 @@ export const crmEsES: CrmWording = {
     aiTab: 'Organizar con IA',
     formTab: 'Rellenar un formulario',
     placeholder:
-      'Pega cualquier cosa: un correo, un chat, notas de una feria o de una llamada. La IA convierte a cada persona en un lead y lo compruebas antes de guardarlo.',
+      'Pega cualquier cosa: un correo, un chat, notas de una feria o de una llamada. La IA convierte cada consulta en un lead (las personas de una misma empresa con la misma necesidad, en uno) y lo compruebas antes de guardarlo.',
     input: 'Texto que organizar',
     organise: 'Organizar con IA',
     organising: 'La IA está organizando…',
@@ -1209,6 +1209,8 @@ export const crmEsES: CrmWording = {
     fillRequired: 'Aún obligatorio: {{fields}}',
     duplicates: 'Posiblemente ya en el CRM:',
     mergeInto: 'Fusionar con este…',
+    samePerson: '(la misma persona)',
+    sameCompany: '(la misma empresa)',
     merged: 'Fusionado',
     found:
       'La IA ha encontrado {{count}} leads. Revísalos y crea los que quieras.',

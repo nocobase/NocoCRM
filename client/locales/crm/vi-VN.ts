@@ -1178,7 +1178,7 @@ export const crmViVN: CrmWording = {
     aiTab: 'Sắp xếp bằng AI',
     formTab: 'Điền biểu mẫu',
     placeholder:
-      'Dán bất kỳ nội dung nào: email, đoạn chat, ghi chú từ hội chợ hay cuộc gọi. AI sẽ biến mỗi người thành một khách hàng tiềm năng, và bạn kiểm tra trước khi lưu.',
+      'Dán bất kỳ nội dung nào: email, đoạn chat, ghi chú từ hội chợ hay cuộc gọi. AI sẽ biến mỗi nhu cầu thành một khách hàng tiềm năng (những người cùng công ty có cùng nhu cầu gộp thành một), và bạn kiểm tra trước khi lưu.',
     input: 'Văn bản cần sắp xếp',
     organise: 'AI sắp xếp',
     organising: 'AI đang sắp xếp…',
@@ -1188,6 +1188,8 @@ export const crmViVN: CrmWording = {
     fillRequired: 'Vẫn còn thiếu trường bắt buộc: {{fields}}',
     duplicates: 'Có thể đã có trong CRM:',
     mergeInto: 'Gộp vào bản ghi này…',
+    samePerson: '(cùng một người)',
+    sameCompany: '(cùng công ty)',
     merged: 'Đã gộp',
     found:
       'AI đã tìm thấy {{count}} khách hàng tiềm năng. Hãy kiểm tra, rồi tạo những khách hàng tiềm năng bạn muốn.',

@@ -1205,7 +1205,7 @@ export const crmDeDE: CrmWording = {
     aiTab: 'Mit KI aufbereiten',
     formTab: 'Formular ausfüllen',
     placeholder:
-      'Fügen Sie beliebigen Text ein: eine E-Mail, einen Chat, Notizen von einer Messe oder einem Anruf. Die KI macht aus jeder Person einen Lead, und Sie prüfen ihn vor dem Speichern.',
+      'Fügen Sie beliebigen Text ein: eine E-Mail, einen Chat, Notizen von einer Messe oder einem Anruf. Die KI macht aus jedem Anliegen einen Lead (Personen derselben Firma mit demselben Bedarf in einem), und Sie prüfen ihn vor dem Speichern.',
     input: 'Aufzubereitender Text',
     organise: 'Mit KI aufbereiten',
     organising: 'Die KI bereitet auf…',
@@ -1215,6 +1215,8 @@ export const crmDeDE: CrmWording = {
     fillRequired: 'Noch erforderlich: {{fields}}',
     duplicates: 'Möglicherweise bereits im CRM:',
     mergeInto: 'Damit zusammenführen…',
+    samePerson: '(dieselbe Person)',
+    sameCompany: '(dieselbe Firma)',
     merged: 'Zusammengeführt',
     found:
       'Die KI hat {{count}} Leads gefunden. Prüfen Sie sie und erstellen Sie die gewünschten.',

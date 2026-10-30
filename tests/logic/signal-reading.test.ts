@@ -10,6 +10,7 @@ import { MockLanguageModelV4 } from 'ai/test';
 import {
   citePages,
   searchWeb,
+  siteName,
   WebSearchError,
   type WebSearcher,
 } from '../../server/providers/crm/web-research.js';
@@ -416,5 +417,21 @@ describe('the search through DeepSeek', () => {
     expect(result.pages).toEqual([]);
     expect(model.doGenerateCalls[0]?.tools ?? []).toEqual([]);
     expect(api.calls).toEqual([]);
+  });
+});
+
+describe("a search result's site", () => {
+  it('reads a name DeepSeek sent as the hex of its bytes', () => {
+    const url = 'https://www.yto.net.cn/about';
+    expect(siteName('e59c86e9809ae9809fe98092', url)).toBe('圆通速递');
+    expect(siteName('e4b8ade59bbde5aeb6e4babae6898de7bd91', url)).toBe(
+      '中国家人才网',
+    );
+    // A name as written stays, one that only looks like hex included.
+    expect(siteName('东方财富', url)).toBe('东方财富');
+    expect(siteName('facade', url)).toBe('facade');
+    // No name: the page's domain.
+    expect(siteName('', url)).toBe('yto.net.cn');
+    expect(siteName(undefined, url)).toBe('yto.net.cn');
   });
 });

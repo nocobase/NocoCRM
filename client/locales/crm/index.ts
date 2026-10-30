@@ -1824,8 +1824,8 @@ const wording = {
     aiTab: ['Organise with AI', 'AI 整理'],
     formTab: ['Fill in a form', '表单录入'],
     placeholder: [
-      'Paste anything: an email, a chat, notes from a fair or a call. The AI turns each person into a lead, and you check it before it is saved.',
-      '粘贴任何内容：邮件、聊天记录、展会或电话记录。AI 会把每个人整理成一条线索，你核对后再保存。',
+      'Paste anything: an email, a chat, notes from a fair or a call. The AI turns each enquiry into a lead (people of one company with the same need make one), and you check it before it is saved.',
+      '粘贴任何内容：邮件、聊天记录、展会或电话记录。AI 会把每件事整理成一条线索（同一家公司为同一个需求来的几个人合成一条），你核对后再保存。',
     ],
     input: ['Text to organise', '要整理的内容'],
     organise: ['AI organise', 'AI 整理'],
@@ -1840,6 +1840,10 @@ const wording = {
     // Merge the lead, not yet saved, into the one the CRM holds instead of
     // creating it.
     mergeInto: ['Merge into it…', '合并到这条…'],
+    // Why a record is listed: the same person, which may be merged, or only
+    // the same company.
+    samePerson: ['(same person)', '（同一人）'],
+    sameCompany: ['(same company)', '（同公司）'],
     merged: ['Merged', '已合并'],
     found: [
       'The AI found {{count}} leads. Check them, then create the ones you want.',

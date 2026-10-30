@@ -92,8 +92,9 @@ Steps (\`op\` and its \`params\`):
 `;
 
 // The CRM's method skills (ai/skills: lead follow-up, opportunity
-// follow-up, approval review, task preparation, company signals): the
-// background runs' method
+// follow-up, approval review, task preparation, company signals, and
+// form capture, the AI organise of a new lead or opportunity, the same
+// method other Solutions ship): the background runs' method
 // (readSkill in crm/ai-model.ts), and skills of the Agents plugin's library
 // attached to the assistant (library.ts), so a question in the chat about a
 // lead's or a deal's next step, or an approval, is answered by the same
@@ -104,4 +105,11 @@ export const METHOD_SKILLS = [
   'approval-review',
   'task-preparation',
   'company-signals',
+  'form-capture',
 ] as const;
+
+// The ones the assistant's `crm_skill` tool offers: the methods a question
+// in the chat may need, not the company check's or a form's.
+export const CHAT_SKILLS: readonly string[] = METHOD_SKILLS.filter(
+  (name) => name !== 'company-signals' && name !== 'form-capture',
+);

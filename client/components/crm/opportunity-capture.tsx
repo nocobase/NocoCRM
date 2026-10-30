@@ -27,6 +27,7 @@ import {
   type CrmRecord,
   type Data,
 } from './api.js';
+import { captureLabels } from './capture-labels.js';
 import { WorkAgentLabel } from './work-agent.js';
 import { LONG_TEXT_LIMIT } from '../../../server/providers/crm/limits.js';
 
@@ -107,6 +108,16 @@ export function OpportunityCaptureDialog({
   const [instruction, setInstruction] = useState('');
   const [followUp, setFollowUp] = useState(true);
   const definitions = meta?.definitions.opportunities.fields ?? [];
+  // The form's labels, for AI organise to name its fields by; the company
+  // it names by name, as the form's company field.
+  const labels = captureLabels(
+    'opportunities',
+    [...FIELDS.filter((key) => key !== 'companyId'), 'company'],
+    definitions,
+    meta?.settings.options ?? {},
+    text,
+    { company: 'companyId' },
+  );
   const required = definitions
     .filter((f) => f.required && FIELDS.includes(f.key))
     .map((f) => f.key);
@@ -169,7 +180,7 @@ export function OpportunityCaptureDialog({
       const { data } = await api<{ data: { deal: CapturedDeal } }>(
         'opportunities/capture',
         'POST',
-        { text: pasted },
+        { text: pasted, labels },
       );
       take(data.deal, {}, false);
       setOrganised(pasted);
@@ -192,6 +203,7 @@ export function OpportunityCaptureDialog({
       }>('opportunities/capture', 'POST', {
         text: pasted,
         instruction: said,
+        labels,
         // The contacts as rows: the server names them for the AI.
         deal: Object.fromEntries(
           FIELDS.map((key) => [key, input[key] ?? null]),
@@ -473,7 +485,7 @@ export function OpportunityCaptureDialog({
                     </div>
                   )}
                 </div>
-                <div className='grid gap-2 border-t pt-3'>
+                <div className='grid gap-2 pt-3'>
                   <h3 className='flex items-center gap-1.5 text-sm font-medium'>
                     <Sparkles className='size-4 text-primary' />
                     {text('leadCapture.adjustTitle')}

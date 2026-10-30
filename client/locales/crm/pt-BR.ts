@@ -1190,7 +1190,7 @@ export const crmPtBR: CrmWording = {
     aiTab: 'Organizar com IA',
     formTab: 'Preencher formulário',
     placeholder:
-      'Cole qualquer coisa: um e-mail, uma conversa, anotações de uma feira ou de uma ligação. A IA transforma cada pessoa em um lead, e você confere antes de salvar.',
+      'Cole qualquer coisa: um e-mail, uma conversa, anotações de uma feira ou de uma ligação. A IA transforma cada demanda em um lead (pessoas da mesma empresa com a mesma necessidade ficam em um só), e você confere antes de salvar.',
     input: 'Texto a organizar',
     organise: 'Organizar com IA',
     organising: 'A IA está organizando…',
@@ -1200,6 +1200,8 @@ export const crmPtBR: CrmWording = {
     fillRequired: 'Ainda obrigatórios: {{fields}}',
     duplicates: 'Possivelmente já no CRM:',
     mergeInto: 'Mesclar neste…',
+    samePerson: '(mesma pessoa)',
+    sameCompany: '(mesma empresa)',
     merged: 'Mesclado',
     found:
       'A IA encontrou {{count}} leads. Confira e depois crie os que desejar.',

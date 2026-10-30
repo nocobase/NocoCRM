@@ -1167,7 +1167,7 @@ export const crmKoKR: CrmWording = {
     aiTab: 'AI로 정리',
     formTab: '양식 작성',
     placeholder:
-      '이메일, 채팅, 박람회나 통화 메모 등 무엇이든 붙여 넣으세요. AI가 각 사람을 리드로 정리하며, 저장하기 전에 확인할 수 있습니다.',
+      '이메일, 채팅, 박람회나 통화 메모 등 무엇이든 붙여 넣으세요. AI가 문의 건마다 리드로 정리하며(같은 회사에서 같은 요구로 온 사람들은 하나로 묶음), 저장하기 전에 확인할 수 있습니다.',
     input: '정리할 텍스트',
     organise: 'AI 정리',
     organising: 'AI가 정리하는 중…',
@@ -1177,6 +1177,8 @@ export const crmKoKR: CrmWording = {
     fillRequired: '아직 필요한 항목: {{fields}}',
     duplicates: 'CRM에 이미 있을 수 있음:',
     mergeInto: '여기에 병합…',
+    samePerson: '(동일 인물)',
+    sameCompany: '(같은 회사)',
     merged: '병합됨',
     found:
       'AI가 리드 {{count}}건을 찾았습니다. 확인한 후 원하는 리드를 만드세요.',

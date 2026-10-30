@@ -31,7 +31,7 @@ import { AGENT_ACTIONS, GRANTABLE } from './actions.js';
 import { heldActions } from './gate.js';
 import { assistantInstructions } from './preset.js';
 import { crmRuleLines } from './rules.js';
-import { crmPlansSkill, METHOD_SKILLS } from './skill.js';
+import { CHAT_SKILLS, crmPlansSkill } from './skill.js';
 import { chatModels } from './work-agents.js';
 
 // The assistant people talk to, Sales Expert: a native chat of the Agents
@@ -484,7 +484,7 @@ async function systemPrompt(
     skill,
     [
       '# Method skills',
-      `The \`crm_skill\` tool reads one of the CRM's method skills, the method its agents follow: ${METHOD_SKILLS.filter((name) => name !== 'company-signals').join(', ')}.`,
+      `The \`crm_skill\` tool reads one of the CRM's method skills, the method its agents follow: ${CHAT_SKILLS.join(', ')}.`,
     ].join('\n'),
     ...sections.map((section) => section.join('\n')),
   ].join('\n\n');
@@ -603,12 +603,7 @@ export function configureAssistant(
       description:
         "Reads one of the CRM's method skills: how its agents follow a lead or an opportunity up, review an approval or prepare a task.",
       inputSchema: z.object({
-        name: z.enum(
-          METHOD_SKILLS.filter((name) => name !== 'company-signals') as [
-            string,
-            ...string[],
-          ],
-        ),
+        name: z.enum(CHAT_SKILLS as [string, ...string[]]),
       }),
       execute: async ({ name }) =>
         asJson({ name, text: await readSkill(container, name) }),
