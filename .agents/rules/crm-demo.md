@@ -5,27 +5,35 @@ through `server/config/demo-mode.ts` and `NOCOBASE_DEMO_MODE`. Follow the
 [Demo Mode Skill](../skills/nocobase-app-plugin-demo-mode/SKILL.md) for deployment
 configuration, quick sign-in and daily reset.
 
-Demo Mode `0.2.0-beta.5` uses Agents `1.0.0-beta.29`, Users
+Demo Mode `0.2.0-beta.6` uses Agents `2.0.0-beta.0`, Users
 `2.0.0-beta.11`, Authorization `1.0.0-beta.33`, Authentication
-`2.0.0-beta.15`, App Client `4.0.0-beta.4`, App Server `3.0.0-beta.4`,
-App CLI `1.0.0-beta.30` and DB `1.0.0-beta.23`. Review the Agents migration
-notes and preview both pending tasks and checksum drift before upgrading an
-existing deployment.
+`2.0.0-beta.16`, App Client `4.0.0-beta.5`, App Server `3.0.0-beta.5`,
+App CLI `1.0.0-beta.30`, DB `1.0.0-beta.24` and Jobs `1.0.0-beta.5`. App Server
+and Jobs bring Queue `1.0.0-beta.10`, Lifecycle `0.1.0-beta.4`, Scheduler
+`1.0.0-beta.21`, Mail `1.0.0-beta.18` and Notification `2.0.0-beta.2` with
+them. Review the Agents migration notes and preview both pending tasks and
+checksum drift before upgrading an existing deployment. Agents 2 fails startup
+on an active `agents.vectors` setting (the CRM uses none), and Redis Jobs and
+Queue now need the commercial `@nocobase/app-plugin-jobs-redis` and
+`@nocobase/app-plugin-queue-redis` plugins with `adapter: redis` declared.
 
 Keep the required peer minimums explicit in the application manifest and
 lock their compatible versions. This upgrade covers Demo Mode and its required
 dependencies; it does not upgrade the application template or unrelated packages.
 
 Use the plugin's `isDemoMode(container)` on the server and `useDemoMode()`
-on the client. The startup public configuration supplies the client flag;
-there is no CRM workspace `demoSite` field or application-owned mode helper.
+on the client, the sample-import banner included. The startup public
+configuration supplies the client flag; there is no CRM workspace `demoSite`
+field, `demoMode/status` request or application-owned mode helper.
 `server/app.ts` registers `demoEffectsGuard()` after i18n and before route
 handlers, for the shared `CRM_PATHS` plus Mail and Agents. Authentication,
 Demo Mode management and Users preferences retain their own APIs. Keep
 `server/routes/crm-paths.ts` current when adding a CRM route; authorization
 and the effects guard consume the same paths. The plugin supplies the
 localized refusal and its toast signal. Retain the CRM's background-work
-checks and form draft recovery, which the request guard does not replace.
+checks and form draft recovery, which the request guard does not replace, and
+`isDemoReadOnlyError` (`client/lib/demo-mode.ts`), since how a page shows the
+refusal is the application's and the plugin's client exports no reason check.
 
 The plugin also owns HTTPS partitioned authentication cookies and visitor
 session preferences through the Users API (locale, theme mode and preset).
@@ -39,7 +47,10 @@ The CRM registers its existing story as the `crm` dataset in
 and cleanup. Registration does not generate data. The dataset creates four sales
 accounts and uses `context.actorId` as its administrator. The plugin owns identity
 cleanup and preserves the executing administrator's access. Clear removes all CRM
-business records, fictional mail, conversations and files.
+business records, fictional mail, conversations and files. The dataset defines no
+`counts`: the plugin's summary of what `demo-lifecycle.ts` tracks reads in one
+grouped query, keyed by collection and `accounts`, where a `counts` callback would
+load every tracked record on each status read.
 
 In Demo Mode, `/settings/demo-data` uses `DemoModeSettings` through
 `demoModeRoutes()` with `demoMode.data/read`. Ordinary installations retain their
@@ -49,7 +60,9 @@ its duplicate header and supplies translated count labels; data operations and
 the language selector are absent by default. The counts, the daily reset and
 the accounts remain; reset by hand with `POST
 <base path>/api/demoMode/data/reset` as an administrator, or `pnpm nocobase
-demo-mode data reset --force` on the server.
+demo-mode data reset --force` on the server. The plugin retries a failed daily
+reset and pauses after an interrupted one until a manual reset or an hour without
+progress; see its reset policy before adding anything around it.
 
 The plugin guards database writes. CRM, Mail and Agents request guards also block
 external effects; CRM background work and real model provisioning are paused.

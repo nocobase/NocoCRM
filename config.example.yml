@@ -1,7 +1,8 @@
 # Copy this file to config.yml before starting the application.
 
 # Read-only showcase deployment. Use its own database and storage directory.
-# Generate the existing CRM story through Settings after enabling.
+# Generate the existing CRM story after enabling: pnpm nocobase demo-mode data import --actor <id> --language <lang> --force,
+# or POST <base path>/api/demoMode/data/import as an administrator.
 # NOCOBASE_DEMO_MODE=true enables the same plugin setting.
 # demoMode:
 #   enabled: true
@@ -216,16 +217,21 @@ snowflake:
 # process that is killed loses what changed since it started. It serves one process: every other process or instance
 # would run its own copy. Set default to memory to keep that without the startup warning, or to redis to run several.
 # Redis must persist its data (AOF or RDB) and use maxmemory-policy noeviction, or schedules can be lost.
+# Install the commercial @nocobase/app-plugin-jobs-redis package and register its Server plugin
+# from @nocobase/app-plugin-jobs-redis/server in server/plugins.ts on every producer and consumer.
+# Upgrading deployments must set adapter: redis explicitly; the application no longer supplies Redis defaults.
 # jobs:
 #   default: redis
 #   redis:
+#     adapter: redis
 #     connection:
 #       host: 127.0.0.1
 #       port: 6379
 #     # namespace: my-app # defaults to the application name; set it when deployments share one Redis
 
 # The CRM's AI follow-ups of leads and deals run on their own jobs configuration, crmFollowUps (memory, four at
-# a time, defined in server/config/jobs.ts). Raise concurrency, or move them to Redis to run across instances:
+# a time, defined in server/config/jobs.ts). Raise concurrency, or, with the Jobs Redis plugin above registered, move
+# them to Redis to run across instances:
 # jobs:
 #   crmFollowUps:
 #     concurrency: 6

@@ -21,6 +21,7 @@ it.each([
     ready: 'Ready',
     schedule: 'Daily reset',
     leads: 'Leads',
+    users: 'Users',
   },
   {
     locale: 'zh-CN',
@@ -28,10 +29,11 @@ it.each([
     ready: '已就绪',
     schedule: '每日重置',
     leads: '线索',
+    users: '用户',
   },
 ])(
   'shows the real read-only demo overview in $locale even for root',
-  async ({ locale, copy, ready, schedule, leads }) => {
+  async ({ locale, copy, ready, schedule, leads, users }) => {
     await renderWithApp(<DemoEnvironmentPage />, {
       route: '/settings/demo-data',
       namespace: packageMetadata.name,
@@ -60,7 +62,7 @@ it.each([
                 languages: ['en-US', 'zh-CN'],
                 language: locale,
                 finishedAt: '2026-10-25T03:00:00.000Z',
-                counts: { crmLeads: 12 },
+                counts: { crmLeads: 12, accounts: 4 },
               },
             };
           case 'demoMode/configuration':
@@ -100,6 +102,8 @@ it.each([
     expect(screen.getByText('UTC')).toBeInTheDocument();
     expect(screen.getByText(leads, { exact: true })).toBeInTheDocument();
     expect(screen.getByText('12', { exact: true })).toBeInTheDocument();
+    expect(screen.getByText(users, { exact: true })).toBeInTheDocument();
+    expect(screen.getByText('4', { exact: true })).toBeInTheDocument();
     const accounts = await screen.findByRole('list');
     expect(within(accounts).getByText('Super Admin')).toBeInTheDocument();
     // All interactive controls belong to account entry links, never data mutations.

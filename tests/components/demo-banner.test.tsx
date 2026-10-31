@@ -12,9 +12,14 @@ import { crmZh } from '../../client/locales/crm/index.js';
 const state = vi.hoisted(() => ({
   demoMode: false,
   metadata: {} as { settingsAccess?: boolean; demoPresent?: boolean },
+  queries: [] as string[],
   status: undefined as
     | { present: boolean; importing: { percent: number | null } | null }
     | undefined,
+}));
+
+vi.mock('@nocobase/app-plugin-demo-mode/client', () => ({
+  useDemoMode: () => state.demoMode,
 }));
 
 vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
@@ -23,10 +28,10 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
   return {
     ...actual,
     useMetadata: () => ({ data: state.metadata }),
-    useCrmQuery: (path: string) => ({
-      data:
-        path === 'demoMode/status' ? { enabled: state.demoMode } : state.status,
-    }),
+    useCrmQuery: (path: string) => {
+      state.queries.push(path);
+      return { data: state.status };
+    },
     useCrmScopeKey: () => ['test'],
     useCrmText: () => ({
       text: (key: string): string => {
@@ -55,6 +60,7 @@ describe('the demo banner', () => {
     localStorage.clear();
     state.status = undefined;
     state.demoMode = false;
+    state.queries = [];
   });
 
   it('hides the old import prompt in read-only demo deployments', () => {
@@ -74,6 +80,8 @@ describe('the demo banner', () => {
         .getByRole('link', { name: crmZh.demoBannerAction })
         .getAttribute('href'),
     ).toBe('/settings/demo-data');
+    // The plugin's startup flag decides, without a status request.
+    expect(state.queries).not.toContain('demoMode/status');
   });
 
   it('hides once the demo data is imported, and from those who cannot import', () => {
