@@ -1,7 +1,8 @@
 # Copy this file to config.yml before starting the application.
 
 # Read-only showcase deployment. Use its own database and storage directory.
-# Generate the existing CRM story after enabling: pnpm nocobase demo-mode data import, or POST /api/demoMode/data/import.
+# Generate the existing CRM story after enabling: pnpm nocobase demo-mode data import --actor <id> --language <lang> --force,
+# or POST <base path>/api/demoMode/data/import as an administrator.
 # NOCOBASE_DEMO_MODE=true enables the same plugin setting.
 # demoMode:
 #   enabled: true

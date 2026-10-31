@@ -31,11 +31,12 @@ const auth: AppConfigFactory<AuthConfig> = defineAuthConfig({
     // Users page; nobody registers themselves, so the sign-up endpoint is off
     // (the /register page and the login page's link to it are removed too).
     emailAndPassword: { enabled: true, autoSignIn: false, disableSignUp: true },
-    // Application change: a forgotten password is reset by mail, sent through
-    // the system mailer's `system-email` channel (notification.channels in
-    // config.yml, its password from SMTP_PASSWORD). Until that channel is
-    // configured the plugin reports reset unavailable, and the login page
-    // offers no "Forgot password" link.
+    // Application change: a forgotten password is reset by mail, which the
+    // plugin sends itself using the `system-email` channel's settings
+    // (notification.channels in config.yml, its password from SMTP_PASSWORD).
+    // The plugin supports this but logs it as deprecated in favour of
+    // auth.email. Until that channel is configured the plugin reports reset
+    // unavailable, and the login page offers no "Forgot password" link.
     passwordReset: { enabled: true },
     session: { storeSessionInDatabase: true },
     account: { encryptOAuthTokens: true },

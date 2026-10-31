@@ -70,14 +70,19 @@ test('generates only sales accounts and keeps the importing administrator outsid
   const demo = app.container.resolve(demoDataToken);
   await demo.importNow(String(root.id), 'zh-CN');
   expect((await demo.status()).state).toBe('ready');
-  // The plugin's own summary, keyed as the settings page labels it.
+  // The plugin's own summary, keyed as the settings page labels it. The task
+  // count follows the weekdays around the import, so it is read, not written.
+  const tasks = await connection.query
+    .selectFrom('crmTasks')
+    .select('id')
+    .execute();
   expect((await demo.status()).counts).toMatchObject({
     accounts: 4,
     crmLeads: 18,
     crmCompanies: 11,
     crmContacts: 22,
     crmOpportunities: 34,
-    crmTasks: 117,
+    crmTasks: tasks.length,
     crmApprovals: 6,
   });
   const users = await connection.query.selectFrom('user').selectAll().execute();
