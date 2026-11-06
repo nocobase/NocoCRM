@@ -5,21 +5,31 @@ through `server/config/demo-mode.ts` and `NOCOBASE_DEMO_MODE`. Follow the
 [Demo Mode Skill](../skills/nocobase-app-plugin-demo-mode/SKILL.md) for deployment
 configuration, quick sign-in and daily reset.
 
-Demo Mode `0.2.0-beta.6` uses Agents `2.0.0-beta.0`, Users
-`2.0.0-beta.11`, Authorization `1.0.0-beta.33`, Authentication
-`2.0.0-beta.16`, App Client `4.0.0-beta.5`, App Server `3.0.0-beta.5`,
-App CLI `1.0.0-beta.30`, DB `1.0.0-beta.24` and Jobs `1.0.0-beta.5`. App Server
-and Jobs bring Queue `1.0.0-beta.10`, Lifecycle `0.1.0-beta.4`, Scheduler
-`1.0.0-beta.21`, Mail `1.0.0-beta.18` and Notification `2.0.0-beta.2` with
-them. Review the Agents migration notes and preview both pending tasks and
+Demo Mode `0.2.0-beta.9` uses Agents `2.0.0-beta.5`, Users
+`2.0.0-beta.15`, Authorization `1.0.0-beta.36`, Authentication
+`2.0.0-beta.19`, App Client `4.0.0-beta.8`, App Server `5.0.0-beta.1`,
+App CLI `1.0.0-beta.32`, DB `1.0.0-beta.25` and Jobs `1.0.0-beta.5`. App Server
+5 needs Caching `1.0.0-beta.4`, and every other `@nocobase/app-plugin-*` the
+CRM registers moves to its release that accepts App Server 5. App Server 5
+removed the deprecated `@nocobase/app-server/mailer` entry; the CRM never
+imported it, its notification channels come from
+`@nocobase/app-plugin-notification-providers/config` and the reset mail from
+`auth.email` (the `mailers` section the template now offers is not adopted).
+Review the Agents migration notes and preview both pending tasks and
 checksum drift before upgrading an existing deployment. Agents 2 fails startup
-on an active `agents.vectors` setting (the CRM uses none), and Redis Jobs and
-Queue now need the commercial `@nocobase/app-plugin-jobs-redis` and
-`@nocobase/app-plugin-queue-redis` plugins with `adapter: redis` declared.
+on an active `agents.vectors` setting (the CRM uses none), and Redis Jobs,
+Queue and realtime need the commercial `@nocobase/app-plugin-jobs-redis`,
+`@nocobase/app-plugin-queue-redis` and `@nocobase/app-plugin-realtime-redis`
+plugins with `adapter: redis` declared.
 
 Keep the required peer minimums explicit in the application manifest and
 lock their compatible versions. This upgrade covers Demo Mode and its required
 dependencies; it does not upgrade the application template or unrelated packages.
+
+The plugin signs an anonymous visitor in as a Super Admin on the home page
+and on every route declared `auth: 'required'`, keeping the whole URL, so a
+shared link to a record opens on that record; the CRM adds no redirect of its
+own.
 
 Use the plugin's `isDemoMode(container)` on the server and `useDemoMode()`
 on the client, the sample-import banner included. The startup public
