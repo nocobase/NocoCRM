@@ -23,6 +23,9 @@ const clientLogic = [
   'tests/logic/toaster.test.tsx',
 ];
 
+// Test applications skip Foundation's automatic source scan (see the file).
+const foundationScan = './tests/setup/foundation-scan.ts';
+
 export default defineConfig({
   test: {
     root,
@@ -36,6 +39,7 @@ export default defineConfig({
           ...databaseTimeouts,
           // Database fixtures and command output capture run one file at a time.
           fileParallelism: false,
+          setupFiles: [foundationScan],
         },
       }),
       createReactVitestConfig({
@@ -47,7 +51,7 @@ export default defineConfig({
           fileParallelism: false,
           include: ['tests/components/**/*.test.{ts,tsx}', ...clientLogic],
           ...databaseTimeouts,
-          setupFiles: ['./tests/setup/client-config.ts'],
+          setupFiles: ['./tests/setup/client-config.ts', foundationScan],
           server: {
             deps: {
               // Keep the fixture, application and plugin clients in the same React/router context.

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Upgrade Demo Mode to 0.2.0-beta.9 with the packages it requires, among them
+  App Server 5.0.0-beta.1, Agents 2.0.0-beta.5, Users 2.0.0-beta.15 and
+  Caching 1.0.0-beta.4: on a demo site, a visitor opening a link to any
+  signed-in page is now signed in and lands on that page, not only one opening
+  the home page. App Server 5 drops the deprecated `@nocobase/app-server/mailer`
+  entry, which the CRM did not use; its mail settings are unchanged.
 - Upgrade the application template to 1.0.0-beta.86 (NocoBase app-server 4):
   every list says when it is loading, finds nothing, is refused or fails to
   load, with Retry or Clear filters in its header, so a failed read no
