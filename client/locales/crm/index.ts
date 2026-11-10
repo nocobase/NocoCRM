@@ -1676,7 +1676,6 @@ const wording = {
   },
   // The preset a CRM agent starts from in the Agents plugin.
   agentPreset: {
-    name: ['CRM assistant', 'CRM 助手'],
     // The assistant agent's own name (server/providers/crm-agents/assistant.ts).
     agentName: ['Sales Expert', '销售专家'],
     description: [
@@ -2373,8 +2372,6 @@ const wording = {
       '在 Agent 团队 → 模型 里配置模型服务。',
     ],
     manageAgents: ['Set up models', '配置模型'],
-    agent: ['Agent', 'Agent'],
-    placeholder: ['Ask the agent…', '问问 Agent…'],
     send: ['Send', '发送'],
     sending: ['Sending…', '发送中…'],
     notSent: ['Not sent', '未发送'],

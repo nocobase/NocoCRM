@@ -1,6 +1,6 @@
 import type { Agents } from '@nocobase/app-plugin-agents/server/tokens';
 import type { DatabaseManager } from '@nocobase/db';
-import { BACKGROUND_INSTRUCTIONS, BACKGROUND_MARKER } from './background.js';
+import { BACKGROUND_INSTRUCTIONS } from './background.js';
 
 // The CRM's work agents, one for each kind of work the AI does on its own,
 // as the Agent work page's tabs are: lead follow-up, opportunity follow-up,
@@ -16,16 +16,12 @@ import { BACKGROUND_INSTRUCTIONS, BACKGROUND_MARKER } from './background.js';
 //
 // They are the CRM's own since the Agents plugin 1.0 (template 1.0.0-beta.74),
 // which keeps no online agents: its agents are the coding tools runners
-// report. What an administrator set on the agents the CRM had made there
-// (their first model, instructions they changed) was taken over once
-// (adoptLegacyWorkAgents); the plugin keeps those rows disabled.
+// report.
 
 // Where their settings are kept, in `crmSettings`.
-export const WORK_AGENTS_SETTINGS = 'ai-work-agents';
-// The plugin agents an earlier release made for them, by work.
-export const WORK_AGENTS_MARKER = 'agents-work-v1';
+const WORK_AGENTS_SETTINGS = 'ai-work-agents';
 
-export const WORKS = [
+const WORKS = [
   'leads',
   'opportunities',
   'approvals',
@@ -96,7 +92,7 @@ export function workInstructions(work: Work): string {
 
 // What an administrator set for a work: its model (null: the default) and
 // its instructions (null: the shipped ones).
-export interface WorkAgentSetting {
+interface WorkAgentSetting {
   model: ModelRef | null;
   instructions: string | null;
 }
@@ -104,8 +100,6 @@ export interface WorkAgentSetting {
 type Stored = {
   version: 1;
   works: Partial<Record<Work, WorkAgentSetting>>;
-  // Set once the plugin agents of an earlier release were read.
-  adopted?: boolean;
 };
 
 function parse(value: unknown): unknown {
@@ -114,15 +108,6 @@ function parse(value: unknown): unknown {
   } catch {
     return null;
   }
-}
-
-// A stored text, or a date as the database hands it back.
-function textOf(value: unknown): string {
-  return typeof value === 'string'
-    ? value
-    : value instanceof Date
-      ? value.toISOString()
-      : '';
 }
 
 function modelOf(value: unknown): ModelRef | null {
@@ -138,7 +123,6 @@ function modelOf(value: unknown): ModelRef | null {
 function storedOf(value: unknown): Stored {
   const parsed = parse(value) as {
     works?: Record<string, unknown>;
-    adopted?: unknown;
   } | null;
   const works: Partial<Record<Work, WorkAgentSetting>> = {};
   for (const work of WORKS) {
@@ -155,7 +139,7 @@ function storedOf(value: unknown): Stored {
           : null,
     };
   }
-  return { version: 1, works, ...(parsed?.adopted ? { adopted: true } : {}) };
+  return { version: 1, works };
 }
 
 async function readStored(database: DatabaseManager): Promise<Stored | null> {
@@ -220,7 +204,6 @@ export async function saveWorkAgent(
             instructions === workInstructions(work) ? null : instructions,
         },
       },
-      ...(stored?.adopted ? { adopted: true } : {}),
     },
     stored !== null,
   );
@@ -305,7 +288,7 @@ export async function workAgentRun(
 // description as references the client translates (the English name is the
 // usage page's source), the model each asks now and whether an
 // administrator chose it, and its instructions.
-export interface WorkAgentName {
+interface WorkAgentName {
   name: string;
   nameText: { key: string; ns: string } | null;
   description: string | null;
@@ -330,94 +313,4 @@ export async function workAgentNames(
     };
   }
   return names;
-}
-
-// Once: what an administrator set on the plugin agents an earlier release
-// made for the work (their first model, and their instructions where they
-// changed them), and on the Background AI before those, taken over as the
-// work's settings. The plugin's upgrade disabled those agents and keeps
-// their rows, read here directly; one an administrator had archived before
-// is left out, its work having followed the assistant's model since.
-export async function adoptLegacyWorkAgents(
-  database: DatabaseManager,
-): Promise<void> {
-  const stored = await readStored(database);
-  if (stored?.adopted) return;
-  const query = database.query();
-  const markerValue = async (id: string): Promise<unknown> =>
-    parse(
-      (
-        await query
-          .selectFrom('crmSettings')
-          .select('value')
-          .where('id', '=', id)
-          .executeTakeFirst()
-          .catch(() => undefined)
-      )?.value,
-    );
-  const idsValue = (await markerValue(WORK_AGENTS_MARKER)) as {
-    agentIds?: Record<string, unknown>;
-  } | null;
-  const ids: Partial<Record<Work, string>> = {};
-  for (const work of WORKS) {
-    const id = idsValue?.agentIds?.[work];
-    if (typeof id === 'string' && id) ids[work] = id;
-  }
-  const background = (await markerValue(BACKGROUND_MARKER)) as {
-    agentId?: unknown;
-  } | null;
-  const backgroundId =
-    typeof background?.agentId === 'string' && background.agentId
-      ? background.agentId
-      : null;
-  const wanted = [
-    ...Object.values(ids),
-    ...(backgroundId ? [backgroundId] : []),
-  ];
-  const rows = wanted.length
-    ? await query
-        .selectFrom('agAgents')
-        .selectAll()
-        .where('id', 'in', wanted)
-        .execute()
-        .catch(() => [])
-    : [];
-  const rowOf = (id: string | null | undefined) =>
-    id ? (rows.find((row) => row.id === id) as Record<string, unknown>) : null;
-  // Archived by a person before the upgrade archived every agent at once.
-  const archivedBefore = (row: Record<string, unknown>): boolean => {
-    const archived = Date.parse(textOf(row.archivedAt));
-    const deleted = Date.parse(textOf(row.deletedAt));
-    return (
-      Number.isFinite(archived) &&
-      (!Number.isFinite(deleted) || deleted - archived > 60_000)
-    );
-  };
-  const backgroundRow = rowOf(backgroundId);
-  const backgroundEdited =
-    backgroundRow && !archivedBefore(backgroundRow)
-      ? textOf(backgroundRow.instructions).trim()
-      : '';
-  const works: Partial<Record<Work, WorkAgentSetting>> = { ...stored?.works };
-  for (const work of WORKS) {
-    if (works[work]) continue;
-    const row = rowOf(ids[work]);
-    if (row && !archivedBefore(row)) {
-      const entries = parse(row.modelEntries);
-      const instructions = textOf(row.instructions).trim();
-      works[work] = {
-        model: modelOf(Array.isArray(entries) ? entries[0] : null),
-        instructions:
-          instructions && instructions !== workInstructions(work)
-            ? instructions
-            : null,
-      };
-    } else if (
-      !row &&
-      backgroundEdited &&
-      backgroundEdited !== BACKGROUND_INSTRUCTIONS
-    )
-      works[work] = { model: null, instructions: backgroundEdited };
-  }
-  await writeStored(database, { version: 1, works, adopted: true }, !!stored);
 }

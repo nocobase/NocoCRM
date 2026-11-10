@@ -1086,7 +1086,6 @@ export const crmRuRU: CrmWording = {
     exportReason: 'Выгрузка данных из CRM остаётся за людьми.',
   },
   agentPreset: {
-    name: 'Ассистент CRM',
     agentName: 'Эксперт по продажам',
     description:
       'ИИ, который разбирается в продажах: находит ваши лиды, сделки и клиентов, оценивает их состояние и готовит следующий шаг; любое предложенное изменение ждёт вашего подтверждения.',
@@ -1509,8 +1508,6 @@ export const crmRuRU: CrmWording = {
     noAgentDescription:
       'Настройте сервис модели в разделе Команда Agent → Модели.',
     manageAgents: 'Настроить модели',
-    agent: 'Agent',
-    placeholder: 'Спросите агента…',
     send: 'Отправить',
     sending: 'Отправка…',
     notSent: 'Не отправлено',

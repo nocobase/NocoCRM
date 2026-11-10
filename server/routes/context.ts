@@ -150,8 +150,8 @@ export function crmGuard(app: Application) {
 export const crmErrorHandler: ErrorHandler<CrmEnv> = (error, c) =>
   apiErrorHandler(toApiError(error), c);
 
-// The AI's workers, absent while the AI Employee plugin is not registered
-// (and in tests that do not provide them).
+// The AI's workers, absent where nothing registered them (the tests that do
+// not provide them).
 export function aiWorkers(app: Application) {
   const { container } = app;
   return {

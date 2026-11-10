@@ -41,19 +41,17 @@ import { jsonValue } from '../values.js';
  * delivered to the agent's conversation.
  */
 
-export const PLAN_OPS = [
-  'record.create',
-  'record.update',
-  'lead.convert',
-  'comment.create',
-  'task.recordOutcome',
-  'approval.submit',
-  'approval.withdraw',
-  'approval.decide',
-  'suggestion.decide',
-  'mail.send',
-] as const;
-export type PlanOp = (typeof PLAN_OPS)[number];
+type PlanOp =
+  | 'record.create'
+  | 'record.update'
+  | 'lead.convert'
+  | 'comment.create'
+  | 'task.recordOutcome'
+  | 'approval.submit'
+  | 'approval.withdraw'
+  | 'approval.decide'
+  | 'suggestion.decide'
+  | 'mail.send';
 
 export interface PlanStepInput {
   op: PlanOp;
@@ -63,7 +61,7 @@ export interface PlanStepInput {
   params: Row;
 }
 
-export interface PlanInput {
+interface PlanInput {
   title: string;
   summary?: string;
   steps: PlanStepInput[];
@@ -94,7 +92,7 @@ export const PLAN_STATUSES = [
 export type PlanStatus = (typeof PLAN_STATUSES)[number];
 
 // What a step does to a record, as the rehearsal found it.
-export interface StepCheck {
+interface StepCheck {
   // An email's: the record it concerns, if any (its entity then only a
   // placeholder).
   entity: Entity;
@@ -109,7 +107,7 @@ export interface StepCheck {
   mail?: PlanMail;
 }
 
-export interface PlanMail {
+interface PlanMail {
   from: string;
   to: string[];
   cc: string[];
@@ -120,7 +118,7 @@ export interface PlanMail {
 // What a plan works with besides the CRM: the AI's follow-ups a step
 // decides or starts, and the Mail plugin it sends with (each absent
 // without its plugin).
-export interface PlanWorkers extends FollowUpWorkers {
+interface PlanWorkers extends FollowUpWorkers {
   tasks?: () => TaskPreparer | undefined;
   mail?: () => MailService | undefined;
   // Brings the person's mail into the timeline once a plan sent some.

@@ -3,11 +3,10 @@ import type { AppResource } from './en-US.js';
 import { crmViVN } from './crm/vi-VN.js';
 import settingsViVN from './settings/vi-VN.js';
 
-// The pages in vi-VN: the template's copy (./system/), the AI skills'
-// display text and the CRM's own (./crm/vi-VN.ts), with the same keys as
-// ./en-US.ts. The template ships no vi-VN, so its copy is translated
-// here; a template upgrade that adds keys fails the type check until they
-// are translated.
+// The pages in vi-VN: the template's copy (./system/) and the CRM's own
+// (./crm/vi-VN.ts), with the same keys as ./en-US.ts. The template ships no
+// vi-VN, so its copy is translated here; a template upgrade that adds keys
+// fails the type check until they are translated.
 const viVN: AppResource = {
   ...fileUi,
   'auth.passwordResetSuccess':
@@ -483,18 +482,6 @@ const viVN: AppResource = {
     placeholder: 'Chọn ngày',
     rangePlaceholder: 'Chọn khoảng ngày',
   },
-  'Lead follow-up': 'Theo dõi khách hàng tiềm năng',
-  'Review everything a lead has now (the lead itself, its tasks, comments and related records in the CRM) and recommend the next step — keep following up, nurture, convert or invalid — with the reasons; when following up, say clearly how to follow up and what exactly to do. Use when a new lead comes in, when the user asks to follow up a lead or follow it up again, or asks "what should I do next with this lead".':
-    'Xem xét mọi thông tin hiện có của một khách hàng tiềm năng (bản thân khách hàng tiềm năng, các công việc, bình luận và bản ghi liên quan trong CRM) và đề xuất bước tiếp theo — tiếp tục theo dõi, nuôi dưỡng, chuyển đổi hay đánh dấu không hợp lệ — kèm lý do; khi tiếp tục theo dõi, nêu rõ cách theo dõi và cụ thể cần làm gì. Dùng khi có khách hàng tiềm năng mới, khi người dùng yêu cầu theo dõi hoặc theo dõi lại một khách hàng tiềm năng, hoặc hỏi "tôi nên làm gì tiếp với khách hàng tiềm năng này".',
-  'Opportunity follow-up': 'Theo dõi cơ hội',
-  'Reviews everything about an opportunity as it now stands (the opportunity itself, the company, contacts and their roles, tasks, comments, approvals, the source lead) and judges whether its stage holds up and what to do next — advance to the next stage, keep at it in the current stage, pause, or mark it lost — with the reasons, risks and gaps to fill; when advancing, spells out exactly what to do. Use when a lead\'s conversion opens a new opportunity, when the outcome of an opportunity\'s task has been recorded, when the user asks for a follow-up, or when asked "what is the next step for this opportunity?".':
-    'Xem xét mọi thông tin hiện tại của một cơ hội (bản thân cơ hội, công ty, các liên hệ và vai trò của họ, công việc, bình luận, phê duyệt, khách hàng tiềm năng nguồn) và đánh giá giai đoạn hiện tại có hợp lý không cũng như nên làm gì tiếp — chuyển sang giai đoạn tiếp theo, tiếp tục ở giai đoạn hiện tại, tạm dừng hay đánh dấu thua — kèm lý do, rủi ro và những thiếu sót cần bổ sung; khi chuyển giai đoạn, nêu cụ thể cần làm gì. Dùng khi việc chuyển đổi một khách hàng tiềm năng mở ra cơ hội mới, khi kết quả một công việc của cơ hội đã được ghi lại, khi người dùng yêu cầu theo dõi, hoặc khi được hỏi "bước tiếp theo của cơ hội này là gì?".',
-  'Approval review': 'Xem xét phê duyệt',
-  'Helps an approver judge whether an approval request (discount, payment terms, contract terms, delivery commitment) is worth approving — how far the asked terms are from the standard, the effect on the amount and on collection, the opportunity\'s situation and the evidence supporting this concession, the other approvals submitted with it on the same opportunity, how earlier requests of the same kind were decided, the risks and what the applicant left unclear — then recommends approve, approve on conditions, reject or ask for more information, and drafts the decision comment. Use it after an approval is submitted, or when the approver asks "should this approval be approved?".':
-    'Giúp người phê duyệt đánh giá một yêu cầu phê duyệt (chiết khấu, điều khoản thanh toán, điều khoản hợp đồng, cam kết giao hàng) có đáng phê duyệt không — điều kiện được yêu cầu chênh lệch bao nhiêu so với tiêu chuẩn, ảnh hưởng đến số tiền và việc thu tiền, tình hình của cơ hội và bằng chứng ủng hộ nhượng bộ này, các phê duyệt khác được gửi cùng trên cùng cơ hội, các yêu cầu cùng loại trước đây đã được quyết định thế nào, các rủi ro và những điểm người đề nghị chưa làm rõ — rồi đề xuất phê duyệt, phê duyệt có điều kiện, từ chối hoặc yêu cầu bổ sung thông tin, và soạn sẵn bình luận cho quyết định. Dùng sau khi một phê duyệt được gửi, hoặc khi người phê duyệt hỏi "có nên phê duyệt yêu cầu này không?".',
-  'Task preparation': 'Chuẩn bị công việc',
-  "Prepares a salesperson for a task they are about to do with a customer (a call, a meeting, a visit, a demo) — what the task should achieve, where things stand from the record's tasks, comments and mail, who is on the other side and what part each plays, the questions to ask, what to bring, the risks, and the points to cover in order. Use it on the morning of a task, or when the task's owner asks to be prepared.":
-    'Giúp nhân viên bán hàng chuẩn bị cho một công việc sắp làm với khách hàng (cuộc gọi, cuộc họp, chuyến thăm, buổi demo) — công việc cần đạt được gì, tình hình hiện tại dựa trên các công việc, bình luận và email của bản ghi, phía bên kia gồm những ai và mỗi người đóng vai trò gì, các câu hỏi cần đặt ra, những gì cần mang theo, các rủi ro, và các điểm cần trao đổi theo thứ tự. Dùng vào buổi sáng ngày diễn ra công việc, hoặc khi người phụ trách công việc yêu cầu được chuẩn bị.',
   flowDiagram: {
     controls: 'Điều khiển sơ đồ',
     fitView: 'Vừa khung nhìn',

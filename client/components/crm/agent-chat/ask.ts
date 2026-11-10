@@ -63,7 +63,7 @@ export function listedConversations<T extends { readonly source: string }>(
     .filter((conversation) => conversation.source !== SEARCH_SOURCE);
 }
 
-export type AgentReadiness =
+type AgentReadiness =
   | { state: 'loading'; agent: null; reason?: undefined }
   | { state: 'ready'; agent: ChatAgent; reason?: undefined }
   | { state: 'unavailable'; agent: ChatAgent | null; reason: string };

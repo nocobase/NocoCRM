@@ -1066,7 +1066,6 @@ export const crmKoKR: CrmWording = {
     exportReason: 'CRM 외부로 데이터를 내보내는 일은 사람에게 맡깁니다.',
   },
   agentPreset: {
-    name: 'CRM 어시스턴트',
     agentName: '영업 전문가',
     description:
       '영업을 잘 아는 AI입니다. 리드, 영업 기회, 고객을 조회하고 현재 상황을 파악해 다음 단계를 준비합니다. 제안하는 변경 사항은 모두 사용자의 확인을 기다립니다.',
@@ -1484,8 +1483,6 @@ export const crmKoKR: CrmWording = {
     noAgent: '아직 Agent가 없습니다',
     noAgentDescription: 'Agent 팀 → 모델에서 모델 서비스를 설정하세요.',
     manageAgents: '모델 설정',
-    agent: 'Agent',
-    placeholder: 'Agent에게 물어보세요…',
     send: '보내기',
     sending: '보내는 중…',
     notSent: '보내지 못함',

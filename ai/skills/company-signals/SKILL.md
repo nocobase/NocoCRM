@@ -1,12 +1,6 @@
 ---
 name: company-signals
-introduction:
-  title: Company signals
-scope: SPECIFIED
-i18n:
-  namespace: crm
 description: Decides which recent events at a customer's company are worth a salesperson's attention — funding, hiring at scale, a new executive, major business news, risks — and which are routine news to leave out. Use it when looking a company up on the web for what happened to it lately.
-tools: []
 ---
 
 # Company signals

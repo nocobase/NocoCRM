@@ -3,11 +3,10 @@ import type { AppResource } from './en-US.js';
 import { crmDeDE } from './crm/de-DE.js';
 import settingsDeDE from './settings/de-DE.js';
 
-// The pages in de-DE: the template's copy (./system/), the AI skills'
-// display text and the CRM's own (./crm/de-DE.ts), with the same keys as
-// ./en-US.ts. The template ships no de-DE, so its copy is translated
-// here; a template upgrade that adds keys fails the type check until they
-// are translated.
+// The pages in de-DE: the template's copy (./system/) and the CRM's own
+// (./crm/de-DE.ts), with the same keys as ./en-US.ts. The template ships no
+// de-DE, so its copy is translated here; a template upgrade that adds keys
+// fails the type check until they are translated.
 const deDE: AppResource = {
   ...fileUi,
   'auth.passwordResetSuccess':
@@ -493,18 +492,6 @@ const deDE: AppResource = {
     placeholder: 'Datum auswählen',
     rangePlaceholder: 'Zeitraum auswählen',
   },
-  'Lead follow-up': 'Lead nachfassen',
-  'Review everything a lead has now (the lead itself, its tasks, comments and related records in the CRM) and recommend the next step — keep following up, nurture, convert or invalid — with the reasons; when following up, say clearly how to follow up and what exactly to do. Use when a new lead comes in, when the user asks to follow up a lead or follow it up again, or asks "what should I do next with this lead".':
-    'Prüft alles, was zu einem Lead aktuell vorliegt (den Lead selbst, seine Aufgaben, Kommentare und zugehörige Datensätze im CRM), und empfiehlt mit Begründung den nächsten Schritt – weiter nachfassen, in Pflege nehmen, konvertieren oder ungültig; beim Nachfassen wird klar gesagt, wie nachgefasst wird und was genau zu tun ist. Verwenden, wenn ein neuer Lead eingeht, wenn der Benutzer darum bittet, einen Lead nachzufassen oder erneut nachzufassen, oder fragt: „Was soll ich als Nächstes mit diesem Lead tun?“',
-  'Opportunity follow-up': 'Verkaufschance nachfassen',
-  'Reviews everything about an opportunity as it now stands (the opportunity itself, the company, contacts and their roles, tasks, comments, approvals, the source lead) and judges whether its stage holds up and what to do next — advance to the next stage, keep at it in the current stage, pause, or mark it lost — with the reasons, risks and gaps to fill; when advancing, spells out exactly what to do. Use when a lead\'s conversion opens a new opportunity, when the outcome of an opportunity\'s task has been recorded, when the user asks for a follow-up, or when asked "what is the next step for this opportunity?".':
-    'Prüft alles zum aktuellen Stand einer Verkaufschance (die Verkaufschance selbst, das Unternehmen, Kontakte und ihre Rollen, Aufgaben, Kommentare, Genehmigungen, den Ursprungs-Lead) und beurteilt, ob ihre Phase haltbar ist und was als Nächstes zu tun ist – in die nächste Phase vorrücken, in der aktuellen Phase dranbleiben, pausieren oder als verloren markieren –, mit Begründung, Risiken und zu schließenden Lücken; beim Vorrücken wird genau beschrieben, was zu tun ist. Verwenden, wenn durch die Konvertierung eines Leads eine neue Verkaufschance entsteht, wenn das Ergebnis einer Aufgabe der Verkaufschance erfasst wurde, wenn der Benutzer um Nachfassen bittet oder wenn gefragt wird: „Was ist der nächste Schritt für diese Verkaufschance?“',
-  'Approval review': 'Genehmigungsprüfung',
-  'Helps an approver judge whether an approval request (discount, payment terms, contract terms, delivery commitment) is worth approving — how far the asked terms are from the standard, the effect on the amount and on collection, the opportunity\'s situation and the evidence supporting this concession, the other approvals submitted with it on the same opportunity, how earlier requests of the same kind were decided, the risks and what the applicant left unclear — then recommends approve, approve on conditions, reject or ask for more information, and drafts the decision comment. Use it after an approval is submitted, or when the approver asks "should this approval be approved?".':
-    'Hilft einem Genehmiger zu beurteilen, ob eine Genehmigungsanfrage (Rabatt, Zahlungsbedingungen, Vertragsbedingungen, Lieferzusage) eine Genehmigung verdient – wie weit die geforderten Bedingungen vom Standard abweichen, die Auswirkung auf Betrag und Zahlungseingang, die Lage der Verkaufschance und die Belege für dieses Zugeständnis, die anderen mit ihr für dieselbe Verkaufschance eingereichten Genehmigungen, wie frühere Anfragen derselben Art entschieden wurden, die Risiken und was der Antragsteller offengelassen hat – und empfiehlt dann Genehmigen, Genehmigen unter Auflagen, Ablehnen oder weitere Informationen anfordern und entwirft den Kommentar zur Entscheidung. Verwenden, nachdem eine Genehmigung eingereicht wurde, oder wenn der Genehmiger fragt: „Sollte diese Genehmigung erteilt werden?“',
-  'Task preparation': 'Aufgabenvorbereitung',
-  "Prepares a salesperson for a task they are about to do with a customer (a call, a meeting, a visit, a demo) — what the task should achieve, where things stand from the record's tasks, comments and mail, who is on the other side and what part each plays, the questions to ask, what to bring, the risks, and the points to cover in order. Use it on the morning of a task, or when the task's owner asks to be prepared.":
-    'Bereitet einen Vertriebsmitarbeiter auf eine anstehende Aufgabe mit einem Kunden vor (Anruf, Meeting, Besuch, Demo) – was die Aufgabe erreichen soll, wo die Dinge laut Aufgaben, Kommentaren und E-Mails des Datensatzes stehen, wer auf der Gegenseite sitzt und welche Rolle jeder spielt, welche Fragen zu stellen sind, was mitzubringen ist, die Risiken und die Punkte, die der Reihe nach zu behandeln sind. Verwenden am Morgen einer Aufgabe oder wenn der Verantwortliche der Aufgabe um Vorbereitung bittet.',
   flowDiagram: {
     controls: 'Diagrammsteuerung',
     fitView: 'Einpassen',

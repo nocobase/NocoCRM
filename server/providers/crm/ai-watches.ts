@@ -7,7 +7,7 @@ import { toText } from './schema.js';
 // the worker's finish hands it to `CrmService.aiFinished`, which tells the
 // conversation (crm-agents/ai-work-news.ts).
 
-export interface AiWatch {
+interface AiWatch {
   id: string;
   entity: string;
   recordId: string;

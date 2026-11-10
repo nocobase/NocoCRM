@@ -3,11 +3,10 @@ import type { AppResource } from './en-US.js';
 import { crmPtBR } from './crm/pt-BR.js';
 import settingsPtBR from './settings/pt-BR.js';
 
-// The pages in pt-BR: the template's copy (./system/), the AI skills'
-// display text and the CRM's own (./crm/pt-BR.ts), with the same keys as
-// ./en-US.ts. The template ships no pt-BR, so its copy is translated
-// here; a template upgrade that adds keys fails the type check until they
-// are translated.
+// The pages in pt-BR: the template's copy (./system/) and the CRM's own
+// (./crm/pt-BR.ts), with the same keys as ./en-US.ts. The template ships no
+// pt-BR, so its copy is translated here; a template upgrade that adds keys
+// fails the type check until they are translated.
 const ptBR: AppResource = {
   ...fileUi,
   'auth.passwordResetSuccess':
@@ -487,18 +486,6 @@ const ptBR: AppResource = {
     placeholder: 'Selecione uma data',
     rangePlaceholder: 'Selecione um intervalo de datas',
   },
-  'Lead follow-up': 'Acompanhamento de leads',
-  'Review everything a lead has now (the lead itself, its tasks, comments and related records in the CRM) and recommend the next step — keep following up, nurture, convert or invalid — with the reasons; when following up, say clearly how to follow up and what exactly to do. Use when a new lead comes in, when the user asks to follow up a lead or follow it up again, or asks "what should I do next with this lead".':
-    'Analise tudo o que um lead tem agora (o próprio lead, suas tarefas, comentários e registros relacionados no CRM) e recomende o próximo passo — continuar acompanhando, colocar em nutrição, converter ou marcar como inválido — com os motivos; ao continuar acompanhando, diga claramente como acompanhar e o que exatamente fazer. Use quando chegar um novo lead, quando o usuário pedir para acompanhar um lead ou retomar o acompanhamento, ou perguntar "o que devo fazer agora com este lead".',
-  'Opportunity follow-up': 'Acompanhamento de oportunidades',
-  'Reviews everything about an opportunity as it now stands (the opportunity itself, the company, contacts and their roles, tasks, comments, approvals, the source lead) and judges whether its stage holds up and what to do next — advance to the next stage, keep at it in the current stage, pause, or mark it lost — with the reasons, risks and gaps to fill; when advancing, spells out exactly what to do. Use when a lead\'s conversion opens a new opportunity, when the outcome of an opportunity\'s task has been recorded, when the user asks for a follow-up, or when asked "what is the next step for this opportunity?".':
-    'Analisa tudo sobre uma oportunidade como está agora (a própria oportunidade, a empresa, os contatos e seus papéis, tarefas, comentários, aprovações, o lead de origem) e avalia se a etapa se sustenta e o que fazer em seguida — avançar para a próxima etapa, continuar trabalhando na etapa atual, pausar ou marcá-la como perdida — com os motivos, os riscos e as lacunas a preencher; ao avançar, detalha exatamente o que fazer. Use quando a conversão de um lead abrir uma nova oportunidade, quando o resultado de uma tarefa da oportunidade tiver sido registrado, quando o usuário pedir um acompanhamento ou quando perguntarem "qual é o próximo passo para esta oportunidade?".',
-  'Approval review': 'Análise de aprovação',
-  'Helps an approver judge whether an approval request (discount, payment terms, contract terms, delivery commitment) is worth approving — how far the asked terms are from the standard, the effect on the amount and on collection, the opportunity\'s situation and the evidence supporting this concession, the other approvals submitted with it on the same opportunity, how earlier requests of the same kind were decided, the risks and what the applicant left unclear — then recommends approve, approve on conditions, reject or ask for more information, and drafts the decision comment. Use it after an approval is submitted, or when the approver asks "should this approval be approved?".':
-    'Ajuda um aprovador a avaliar se uma solicitação de aprovação (desconto, condições de pagamento, cláusulas contratuais, compromisso de entrega) merece ser aprovada — quanto as condições pedidas se distanciam do padrão, o efeito sobre o valor e sobre o recebimento, a situação da oportunidade e as evidências que sustentam esta concessão, as outras aprovações enviadas junto com ela na mesma oportunidade, como solicitações anteriores do mesmo tipo foram decididas, os riscos e o que o solicitante deixou sem esclarecer — e então recomenda aprovar, aprovar com condições, rejeitar ou pedir mais informações, e redige o comentário da decisão. Use depois que uma aprovação for enviada ou quando o aprovador perguntar "esta aprovação deve ser aprovada?".',
-  'Task preparation': 'Preparação de tarefas',
-  "Prepares a salesperson for a task they are about to do with a customer (a call, a meeting, a visit, a demo) — what the task should achieve, where things stand from the record's tasks, comments and mail, who is on the other side and what part each plays, the questions to ask, what to bring, the risks, and the points to cover in order. Use it on the morning of a task, or when the task's owner asks to be prepared.":
-    'Prepara um vendedor para uma tarefa que ele está prestes a realizar com um cliente (uma ligação, uma reunião, uma visita, uma demonstração) — o que a tarefa deve alcançar, em que pé estão as coisas segundo as tarefas, os comentários e os e-mails do registro, quem está do outro lado e qual é o papel de cada um, as perguntas a fazer, o que levar, os riscos e os pontos a abordar, em ordem. Use na manhã da tarefa ou quando o responsável pela tarefa pedir para ser preparado.',
   flowDiagram: {
     controls: 'Controles do diagrama',
     fitView: 'Ajustar à tela',

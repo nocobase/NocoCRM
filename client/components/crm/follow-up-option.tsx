@@ -15,8 +15,9 @@ const AGENT_LABELS: Record<string, string> = {
 
 // "Let the AI follow up at once", beside the button that creates a lead (the
 // lead form, the review of leads the AI organised) and under the deal a
-// conversion opens (`label`): ticked by default, and left out while the AI
-// employee is off, when no follow-up would run anyway. It names the agent
+// conversion opens (`label`): ticked by default, and left out while its
+// agent or that trigger is switched off on the Agent work page (`agentRuns`),
+// when no follow-up would run anyway. It names the agent
 // following up, "让 线索跟进 立刻跟进", while that agent is there.
 export function FollowUpOption({
   checked,

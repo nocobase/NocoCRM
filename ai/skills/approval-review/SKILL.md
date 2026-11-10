@@ -1,12 +1,6 @@
 ---
 name: approval-review
-introduction:
-  title: Approval review
-scope: SPECIFIED
-i18n:
-  namespace: crm
 description: Helps an approver judge whether an approval request (discount, payment terms, contract terms, delivery commitment) is worth approving — how far the asked terms are from the standard, the effect on the amount and on collection, the opportunity's situation and the evidence supporting this concession, the other approvals submitted with it on the same opportunity, how earlier requests of the same kind were decided, the risks and what the applicant left unclear — then recommends approve, approve on conditions, reject or ask for more information, and drafts the decision comment. Use it after an approval is submitted, or when the approver asks "should this approval be approved?".
-tools: []
 ---
 
 # Approval review

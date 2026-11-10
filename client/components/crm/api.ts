@@ -53,8 +53,9 @@ export interface Metadata {
   // Whether the company's WhatsApp number is connected: records show their
   // WhatsApp tab (components/crm/whatsapp/).
   whatsapp?: { configured: boolean };
-  // Whether the CRM's AI employee is switched on (its Enabled switch on the
-  // AI Employee plugin's settings page): every assistant entry follows it.
+  // Whether the CRM's AI can answer: the Agents plugin has a model to ask
+  // (aiAvailable, server/providers/crm/index.ts). Every assistant entry
+  // follows it.
   assistant: boolean;
   // The CRM's work agents' names as written and the references translating
   // them, by work (crm-agents/work-agents.ts): the dialogs doing that work
@@ -138,7 +139,7 @@ export function useCrmApi() {
   );
 }
 // One page, everywhere the CRM pages or reveals more: list pages, board
-// columns, the lists on a record's tabs, the action centre.
+// columns, the lists on a record's tabs.
 export const PAGE_SIZE = 20;
 
 // The signed-in user's id, read from the authentication plugin's client
@@ -289,7 +290,7 @@ export function useMetadata(enabled = true) {
   return useCrmQuery<Metadata>('workspace', enabled);
 }
 // Whether the pages offer the assistant: the header button, the page
-// shortcuts and the panel all hide while the CRM's AI employee is disabled.
+// shortcuts and the panel all hide while the CRM's AI has no model to ask.
 export function useAssistantAvailable(): boolean {
   return useMetadata().data?.assistant === true;
 }

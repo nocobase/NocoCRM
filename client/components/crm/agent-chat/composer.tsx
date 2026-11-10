@@ -48,7 +48,7 @@ import {
 // conversation) does not take it again.
 let takenDraft: number | null = null;
 
-export interface ComposerSend {
+interface ComposerSend {
   content: string;
   context: PageContext | undefined;
   attachments: readonly MessageAttachment[];

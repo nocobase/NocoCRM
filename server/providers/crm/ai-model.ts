@@ -67,7 +67,7 @@ export async function aiAvailable(
   return (await crmModel(container, 'leads').catch(() => null)) !== null;
 }
 
-export interface ModelSession {
+interface ModelSession {
   // Asks the next turn and returns the reply's text.
   ask(content: string, signal?: AbortSignal): Promise<string>;
   // Asks for one JSON object in the given shape, spelled out after the
@@ -314,7 +314,7 @@ export function daysWithin(min: number, max: number) {
   );
 }
 
-export function shapeOf(shape: ZodType): string {
+function shapeOf(shape: ZodType): string {
   try {
     return JSON.stringify(z.toJSONSchema(shape, { unrepresentable: 'any' }));
   } catch {

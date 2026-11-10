@@ -1098,7 +1098,6 @@ export const crmEsES: CrmWording = {
     exportReason: 'Sacar datos del CRM corresponde a las personas.',
   },
   agentPreset: {
-    name: 'Asistente del CRM',
     agentName: 'Experto en ventas',
     description:
       'Una IA que entiende de ventas: consulta tus leads, oportunidades y clientes, analiza en qué punto están y prepara el siguiente paso; cualquier cambio que sugiera espera a que lo confirmes.',
@@ -1532,8 +1531,6 @@ export const crmEsES: CrmWording = {
     noAgentDescription:
       'Configure un servicio de modelos en Equipo de agentes → Modelos.',
     manageAgents: 'Configurar modelos',
-    agent: 'Agent',
-    placeholder: 'Pregunta al Agent…',
     send: 'Enviar',
     sending: 'Enviando…',
     notSent: 'No enviado',

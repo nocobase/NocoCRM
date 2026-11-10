@@ -1,12 +1,6 @@
 ---
 name: opportunity-follow-up
-introduction:
-  title: Opportunity follow-up
-scope: SPECIFIED
-i18n:
-  namespace: crm
 description: Reviews everything about an opportunity as it now stands (the opportunity itself, the company, contacts and their roles, tasks, comments, approvals, the source lead) and judges whether its stage holds up and what to do next — advance to the next stage, keep at it in the current stage, pause, or mark it lost — with the reasons, risks and gaps to fill; when advancing, spells out exactly what to do. Use when a lead's conversion opens a new opportunity, when the outcome of an opportunity's task has been recorded, when the user asks for a follow-up, or when asked "what is the next step for this opportunity?".
-tools: []
 ---
 
 # Opportunity follow-up

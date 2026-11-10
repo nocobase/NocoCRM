@@ -64,12 +64,12 @@ export const ASSISTANT_SCOPE = 'crm';
 export const ASSISTANT_ID = 'crm-assistant';
 export const ASSISTANT_NAME = 'Sales Expert';
 // The credential of one command the assistant runs.
-export const ASSISTANT_TOKEN_HEADER = 'x-crm-assistant-token';
+const ASSISTANT_TOKEN_HEADER = 'x-crm-assistant-token';
 export const ASSISTANT_SCHEME = 'crmAssistantToken';
 const ASSISTANT_CREDENTIAL = 'crm-assistant';
 // What marks the CRM's news in a conversation (client: agent-chat/news.ts).
 export const NEWS_OPEN = '<crm-news>';
-export const NEWS_CLOSE = '</crm-news>';
+const NEWS_CLOSE = '</crm-news>';
 
 // The CLI's name in the commands' help.
 const BIN = 'crm';
@@ -121,7 +121,7 @@ export async function assistantActions(
 
 // A command line as a shell splits it: words apart by spaces, kept together
 // by quotes, a backslash escaping the next character.
-export function splitLine(line: string): string[] {
+function splitLine(line: string): string[] {
   const words: string[] = [];
   let word = '';
   let started = false;

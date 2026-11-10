@@ -1073,7 +1073,6 @@ export const crmJaJP: CrmWording = {
     exportReason: 'CRM からのデータの持ち出しは人が行います。',
   },
   agentPreset: {
-    name: 'CRM アシスタント',
     agentName: '営業エキスパート',
     description:
       '営業を熟知した AI です。リード、商談、顧客を調べ、状況を把握して次のステップを準備します。提案する変更はすべて、あなたの確認を待ちます。',
@@ -1497,8 +1496,6 @@ export const crmJaJP: CrmWording = {
     noAgentDescription:
       'エージェントチーム → モデルでモデルサービスを設定してください。',
     manageAgents: 'モデルを設定',
-    agent: 'Agent',
-    placeholder: 'Agent に質問…',
     send: '送信',
     sending: '送信中…',
     notSent: '未送信',

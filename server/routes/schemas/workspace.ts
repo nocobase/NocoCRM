@@ -113,7 +113,8 @@ export const Workspace = z
       description: 'For whoever may import one: whether a demo dataset is.',
     }),
     assistant: z.boolean().meta({
-      description: "Whether the CRM's AI employee is switched on.",
+      description:
+        "Whether the CRM's AI can answer: the Agents plugin has a model to ask.",
     }),
     agents: AgentSwitchesSchema,
     workAgentNames: z

@@ -276,25 +276,7 @@ export class CrmService {
       parsed && typeof parsed === 'object' && !Array.isArray(parsed)
         ? parsed
         : {}
-    ) as Partial<CrmSettings> & {
-      approvalEnabled?: unknown;
-      firstContactDays?: unknown;
-      aiInstructions?: unknown;
-      aiService?: unknown;
-      aiModel?: unknown;
-      aiEnabled?: unknown;
-    };
-    // Settings since retired (the approval switch, the first-contact
-    // threshold, the AI business instructions now in the employee's role,
-    // the model choice now on the plugin's page, the AI switch now the
-    // employee's own Enabled switch there); a row from before still
-    // carries them.
-    delete stored.approvalEnabled;
-    delete stored.firstContactDays;
-    delete stored.aiInstructions;
-    delete stored.aiService;
-    delete stored.aiModel;
-    delete stored.aiEnabled;
+    ) as Partial<CrmSettings>;
     // The former `user` choice (each user's own language) is gone: the chat
     // follows the user's language by itself, and the AI's own work uses one
     // language for the whole team, the default unless one was chosen.
@@ -400,27 +382,13 @@ export class CrmService {
   async saveSettings(actor: Actor, raw: unknown): Promise<CrmSettings> {
     await requireCapability(actor, 'manage', 'settings');
     const input = object(raw);
-    // Settings that no longer exist (the option lists, the approval switch)
-    // may still arrive from a stored row or an old tab; they are dropped, not
-    // rejected. Anything else unknown is a client bug worth surfacing.
+    // The option lists, which reading the settings returns and which live in
+    // code, may come back with them; they are dropped, not rejected. Anything
+    // else unknown is a client bug worth surfacing. (The settings since
+    // retired went from the stored row with 202611100001_crm_drop_retired_settings.)
     for (const key of Object.keys(input))
       if (!(key in defaultSettings)) {
-        if (
-          [
-            'options',
-            'approvalEnabled',
-            'firstContactDays',
-            // Settings of the CRM's former assistant: its business guidance
-            // is in server/providers/crm/guidance.ts and its model is the
-            // Agents plugin's.
-            'aiInstructions',
-            'aiService',
-            'aiModel',
-            // The AI is on whenever there is a model (assistantEnabled).
-            'aiEnabled',
-          ].includes(key)
-        )
-          delete input[key];
+        if (key === 'options') delete input[key];
         else throw new CrmError('invalidInput', 400, key);
       }
     const current = await this.settings();

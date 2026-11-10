@@ -1,12 +1,6 @@
 ---
 name: lead-follow-up
-introduction:
-  title: Lead follow-up
-scope: SPECIFIED
-i18n:
-  namespace: crm
 description: Review everything a lead has now (the lead itself, its tasks, comments and related records in the CRM) and recommend the next step — keep following up, nurture, convert or invalid — with the reasons; when following up, say clearly how to follow up and what exactly to do. Use when a new lead comes in, when the user asks to follow up a lead or follow it up again, or asks "what should I do next with this lead".
-tools: []
 ---
 
 # Lead follow-up

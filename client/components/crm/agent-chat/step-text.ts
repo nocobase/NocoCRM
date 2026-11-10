@@ -30,7 +30,7 @@ const OBJECTS: Record<string, string> = {
   approvals: 'approvals',
 };
 
-export interface StepWords {
+interface StepWords {
   // The key under `agentChat.step` and its values.
   readonly key: string;
   readonly values?: Record<string, string>;

@@ -323,9 +323,8 @@ export async function provisionCrm(
     }
     await mark('crm-reports-v1');
   }
-  // The conversations with the CRM's agent, root-only while the AI Employee
-  // assistant was everyone's (migration step 2), opened to the sales roles
-  // once that assistant moved to the Agents plugin (step 3).
+  // The conversations with the CRM's assistant, root-only at first (step 2),
+  // opened to the sales roles once it ran on the Agents plugin (step 3).
   if (!(await marker('crm-agent-chat-v1'))) {
     for (const role of salesRoles) {
       const set = await authz.permissionSets.get(roleKey(role));

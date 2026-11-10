@@ -1,12 +1,6 @@
 ---
 name: task-preparation
-introduction:
-  title: Task preparation
-scope: SPECIFIED
-i18n:
-  namespace: crm
 description: Prepares a salesperson for a task they are about to do with a customer (a call, a meeting, a visit, a demo) — what the task should achieve, where things stand from the record's tasks, comments and mail, who is on the other side and what part each plays, the questions to ask, what to bring, the risks, and the points to cover in order. Use it on the morning of a task, or when the task's owner asks to be prepared.
-tools: []
 ---
 
 # Task preparation

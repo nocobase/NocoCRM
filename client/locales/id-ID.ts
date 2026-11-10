@@ -3,11 +3,10 @@ import type { AppResource } from './en-US.js';
 import { crmIdID } from './crm/id-ID.js';
 import settingsIdID from './settings/id-ID.js';
 
-// The pages in id-ID: the template's copy (./system/), the AI skills'
-// display text and the CRM's own (./crm/id-ID.ts), with the same keys as
-// ./en-US.ts. The template ships no id-ID, so its copy is translated
-// here; a template upgrade that adds keys fails the type check until they
-// are translated.
+// The pages in id-ID: the template's copy (./system/) and the CRM's own
+// (./crm/id-ID.ts), with the same keys as ./en-US.ts. The template ships no
+// id-ID, so its copy is translated here; a template upgrade that adds keys
+// fails the type check until they are translated.
 const idID: AppResource = {
   ...fileUi,
   'auth.passwordResetSuccess':
@@ -486,18 +485,6 @@ const idID: AppResource = {
     placeholder: 'Pilih tanggal',
     rangePlaceholder: 'Pilih rentang tanggal',
   },
-  'Lead follow-up': 'Tindak lanjut prospek',
-  'Review everything a lead has now (the lead itself, its tasks, comments and related records in the CRM) and recommend the next step — keep following up, nurture, convert or invalid — with the reasons; when following up, say clearly how to follow up and what exactly to do. Use when a new lead comes in, when the user asks to follow up a lead or follow it up again, or asks "what should I do next with this lead".':
-    'Tinjau semua yang dimiliki prospek saat ini (prospek itu sendiri, tugas, komentar, dan data terkait di CRM) dan rekomendasikan langkah berikutnya — terus menindaklanjuti, dibina, konversi, atau tidak valid — beserta alasannya; saat menindaklanjuti, jelaskan dengan jelas cara menindaklanjutinya dan apa persisnya yang harus dilakukan. Gunakan saat prospek baru masuk, saat pengguna meminta untuk menindaklanjuti prospek atau menindaklanjutinya lagi, atau bertanya "apa yang harus saya lakukan selanjutnya dengan prospek ini".',
-  'Opportunity follow-up': 'Tindak lanjut peluang',
-  'Reviews everything about an opportunity as it now stands (the opportunity itself, the company, contacts and their roles, tasks, comments, approvals, the source lead) and judges whether its stage holds up and what to do next — advance to the next stage, keep at it in the current stage, pause, or mark it lost — with the reasons, risks and gaps to fill; when advancing, spells out exactly what to do. Use when a lead\'s conversion opens a new opportunity, when the outcome of an opportunity\'s task has been recorded, when the user asks for a follow-up, or when asked "what is the next step for this opportunity?".':
-    'Meninjau semua hal tentang peluang sebagaimana kondisinya saat ini (peluang itu sendiri, perusahaan, kontak dan perannya, tugas, komentar, persetujuan, prospek asalnya) dan menilai apakah tahapnya masih tepat serta apa yang harus dilakukan selanjutnya — maju ke tahap berikutnya, terus berupaya di tahap saat ini, menjeda, atau menandainya kalah — beserta alasan, risiko, dan kekurangan yang perlu dilengkapi; saat maju, menjabarkan dengan tepat apa yang harus dilakukan. Gunakan saat konversi prospek membuka peluang baru, saat hasil tugas suatu peluang telah dicatat, saat pengguna meminta tindak lanjut, atau saat ditanya "apa langkah berikutnya untuk peluang ini?".',
-  'Approval review': 'Tinjauan persetujuan',
-  'Helps an approver judge whether an approval request (discount, payment terms, contract terms, delivery commitment) is worth approving — how far the asked terms are from the standard, the effect on the amount and on collection, the opportunity\'s situation and the evidence supporting this concession, the other approvals submitted with it on the same opportunity, how earlier requests of the same kind were decided, the risks and what the applicant left unclear — then recommends approve, approve on conditions, reject or ask for more information, and drafts the decision comment. Use it after an approval is submitted, or when the approver asks "should this approval be approved?".':
-    'Membantu pemberi persetujuan menilai apakah permintaan persetujuan (diskon, ketentuan pembayaran, ketentuan kontrak, komitmen pengiriman) layak disetujui — seberapa jauh ketentuan yang diminta dari standar, dampaknya terhadap nilai dan penagihan, situasi peluang dan bukti yang mendukung konsesi ini, persetujuan lain yang diajukan bersamanya pada peluang yang sama, bagaimana permintaan sejenis sebelumnya diputuskan, risikonya, dan hal yang belum dijelaskan pemohon — lalu merekomendasikan setujui, setujui dengan syarat, tolak, atau minta informasi lebih lanjut, dan menyusun draf komentar keputusan. Gunakan setelah persetujuan diajukan, atau saat pemberi persetujuan bertanya "apakah persetujuan ini sebaiknya disetujui?".',
-  'Task preparation': 'Persiapan tugas',
-  "Prepares a salesperson for a task they are about to do with a customer (a call, a meeting, a visit, a demo) — what the task should achieve, where things stand from the record's tasks, comments and mail, who is on the other side and what part each plays, the questions to ask, what to bring, the risks, and the points to cover in order. Use it on the morning of a task, or when the task's owner asks to be prepared.":
-    'Mempersiapkan tenaga penjualan untuk tugas yang akan dilakukannya bersama pelanggan (panggilan, rapat, kunjungan, demo) — apa yang harus dicapai tugas tersebut, posisi terkini berdasarkan tugas, komentar, dan email pada data, siapa saja di pihak pelanggan dan peran masing-masing, pertanyaan yang perlu diajukan, apa yang perlu dibawa, risikonya, dan poin yang perlu dibahas secara berurutan. Gunakan pada pagi hari tugas, atau saat penanggung jawab tugas meminta dipersiapkan.',
   flowDiagram: {
     controls: 'Kontrol diagram',
     fitView: 'Sesuaikan tampilan',

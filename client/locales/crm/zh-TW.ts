@@ -1038,7 +1038,6 @@ export const crmZhTW: CrmWording = {
     exportReason: '匯出資料只能由人來做。',
   },
   agentPreset: {
-    name: 'CRM 助理',
     agentName: '銷售專家',
     description:
       '懂銷售的 AI 助理：查詢線索、商機和客戶，分析進展、準備跟進；要改的內容先列出來，由你確認。',
@@ -1431,8 +1430,6 @@ export const crmZhTW: CrmWording = {
     noAgent: '還沒有 Agent',
     noAgentDescription: '在 Agent 團隊 → 模型 裡設定模型服務。',
     manageAgents: '設定模型',
-    agent: 'Agent',
-    placeholder: '問問 Agent…',
     send: '傳送',
     sending: '傳送中…',
     notSent: '未傳送',

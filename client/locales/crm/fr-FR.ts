@@ -1091,7 +1091,6 @@ export const crmFrFR: CrmWording = {
     exportReason: 'La sortie de données du CRM est réservée aux personnes.',
   },
   agentPreset: {
-    name: 'Assistant CRM',
     agentName: 'Expert commercial',
     description:
       "Une IA qui connaît la vente : elle consulte vos prospects, affaires et clients, analyse où ils en sont et prépare l'étape suivante ; toute modification qu'elle suggère attend votre confirmation.",
@@ -1527,8 +1526,6 @@ export const crmFrFR: CrmWording = {
     noAgentDescription:
       'Configurez un service de modèles dans Équipe d’agents → Modèles.',
     manageAgents: 'Configurer les modèles',
-    agent: 'Agent',
-    placeholder: "Posez une question à l'Agent…",
     send: 'Envoyer',
     sending: 'Envoi…',
     notSent: 'Non envoyé',

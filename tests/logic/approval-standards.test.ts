@@ -3,8 +3,6 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import enUS from '../../client/locales/en-US.js';
-import zhCN from '../../client/locales/zh-CN.js';
 
 const SKILLS = [
   'lead-follow-up',
@@ -43,48 +41,28 @@ describe('the approval standards', () => {
   });
 });
 
-// A skill's frontmatter: its single-line values, and the namespace of its
-// display text.
+// A skill's frontmatter: its single-line values.
 const front = (name: string) => {
   const text = /^---\n([\s\S]*?)\n---\n/.exec(skill(name))?.[1] ?? '';
-  const value = (pattern: RegExp) => pattern.exec(text)?.[1].trim() ?? '';
   return {
     text,
-    title: value(/^\s+title:\s*(.+)$/m),
-    description: value(/^description:\s*(.+)$/m),
-    namespace: value(/^ {2}namespace:\s*(.+)$/m),
+    description: /^description:\s*(.+)$/m.exec(text)?.[1].trim() ?? '',
   };
 };
 
-// The AI Employee plugin reads a skill's frontmatter as YAML and drops the
-// whole skill when it does not parse, logging only an error; a plain value
-// holding ": " is the usual way to break it.
+// The Agents plugin's skill library reads a skill's frontmatter as YAML, its
+// `name` and `description`; a plain value holding ": " is the usual way to
+// break it.
 describe('the skill files', () => {
   for (const name of SKILLS)
     it(`${name} has frontmatter the plugin can read`, () => {
-      const { text, title } = front(name);
+      const { text, description } = front(name);
       expect(text).toMatch(new RegExp(`^name: ${name}$`, 'm'));
-      expect(title).not.toBe('');
+      expect(description).not.toBe('');
       for (const line of text.split('\n')) {
         const value = /^\s*[\w.]+:\s(.*)$/.exec(line)?.[1] ?? '';
         if (/^['"[{|>]/.test(value)) continue;
         expect(`${line} → ${/: |\s#/.test(value)}`).toBe(`${line} → false`);
-      }
-    });
-});
-
-// The skills are written in English alone. The plugin's skill pages and the
-// Sales skills page show their title and description in the reader's
-// language, keyed by that English text in the `crm` namespace.
-describe("the skills shown in the reader's language", () => {
-  const messages = (resource: unknown) => resource as Record<string, unknown>;
-  for (const name of SKILLS)
-    it(`${name} has its title and description in both locales`, () => {
-      const english = front(name);
-      expect(english.namespace).toBe('crm');
-      for (const key of [english.title, english.description]) {
-        expect(messages(enUS)[key]).toBe(key);
-        expect(messages(zhCN)[key]).toMatch(/\p{Script=Han}/u);
       }
     });
 });

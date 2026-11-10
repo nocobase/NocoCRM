@@ -14,8 +14,6 @@ import { deliverAiWork } from './ai-work-news.js';
 import { crmPlansSkill } from './skill.js';
 import { provisionSkills } from './library.js';
 import { SKILLS_DIR } from '../crm/ai-model.js';
-import { adoptLegacyWorkAgents } from './work-agents.js';
-import { adoptLegacyConversations } from './legacy-conversations.js';
 import { registerContextKinds } from './context.js';
 import { assistantWake, configureAssistant } from './assistant.js';
 import { crmConversationRules } from './rules.js';
@@ -117,25 +115,6 @@ export default class CrmAgentsProvider extends ServiceProvider<Application> {
       // host may start the application from another root (NocoBase Studio).
       SKILLS_DIR,
     );
-    // The work agents' settings from the plugin's agents of an earlier
-    // release, once.
-    await adoptLegacyWorkAgents(database).catch((error: unknown) => {
-      this.app.container
-        .resolve(loggingToken)
-        .getLogger('crm-agents')
-        .warn({ error }, 'work agent settings not adopted');
-    });
-    // The conversations with the earlier assistant, carried over once.
-    await adoptLegacyConversations(
-      agents,
-      service,
-      this.app.container.resolve(loggingToken).getLogger('crm-agents'),
-    ).catch((error: unknown) => {
-      this.app.container
-        .resolve(loggingToken)
-        .getLogger('crm-agents')
-        .warn({ error }, 'conversations not carried over');
-    });
     // The demo's conversations imported where no model was set up, which
     // the plugin will not read while they name none (placeholder-model.ts).
     await namePlaceholderModel(this.app, service.database.query()).catch(

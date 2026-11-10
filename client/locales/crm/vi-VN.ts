@@ -1077,7 +1077,6 @@ export const crmViVN: CrmWording = {
     exportReason: 'Việc đưa dữ liệu ra khỏi CRM chỉ do con người thực hiện.',
   },
   agentPreset: {
-    name: 'Trợ lý CRM',
     agentName: 'Chuyên gia bán hàng',
     description:
       'Một AI am hiểu bán hàng: tra cứu khách hàng tiềm năng, cơ hội và khách hàng của bạn, nắm rõ tình hình và chuẩn bị bước tiếp theo; mọi thay đổi nó đề xuất đều chờ bạn xác nhận.',
@@ -1506,8 +1505,6 @@ export const crmViVN: CrmWording = {
     noAgentDescription:
       'Hãy thiết lập dịch vụ mô hình tại Đội agent → Mô hình.',
     manageAgents: 'Thiết lập mô hình',
-    agent: 'Agent',
-    placeholder: 'Hỏi Agent…',
     send: 'Gửi',
     sending: 'Đang gửi…',
     notSent: 'Chưa gửi',

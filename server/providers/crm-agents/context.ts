@@ -14,7 +14,7 @@ import { titleOf } from '../crm/titles.js';
 // these inside the transaction that saves the message: every read goes
 // through its connection.
 
-export const EVALUATION_KIND = 'crm-evaluation';
+const EVALUATION_KIND = 'crm-evaluation';
 
 // The person, with what they may read as their last workspace load found it
 // (CrmService.readsOf): the authorization service cannot read inside the

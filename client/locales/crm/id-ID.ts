@@ -1088,7 +1088,6 @@ export const crmIdID: CrmWording = {
     exportReason: 'Mengeluarkan data dari CRM diserahkan kepada manusia.',
   },
   agentPreset: {
-    name: 'Asisten CRM',
     agentName: 'Pakar Penjualan',
     description:
       'AI yang memahami penjualan: mencari prospek, kesepakatan, dan pelanggan Anda, membaca posisi masing-masing, dan menyiapkan langkah berikutnya; setiap perubahan yang disarankannya menunggu konfirmasi Anda.',
@@ -1511,8 +1510,6 @@ export const crmIdID: CrmWording = {
     noAgent: 'Belum ada Agent',
     noAgentDescription: 'Siapkan layanan model di Tim agen → Model.',
     manageAgents: 'Siapkan model',
-    agent: 'Agent',
-    placeholder: 'Tanya Agent…',
     send: 'Kirim',
     sending: 'Mengirim…',
     notSent: 'Tidak terkirim',

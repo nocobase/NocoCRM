@@ -1103,7 +1103,6 @@ export const crmDeDE: CrmWording = {
       'Daten aus dem CRM zu exportieren bleibt Menschen vorbehalten.',
   },
   agentPreset: {
-    name: 'CRM-Assistent',
     agentName: 'Vertriebsexperte',
     description:
       'Eine KI mit Vertriebswissen: Sie schlägt Ihre Leads, Verkaufschancen und Kunden nach, erkennt, wo sie stehen, und bereitet den nächsten Schritt vor; jede vorgeschlagene Änderung wartet auf Ihre Bestätigung.',
@@ -1537,8 +1536,6 @@ export const crmDeDE: CrmWording = {
     noAgentDescription:
       'Richten Sie unter Agent-Team → Modelle einen Modelldienst ein.',
     manageAgents: 'Modelle einrichten',
-    agent: 'Agent',
-    placeholder: 'Fragen Sie den Agent…',
     send: 'Senden',
     sending: 'Wird gesendet…',
     notSent: 'Nicht gesendet',

@@ -3,11 +3,10 @@ import type { AppResource } from './en-US.js';
 import { crmZhTW } from './crm/zh-TW.js';
 import settingsZhTW from './settings/zh-TW.js';
 
-// The pages in zh-TW: the template's copy (./system/), the AI skills'
-// display text and the CRM's own (./crm/zh-TW.ts), with the same keys as
-// ./en-US.ts. The template ships no zh-TW, so its copy is translated
-// here; a template upgrade that adds keys fails the type check until they
-// are translated.
+// The pages in zh-TW: the template's copy (./system/) and the CRM's own
+// (./crm/zh-TW.ts), with the same keys as ./en-US.ts. The template ships no
+// zh-TW, so its copy is translated here; a template upgrade that adds keys
+// fails the type check until they are translated.
 const zhTW: AppResource = {
   ...fileUi,
   'auth.passwordResetSuccess': '密碼已重設，請用新密碼登入。',
@@ -453,18 +452,6 @@ const zhTW: AppResource = {
     placeholder: '選擇日期',
     rangePlaceholder: '選擇日期範圍',
   },
-  'Lead follow-up': '跟進線索',
-  'Review everything a lead has now (the lead itself, its tasks, comments and related records in the CRM) and recommend the next step — keep following up, nurture, convert or invalid — with the reasons; when following up, say clearly how to follow up and what exactly to do. Use when a new lead comes in, when the user asks to follow up a lead or follow it up again, or asks "what should I do next with this lead".':
-    '綜合檢視一條線索現在的全部資訊（線索本身、任務、備註和 CRM 裡的相關記錄），給出下一步建議：繼續跟進、放入培育、轉換還是無效，以及理由；繼續跟進時寫清楚怎麼跟、具體做什麼。新線索進來、使用者要求跟進或重新跟進、或問「這條線索下一步怎麼做」時使用。',
-  'Opportunity follow-up': '跟進商機',
-  'Reviews everything about an opportunity as it now stands (the opportunity itself, the company, contacts and their roles, tasks, comments, approvals, the source lead) and judges whether its stage holds up and what to do next — advance to the next stage, keep at it in the current stage, pause, or mark it lost — with the reasons, risks and gaps to fill; when advancing, spells out exactly what to do. Use when a lead\'s conversion opens a new opportunity, when the outcome of an opportunity\'s task has been recorded, when the user asks for a follow-up, or when asked "what is the next step for this opportunity?".':
-    '綜合檢視一個商機現在的全部資訊（商機本身、公司、聯絡人和角色、任務、備註、審批、來源線索），判斷它的階段站不站得住、下一步做什麼：推進到下一階段、留在本階段繼續推進、暫停還是輸單，以及理由、風險和要補的缺口；推進時寫清楚具體做什麼。線索轉換出新商機、記錄了商機任務的結果、使用者要求跟進，或問「這個商機下一步怎麼做」時使用。',
-  'Approval review': '審批輔助',
-  'Helps an approver judge whether an approval request (discount, payment terms, contract terms, delivery commitment) is worth approving — how far the asked terms are from the standard, the effect on the amount and on collection, the opportunity\'s situation and the evidence supporting this concession, the other approvals submitted with it on the same opportunity, how earlier requests of the same kind were decided, the risks and what the applicant left unclear — then recommends approve, approve on conditions, reject or ask for more information, and drafts the decision comment. Use it after an approval is submitted, or when the approver asks "should this approval be approved?".':
-    '幫審批人看一個審批申請（折扣、帳期、合約條款、交付承諾）值不值得批：申請的條件和標準差多少、對金額和收款的影響、商機的情況和支撐這次讓步的證據、同一商機一起提交的其他審批、以往同類審批是怎麼批的、風險和申請人沒說清的地方，最後給出批准、有條件批准、駁回或需要補充資訊的建議，並寫好審批意見。審批提交後、審批人問「這個審批該不該批」時使用。',
-  'Task preparation': '任務準備',
-  "Prepares a salesperson for a task they are about to do with a customer (a call, a meeting, a visit, a demo) — what the task should achieve, where things stand from the record's tasks, comments and mail, who is on the other side and what part each plays, the questions to ask, what to bring, the risks, and the points to cover in order. Use it on the morning of a task, or when the task's owner asks to be prepared.":
-    '為業務即將和客戶進行的任務（電話、會議、拜訪、展示）做準備：任務要達成什麼、從記錄的任務、評論和郵件看事情進展到哪一步、對方都有誰以及各自的角色、要問的問題、要帶的資料、風險，以及依順序要講的重點。在任務當天早上，或任務負責人要求準備時使用。',
   flowDiagram: {
     controls: '流程圖控制',
     fitView: '符合畫布',

@@ -9,7 +9,7 @@ import { aiStateWords, type AiWork } from './ai-state-words.js';
 // suggestion waiting. One look wherever it shows (a list's row, a board's
 // card, the chip atop the record's own page), so the same state reads the
 // same: in the AI's tint, a spinner while it works, its spark once done.
-export function AiStateIcon({
+function AiStateIcon({
   state,
 }: {
   state: 'running' | 'pending';

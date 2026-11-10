@@ -3,11 +3,10 @@ import type { AppResource } from './en-US.js';
 import { crmRuRU } from './crm/ru-RU.js';
 import settingsRuRU from './settings/ru-RU.js';
 
-// The pages in ru-RU: the template's copy (./system/), the AI skills'
-// display text and the CRM's own (./crm/ru-RU.ts), with the same keys as
-// ./en-US.ts. The template ships no ru-RU, so its copy is translated
-// here; a template upgrade that adds keys fails the type check until they
-// are translated.
+// The pages in ru-RU: the template's copy (./system/) and the CRM's own
+// (./crm/ru-RU.ts), with the same keys as ./en-US.ts. The template ships no
+// ru-RU, so its copy is translated here; a template upgrade that adds keys
+// fails the type check until they are translated.
 const ruRU: AppResource = {
   ...fileUi,
   'auth.passwordResetSuccess': 'Ваш пароль сброшен. Войдите с новым паролем.',
@@ -487,18 +486,6 @@ const ruRU: AppResource = {
     placeholder: 'Выберите дату',
     rangePlaceholder: 'Выберите период',
   },
-  'Lead follow-up': 'Сопровождение лида',
-  'Review everything a lead has now (the lead itself, its tasks, comments and related records in the CRM) and recommend the next step — keep following up, nurture, convert or invalid — with the reasons; when following up, say clearly how to follow up and what exactly to do. Use when a new lead comes in, when the user asks to follow up a lead or follow it up again, or asks "what should I do next with this lead".':
-    'Изучает всё, что сейчас есть по лиду (сам лид, его задачи, комментарии и связанные записи в CRM), и рекомендует следующий шаг — продолжить работу, отправить на прогрев, конвертировать или признать недействительным — с обоснованием; при продолжении работы чётко говорит, как продолжать и что именно сделать. Используется, когда поступает новый лид, когда пользователь просит выполнить или повторить сопровождение лида или спрашивает «что делать дальше с этим лидом».',
-  'Opportunity follow-up': 'Сопровождение сделки',
-  'Reviews everything about an opportunity as it now stands (the opportunity itself, the company, contacts and their roles, tasks, comments, approvals, the source lead) and judges whether its stage holds up and what to do next — advance to the next stage, keep at it in the current stage, pause, or mark it lost — with the reasons, risks and gaps to fill; when advancing, spells out exactly what to do. Use when a lead\'s conversion opens a new opportunity, when the outcome of an opportunity\'s task has been recorded, when the user asks for a follow-up, or when asked "what is the next step for this opportunity?".':
-    'Изучает текущее состояние сделки (саму сделку, компанию, контакты и их роли, задачи, комментарии, согласования, исходный лид) и оценивает, обоснован ли её этап и что делать дальше — перейти на следующий этап, продолжить на текущем, приостановить или признать проигранной — с обоснованием, рисками и пробелами, которые нужно заполнить; при продвижении точно описывает, что сделать. Используется, когда конвертация лида открывает новую сделку, когда записан результат задачи по сделке, когда пользователь просит о сопровождении или спрашивает «какой следующий шаг по этой сделке?».',
-  'Approval review': 'Проверка согласования',
-  'Helps an approver judge whether an approval request (discount, payment terms, contract terms, delivery commitment) is worth approving — how far the asked terms are from the standard, the effect on the amount and on collection, the opportunity\'s situation and the evidence supporting this concession, the other approvals submitted with it on the same opportunity, how earlier requests of the same kind were decided, the risks and what the applicant left unclear — then recommends approve, approve on conditions, reject or ask for more information, and drafts the decision comment. Use it after an approval is submitted, or when the approver asks "should this approval be approved?".':
-    'Помогает согласующему оценить, стоит ли одобрять запрос на согласование (скидка, условия оплаты, условия договора, обязательства по поставке): насколько запрошенные условия отличаются от стандарта, как они влияют на сумму и поступление оплаты, в каком состоянии сделка и какие доводы подкрепляют эту уступку, какие ещё запросы отправлены вместе с ним по той же сделке, какие решения принимались по прежним запросам того же рода, какие есть риски и что заявитель оставил неясным, — затем рекомендует одобрить, одобрить с условиями, отклонить или запросить больше информации и готовит черновик комментария к решению. Используется после отправки запроса на согласование или когда согласующий спрашивает «стоит ли одобрить этот запрос?».',
-  'Task preparation': 'Подготовка к задаче',
-  "Prepares a salesperson for a task they are about to do with a customer (a call, a meeting, a visit, a demo) — what the task should achieve, where things stand from the record's tasks, comments and mail, who is on the other side and what part each plays, the questions to ask, what to bring, the risks, and the points to cover in order. Use it on the morning of a task, or when the task's owner asks to be prepared.":
-    'Готовит менеджера по продажам к предстоящей задаче с клиентом (звонку, встрече, визиту, демонстрации): какого результата нужно достичь, как обстоят дела по задачам, комментариям и почте записи, кто на другой стороне и какую роль играет каждый, какие вопросы задать, что взять с собой, какие риски и какие пункты обсудить по порядку. Используется утром в день задачи или когда ответственный за задачу просит подготовить его.',
   flowDiagram: {
     controls: 'Управление схемой',
     fitView: 'Вписать в экран',

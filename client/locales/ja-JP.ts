@@ -3,11 +3,10 @@ import type { AppResource } from './en-US.js';
 import { crmJaJP } from './crm/ja-JP.js';
 import settingsJaJP from './settings/ja-JP.js';
 
-// The pages in ja-JP: the template's copy (./system/), the AI skills'
-// display text and the CRM's own (./crm/ja-JP.ts), with the same keys as
-// ./en-US.ts. The template ships no ja-JP, so its copy is translated
-// here; a template upgrade that adds keys fails the type check until they
-// are translated.
+// The pages in ja-JP: the template's copy (./system/) and the CRM's own
+// (./crm/ja-JP.ts), with the same keys as ./en-US.ts. The template ships no
+// ja-JP, so its copy is translated here; a template upgrade that adds keys
+// fails the type check until they are translated.
 const jaJP: AppResource = {
   ...fileUi,
   'auth.passwordResetSuccess':
@@ -487,18 +486,6 @@ const jaJP: AppResource = {
     placeholder: '日付を選択',
     rangePlaceholder: '期間を選択',
   },
-  'Lead follow-up': 'リードのフォローアップ',
-  'Review everything a lead has now (the lead itself, its tasks, comments and related records in the CRM) and recommend the next step — keep following up, nurture, convert or invalid — with the reasons; when following up, say clearly how to follow up and what exactly to do. Use when a new lead comes in, when the user asks to follow up a lead or follow it up again, or asks "what should I do next with this lead".':
-    'リードの現在の情報（リード自体、そのタスク、コメント、CRM 内の関連レコード）をすべて確認し、次のステップ（フォローアップの継続、ナーチャリング、コンバート、無効）を理由とともに提案します。フォローアップを続ける場合は、どのようにフォローアップし、具体的に何をするかを明確に示します。新しいリードが入ったとき、ユーザーがリードのフォローアップや再フォローアップを依頼したとき、または「このリードは次に何をすべきか」と尋ねたときに使います。',
-  'Opportunity follow-up': '商談のフォローアップ',
-  'Reviews everything about an opportunity as it now stands (the opportunity itself, the company, contacts and their roles, tasks, comments, approvals, the source lead) and judges whether its stage holds up and what to do next — advance to the next stage, keep at it in the current stage, pause, or mark it lost — with the reasons, risks and gaps to fill; when advancing, spells out exactly what to do. Use when a lead\'s conversion opens a new opportunity, when the outcome of an opportunity\'s task has been recorded, when the user asks for a follow-up, or when asked "what is the next step for this opportunity?".':
-    '商談の現状に関するすべての情報（商談自体、会社、連絡先とその役割、タスク、コメント、承認、元のリード）を確認し、現在のフェーズが妥当か、次に何をすべきか（次のフェーズへ進める、現在のフェーズで継続する、保留する、失注とする）を、理由、リスク、埋めるべき不足点とともに判断します。進める場合は、具体的に何をするかを明示します。リードのコンバートで新しい商談が作成されたとき、商談のタスクの結果が記録されたとき、ユーザーがフォローアップを依頼したとき、または「この商談の次のステップは？」と尋ねられたときに使います。',
-  'Approval review': '承認レビュー',
-  'Helps an approver judge whether an approval request (discount, payment terms, contract terms, delivery commitment) is worth approving — how far the asked terms are from the standard, the effect on the amount and on collection, the opportunity\'s situation and the evidence supporting this concession, the other approvals submitted with it on the same opportunity, how earlier requests of the same kind were decided, the risks and what the applicant left unclear — then recommends approve, approve on conditions, reject or ask for more information, and drafts the decision comment. Use it after an approval is submitted, or when the approver asks "should this approval be approved?".':
-    '承認者が承認申請（値引き、支払条件、契約条件、納期の確約）を承認すべきかどうか判断するのを支援します。申請された条件が標準からどれだけ離れているか、金額と回収への影響、商談の状況とこの譲歩を裏付ける根拠、同じ商談で一緒に提出された他の承認、過去の同種の申請がどう判断されたか、リスクと申請者が明確にしていない点を確認したうえで、承認、条件付き承認、却下、追加情報の要求のいずれかを提案し、判断コメントの下書きを作成します。承認が申請された後、または承認者が「この承認は承認すべきか」と尋ねたときに使います。',
-  'Task preparation': 'タスクの準備',
-  "Prepares a salesperson for a task they are about to do with a customer (a call, a meeting, a visit, a demo) — what the task should achieve, where things stand from the record's tasks, comments and mail, who is on the other side and what part each plays, the questions to ask, what to bring, the risks, and the points to cover in order. Use it on the morning of a task, or when the task's owner asks to be prepared.":
-    '営業担当が顧客と行う予定のタスク（電話、会議、訪問、デモ）の準備を支援します。タスクで達成すべきこと、レコードのタスク・コメント・メールから見た現状、先方の参加者とそれぞれの役割、尋ねるべき質問、持参するもの、リスク、順に押さえるべきポイントをまとめます。タスク当日の朝、またはタスクの担当者が準備を依頼したときに使います。',
   flowDiagram: {
     controls: '図の操作',
     fitView: '全体を表示',

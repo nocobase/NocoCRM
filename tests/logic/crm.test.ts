@@ -132,15 +132,9 @@ import {
   assistantActor,
   configureAssistant,
 } from '../../server/providers/crm-agents/assistant.js';
-import { adoptLegacyConversations } from '../../server/providers/crm-agents/legacy-conversations.js';
 import { namePlaceholderModel } from '../../server/providers/crm-agents/placeholder-model.js';
 import { provisionSkills } from '../../server/providers/crm-agents/library.js';
-import {
-  adoptLegacyWorkAgents,
-  workAgentNames,
-  workAgentSettings,
-  workInstructions,
-} from '../../server/providers/crm-agents/work-agents.js';
+import { workAgentNames } from '../../server/providers/crm-agents/work-agents.js';
 import {
   findApiDocumentSchemaProblems,
   findUndeclaredApiRoutes,
@@ -880,9 +874,9 @@ describe('CRM API security and domain rules', () => {
     });
     expect((await router.request('/unrelated')).status).toBe(404);
   });
-  it('offers the assistant only as the enabled AI employee and drops the retired AI switch', async () => {
-    // Without the AI Employee plugin's table there is no employee to answer,
-    // so the pages offer no assistant entry.
+  it('offers the assistant only while there is a model and refuses the retired AI switch', async () => {
+    // The tests set up no model to ask, so the pages offer no assistant
+    // entry.
     const meta = (await (await request('/workspace', 'admin')).json()) as {
       data: { assistant: boolean; settings: Record<string, unknown> };
     };
@@ -4260,7 +4254,7 @@ describe('CRM lead capture', () => {
       (await request('/leads/capture', 'outsider', 'POST', { text: pasted }))
         .status,
     ).toBe(403);
-    // The routes' container has no AI employee plugin: unavailable.
+    // The routes' container has no model to ask: unavailable.
     expect(
       (await request('/leads/capture', 'rep', 'POST', { text: pasted })).status,
     ).toBe(503);
@@ -5227,7 +5221,7 @@ describe('CRM lead evaluation', () => {
       name: 'unreadable',
       source: 'website',
     });
-    // The employee switched off: nothing is queued.
+    // No model to ask: nothing is queued.
     expect(
       await evaluating(follow).evaluator.request(actor('rep'), lead.id),
     ).toBe(null);
@@ -5439,7 +5433,7 @@ describe('CRM lead evaluation', () => {
     expect(await (await request(latest, 'rep')).json()).toEqual({
       data: null,
     });
-    // The routes' container has no AI employee plugin: unavailable.
+    // The routes' container has no model to ask: unavailable.
     expect(
       (await request(`/leads/${lead.id}/evaluate`, 'rep', 'POST', {})).status,
     ).toBe(503);
@@ -12647,109 +12641,6 @@ describe("The assistant's conversations on the Agents plugin", () => {
     expect(await configurator.resolve(context, {}, scope)).toEqual(scope);
   });
 
-  it('takes over once what an administrator set on the work agents an earlier release made', async () => {
-    const query = database.query();
-    await query
-      .deleteFrom('crmSettings')
-      .where('id', 'in', [
-        'ai-work-agents',
-        'agents-work-v1',
-        'agents-background-v1',
-      ])
-      .execute();
-    await query
-      .deleteFrom('agAgents')
-      .where('id', 'in', ['lead', 'review', 'archived', 'background'])
-      .execute();
-    await query
-      .insertInto('crmSettings')
-      .values([
-        {
-          id: 'agents-work-v1',
-          value: JSON.stringify({
-            version: 1,
-            agentIds: { leads: 'lead', approvals: 'review', tasks: 'archived' },
-          }),
-          updatedAt: new Date(),
-        },
-        {
-          id: 'agents-background-v1',
-          value: JSON.stringify({ version: 1, agentId: 'background' }),
-          updatedAt: new Date(),
-        },
-      ])
-      .execute();
-    const upgradedAt = '2026-10-21T06:00:00.000Z';
-    await query
-      .insertInto('agAgents')
-      .values([
-        // Its model chosen, its instructions changed.
-        {
-          id: 'lead',
-          instructions: 'Follow every lead up in two lines.',
-          modelEntries: JSON.stringify([
-            { modelService: 'qwen', model: 'max' },
-            { modelService: 'deepseek', model: 'flash' },
-          ]),
-          archivedAt: upgradedAt,
-          deletedAt: upgradedAt,
-        },
-        // Its instructions as shipped.
-        {
-          id: 'review',
-          instructions: workInstructions('approvals'),
-          modelEntries: JSON.stringify([
-            { modelService: 'deepseek', model: 'flash' },
-          ]),
-          archivedAt: upgradedAt,
-          deletedAt: upgradedAt,
-        },
-        // Archived by a person before the upgrade.
-        {
-          id: 'archived',
-          instructions: 'Old.',
-          modelEntries: JSON.stringify([
-            { modelService: 'qwen', model: 'max' },
-          ]),
-          archivedAt: '2026-10-01T00:00:00.000Z',
-          deletedAt: upgradedAt,
-        },
-        // The Background AI, whose changed instructions a work without an
-        // agent of its own takes.
-        {
-          id: 'background',
-          instructions: 'Work for the CRM, briefly.',
-          modelEntries: JSON.stringify([]),
-          archivedAt: upgradedAt,
-          deletedAt: upgradedAt,
-        },
-      ])
-      .execute();
-    await adoptLegacyWorkAgents(database);
-    // Once: a later change of the old rows is not taken.
-    await query
-      .updateTable('agAgents')
-      .set({ instructions: 'Changed after.' })
-      .where('id', '=', 'lead')
-      .execute();
-    await adoptLegacyWorkAgents(database);
-    expect(await workAgentSettings(database)).toEqual({
-      leads: {
-        model: { modelService: 'qwen', model: 'max' },
-        instructions: 'Follow every lead up in two lines.',
-      },
-      approvals: {
-        model: { modelService: 'deepseek', model: 'flash' },
-        instructions: null,
-      },
-      opportunities: {
-        model: null,
-        instructions: 'Work for the CRM, briefly.',
-      },
-      signals: { model: null, instructions: 'Work for the CRM, briefly.' },
-    });
-  });
-
   it("names the work agents in the viewer's language, with the model each asks now", async () => {
     const names = await workAgentNames(
       {
@@ -12842,185 +12733,6 @@ describe("The assistant's conversations on the Agents plugin", () => {
       later: 'deepseek/deepseek-flash',
     });
     await query.deleteFrom('agConversations').where('id', 'in', ids).execute();
-  });
-
-  it('carries the conversations with the earlier assistant over to it once, in place', async () => {
-    const query = database.query();
-    await query
-      .deleteFrom('crmSettings')
-      .where('id', '=', 'agents-native-conversations-v1')
-      .execute();
-    await query
-      .deleteFrom('agConversationMessages')
-      .where('conversationId', '=', 'old-chat')
-      .execute();
-    await query
-      .deleteFrom('agConversations')
-      .where('id', '=', 'old-chat')
-      .execute();
-    await query
-      .insertInto('agConversations')
-      .values({
-        id: 'old-chat',
-        userId: 'rep',
-        source: 'crm',
-        agentId: 'removed-agent',
-        mode: 'online',
-        modelService: 'qwen',
-        model: 'max',
-        metadata: null,
-        createdAt: '2026-10-19T09:00:00.000Z',
-      })
-      .execute();
-    const context = {
-      route: '/leads/l1',
-      items: [
-        {
-          kind: 'leads',
-          id: 'l1',
-          title: 'Tang Rui',
-          key: null,
-          url: '/main/leads/l1',
-        },
-      ],
-      dropped: 0,
-    };
-    await query
-      .insertInto('agConversationMessages')
-      .values([
-        {
-          id: 'old-1',
-          conversationId: 'old-chat',
-          seq: 1,
-          role: 'user',
-          content: JSON.stringify({ type: 'text', content: 'Is it worth it?' }),
-          workContext: JSON.stringify(context),
-          metadata: JSON.stringify({}),
-          createdAt: '2026-10-19T09:00:00.000Z',
-        },
-        {
-          id: 'old-2',
-          conversationId: 'old-chat',
-          seq: 2,
-          role: 'assistant',
-          content: JSON.stringify({ type: 'text', content: 'Yes, **soon**.' }),
-          workContext: null,
-          metadata: JSON.stringify({}),
-          createdAt: '2026-10-19T09:01:00.000Z',
-        },
-        {
-          id: 'old-3',
-          conversationId: 'old-chat',
-          seq: 3,
-          role: 'system',
-          content: JSON.stringify({ type: 'text', content: 'Add Acme' }),
-          workContext: null,
-          metadata: JSON.stringify({
-            notice: {
-              code: 'news',
-              type: 'planDecided',
-              title: 'Add Acme',
-              params: { planId: 'p1', decision: 'executed' },
-            },
-          }),
-          createdAt: '2026-10-19T09:02:00.000Z',
-        },
-      ])
-      .execute();
-    const resolved: unknown[] = [];
-    const fakeOnline = {
-      onlineAgent: {
-        configurator: {
-          resolve: (actor: { user: { id: string } }, options: unknown) => {
-            resolved.push({ user: actor.user.id, options });
-            return Promise.resolve({
-              scope: ['crm'],
-              systemPrompt: 'Prompt.',
-              tool: ['crm'],
-              toolVersions: { crm: '1' },
-              model: ['deepseek/flash', 'qwen/max'],
-              agentId: 'online',
-            });
-          },
-        },
-      },
-    } as never;
-    const warnings: unknown[] = [];
-    const logger = { warn: (details: object) => warnings.push(details) };
-    await adoptLegacyConversations(fakeOnline, service, logger);
-    await adoptLegacyConversations(fakeOnline, service, logger);
-    expect(warnings).toEqual([]);
-    expect(resolved).toEqual([
-      { user: 'rep', options: { scope: ['crm'], agentId: 'online' } },
-    ]);
-    const row = await query
-      .selectFrom('agConversations')
-      .selectAll()
-      .where('id', '=', 'old-chat')
-      .executeTakeFirst();
-    // Bound to the assistant, on its own model while the scope offers it.
-    expect(row).toMatchObject({
-      agentId: '0',
-      modelService: 'qwen',
-      model: 'max',
-    });
-    expect(JSON.parse(toText(row?.metadata))).toMatchObject({
-      onlineAgent: { kind: 'realtime', config: { scope: ['crm'] }, call: null },
-    });
-    const originals = (
-      await query
-        .selectFrom('agConversationMessages')
-        .select(['id', 'content'])
-        .where('conversationId', '=', 'old-chat')
-        .orderBy('seq')
-        .execute()
-    ).map((message) => JSON.parse(toText(message.content)).original);
-    expect(originals).toEqual([
-      {
-        id: 'old-1',
-        role: 'user',
-        metadata: {
-          conversationId: 'old-chat',
-          createdAt: '2026-10-19T09:00:00.000Z',
-          revision: 1,
-          seq: 1,
-          context,
-        },
-        parts: [{ type: 'text', text: 'Is it worth it?' }],
-      },
-      {
-        id: 'old-2',
-        role: 'assistant',
-        metadata: {
-          conversationId: 'old-chat',
-          createdAt: '2026-10-19T09:01:00.000Z',
-          revision: 1,
-          seq: 2,
-        },
-        parts: [{ type: 'text', text: 'Yes, **soon**.', state: 'done' }],
-      },
-      {
-        id: 'old-3',
-        role: 'system',
-        metadata: {
-          conversationId: 'old-chat',
-          createdAt: '2026-10-19T09:02:00.000Z',
-          revision: 1,
-          seq: 3,
-        },
-        parts: [
-          {
-            type: 'data-notice',
-            id: 'record:old-3',
-            data: {
-              type: 'planDecided',
-              title: 'Add Acme',
-              params: { planId: 'p1', decision: 'executed' },
-            },
-          },
-        ],
-      },
-    ]);
   });
 
   it('puts the method skills into the library once, keeping one a person added', async () => {

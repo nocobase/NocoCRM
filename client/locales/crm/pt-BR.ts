@@ -1089,7 +1089,6 @@ export const crmPtBR: CrmWording = {
     exportReason: 'A retirada de dados do CRM fica a cargo das pessoas.',
   },
   agentPreset: {
-    name: 'Assistente de CRM',
     agentName: 'Especialista em vendas',
     description:
       'Uma IA que entende de vendas: consulta seus leads, negócios e clientes, analisa a situação de cada um e prepara o próximo passo; qualquer alteração que ela sugira aguarda sua confirmação.',
@@ -1516,8 +1515,6 @@ export const crmPtBR: CrmWording = {
     noAgentDescription:
       'Configure um serviço de modelos em Equipe de agentes → Modelos.',
     manageAgents: 'Configurar modelos',
-    agent: 'Agent',
-    placeholder: 'Pergunte ao Agent…',
     send: 'Enviar',
     sending: 'Enviando…',
     notSent: 'Não enviada',

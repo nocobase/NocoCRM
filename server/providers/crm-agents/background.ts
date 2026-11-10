@@ -1,11 +1,5 @@
-// The Background AI: the one agent whose settings all of the CRM's
-// background work once followed, replaced by an agent for each work
-// (work-agents.ts). What remains here is what those need: its marker, which
-// an installation from before keeps and the work agents' settings were once
-// taken over from (adoptLegacyWorkAgents), and its default instructions
-// (the work agents' rules, and how an edit of them is told).
-
-export const BACKGROUND_MARKER = 'agents-background-v1';
+// The rules every work agent's instructions open with (work-agents.ts), from
+// the one Background AI all of the CRM's background work once followed.
 
 // Prompt text, in English like the CRM's other prompts. Each run's own
 // request states the task, the material and the answer's shape.
