@@ -1967,6 +1967,23 @@ export const crmDeDE: CrmWording = {
     skills: 'Skills',
     usage: 'Nutzung',
   },
+  settingsCards: {
+    general:
+      'Zeitzone, Währung und KI-Sprache, mit denen das CRM arbeitet, und die Erinnerungen, die es sendet.',
+    approvalFlow:
+      'Wer genehmigen darf und welche Status eine Genehmigung durchläuft.',
+    demoData:
+      'Importieren Sie fiktive Beispieldaten, um das CRM auszuprobieren, und entfernen Sie sie danach wieder.',
+    demoEnvironment:
+      'Erzeugen, löschen und setzen Sie die fiktiven Daten der Demo-Website zurück.',
+    users: 'Konten, die Rollen jeder Person und Einladungen.',
+    roles:
+      'Was jede Rolle öffnen und tun darf und welche Datensätze sie sieht.',
+    apiKeys:
+      'Schlüssel, mit denen Skripte und Agents das CRM in Ihrem Namen aufrufen.',
+    scheduledTasks:
+      'Die wiederkehrenden Durchläufe des CRM und wie sie verlaufen sind.',
+  },
   admin: {
     common: {
       loading: 'Wird geladen',
@@ -2371,6 +2388,167 @@ export const crmDeDE: CrmWording = {
         cancelled: 'Abgebrochen',
         timed_out: 'Zeitüberschreitung',
         triggered: 'Ausgelöst',
+      },
+    },
+    notificationTemplates: {
+      intro:
+        'Benachrichtigungen, die das CRM selbst sendet: wann sie gesendet werden, wer sie erhält und was sie in jeder Sprache sagen. Hier lässt sich nichts ändern.',
+      search: 'Suchen',
+      searchPlaceholder: 'Name oder Beschreibung',
+      category: 'Kategorie',
+      channel: 'Kanal',
+      all: 'Alle',
+      empty: 'Es sind keine Benachrichtigungen registriert.',
+      noResults: 'Keine Benachrichtigung entspricht der Suche und den Filtern.',
+      what: 'die Benachrichtigungsvorlagen',
+      whatOne: 'diese Benachrichtigungsvorlage',
+      when: 'Wann sie gesendet wird',
+      who: 'Wer sie erhält',
+      conditions: 'Bedingungen',
+      language: 'Sprache',
+      source: 'Bereitgestellt von',
+      channels: 'Kanäle',
+      channelsHint:
+        'Eingerichtet und aktiv heißt nicht, dass die Verbindung funktioniert.',
+      channelState: {
+        configured: 'Eingerichtet',
+        unconfigured: 'Nicht eingerichtet',
+        enabled: 'Aktiv',
+        disabled: 'Inaktiv',
+        unknown: 'Unbekannt',
+      },
+      variables: 'Variablen',
+      preview: 'Vorschau',
+      previewLanguage: 'Vorschausprache',
+      previewAllLanguages:
+        'Diese E-Mail enthält alle Sprachen auf einmal; jeder Empfänger erhält dieselbe Nachricht.',
+      example: 'Beispiel',
+      definition: 'Vorlage',
+      synthetic:
+        'Erfundene Beispieldaten. Die Vorschau sendet nichts und ändert nichts.',
+      html: 'HTML-Version',
+      channelTypes: {
+        'in-app': 'In-App',
+        email: 'E-Mail',
+      },
+      contributors: {
+        crm: 'NocoCRM',
+        users: 'Benutzer',
+      },
+      categories: {
+        accounts: 'Konten',
+        records: 'Datensätze',
+        tasks: 'Aufgaben',
+        comments: 'Kommentare',
+        signals: 'Unternehmenssignale',
+        approvals: 'Genehmigungen',
+      },
+      switchRule:
+        'Wird gesendet, solange „{{switch}}“ unter Einstellungen › Allgemein › Erinnerungen aktiviert ist (standardmäßig aktiviert).',
+      always:
+        'Wird nie an die Person gesendet, die die Änderung vorgenommen hat, nicht zu einem gelöschten Datensatz und nicht an ein deaktiviertes Konto, und nur, solange der Empfänger den Datensatz noch sehen kann.',
+      crmLanguage:
+        'In der Sprache jedes Empfängers, die er im Kontomenü gewählt hat; auf Englisch, wenn keine gewählt ist.',
+      items: {
+        recordAssigned: {
+          name: 'Datensatz zugewiesen',
+          trigger:
+            'Ein Lead, eine Verkaufschance, ein Unternehmen, ein Kontakt, eine Aufgabe oder eine Genehmigung erhält einen neuen Verantwortlichen, auch ein für jemand anderen neu erstellter Datensatz.',
+          recipients: 'Der neue Verantwortliche.',
+        },
+        taskInvited: {
+          name: 'Zu einer Aufgabe hinzugefügt',
+          trigger: 'Jemand wird zu den Teilnehmern einer Aufgabe hinzugefügt.',
+          recipients: 'Jeder hinzugefügte Teilnehmer.',
+        },
+        taskRemoved: {
+          name: 'Aus einer Aufgabe entfernt',
+          trigger: 'Jemand wird aus den Teilnehmern einer Aufgabe entfernt.',
+          recipients: 'Jeder entfernte Teilnehmer.',
+        },
+        taskCancelled: {
+          name: 'Aufgabe abgesagt',
+          trigger: 'Eine Aufgabe wird abgesagt.',
+          recipients:
+            'Die Teilnehmer, die noch an der Aufgabe beteiligt sind (nicht der Verantwortliche).',
+        },
+        taskRescheduled: {
+          name: 'Aufgabe verschoben',
+          trigger:
+            'Die Zeit einer Aufgabe wird geändert, außer die Aufgabe ist abgesagt.',
+          recipients:
+            'Die Teilnehmer, die noch an der Aufgabe beteiligt sind (nicht der Verantwortliche).',
+        },
+        taskStarting: {
+          name: 'Aufgabe steht bevor',
+          trigger:
+            'Eine Aufgabe mit Uhrzeit, nicht nur mit Datum, beginnt bald, innerhalb der Vorlaufzeit unter Einstellungen › Allgemein › Erinnerungen.',
+          recipients: 'Der Verantwortliche der Aufgabe und ihre Teilnehmer.',
+          rule: 'Einmal pro Aufgabe, Startzeit und Person.',
+        },
+        commentMentioned: {
+          name: 'In einem Kommentar erwähnt',
+          trigger:
+            'Ein Kommentar erwähnt einen Kollegen per @, beim Schreiben oder wenn eine Bearbeitung die Erwähnung hinzufügt.',
+          recipients: 'Jeder neu erwähnte Kollege.',
+          rule: 'Einmal pro Kommentar und Person.',
+        },
+        commentReplied: {
+          name: 'Antwort in einem Kommentar-Thread',
+          trigger: 'Jemand antwortet auf einen Kommentar oder eine Antwort.',
+          recipients:
+            'Alle, die im Thread geschrieben haben; wer in der Antwort per @ erwähnt wird, erhält stattdessen die Erwähnung.',
+          rule: 'Einmal pro Antwort und Person.',
+        },
+        companySignal: {
+          name: 'Neuigkeiten zum Unternehmen',
+          trigger:
+            'Die Prüfung der Unternehmenssignale findet über die Websuche der KI Neuigkeiten zu einem Unternehmen.',
+          recipients:
+            'Der Verantwortliche des Unternehmens und die Verantwortlichen seiner offenen Verkaufschancen.',
+          rule: 'Einmal pro Neuigkeit und Person; sie öffnet den Tab „Signale“ des Unternehmens.',
+        },
+        approvalPending: {
+          name: 'Genehmigung angefordert',
+          trigger: 'Ein Genehmigungsantrag wird eingereicht.',
+          recipients: 'Der Genehmiger.',
+        },
+        approvalWithdrawn: {
+          name: 'Genehmigungsantrag zurückgezogen',
+          trigger: 'Der Antragsteller zieht einen eingereichten Antrag zurück.',
+          recipients: 'Der Genehmiger.',
+        },
+        approvalApproved: {
+          name: 'Genehmigungsantrag genehmigt',
+          trigger: 'Der Genehmiger genehmigt einen Antrag.',
+          recipients: 'Der Antragsteller.',
+        },
+        approvalRejected: {
+          name: 'Genehmigungsantrag abgelehnt',
+          trigger: 'Der Genehmiger lehnt einen Antrag ab.',
+          recipients: 'Der Antragsteller.',
+        },
+        usersInvitation: {
+          name: 'Benutzereinladung',
+          trigger:
+            'Ein Administrator lädt jemanden ein oder sendet eine Einladung erneut und wählt dabei die Zustellung per E-Mail.',
+          recipients: 'Die E-Mail-Adresse der eingeladenen Person.',
+          rule: 'Wird bei jeder per E-Mail gesendeten Einladung verschickt; es gibt keinen Schalter, um sie abzuschalten.',
+          language:
+            'Eine E-Mail in allen unterstützten Sprachen, der Betreff auf Englisch; die Vorschausprache ändert daran nichts.',
+        },
+      },
+      variableText: {
+        entity:
+          'Die Art des Datensatzes in der Sprache des Empfängers (Lead, Verkaufschance, Unternehmen, Kontakt, Aufgabe, Genehmigung).',
+        record:
+          'Die Art des Datensatzes, wie sie im Satz steht (im Englischen „a lead“), für die Sprachen, die das brauchen.',
+        name: 'Der Name des Datensatzes wie im CRM: „Name / Unternehmen“ bei einem Lead oder Kontakt, „Unternehmen / Name“ bei einer Verkaufschance.',
+        app: 'Der Name der Anwendung.',
+        inviter: 'Wer die Einladung gesendet hat.',
+        items: 'Die gewährten Rollen oder Zugriffe.',
+        date: 'Wann die Einladung abläuft.',
+        url: 'Der einmalige Einladungslink; die Vorschau verwendet einen erfundenen.',
       },
     },
   },

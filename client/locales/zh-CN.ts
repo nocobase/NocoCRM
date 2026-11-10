@@ -1,4 +1,5 @@
 import fileUi from '../extensions/nocobase-file-component-ui/locales/zh-CN.js';
+import notificationLogsUi from '../extensions/nocobase-notification-logs-ui/locales/zh-CN.js';
 import type { AppResource } from './en-US.js';
 import { crmZh } from './crm/index.js';
 import systemZhCN from './system/zh-CN.js';
@@ -7,8 +8,15 @@ const zhCN: AppResource = {
   // The template's own copy; see `./en-US.ts`.
   ...systemZhCN,
   ...fileUi,
+  ...notificationLogsUi,
   settings: {
     ...systemZhCN.settings,
+    // The Notification management module's logs tab, named as the
+    // notification-logs-ui block names it
+    // (client/pages/settings/routes.ts) and its description.
+    notificationLogs: '通知日志',
+    notificationManagementDescription:
+      '追踪通知的发送情况，查看已登记的通知模板和合成内容预览。',
     usersDescription:
       '管理账户、角色及登录会话。新账户默认选中成员角色，可替换或移除；没有角色的账户仅保留账户基础功能。',
   },
@@ -16,6 +24,9 @@ const zhCN: AppResource = {
   'navigation.brandHome': 'NocoCRM 首页',
   'navigation.brandApps': 'NocoBase 应用',
   app: { ...systemZhCN.app, title: 'NocoCRM' },
+  // The account menu's Appearance entry (appearance-menu.tsx); the template
+  // renamed its own entry Theme in 1.0.0-beta.92.
+  appearance: { ...systemZhCN.appearance, title: '外观' },
   flowDiagram: {
     ...systemZhCN.flowDiagram,
     empty: '没有可显示的状态。',

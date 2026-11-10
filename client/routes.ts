@@ -12,7 +12,6 @@ import {
   skillsRoute,
   usageRoute,
 } from '@nocobase/app-plugin-agents/client/routes';
-import { demoModeRoutes } from '@nocobase/app-plugin-demo-mode/client';
 import {
   BookOpen,
   Cpu,
@@ -28,11 +27,13 @@ import {
   Radar,
   Workflow,
   ScrollText,
-  Settings2,
   SquareCheckBig,
 } from 'lucide-react';
 
 import { WhatsAppLogo } from '#components/crm/whatsapp/logo';
+import databaseExplorerRoutes from './pages/settings/database-explorer/routes.js';
+import settingsRoutes from './pages/settings/routes.js';
+import settingsShellRoutes from './pages/settings/shell-routes.js';
 import { RECORD_ENTITIES } from '#components/crm/record-route';
 
 // One of the Agents plugin's pages, drawn in the CRM's look
@@ -68,20 +69,6 @@ const page = (name: string) =>
     resource: { type: 'page', id: name },
     action: 'access',
   }) as const;
-
-// Only the dedicated deployment registers the plugin's management page.
-// Ordinary installations keep the existing CRM sample-data importer at this URL.
-const demoEnvironmentRoutes = demoModeRoutes([
-  {
-    name: 'settings-demo-data',
-    path: 'demo-data',
-    authz: {
-      resource: { type: 'settings', id: 'demoMode.data' },
-      action: 'read',
-    },
-    componentLoader: () => import('./pages/settings/demo-environment.js'),
-  },
-]);
 
 // The /crm addresses' segments below /crm, each a level of its own.
 const LEGACY_DEPTH = 5;
@@ -416,179 +403,29 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     name: 'device',
     path: '/device',
   },
-  // Settings: what configures the CRM and its people, one entry of the menu
-  // that opens a page with a tab each (pages/settings/index.tsx). Template
-  // 1.0.0-beta.60 has no settings area of its own (no /settings layout or
-  // header entry), and plugins contribute no settings pages: the tabs are
-  // this page's children at the /settings/... addresses they had as entries
-  // of their own, each with its grant, and a tab shows only to whoever may
-  // open it. The Agents plugin's pages are in the Agent team section.
-  {
-    name: 'settings',
-    path: '/settings',
-    auth: 'required',
-    // Opens on the first tab its reader may open; API keys are everyone's.
-    authz: 'skip',
-    navigation: { title: 'crm.navigation.settings', icon: Settings2 },
-    componentLoader: () => import('./pages/settings/index.js'),
-    children: [
-      {
-        name: 'crm-settings',
-        path: 'crm',
-        authz: {
-          resource: { type: 'settings', id: 'crm' },
-          action: 'manage',
-        },
-        componentLoader: () => import('./pages/crm-settings.js'),
-      },
-      ...(demoEnvironmentRoutes.length
-        ? demoEnvironmentRoutes
-        : [
-            {
-              // Ordinary sample data is independent of the dedicated Demo Mode page.
-              name: 'settings-demo-data',
-              path: 'demo-data',
-              authz: {
-                resource: { type: 'settings', id: 'crm' },
-                action: 'manage',
-              },
-              componentLoader: () => import('./pages/settings/demo-data.js'),
-            },
-          ]),
-      {
-        // How an approval moves, read only; the administrators', as the
-        // General tab is.
-        name: 'settings-approval-flow',
-        path: 'approval-flow',
-        authz: {
-          resource: { type: 'settings', id: 'crm' },
-          action: 'manage',
-        },
-        componentLoader: () =>
-          import('./pages/settings/approval-flow/index.js'),
-      },
-      // NocoBase 3's prepared Users and Roles pages (client/pages/settings/,
-      // the template's since 1.0.0-beta.74, registered here rather than
-      // through its routes.ts so they stay tabs of this Settings page, and
-      // without its Default access page, which the CRM does not offer).
-      // Each route checks what the plugin's own API checks.
-      {
-        name: 'settings-users',
-        path: 'users',
-        authz: { resource: { type: 'user', id: '*' }, action: 'read' },
-        componentLoader: () => import('./pages/settings/users.js'),
-        children: [
-          {
-            name: 'settings-users-create',
-            path: 'create',
-            authz: { resource: { type: 'user', id: '*' }, action: 'create' },
-            componentLoader: () => import('./pages/settings/user-form.js'),
-          },
-          {
-            // Application addition: inviting by email, which the prepared
-            // pages leave out (pages/settings/accounts/).
-            name: 'settings-users-invite',
-            path: 'invite',
-            authz: { resource: { type: 'user', id: '*' }, action: 'invite' },
-            componentLoader: () =>
-              import('./pages/settings/accounts/invite.js'),
-          },
-          {
-            // Application addition: a new password set by an administrator.
-            name: 'settings-users-password',
-            path: ':userId/password',
-            componentLoader: () =>
-              import('./pages/settings/accounts/password.js'),
-          },
-          {
-            name: 'settings-user',
-            path: ':userId',
-            componentLoader: () => import('./pages/settings/user-detail.js'),
-            children: [
-              {
-                name: 'settings-user-edit',
-                path: 'edit',
-                componentLoader: () => import('./pages/settings/user-form.js'),
-              },
-            ],
-          },
-        ],
-      },
-      {
-        name: 'settings-roles',
-        path: 'roles',
-        authz: {
-          resource: { type: 'settings', id: 'authorization.permission-sets' },
-          action: 'read',
-        },
-        componentLoader: () => import('./pages/settings/roles.js'),
-        children: [
-          {
-            name: 'settings-role-create',
-            path: 'create',
-            authz: {
-              resource: {
-                type: 'settings',
-                id: 'authorization.permission-sets',
-              },
-              action: 'create',
-            },
-            componentLoader: () => import('./pages/settings/role-form.js'),
-          },
-          {
-            name: 'settings-role-edit',
-            path: ':key/edit',
-            componentLoader: () => import('./pages/settings/role-form.js'),
-          },
-        ],
-      },
-      {
-        // The address the CRM's own Permission sets page had, kept for
-        // links and bookmarks.
-        name: 'settings-permission-sets',
-        path: 'permission-sets',
-        authz: {
-          resource: { type: 'settings', id: 'authorization.permission-sets' },
-          action: 'read',
-        },
-        componentLoader: () =>
-          import('./pages/settings/permission-sets-redirect.js'),
-      },
-      {
-        // Every signed-in person manages their own keys only; the API
-        // answers for the caller alone.
-        name: 'settings-api-keys',
-        path: 'api-keys',
-        authz: 'skip',
-        componentLoader: () => import('./pages/settings/api-keys/index.js'),
-        children: [
-          {
-            name: 'settings-api-keys-new',
-            path: 'new',
-            componentLoader: () => import('./pages/settings/api-keys/new.js'),
-          },
-        ],
-      },
-      {
-        // The page grant the scheduler's API checks.
-        name: 'settings-scheduled-tasks',
-        path: 'scheduled-tasks',
-        authz: page('scheduler.schedules'),
-        componentLoader: () =>
-          import('./pages/settings/scheduled-tasks/index.js'),
-        children: [
-          {
-            name: 'settings-scheduled-task',
-            path: ':scheduleId',
-            componentLoader: () =>
-              import('./pages/settings/scheduled-tasks/detail.js'),
-          },
-        ],
-      },
-    ],
-  },
 ]);
 
-const routes: readonly AppClientRouteContribution[] = [appRoutes];
+// Settings: one entry of the menu opening a home page of cards by category
+// (pages/settings/shell-routes.ts), the CRM's settings pages placed in those
+// categories (pages/settings/routes.ts, the template's Notification
+// management module among them, with its templates and logs), and the
+// template's Database Explorer.
+//
+// Application change: the template adds Notification management through
+// `includeNotificationTemplateRoutes` (pages/settings/notification-routes.ts)
+// only once the built-in invitation mailer is configured. The CRM always sends
+// its own in-app notifications, registered in the directory by
+// server/providers/crm/notification-templates.ts, so it declares the module
+// itself, its views in the order it wants them.
+export function createApplicationRoutes(): readonly AppClientRouteContribution[] {
+  return [
+    appRoutes,
+    settingsShellRoutes,
+    settingsRoutes,
+    databaseExplorerRoutes,
+  ];
+}
+
+const routes: readonly AppClientRouteContribution[] = createApplicationRoutes();
 
 export default routes;

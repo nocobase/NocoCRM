@@ -23,7 +23,7 @@ import {
 import type { DemoStatus } from '../../components/crm/demo-status.js';
 import { DEFAULT_TIME_ZONE } from '../../../server/providers/crm/zone-time.js';
 
-// Settings → Demo data, a tab of its own (it was the General tab's last
+// Settings → Demo data, a page of its own (it was the General page's last
 // card): the demo dataset's accounts, whether it is there, and importing it
 // in either language or removing it, never saved with the settings.
 export default function DemoDataPage(): ReactElement {

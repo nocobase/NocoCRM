@@ -2,6 +2,11 @@ import { i18nToken } from '@nocobase/app-server/i18n';
 import { notificationLocales } from '../../locales/crm-notifications/index.js';
 import { asEntity, toText } from './schema.js';
 import { resolveTitles } from './titles.js';
+import {
+  crmNotificationContent,
+  crmNotificationLabels,
+} from './notification-content.js';
+import { registerCrmNotificationTemplates } from './notification-templates.js';
 import type { Application } from '@nocobase/app-server/application';
 import { databaseManagerToken } from '@nocobase/db';
 import {
@@ -10,7 +15,10 @@ import {
   type ServiceToken,
 } from '@nocobase/service-provider';
 import { authorizationToken } from '@nocobase/app-plugin-authorization';
-import { notificationServiceToken } from '@nocobase/app-plugin-notification/server';
+import {
+  notificationServiceToken,
+  type NotificationConfigInput,
+} from '@nocobase/app-plugin-notification/server';
 import { schedulerServiceToken } from '@nocobase/app-plugin-scheduler/server/tokens';
 import { isDemoMode } from '@nocobase/app-plugin-demo-mode/server';
 import { scanLeadSignals } from './lead-signals.js';
@@ -97,6 +105,8 @@ export default class CrmProvider extends ServiceProvider<Application> {
   private timers: ReturnType<typeof setInterval>[] = [];
   private followUps?: JobExecutor;
   private unregisterRoleScope?: () => void;
+  // The CRM's entries in the notification template directory.
+  private releaseNotificationTemplates?: () => void;
   private reminding = false;
   private delivering = false;
   public override register(): void {
@@ -260,6 +270,15 @@ export default class CrmProvider extends ServiceProvider<Application> {
     registerCrmResources(this.app.container.resolve(authorizationToken));
   }
   public override async boot(): Promise<void> {
+    // The messages the delivery pass sends, listed with a synthetic preview
+    // in Settings → Notification management (notification-templates.ts).
+    this.releaseNotificationTemplates ??= registerCrmNotificationTemplates({
+      container: this.app.container,
+      i18n: this.app.container.resolve(i18nToken),
+      notification: () =>
+        this.app.config.get<NotificationConfigInput>('notification'),
+      channel: CRM_INBOX_CHANNEL,
+    });
     await provisionCrm(
       this.app.container.resolve(authorizationToken),
       this.app.container.resolve(databaseManagerToken),
@@ -735,6 +754,8 @@ export default class CrmProvider extends ServiceProvider<Application> {
     await this.followUps?.shutdown();
     this.unregisterRoleScope?.();
     this.unregisterRoleScope = undefined;
+    this.releaseNotificationTemplates?.();
+    this.releaseNotificationTemplates = undefined;
     for (const timer of this.timers.splice(0)) clearInterval(timer);
   }
   // Both recurring passes, every half minute.
@@ -845,7 +866,12 @@ export default class CrmProvider extends ServiceProvider<Application> {
               throw new CrmError('forbidden', 403);
             await i18n.ensureLocaleLoaded(recipient.locale);
             const t = i18n.getFixedT('crm-notifications', recipient.locale);
-            const title = t(`titles.${toText(row.event)}`);
+            const content = crmNotificationContent(
+              t,
+              toText(row.event),
+              undefined,
+              toText(row.name),
+            );
             const sent = await this.app.container
               .resolve(notificationServiceToken)
               .send({
@@ -854,8 +880,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
                 messages: {
                   [CRM_INBOX_CHANNEL]: {
                     to: toText(row.recipientId),
-                    title,
-                    body: t('body', { title, name: toText(row.name) }),
+                    ...content,
                     target: {
                       type: 'route',
                       path: `/whatsapp/${toText(row.recordId)}`,
@@ -878,24 +903,20 @@ export default class CrmProvider extends ServiceProvider<Application> {
           );
           await i18n.ensureLocaleLoaded(recipient.locale);
           const t = i18n.getFixedT('crm-notifications', recipient.locale);
-          const title = t(`titles.${toText(row.event)}`, {
-            entity: t(`entities.${toText(row.entity)}`),
-            // Named inside a sentence: "a lead".
-            record: t(`records.${toText(row.entity)}`),
-          });
           // The record is named the way the pages name it (a lead by person
           // and company, a deal by company and name), not by its bare name.
           const entity = asEntity(toText(row.entity));
           const { titles } = await resolveTitles(service, recipient, {
             [entity]: [record],
           });
-          const content = {
-            title,
-            body: t('body', {
-              title,
-              name: titles[toText(record.id)] ?? record.name ?? '',
-            }),
-          };
+          // The shared builder the notification template directory previews
+          // with (notification-content.ts, notification-templates.ts).
+          const content = crmNotificationContent(
+            t,
+            toText(row.event),
+            crmNotificationLabels(t, toText(row.entity)),
+            titles[toText(record.id)] ?? toText(record.name),
+          );
           const sent = await this.app.container
             .resolve(notificationServiceToken)
             .send({

@@ -18,6 +18,7 @@ import file from '@nocobase/app-plugin-file/client';
 import mail from '@nocobase/app-plugin-mail/client';
 import agents from '@nocobase/app-plugin-agents/client';
 import foundation from '@nocobase/app-plugin-foundation/client';
+import applicationManifest from '../package.json' with { type: 'json' };
 import demoMode from '@nocobase/app-plugin-demo-mode/client';
 
 // Array order is contribution order. A plugin is enabled by appearing in this
@@ -38,7 +39,16 @@ const clientPlugins: AppClientPlugins = defineClientPlugins([
   scheduler(),
   mail(),
   agents(),
-  foundation(),
+  // The manifest is what the capability guide lists: every plugin this application declares. As in template
+  // 1.0.0-beta.92, the guide (Features and extensions, /settings/capabilities) takes the menu entry App foundation
+  // had, and the protected /foundation page keeps its URL without one; the guide is a card of the settings home's
+  // System category (client/lib/navigation-transform.ts), and its breadcrumb returns to that home.
+  foundation({
+    settingsGroup: true,
+    manifest: applicationManifest,
+    guideSettingsPath: '/settings',
+    navigation: false,
+  }),
   demoMode(),
 ]);
 

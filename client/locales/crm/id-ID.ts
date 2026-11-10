@@ -1938,6 +1938,21 @@ export const crmIdID: CrmWording = {
     skills: 'Keahlian',
     usage: 'Penggunaan',
   },
+  settingsCards: {
+    general:
+      'Zona waktu, mata uang, dan bahasa AI yang digunakan CRM, serta pengingat yang dikirimnya.',
+    approvalFlow:
+      'Siapa yang boleh menyetujui, dan status yang dilalui sebuah persetujuan.',
+    demoData:
+      'Impor data contoh fiktif untuk mencoba CRM, lalu hapus setelah Anda selesai.',
+    demoEnvironment: 'Buat, hapus, dan atur ulang data fiktif situs demo.',
+    users: 'Akun, peran yang dimiliki setiap orang, dan undangan.',
+    roles:
+      'Apa yang boleh dibuka dan dilakukan setiap peran, dan data mana yang dilihatnya.',
+    apiKeys:
+      'Kunci yang memungkinkan skrip dan agent memanggil CRM atas nama Anda.',
+    scheduledTasks: 'Proses berulang CRM dan hasil setiap jalannya.',
+  },
   admin: {
     common: {
       loading: 'Memuat',
@@ -2337,6 +2352,166 @@ export const crmIdID: CrmWording = {
         cancelled: 'Dibatalkan',
         timed_out: 'Waktu habis',
         triggered: 'Dipicu',
+      },
+    },
+    notificationTemplates: {
+      intro:
+        'Notifikasi yang dikirim CRM secara otomatis: kapan masing-masing dikirim, siapa penerimanya, dan isinya dalam setiap bahasa. Tidak ada yang bisa diubah di sini.',
+      search: 'Cari',
+      searchPlaceholder: 'Nama atau deskripsi',
+      category: 'Kategori',
+      channel: 'Saluran',
+      all: 'Semua',
+      empty: 'Belum ada notifikasi yang terdaftar.',
+      noResults: 'Tidak ada notifikasi yang cocok dengan pencarian dan filter.',
+      what: 'templat notifikasi',
+      whatOne: 'templat notifikasi ini',
+      when: 'Kapan dikirim',
+      who: 'Siapa penerimanya',
+      conditions: 'Syarat',
+      language: 'Bahasa',
+      source: 'Disediakan oleh',
+      channels: 'Saluran',
+      channelsHint:
+        'Sudah diatur dan aktif belum tentu berarti koneksinya berfungsi.',
+      channelState: {
+        configured: 'Sudah diatur',
+        unconfigured: 'Belum diatur',
+        enabled: 'Aktif',
+        disabled: 'Nonaktif',
+        unknown: 'Tidak diketahui',
+      },
+      variables: 'Variabel',
+      preview: 'Pratinjau',
+      previewLanguage: 'Bahasa pratinjau',
+      previewAllLanguages:
+        'Email ini memuat semua bahasa sekaligus; setiap penerima mendapat pesan yang sama.',
+      example: 'Contoh',
+      definition: 'Templat',
+      synthetic:
+        'Data contoh rekaan. Pratinjau tidak mengirim apa pun dan tidak mengubah apa pun.',
+      html: 'Versi HTML',
+      channelTypes: {
+        'in-app': 'Dalam aplikasi',
+        email: 'Email',
+      },
+      contributors: {
+        crm: 'NocoCRM',
+        users: 'Pengguna',
+      },
+      categories: {
+        accounts: 'Akun',
+        records: 'Data',
+        tasks: 'Tugas',
+        comments: 'Komentar',
+        signals: 'Sinyal perusahaan',
+        approvals: 'Persetujuan',
+      },
+      switchRule:
+        'Dikirim selama "{{switch}}" aktif di Pengaturan › Umum › Pengingat (aktif secara bawaan).',
+      always:
+        'Tidak pernah dikirim kepada orang yang membuat perubahan, untuk data yang sudah dihapus, atau ke akun yang dinonaktifkan, dan hanya selama penerima masih dapat melihat data tersebut.',
+      crmLanguage:
+        'Dalam bahasa masing-masing penerima, yang dipilihnya di menu akun; dalam bahasa Inggris jika belum memilih.',
+      items: {
+        recordAssigned: {
+          name: 'Data ditugaskan',
+          trigger:
+            'Prospek, peluang, perusahaan, kontak, tugas, atau persetujuan mendapat penanggung jawab baru, termasuk data baru yang dibuat untuk orang lain.',
+          recipients: 'Penanggung jawab baru.',
+        },
+        taskInvited: {
+          name: 'Ditambahkan ke tugas',
+          trigger: 'Seseorang ditambahkan ke peserta tugas.',
+          recipients: 'Setiap peserta yang ditambahkan.',
+        },
+        taskRemoved: {
+          name: 'Dikeluarkan dari tugas',
+          trigger: 'Seseorang dikeluarkan dari peserta tugas.',
+          recipients: 'Setiap peserta yang dikeluarkan.',
+        },
+        taskCancelled: {
+          name: 'Tugas dibatalkan',
+          trigger: 'Tugas dibatalkan.',
+          recipients:
+            'Peserta yang masih ada di tugas (bukan penanggung jawab).',
+        },
+        taskRescheduled: {
+          name: 'Tugas dijadwalkan ulang',
+          trigger: 'Waktu tugas diubah, kecuali tugas sudah dibatalkan.',
+          recipients:
+            'Peserta yang masih ada di tugas (bukan penanggung jawab).',
+        },
+        taskStarting: {
+          name: 'Tugas akan dimulai',
+          trigger:
+            'Tugas yang memiliki waktu, bukan hanya tanggal, akan segera dimulai, sesuai waktu pengingat yang diatur di Pengaturan › Umum › Pengingat.',
+          recipients: 'Penanggung jawab tugas dan pesertanya.',
+          rule: 'Sekali per tugas, waktu mulai, dan orang.',
+        },
+        commentMentioned: {
+          name: 'Disebut dalam komentar',
+          trigger:
+            'Rekan kerja di-@ dalam komentar, saat komentar ditulis atau saat suntingan menambahkan @.',
+          recipients: 'Setiap rekan kerja yang baru di-@.',
+          rule: 'Sekali per komentar dan orang.',
+        },
+        commentReplied: {
+          name: 'Balasan di utas komentar',
+          trigger: 'Seseorang membalas komentar atau balasan.',
+          recipients:
+            'Semua yang pernah menulis di utas; yang di-@ dalam balasan menerima notifikasi sebutan sebagai gantinya.',
+          rule: 'Sekali per balasan dan orang.',
+        },
+        companySignal: {
+          name: 'Berita perusahaan',
+          trigger:
+            'Pemeriksaan sinyal perusahaan menemukan berita tentang suatu perusahaan melalui pencarian web AI.',
+          recipients:
+            'Penanggung jawab perusahaan dan penanggung jawab peluangnya yang masih terbuka.',
+          rule: 'Sekali per berita dan orang; notifikasi membuka tab Sinyal perusahaan tersebut.',
+        },
+        approvalPending: {
+          name: 'Persetujuan diminta',
+          trigger: 'Permintaan persetujuan diajukan.',
+          recipients: 'Pemberi persetujuan.',
+        },
+        approvalWithdrawn: {
+          name: 'Permintaan persetujuan ditarik',
+          trigger: 'Pemohon menarik permintaan yang sudah diajukan.',
+          recipients: 'Pemberi persetujuan.',
+        },
+        approvalApproved: {
+          name: 'Permintaan persetujuan disetujui',
+          trigger: 'Pemberi persetujuan menyetujui permintaan.',
+          recipients: 'Pemohon.',
+        },
+        approvalRejected: {
+          name: 'Permintaan persetujuan ditolak',
+          trigger: 'Pemberi persetujuan menolak permintaan.',
+          recipients: 'Pemohon.',
+        },
+        usersInvitation: {
+          name: 'Undangan pengguna',
+          trigger:
+            'Administrator mengundang seseorang, atau mengirim ulang undangan, dengan memilih pengiriman lewat email.',
+          recipients: 'Alamat email orang yang diundang.',
+          rule: 'Dikirim untuk setiap undangan lewat email; tidak ada sakelar untuk mematikannya.',
+          language:
+            'Satu email dalam semua bahasa yang didukung, dengan subjek dalam bahasa Inggris; bahasa pratinjau tidak mengubahnya.',
+        },
+      },
+      variableText: {
+        entity:
+          'Jenis data, dalam bahasa penerima (prospek, peluang, perusahaan, kontak, tugas, persetujuan).',
+        record:
+          'Jenis data sebagaimana tertulis dalam kalimat (dalam bahasa Inggris "a lead"), untuk bahasa yang memerlukannya.',
+        name: 'Nama data seperti yang ditampilkan CRM: "nama / perusahaan" untuk prospek atau kontak, "perusahaan / nama" untuk peluang.',
+        app: 'Nama aplikasi.',
+        inviter: 'Pengirim undangan.',
+        items: 'Peran atau akses yang diberikan.',
+        date: 'Kapan undangan kedaluwarsa.',
+        url: 'Tautan undangan sekali pakai; pratinjau memakai tautan rekaan.',
       },
     },
   },

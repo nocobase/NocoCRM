@@ -1,7 +1,9 @@
 import fileUi from '../extensions/nocobase-file-component-ui/locales/pt-BR.js';
+import notificationLogsUi from '../extensions/nocobase-notification-logs-ui/locales/pt-BR.js';
 import type { AppResource } from './en-US.js';
 import { crmPtBR } from './crm/pt-BR.js';
 import settingsPtBR from './settings/pt-BR.js';
+import databaseExplorer from './database-explorer/pt-BR.js';
 
 // The pages in pt-BR: the template's copy (./system/) and the CRM's own
 // (./crm/pt-BR.ts), with the same keys as ./en-US.ts. The template ships no
@@ -9,6 +11,7 @@ import settingsPtBR from './settings/pt-BR.js';
 // fails the type check until they are translated.
 const ptBR: AppResource = {
   ...fileUi,
+  ...notificationLogsUi,
   'auth.passwordResetSuccess':
     'Sua senha foi redefinida. Entre com a nova senha.',
   'auth.requestNewResetLink': 'Solicitar um novo link de redefinição',
@@ -16,6 +19,23 @@ const ptBR: AppResource = {
   'auth.connectionFailed': 'Não foi possível conectar',
   'auth.connectionFailedDescription':
     'Não foi possível preparar a conexão em tempo real. Tente novamente para entrar no aplicativo ou saia.',
+  // The template's Database Explorer copy, translated in ./database-explorer/.
+  databaseExplorer,
+  taskProgress: {
+    queued: 'Aguardando início',
+    running: 'Em andamento',
+    completed: 'Concluído',
+    failed: 'Falhou',
+    canceled: 'Cancelado',
+    count: '{{processed}} de {{total}}',
+    processed: '{{processed}} processados',
+    background: 'Continua em execução se você sair desta página.',
+  },
+  pendingFeedback: {
+    working: 'Processando…',
+    longWait:
+      'Está demorando mais do que o normal. Você pode continuar aguardando.',
+  },
   listFeedback: {
     loading: 'Carregando',
     empty: 'Ainda não há dados',
@@ -130,6 +150,9 @@ const ptBR: AppResource = {
     'Entre com seu nome de usuário ou e-mail e sua senha.',
   'auth.registerTitle': 'Criar uma conta',
   'auth.registerDescription': 'Crie uma conta para começar.',
+  'auth.registrationAccepted': 'Solicitação de cadastro enviada',
+  'auth.registrationGuidance':
+    'Tente entrar com o nome de usuário e a senha que você enviou. Se este e-mail já tiver uma conta, os novos dados não terão efeito. Entre com sua conta original ou recupere sua senha. Siga as instruções de verificação fornecidas pela aplicação antes de entrar.',
   'auth.forgotTitle': 'Esqueci a senha',
   'auth.forgotDescription':
     'Informe seu e-mail e enviaremos um link de redefinição se a conta existir.',
@@ -173,9 +196,9 @@ const ptBR: AppResource = {
   'auth.continueWith': 'Continuar com {provider}',
   'auth.about': 'Sobre este aplicativo',
   'auth.platform': 'Plataforma de aplicativos nativa de IA',
-  'auth.marketingTitleFirst': 'Deixe a IA construir livremente.',
-  'auth.marketingTitleSecond': 'O NocoBase garante',
-  'auth.marketingTitleThird': 'a confiabilidade.',
+  // The template's brand line (its zh-CN keeps it in English too).
+  'auth.marketingTitleFirst': 'AI + NocoBase',
+  'auth.marketingTitleSecond': 'Build reliable business systems',
   'auth.marketingDescription':
     'Dê à IA um framework de frontend flexível para moldar cada experiência, enquanto o NocoBase protege os dados, as permissões e a governança por trás.',
   'auth.frontend': 'Frontend nativo de IA',
@@ -190,15 +213,20 @@ const ptBR: AppResource = {
   'status.denied': 'Acesso negado',
   'status.pageFailed': 'Não foi possível carregar a página',
   'status.retry': 'Tentar novamente',
+  'status.refreshing': 'Atualizando',
+  'status.reloadPage': 'Recarregar página',
+  'status.retryFailedDescription':
+    'Ainda não foi possível carregar. Recarregar a página inteira pode ajudar; alterações não salvas nesta página podem ser perdidas.',
   'navigation.brandHome': 'Início do NocoCRM',
   'navigation.brandApps': 'Aplicativos NocoBase',
   'routeOverlay.close': 'Fechar',
   'status.deniedDescription': 'Você não tem permissão para acessar {{label}}.',
   'status.routeFailedDescription':
     'Não foi possível carregar a rota {{label}} de {{packageName}}.',
+  // The template's brand line, which its own zh-CN keeps in English too.
   shell: {
-    buildFreely: 'A IA constrói livremente.',
-    reliability: 'O <brand>NocoBase</brand> garante a confiabilidade.',
+    brandPartnership: 'AI + <brand>NocoBase</brand>',
+    buildReliableSystems: 'Build reliable business systems',
   },
   home: {
     platform: 'NocoBase · Plataforma de aplicativos nativa de IA',
@@ -456,6 +484,7 @@ const ptBR: AppResource = {
   },
   navigation: {
     home: 'Início',
+    resources: 'Recursos',
     open: 'Abrir navegação',
     close: 'Fechar navegação',
     expand: 'Expandir navegação',
@@ -466,6 +495,7 @@ const ptBR: AppResource = {
     breadcrumb: 'Trilha de navegação',
     breadcrumbMore: 'Mostrar os níveis intermediários',
     back: 'Voltar',
+    backTo: 'Voltar para {{label}}',
   },
   dataTable: {
     noResults: 'Nenhum resultado.',
@@ -485,6 +515,7 @@ const ptBR: AppResource = {
   datePicker: {
     placeholder: 'Selecione uma data',
     rangePlaceholder: 'Selecione um intervalo de datas',
+    clear: 'Limpar',
   },
   flowDiagram: {
     controls: 'Controles do diagrama',
@@ -608,7 +639,13 @@ const ptBR: AppResource = {
     },
   },
   // The template's Settings copy, translated in ./settings/.
-  settings: settingsPtBR,
+  settings: {
+    ...settingsPtBR,
+    // The Notification management module's logs tab, named as the
+    // notification-logs-ui block names it
+    // (client/pages/settings/routes.ts).
+    notificationLogs: 'Registros de notificação',
+  },
   crm: crmPtBR,
 };
 

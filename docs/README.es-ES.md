@@ -10,7 +10,7 @@
 <p align="center">CRM de código abierto para ventas B2B · Construido sobre NocoBase</p>
 
 <p align="center">
-  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache-2.0"></a>
+  <a href="../LICENSE.txt"><img src="https://img.shields.io/badge/license-NocoBase-blue" alt="NocoBase License"></a>
   <a href="https://github.com/nocobase/NocoCRM/tags"><img src="https://img.shields.io/github/v/tag/nocobase/NocoCRM?label=version&sort=semver&include_prereleases" alt="version"></a>
   <a href="https://www.nocobase.com"><img src="https://img.shields.io/badge/built%20on-NocoBase-1f6feb" alt="Built on NocoBase"></a>
 </p>
@@ -37,7 +37,7 @@ https://github.com/user-attachments/assets/d56b50ed-a7f6-4012-95ee-7eece46d4271
 - **Las aprobaciones ya no se atascan.** El agente de aprobaciones contrasta un descuento o una condición con tus reglas y decisiones anteriores, y redacta una recomendación y un comentario para quien aprueba.
 - **Todo el ciclo de ventas.** Leads, empresas, contactos, oportunidades, tareas, aprobaciones e informes, con un tablero de oportunidades, un calendario de tareas, búsqueda en todos los registros (⌘K / Ctrl+K) y roles que el servidor aplica registro a registro.
 - **Personalizable.** Escribe tus precios, límites de descuento y ritmo de seguimiento en texto llano en las directrices de negocio, y todos los agentes las siguen; el método de cada agente es una habilidad que puedes editar. El código es abierto, así que un agente de programación puede cambiar el resto.
-- **Autoalojado.** Tus datos se quedan en tus servidores, con los modelos que elijas: DeepSeek, OpenAI, Claude, Gemini, Qwen y otros. Apache-2.0.
+- **Autoalojado.** Tus datos se quedan en tus servidores, con los modelos que elijas: DeepSeek, OpenAI, Claude, Gemini, Qwen y otros.
 
 ## Inicio rápido
 
@@ -79,4 +79,4 @@ Para producción, consulta [Despliegue](guide.md#deployment); para PostgreSQL y 
 
 ## Licencia
 
-NocoCRM está construido sobre NocoBase y se publica bajo la licencia [Apache-2.0](../LICENSE).
+NocoCRM está construido sobre NocoBase y se publica bajo la [licencia de NocoBase](../LICENSE.txt).

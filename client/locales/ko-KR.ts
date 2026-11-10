@@ -1,7 +1,9 @@
 import fileUi from '../extensions/nocobase-file-component-ui/locales/ko-KR.js';
+import notificationLogsUi from '../extensions/nocobase-notification-logs-ui/locales/ko-KR.js';
 import type { AppResource } from './en-US.js';
 import { crmKoKR } from './crm/ko-KR.js';
 import settingsKoKR from './settings/ko-KR.js';
+import databaseExplorer from './database-explorer/ko-KR.js';
 
 // The pages in ko-KR: the template's copy (./system/) and the CRM's own
 // (./crm/ko-KR.ts), with the same keys as ./en-US.ts. The template ships no
@@ -9,6 +11,7 @@ import settingsKoKR from './settings/ko-KR.js';
 // fails the type check until they are translated.
 const koKR: AppResource = {
   ...fileUi,
+  ...notificationLogsUi,
   'auth.passwordResetSuccess':
     '비밀번호가 재설정되었습니다. 새 비밀번호로 로그인하세요.',
   'auth.requestNewResetLink': '새 재설정 링크 요청',
@@ -16,6 +19,22 @@ const koKR: AppResource = {
   'auth.connectionFailed': '연결할 수 없습니다',
   'auth.connectionFailedDescription':
     '실시간 연결을 준비할 수 없습니다. 다시 시도해 애플리케이션에 들어가거나 로그아웃하세요.',
+  // The template's Database Explorer copy, translated in ./database-explorer/.
+  databaseExplorer,
+  taskProgress: {
+    queued: '시작 대기 중',
+    running: '진행 중',
+    completed: '완료됨',
+    failed: '실패',
+    canceled: '취소됨',
+    count: '{{total}}개 중 {{processed}}개',
+    processed: '{{processed}}개 처리됨',
+    background: '이 페이지를 떠나도 계속 실행됩니다.',
+  },
+  pendingFeedback: {
+    working: '처리 중…',
+    longWait: '평소보다 오래 걸리고 있습니다. 계속 기다리셔도 됩니다.',
+  },
   listFeedback: {
     loading: '불러오는 중',
     empty: '아직 데이터가 없습니다',
@@ -127,6 +146,9 @@ const koKR: AppResource = {
   'auth.loginDescription': '사용자 이름 또는 이메일과 비밀번호로 로그인하세요.',
   'auth.registerTitle': '계정 만들기',
   'auth.registerDescription': '시작하려면 계정을 만드세요.',
+  'auth.registrationAccepted': '가입 요청을 보냈습니다',
+  'auth.registrationGuidance':
+    '보낸 사용자 이름과 비밀번호로 로그인해 보세요. 이 이메일로 이미 계정이 있다면 새 정보는 적용되지 않습니다. 기존 계정으로 로그인하거나 비밀번호를 재설정하세요. 로그인하기 전에 애플리케이션이 안내하는 인증 절차를 따르세요.',
   'auth.forgotTitle': '비밀번호 찾기',
   'auth.forgotDescription':
     '이메일을 입력하면 계정이 있는 경우 재설정 링크를 보내 드립니다.',
@@ -170,9 +192,9 @@ const koKR: AppResource = {
   'auth.continueWith': '{provider}(으)로 계속',
   'auth.about': '이 애플리케이션 정보',
   'auth.platform': 'AI 네이티브 애플리케이션 플랫폼',
-  'auth.marketingTitleFirst': 'AI는 자유롭게 만들고,',
-  'auth.marketingTitleSecond': 'NocoBase는',
-  'auth.marketingTitleThird': '신뢰성을 지킵니다.',
+  // The template's brand line (its zh-CN keeps it in English too).
+  'auth.marketingTitleFirst': 'AI + NocoBase',
+  'auth.marketingTitleSecond': 'Build reliable business systems',
   'auth.marketingDescription':
     'AI에게 유연한 프론트엔드 프레임워크를 제공해 모든 경험을 자유롭게 만들게 하고, 그 아래의 데이터, 권한, 거버넌스는 NocoBase가 지킵니다.',
   'auth.frontend': 'AI 네이티브 프론트엔드',
@@ -186,15 +208,20 @@ const koKR: AppResource = {
   'status.denied': '접근 거부됨',
   'status.pageFailed': '페이지를 불러올 수 없습니다',
   'status.retry': '다시 시도',
+  'status.refreshing': '새로 고치는 중',
+  'status.reloadPage': '페이지 새로 고침',
+  'status.retryFailedDescription':
+    '여전히 불러올 수 없습니다. 페이지 전체를 새로 고치면 해결될 수 있지만, 이 페이지에서 저장하지 않은 변경 사항이 사라질 수 있습니다.',
   'navigation.brandHome': 'NocoCRM 홈',
   'navigation.brandApps': 'NocoBase 애플리케이션',
   'routeOverlay.close': '닫기',
   'status.deniedDescription': '{{label}}에 접근할 권한이 없습니다.',
   'status.routeFailedDescription':
     '{{packageName}}의 경로 {{label}}을(를) 불러올 수 없습니다.',
+  // The template's brand line, which its own zh-CN keeps in English too.
   shell: {
-    buildFreely: 'AI는 자유롭게 만듭니다.',
-    reliability: '<brand>NocoBase</brand>가 신뢰성을 지킵니다.',
+    brandPartnership: 'AI + <brand>NocoBase</brand>',
+    buildReliableSystems: 'Build reliable business systems',
   },
   home: {
     platform: 'NocoBase · AI 네이티브 애플리케이션 플랫폼',
@@ -449,6 +476,7 @@ const koKR: AppResource = {
   },
   navigation: {
     home: '개요',
+    resources: '리소스',
     open: '탐색 메뉴 열기',
     close: '탐색 메뉴 닫기',
     expand: '탐색 메뉴 펼치기',
@@ -459,6 +487,7 @@ const koKR: AppResource = {
     breadcrumb: '이동 경로',
     breadcrumbMore: '중간 단계 표시',
     back: '뒤로',
+    backTo: '{{label}}(으)로 돌아가기',
   },
   dataTable: {
     noResults: '결과가 없습니다.',
@@ -478,6 +507,7 @@ const koKR: AppResource = {
   datePicker: {
     placeholder: '날짜 선택',
     rangePlaceholder: '날짜 범위 선택',
+    clear: '지우기',
   },
   flowDiagram: {
     controls: '다이어그램 컨트롤',
@@ -601,7 +631,13 @@ const koKR: AppResource = {
     },
   },
   // The template's Settings copy, translated in ./settings/.
-  settings: settingsKoKR,
+  settings: {
+    ...settingsKoKR,
+    // The Notification management module's logs tab, named as the
+    // notification-logs-ui block names it
+    // (client/pages/settings/routes.ts).
+    notificationLogs: '알림 로그',
+  },
   crm: crmKoKR,
 };
 

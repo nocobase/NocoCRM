@@ -1,4 +1,5 @@
 import fileUi from '../extensions/nocobase-file-component-ui/locales/en-US.js';
+import notificationLogsUi from '../extensions/nocobase-notification-logs-ui/locales/en-US.js';
 import type { LocaleResource } from '@nocobase/i18n';
 
 import { crmEn } from './crm/index.js';
@@ -9,8 +10,15 @@ const enUS = {
   // `./system/` so a template upgrade can replace it without touching the application's copy below.
   ...systemEnUS,
   ...fileUi,
+  ...notificationLogsUi,
   settings: {
     ...systemEnUS.settings,
+    // The Notification management module's logs tab, named as the
+    // notification-logs-ui block names it
+    // (client/pages/settings/routes.ts) and its description.
+    notificationLogs: 'Notification logs',
+    notificationManagementDescription:
+      'Trace notification deliveries, and view the registered templates with synthetic content previews.',
     usersDescription:
       'Manage accounts, roles and sessions. New accounts start with Member selected; you can replace or remove it. Accounts without roles retain account basics only.',
   },
@@ -22,6 +30,9 @@ const enUS = {
   'navigation.brandHome': 'NocoCRM home',
   'navigation.brandApps': 'NocoBase applications',
   app: { ...systemEnUS.app, title: 'NocoCRM' },
+  // The account menu's Appearance entry (appearance-menu.tsx); the template
+  // renamed its own entry Theme in 1.0.0-beta.92.
+  appearance: { ...systemEnUS.appearance, title: 'Appearance' },
   // The sign-in page's right side (client/pages/auth/activity-panel.tsx):
   // one customer's way from a lead to a closed deal. Sample content.
   // The UI Library's flow diagram (client/components/flow-diagram.tsx), which

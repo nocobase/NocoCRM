@@ -1,7 +1,9 @@
 import fileUi from '../extensions/nocobase-file-component-ui/locales/zh-TW.js';
+import notificationLogsUi from '../extensions/nocobase-notification-logs-ui/locales/zh-TW.js';
 import type { AppResource } from './en-US.js';
 import { crmZhTW } from './crm/zh-TW.js';
 import settingsZhTW from './settings/zh-TW.js';
+import databaseExplorer from './database-explorer/zh-TW.js';
 
 // The pages in zh-TW: the template's copy (./system/) and the CRM's own
 // (./crm/zh-TW.ts), with the same keys as ./en-US.ts. The template ships no
@@ -9,12 +11,29 @@ import settingsZhTW from './settings/zh-TW.js';
 // fails the type check until they are translated.
 const zhTW: AppResource = {
   ...fileUi,
+  ...notificationLogsUi,
   'auth.passwordResetSuccess': '密碼已重設，請用新密碼登入。',
   'auth.requestNewResetLink': '重新申請重設連結',
   'auth.preparingSession': '正在準備登入工作階段…',
   'auth.connectionFailed': '連線失敗',
   'auth.connectionFailedDescription':
     '即時連線暫時無法準備就緒。請重試後進入應用程式，或登出。',
+  // The template's Database Explorer copy, translated in ./database-explorer/.
+  databaseExplorer,
+  taskProgress: {
+    queued: '等待開始',
+    running: '進行中',
+    completed: '已完成',
+    failed: '失敗',
+    canceled: '已取消',
+    count: '{{processed}} / {{total}}',
+    processed: '已處理 {{processed}}',
+    background: '離開此頁面後仍會繼續執行。',
+  },
+  pendingFeedback: {
+    working: '處理中…',
+    longWait: '耗時比平常久，你可以繼續等待。',
+  },
   listFeedback: {
     loading: '載入中',
     empty: '尚無資料',
@@ -116,6 +135,9 @@ const zhTW: AppResource = {
   'auth.loginDescription': '使用使用者名稱或電子郵件和密碼登入',
   'auth.registerTitle': '建立帳戶',
   'auth.registerDescription': '建立帳戶以開始使用',
+  'auth.registrationAccepted': '註冊申請已送出',
+  'auth.registrationGuidance':
+    '請嘗試使用你送出的使用者名稱和密碼登入。如果此電子郵件已有帳戶，新資料不會生效。請使用原帳戶登入或找回密碼。登入前，請依照應用程式提供的驗證說明操作。',
   'auth.forgotTitle': '忘記密碼',
   'auth.forgotDescription': '輸入電子郵件，如果帳戶存在，我們將傳送重設連結',
   'auth.passwordResetUnavailable': '未開啟自助找回，請聯絡管理員重設密碼。',
@@ -155,9 +177,9 @@ const zhTW: AppResource = {
   'auth.continueWith': '使用 {provider} 繼續',
   'auth.about': '關於此應用程式',
   'auth.platform': 'AI 原生應用程式平台',
-  'auth.marketingTitleFirst': '讓 AI 自由建構',
-  'auth.marketingTitleSecond': 'NocoBase 保障',
-  'auth.marketingTitleThird': '可靠運作',
+  // The template's brand line (its zh-CN keeps it in English too).
+  'auth.marketingTitleFirst': 'AI + NocoBase',
+  'auth.marketingTitleSecond': 'Build reliable business systems',
   'auth.marketingDescription':
     '讓 AI 在靈活的前端框架上建構體驗，由 NocoBase 保障底層資料、權限與治理',
   'auth.frontend': 'AI 原生前端',
@@ -170,15 +192,20 @@ const zhTW: AppResource = {
   'status.denied': '無權存取',
   'status.pageFailed': '無法載入頁面',
   'status.retry': '重試',
+  'status.refreshing': '正在重新整理',
+  'status.reloadPage': '重新載入頁面',
+  'status.retryFailedDescription':
+    '仍然無法載入。重新載入整個頁面可能有幫助；此頁面上未儲存的變更可能會遺失。',
   'navigation.brandHome': 'NocoCRM 首頁',
   'navigation.brandApps': 'NocoBase 應用程式',
   'routeOverlay.close': '關閉',
   'status.deniedDescription': '你沒有存取 {{label}} 的權限。',
   'status.routeFailedDescription':
     '無法載入 {{packageName}} 的路由 {{label}}。',
+  // The template's brand line, which its own zh-CN keeps in English too.
   shell: {
-    buildFreely: 'AI 自由建構',
-    reliability: '<brand>NocoBase</brand> 保障可靠',
+    brandPartnership: 'AI + <brand>NocoBase</brand>',
+    buildReliableSystems: 'Build reliable business systems',
   },
   home: {
     platform: 'NocoBase · AI 原生應用程式平台',
@@ -422,6 +449,7 @@ const zhTW: AppResource = {
   },
   navigation: {
     home: '工作台',
+    resources: '參考資料',
     open: '開啟導覽',
     close: '關閉導覽',
     expand: '展開導覽',
@@ -432,6 +460,7 @@ const zhTW: AppResource = {
     breadcrumb: '麵包屑',
     breadcrumbMore: '顯示中間層級',
     back: '返回',
+    backTo: '返回{{label}}',
   },
   dataTable: {
     noResults: '暫無資料。',
@@ -451,6 +480,7 @@ const zhTW: AppResource = {
   datePicker: {
     placeholder: '選擇日期',
     rangePlaceholder: '選擇日期範圍',
+    clear: '清除',
   },
   flowDiagram: {
     controls: '流程圖控制',
@@ -574,7 +604,13 @@ const zhTW: AppResource = {
     },
   },
   // The template's Settings copy, translated in ./settings/.
-  settings: settingsZhTW,
+  settings: {
+    ...settingsZhTW,
+    // The Notification management module's logs tab, named as the
+    // notification-logs-ui block names it
+    // (client/pages/settings/routes.ts).
+    notificationLogs: '通知日誌',
+  },
   crm: crmZhTW,
 };
 

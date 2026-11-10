@@ -1,7 +1,9 @@
 import fileUi from '../extensions/nocobase-file-component-ui/locales/vi-VN.js';
+import notificationLogsUi from '../extensions/nocobase-notification-logs-ui/locales/vi-VN.js';
 import type { AppResource } from './en-US.js';
 import { crmViVN } from './crm/vi-VN.js';
 import settingsViVN from './settings/vi-VN.js';
+import databaseExplorer from './database-explorer/vi-VN.js';
 
 // The pages in vi-VN: the template's copy (./system/) and the CRM's own
 // (./crm/vi-VN.ts), with the same keys as ./en-US.ts. The template ships no
@@ -9,6 +11,7 @@ import settingsViVN from './settings/vi-VN.js';
 // fails the type check until they are translated.
 const viVN: AppResource = {
   ...fileUi,
+  ...notificationLogsUi,
   'auth.passwordResetSuccess':
     'Mật khẩu của bạn đã được đặt lại. Hãy đăng nhập bằng mật khẩu mới.',
   'auth.requestNewResetLink': 'Yêu cầu liên kết đặt lại mới',
@@ -16,6 +19,23 @@ const viVN: AppResource = {
   'auth.connectionFailed': 'Không thể kết nối',
   'auth.connectionFailedDescription':
     'Không thể chuẩn bị kết nối thời gian thực. Hãy thử lại để vào ứng dụng hoặc đăng xuất.',
+  // The template's Database Explorer copy, translated in ./database-explorer/.
+  databaseExplorer,
+  taskProgress: {
+    queued: 'Đang chờ bắt đầu',
+    running: 'Đang chạy',
+    completed: 'Đã hoàn tất',
+    failed: 'Thất bại',
+    canceled: 'Đã hủy',
+    count: '{{processed}} / {{total}}',
+    processed: 'Đã xử lý {{processed}}',
+    background: 'Tác vụ vẫn chạy nếu bạn rời trang này.',
+  },
+  pendingFeedback: {
+    working: 'Đang xử lý…',
+    longWait:
+      'Việc này mất nhiều thời gian hơn bình thường. Bạn có thể tiếp tục chờ.',
+  },
   listFeedback: {
     loading: 'Đang tải',
     empty: 'Chưa có dữ liệu',
@@ -128,6 +148,9 @@ const viVN: AppResource = {
     'Đăng nhập bằng tên người dùng hoặc email và mật khẩu.',
   'auth.registerTitle': 'Tạo tài khoản',
   'auth.registerDescription': 'Tạo tài khoản để bắt đầu.',
+  'auth.registrationAccepted': 'Đã gửi yêu cầu đăng ký',
+  'auth.registrationGuidance':
+    'Hãy thử đăng nhập bằng tên người dùng và mật khẩu bạn đã gửi. Nếu email này đã có tài khoản, thông tin mới sẽ không có hiệu lực. Hãy đăng nhập bằng tài khoản ban đầu hoặc khôi phục mật khẩu. Làm theo mọi hướng dẫn xác minh của ứng dụng trước khi đăng nhập.',
   'auth.forgotTitle': 'Quên mật khẩu',
   'auth.forgotDescription':
     'Nhập email của bạn, chúng tôi sẽ gửi liên kết đặt lại nếu tài khoản tồn tại.',
@@ -170,9 +193,9 @@ const viVN: AppResource = {
   'auth.continueWith': 'Tiếp tục với {provider}',
   'auth.about': 'Giới thiệu ứng dụng',
   'auth.platform': 'Nền tảng ứng dụng AI-native',
-  'auth.marketingTitleFirst': 'Để AI tự do xây dựng.',
-  'auth.marketingTitleSecond': 'NocoBase giữ cho mọi thứ',
-  'auth.marketingTitleThird': 'đáng tin cậy.',
+  // The template's brand line (its zh-CN keeps it in English too).
+  'auth.marketingTitleFirst': 'AI + NocoBase',
+  'auth.marketingTitleSecond': 'Build reliable business systems',
   'auth.marketingDescription':
     'Trao cho AI một framework frontend linh hoạt để định hình từng trải nghiệm, trong khi NocoBase bảo vệ dữ liệu, quyền hạn và quản trị bên dưới.',
   'auth.frontend': 'Frontend AI-native',
@@ -187,15 +210,20 @@ const viVN: AppResource = {
   'status.denied': 'Truy cập bị từ chối',
   'status.pageFailed': 'Không thể tải trang',
   'status.retry': 'Thử lại',
+  'status.refreshing': 'Đang làm mới',
+  'status.reloadPage': 'Tải lại trang',
+  'status.retryFailedDescription':
+    'Vẫn không tải được. Tải lại toàn bộ trang có thể giúp ích; các thay đổi chưa lưu trên trang này có thể bị mất.',
   'navigation.brandHome': 'Trang chủ NocoCRM',
   'navigation.brandApps': 'Ứng dụng NocoBase',
   'routeOverlay.close': 'Đóng',
   'status.deniedDescription': 'Bạn không có quyền truy cập {{label}}.',
   'status.routeFailedDescription':
     'Không thể tải route {{label}} từ {{packageName}}.',
+  // The template's brand line, which its own zh-CN keeps in English too.
   shell: {
-    buildFreely: 'AI tự do xây dựng.',
-    reliability: '<brand>NocoBase</brand> giữ cho mọi thứ đáng tin cậy.',
+    brandPartnership: 'AI + <brand>NocoBase</brand>',
+    buildReliableSystems: 'Build reliable business systems',
   },
   home: {
     platform: 'NocoBase · Nền tảng ứng dụng AI-native',
@@ -452,6 +480,7 @@ const viVN: AppResource = {
   },
   navigation: {
     home: 'Tổng quan',
+    resources: 'Tài nguyên',
     open: 'Mở thanh điều hướng',
     close: 'Đóng thanh điều hướng',
     expand: 'Mở rộng thanh điều hướng',
@@ -462,6 +491,7 @@ const viVN: AppResource = {
     breadcrumb: 'Đường dẫn',
     breadcrumbMore: 'Hiện các cấp ở giữa',
     back: 'Quay lại',
+    backTo: 'Quay lại {{label}}',
   },
   dataTable: {
     noResults: 'Không có kết quả.',
@@ -481,6 +511,7 @@ const viVN: AppResource = {
   datePicker: {
     placeholder: 'Chọn ngày',
     rangePlaceholder: 'Chọn khoảng ngày',
+    clear: 'Xóa',
   },
   flowDiagram: {
     controls: 'Điều khiển sơ đồ',
@@ -604,7 +635,13 @@ const viVN: AppResource = {
     },
   },
   // The template's Settings copy, translated in ./settings/.
-  settings: settingsViVN,
+  settings: {
+    ...settingsViVN,
+    // The Notification management module's logs tab, named as the
+    // notification-logs-ui block names it
+    // (client/pages/settings/routes.ts).
+    notificationLogs: 'Nhật ký thông báo',
+  },
   crm: crmViVN,
 };
 

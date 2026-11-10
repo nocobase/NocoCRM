@@ -4,6 +4,10 @@ import type settingsEnUS from '../system/settings-en-US.js';
 // The template's Settings copy (client/locales/system/settings-en-US.ts): the
 // prepared Users and Roles pages and the permission editor, in ko-KR.
 const settings: LocaleResource<typeof settingsEnUS> = {
+  notificationManagementDescription:
+    '알림 발송 현황을 추적하고, 등록된 알림 템플릿과 합성 콘텐츠 미리보기를 확인합니다.',
+  notificationTemplates: '알림 템플릿',
+  notificationManagement: '알림 관리',
   listChanged: '목록이 변경되었습니다. 다시 시도하세요.',
   setup: {
     title: '기능 사전 요구 사항',
@@ -102,6 +106,19 @@ const settings: LocaleResource<typeof settingsEnUS> = {
   passwordPolicy: '비밀번호가 현재 비밀번호 정책을 충족하지 않습니다.',
   reload: '역할 다시 불러오기',
   title: '시스템 설정',
+  home: {
+    description:
+      '계정, 권한, 비즈니스 구성, 시스템 기능이 모두 여기에 있습니다.',
+    empty: '아직 사용할 수 있는 설정이 없습니다.',
+  },
+  categories: {
+    account: '계정 및 권한',
+    business: '비즈니스 구성',
+    ai: 'AI',
+    system: '시스템',
+  },
+  permissionManagementDescription:
+    '각 역할이 열 수 있는 페이지, 할 수 있는 작업, 볼 수 있는 데이터를 설정합니다.',
   users: '사용자',
   roles: '역할 및 권한',
   usersDescription: '계정, 접근 권한, 활성 세션을 관리합니다.',

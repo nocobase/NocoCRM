@@ -1,3 +1,4 @@
+import mailers from './mailers.js';
 import {
   defaultAppConfigs,
   type AppConfigFactory,
@@ -16,6 +17,7 @@ import queue from './queue.js';
 import jobs from './jobs.js';
 import scheduler from './scheduler.js';
 import caching from './caching.js';
+import realtime from './realtime.js';
 import i18n from './i18n.js';
 import app from './app.js';
 import api from './api.js';
@@ -26,8 +28,10 @@ import users from './users.js';
 import mail from './mail.js';
 import agents from './agents.js';
 import demoMode from './demo-mode.js';
+import foundation from './foundation.js';
 
 const defaultConfigs: AppConfigFactory<{
+  mailers: ReturnType<typeof mailers>;
   auth: ReturnType<typeof auth>;
   authorization: ReturnType<typeof authorization>;
   notification: ReturnType<typeof notification>;
@@ -42,6 +46,7 @@ const defaultConfigs: AppConfigFactory<{
   jobs: ReturnType<typeof jobs>;
   scheduler: ReturnType<typeof scheduler>;
   caching: ReturnType<typeof caching>;
+  realtime: ReturnType<typeof realtime>;
   i18n: ReturnType<typeof i18n>;
   app: ReturnType<typeof app>;
   api: ReturnType<typeof api>;
@@ -52,7 +57,9 @@ const defaultConfigs: AppConfigFactory<{
   mail: ReturnType<typeof mail>;
   agents: ReturnType<typeof agents>;
   demoMode: ReturnType<typeof demoMode>;
+  foundation: ReturnType<typeof foundation>;
 }> = defaultAppConfigs({
+  mailers,
   auth,
   authorization,
   notification,
@@ -67,6 +74,7 @@ const defaultConfigs: AppConfigFactory<{
   jobs,
   scheduler,
   caching,
+  realtime,
   i18n,
   app,
   api,
@@ -77,6 +85,7 @@ const defaultConfigs: AppConfigFactory<{
   mail,
   agents,
   demoMode,
+  foundation,
 });
 
 export default defaultConfigs;

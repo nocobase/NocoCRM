@@ -10,6 +10,7 @@ import {
   buildVariablesManifest,
 } from '@nocobase/app-server/config';
 import auth from '../../server/config/auth.js';
+import mailers from '../../server/config/mailers.js';
 
 it('inherits private authentication sender mappings without changing other mail consumers', async () => {
   const defaults = defaultAppConfigs({ auth });
@@ -52,6 +53,8 @@ it('inherits private authentication sender mappings without changing other mail 
   ).toBe(true);
 });
 
+// Application change, kept: the CRM's example still shows the inline auth.email senders, which the template
+// replaced with the shared `mailers` example in 1.0.0-beta.92 (both remain supported).
 it('ships separate, valid SMTP and Resend authentication examples', async () => {
   const example = await readFile(
     new URL('../../config.example.yml', import.meta.url),
@@ -78,4 +81,89 @@ it('ships separate, valid SMTP and Resend authentication examples', async () => 
     await rm(directory, { recursive: true, force: true });
   }
   expect(example).not.toContain('emailChannel:');
+});
+
+it('ships a valid shared mailer example with private mapped credentials', async () => {
+  const example = await readFile(
+    new URL('../../config.example.yml', import.meta.url),
+    'utf8',
+  );
+  const block = example.match(/^# mailers:\n(?:#.*\n)+/m)?.[0];
+  expect(block).toBeTruthy();
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'mailers-example-'));
+  try {
+    const file = path.join(directory, 'config.yml');
+    await writeFile(file, block!.replace(/^# ?/gm, ''));
+    const config = new AppConfig().loadFile(file);
+    await config.loadAll();
+    const defaults = defaultAppConfigs({ auth, mailers });
+    config.mergeDefaults(defaults({} as never));
+    config.defineSections(defaults.sections!);
+    await config.loadSectionEnvironment({
+      MAILERS_SYSTEM_PASSWORD: 'synthetic-password',
+    });
+    expect(await config.validate()).toEqual([]);
+    expect(config.get('mailers.default')).toBe('system');
+    expect(config.get('mailers.system.auth.pass')).toBe('synthetic-password');
+    expect(JSON.stringify(config.publicValues())).not.toContain(
+      'synthetic-password',
+    );
+    // Application change: the CRM turns self-service reset on (server/config/auth.ts).
+    expect(config.get('auth.passwordReset.enabled')).toBe(true);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+  expect(example).not.toContain('emailChannel:');
+});
+
+it('accepts an entirely environment-configured shared sender without enabling recovery', async () => {
+  const config = new AppConfig();
+  await config.loadAll();
+  const defaults = defaultAppConfigs({ auth, mailers });
+  config.mergeDefaults(defaults({} as never));
+  config.defineSections(defaults.sections!);
+  await config.loadSectionEnvironment({
+    MAILERS_DEFAULT: 'system',
+    MAILERS_SYSTEM_PROVIDER: 'smtp',
+    MAILERS_SYSTEM_HOST: 'localhost',
+    MAILERS_SYSTEM_PORT: '2525',
+    MAILERS_SYSTEM_SECURE: 'false',
+  });
+  expect(await config.validate()).toEqual([]);
+  expect(config.get('mailers.system')).toMatchObject({
+    provider: 'smtp',
+    port: 2525,
+    secure: false,
+  });
+  // Application change: the CRM turns self-service reset on (server/config/auth.ts).
+  expect(config.get('auth.passwordReset.enabled')).toBe(true);
+  expect(config.environmentVariableMappings()).toMatchObject({
+    MAILERS_DEFAULT: { path: 'mailers.default' },
+    MAILERS_SYSTEM_PASSWORD: {
+      path: 'mailers.system.auth.pass',
+      secret: true,
+    },
+  });
+});
+
+it('loads the direct password-reset reference from the inherited environment mapping', async () => {
+  const config = new AppConfig();
+  await config.loadAll();
+  const defaults = defaultAppConfigs({ auth, mailers });
+  config.mergeDefaults(defaults({} as never));
+  config.defineSections(defaults.sections!);
+  await config.loadSectionEnvironment({
+    AUTH_PASSWORD_RESET_MAILER: 'system',
+    MAILERS_SYSTEM_PROVIDER: 'smtp',
+    MAILERS_SYSTEM_HOST: 'localhost',
+    MAILERS_SYSTEM_PORT: '2525',
+  });
+  expect(await config.validate()).toEqual([]);
+  expect(config.get('auth.passwordReset.mailer')).toBe('system');
+  // Application change: the CRM turns self-service reset on (server/config/auth.ts).
+  expect(config.get('auth.passwordReset.enabled')).toBe(true);
+  expect(config.environmentVariableMappings()).toMatchObject({
+    AUTH_PASSWORD_RESET_MAILER: { path: 'auth.passwordReset.mailer' },
+  });
+  expect(config.publicValues()).not.toHaveProperty('auth.passwordReset');
 });

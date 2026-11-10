@@ -1931,6 +1931,19 @@ export const crmViVN: CrmWording = {
     skills: 'Kỹ năng',
     usage: 'Mức sử dụng',
   },
+  settingsCards: {
+    general:
+      'Múi giờ, tiền tệ và ngôn ngữ AI mà CRM sử dụng, cùng các lời nhắc CRM gửi đi.',
+    approvalFlow:
+      'Ai được phê duyệt, và các trạng thái mà một phê duyệt trải qua.',
+    demoData:
+      'Nhập dữ liệu mẫu hư cấu để dùng thử CRM, và xóa đi khi bạn dùng xong.',
+    demoEnvironment: 'Tạo, xóa và đặt lại dữ liệu hư cấu của trang demo.',
+    users: 'Tài khoản, vai trò của từng người và lời mời.',
+    roles: 'Mỗi vai trò được mở trang nào, làm gì và thấy những bản ghi nào.',
+    apiKeys: 'Các khóa cho phép script và Agent gọi CRM với tư cách của bạn.',
+    scheduledTasks: 'Các tác vụ chạy định kỳ của CRM và kết quả các lần chạy.',
+  },
   admin: {
     common: {
       loading: 'Đang tải',
@@ -2327,6 +2340,168 @@ export const crmViVN: CrmWording = {
         cancelled: 'Đã hủy',
         timed_out: 'Hết thời gian',
         triggered: 'Đã kích hoạt',
+      },
+    },
+    notificationTemplates: {
+      intro:
+        'Các thông báo CRM tự động gửi: khi nào gửi từng loại, ai nhận và nội dung ở mỗi ngôn ngữ. Không thể thay đổi gì ở đây.',
+      search: 'Tìm kiếm',
+      searchPlaceholder: 'Tên hoặc mô tả',
+      category: 'Danh mục',
+      channel: 'Kênh',
+      all: 'Tất cả',
+      empty: 'Chưa có thông báo nào được đăng ký.',
+      noResults: 'Không có thông báo nào khớp với tìm kiếm và bộ lọc.',
+      what: 'các mẫu thông báo',
+      whatOne: 'mẫu thông báo này',
+      when: 'Khi nào gửi',
+      who: 'Ai nhận',
+      conditions: 'Điều kiện gửi',
+      language: 'Ngôn ngữ',
+      source: 'Cung cấp bởi',
+      channels: 'Kênh gửi',
+      channelsHint:
+        'Đã thiết lập và đã bật không có nghĩa là kết nối chắc chắn hoạt động.',
+      channelState: {
+        configured: 'Đã thiết lập',
+        unconfigured: 'Chưa thiết lập',
+        enabled: 'Đã bật',
+        disabled: 'Đã tắt',
+        unknown: 'Không rõ',
+      },
+      variables: 'Biến',
+      preview: 'Xem trước',
+      previewLanguage: 'Ngôn ngữ xem trước',
+      previewAllLanguages:
+        'Email này gồm tất cả các ngôn ngữ cùng lúc; mọi người nhận đều nhận cùng một nội dung.',
+      example: 'Ví dụ',
+      definition: 'Mẫu gốc',
+      synthetic:
+        'Dữ liệu mẫu hư cấu. Xem trước không gửi gì và không thay đổi gì.',
+      html: 'Bản HTML',
+      channelTypes: {
+        'in-app': 'Trong ứng dụng',
+        email: 'Email',
+      },
+      contributors: {
+        crm: 'NocoCRM',
+        users: 'Người dùng',
+      },
+      categories: {
+        accounts: 'Tài khoản',
+        records: 'Bản ghi',
+        tasks: 'Công việc',
+        comments: 'Bình luận',
+        signals: 'Tín hiệu công ty',
+        approvals: 'Phê duyệt',
+      },
+      switchRule:
+        'Được gửi khi “{{switch}}” đang bật trong Cài đặt › Chung › Nhắc nhở (mặc định bật).',
+      always:
+        'Không bao giờ gửi cho người thực hiện thay đổi, về bản ghi đã bị xóa hoặc tới tài khoản đã bị vô hiệu hóa, và chỉ gửi khi người nhận vẫn còn xem được bản ghi.',
+      crmLanguage:
+        'Bằng ngôn ngữ của từng người nhận, ngôn ngữ họ đã chọn trong menu tài khoản; bằng tiếng Anh nếu chưa chọn.',
+      items: {
+        recordAssigned: {
+          name: 'Bản ghi được giao',
+          trigger:
+            'Khách hàng tiềm năng, cơ hội, công ty, liên hệ, công việc hoặc phê duyệt có người phụ trách mới, kể cả bản ghi mới được tạo cho người khác.',
+          recipients: 'Người phụ trách mới.',
+        },
+        taskInvited: {
+          name: 'Được thêm vào công việc',
+          trigger:
+            'Một người được thêm vào danh sách người tham gia công việc.',
+          recipients: 'Từng người tham gia được thêm.',
+        },
+        taskRemoved: {
+          name: 'Bị gỡ khỏi công việc',
+          trigger: 'Một người bị gỡ khỏi danh sách người tham gia công việc.',
+          recipients: 'Từng người tham gia bị gỡ.',
+        },
+        taskCancelled: {
+          name: 'Công việc bị hủy',
+          trigger: 'Một công việc bị hủy.',
+          recipients:
+            'Những người tham gia vẫn còn trong công việc (không gồm người phụ trách).',
+        },
+        taskRescheduled: {
+          name: 'Công việc được dời lịch',
+          trigger:
+            'Thời gian của công việc thay đổi, trừ khi công việc đã bị hủy.',
+          recipients:
+            'Những người tham gia vẫn còn trong công việc (không gồm người phụ trách).',
+        },
+        taskStarting: {
+          name: 'Công việc sắp bắt đầu',
+          trigger:
+            'Một công việc có giờ cụ thể, không chỉ có ngày, sắp bắt đầu, trong khoảng thời gian báo trước đặt tại Cài đặt › Chung › Nhắc nhở.',
+          recipients: 'Người phụ trách công việc và những người tham gia.',
+          rule: 'Mỗi người chỉ một lần cho mỗi công việc và giờ bắt đầu.',
+        },
+        commentMentioned: {
+          name: 'Được nhắc đến trong bình luận',
+          trigger:
+            'Một bình luận @-nhắc đến đồng nghiệp, khi viết hoặc khi chỉnh sửa thêm lượt nhắc đến.',
+          recipients: 'Từng đồng nghiệp mới được nhắc đến.',
+          rule: 'Mỗi người chỉ một lần cho mỗi bình luận.',
+        },
+        commentReplied: {
+          name: 'Trả lời trong chuỗi bình luận',
+          trigger: 'Có người trả lời một bình luận hoặc một câu trả lời.',
+          recipients:
+            'Mọi người đã viết trong chuỗi thảo luận; người được @-nhắc đến trong câu trả lời sẽ nhận thông báo nhắc đến thay vào đó.',
+          rule: 'Mỗi người chỉ một lần cho mỗi câu trả lời.',
+        },
+        companySignal: {
+          name: 'Tin tức công ty',
+          trigger:
+            'Đợt kiểm tra tín hiệu công ty tìm thấy tin tức về một công ty qua tìm kiếm web của AI.',
+          recipients:
+            'Người phụ trách công ty và người phụ trách các cơ hội đang mở của công ty.',
+          rule: 'Mỗi người chỉ một lần cho mỗi tin; thông báo mở tab Tín hiệu của công ty.',
+        },
+        approvalPending: {
+          name: 'Có yêu cầu phê duyệt',
+          trigger: 'Một yêu cầu phê duyệt được gửi.',
+          recipients: 'Người phê duyệt.',
+        },
+        approvalWithdrawn: {
+          name: 'Yêu cầu phê duyệt đã rút lại',
+          trigger: 'Người yêu cầu rút lại yêu cầu đã gửi.',
+          recipients: 'Người phê duyệt.',
+        },
+        approvalApproved: {
+          name: 'Yêu cầu phê duyệt đã được duyệt',
+          trigger: 'Người phê duyệt phê duyệt một yêu cầu.',
+          recipients: 'Người yêu cầu.',
+        },
+        approvalRejected: {
+          name: 'Yêu cầu phê duyệt bị từ chối',
+          trigger: 'Người phê duyệt từ chối một yêu cầu.',
+          recipients: 'Người yêu cầu.',
+        },
+        usersInvitation: {
+          name: 'Lời mời người dùng',
+          trigger:
+            'Quản trị viên mời ai đó hoặc gửi lại lời mời, và chọn gửi qua email.',
+          recipients: 'Địa chỉ email của người được mời.',
+          rule: 'Được gửi với mọi lời mời gửi qua email; không có công tắc để tắt.',
+          language:
+            'Một email gồm tất cả ngôn ngữ được hỗ trợ, tiêu đề bằng tiếng Anh; đổi ngôn ngữ xem trước không làm thay đổi nội dung.',
+        },
+      },
+      variableText: {
+        entity:
+          'Loại bản ghi, hiển thị bằng ngôn ngữ của người nhận (khách hàng tiềm năng, cơ hội, công ty, liên hệ, công việc, phê duyệt).',
+        record:
+          'Loại bản ghi như khi đứng trong câu (như “a lead” trong tiếng Anh), dành cho các ngôn ngữ cần đến.',
+        name: 'Tên bản ghi như CRM hiển thị: “tên / công ty” với khách hàng tiềm năng hoặc liên hệ, “công ty / tên” với cơ hội.',
+        app: 'Tên ứng dụng.',
+        inviter: 'Người gửi lời mời.',
+        items: 'Vai trò hoặc quyền truy cập được cấp.',
+        date: 'Thời điểm lời mời hết hạn.',
+        url: 'Liên kết mời dùng một lần; bản xem trước dùng liên kết hư cấu.',
       },
     },
   },

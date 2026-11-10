@@ -1,7 +1,9 @@
 import fileUi from '../extensions/nocobase-file-component-ui/locales/id-ID.js';
+import notificationLogsUi from '../extensions/nocobase-notification-logs-ui/locales/id-ID.js';
 import type { AppResource } from './en-US.js';
 import { crmIdID } from './crm/id-ID.js';
 import settingsIdID from './settings/id-ID.js';
+import databaseExplorer from './database-explorer/id-ID.js';
 
 // The pages in id-ID: the template's copy (./system/) and the CRM's own
 // (./crm/id-ID.ts), with the same keys as ./en-US.ts. The template ships no
@@ -9,6 +11,7 @@ import settingsIdID from './settings/id-ID.js';
 // fails the type check until they are translated.
 const idID: AppResource = {
   ...fileUi,
+  ...notificationLogsUi,
   'auth.passwordResetSuccess':
     'Kata sandi Anda telah diatur ulang. Masuk dengan kata sandi baru Anda.',
   'auth.requestNewResetLink': 'Minta tautan atur ulang baru',
@@ -16,6 +19,23 @@ const idID: AppResource = {
   'auth.connectionFailed': 'Tidak dapat terhubung',
   'auth.connectionFailedDescription':
     'Koneksi waktu nyata tidak dapat disiapkan. Coba lagi untuk masuk ke aplikasi, atau keluar.',
+  // The template's Database Explorer copy, translated in ./database-explorer/.
+  databaseExplorer,
+  taskProgress: {
+    queued: 'Menunggu dimulai',
+    running: 'Sedang berjalan',
+    completed: 'Selesai',
+    failed: 'Gagal',
+    canceled: 'Dibatalkan',
+    count: '{{processed}} dari {{total}}',
+    processed: '{{processed}} diproses',
+    background: 'Tetap berjalan meskipun Anda meninggalkan halaman ini.',
+  },
+  pendingFeedback: {
+    working: 'Memproses…',
+    longWait:
+      'Ini memakan waktu lebih lama dari biasanya. Anda dapat terus menunggu.',
+  },
   listFeedback: {
     loading: 'Memuat',
     empty: 'Belum ada data',
@@ -128,6 +148,9 @@ const idID: AppResource = {
     'Masuk dengan nama pengguna atau email dan kata sandi Anda.',
   'auth.registerTitle': 'Buat akun',
   'auth.registerDescription': 'Buat akun untuk memulai.',
+  'auth.registrationAccepted': 'Permintaan pendaftaran dikirim',
+  'auth.registrationGuidance':
+    'Coba masuk dengan nama pengguna dan kata sandi yang Anda kirim. Jika email ini sudah memiliki akun, data baru tidak akan berlaku. Masuk dengan akun asli Anda atau pulihkan kata sandi. Ikuti petunjuk verifikasi dari aplikasi sebelum masuk.',
   'auth.forgotTitle': 'Lupa kata sandi',
   'auth.forgotDescription':
     'Masukkan email Anda dan kami akan mengirim tautan atur ulang jika akunnya ada.',
@@ -171,9 +194,9 @@ const idID: AppResource = {
   'auth.continueWith': 'Lanjutkan dengan {provider}',
   'auth.about': 'Tentang aplikasi ini',
   'auth.platform': 'Platform aplikasi berbasis AI',
-  'auth.marketingTitleFirst': 'Biarkan AI membangun dengan bebas.',
-  'auth.marketingTitleSecond': 'NocoBase menjaganya tetap',
-  'auth.marketingTitleThird': 'andal.',
+  // The template's brand line (its zh-CN keeps it in English too).
+  'auth.marketingTitleFirst': 'AI + NocoBase',
+  'auth.marketingTitleSecond': 'Build reliable business systems',
   'auth.marketingDescription':
     'Beri AI kerangka frontend yang fleksibel untuk membentuk setiap pengalaman, sementara NocoBase mengamankan data, izin, dan tata kelola di bawahnya.',
   'auth.frontend': 'Frontend berbasis AI',
@@ -188,6 +211,10 @@ const idID: AppResource = {
   'status.denied': 'Akses ditolak',
   'status.pageFailed': 'Tidak dapat memuat halaman',
   'status.retry': 'Coba lagi',
+  'status.refreshing': 'Memperbarui',
+  'status.reloadPage': 'Muat ulang halaman',
+  'status.retryFailedDescription':
+    'Masih belum dapat dimuat. Memuat ulang seluruh halaman mungkin membantu; perubahan yang belum disimpan di halaman ini bisa hilang.',
   'navigation.brandHome': 'Beranda NocoCRM',
   'navigation.brandApps': 'Aplikasi NocoBase',
   'routeOverlay.close': 'Tutup',
@@ -195,9 +222,10 @@ const idID: AppResource = {
     'Anda tidak memiliki izin untuk mengakses {{label}}.',
   'status.routeFailedDescription':
     'Rute {{label}} dari {{packageName}} tidak dapat dimuat.',
+  // The template's brand line, which its own zh-CN keeps in English too.
   shell: {
-    buildFreely: 'AI membangun dengan bebas.',
-    reliability: '<brand>NocoBase</brand> menjaganya tetap andal.',
+    brandPartnership: 'AI + <brand>NocoBase</brand>',
+    buildReliableSystems: 'Build reliable business systems',
   },
   home: {
     platform: 'NocoBase · Platform aplikasi berbasis AI',
@@ -455,6 +483,7 @@ const idID: AppResource = {
   },
   navigation: {
     home: 'Beranda',
+    resources: 'Sumber daya',
     open: 'Buka navigasi',
     close: 'Tutup navigasi',
     expand: 'Bentangkan navigasi',
@@ -465,6 +494,7 @@ const idID: AppResource = {
     breadcrumb: 'Jejak navigasi',
     breadcrumbMore: 'Tampilkan tingkat di antaranya',
     back: 'Kembali',
+    backTo: 'Kembali ke {{label}}',
   },
   dataTable: {
     noResults: 'Tidak ada hasil.',
@@ -484,6 +514,7 @@ const idID: AppResource = {
   datePicker: {
     placeholder: 'Pilih tanggal',
     rangePlaceholder: 'Pilih rentang tanggal',
+    clear: 'Hapus',
   },
   flowDiagram: {
     controls: 'Kontrol diagram',
@@ -607,7 +638,13 @@ const idID: AppResource = {
     },
   },
   // The template's Settings copy, translated in ./settings/.
-  settings: settingsIdID,
+  settings: {
+    ...settingsIdID,
+    // The Notification management module's logs tab, named as the
+    // notification-logs-ui block names it
+    // (client/pages/settings/routes.ts).
+    notificationLogs: 'Log pemberitahuan',
+  },
   crm: crmIdID,
 };
 

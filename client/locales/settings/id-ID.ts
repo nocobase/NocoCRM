@@ -4,6 +4,10 @@ import type settingsEnUS from '../system/settings-en-US.js';
 // The template's Settings copy (client/locales/system/settings-en-US.ts): the
 // prepared Users and Roles pages and the permission editor, in id-ID.
 const settings: LocaleResource<typeof settingsEnUS> = {
+  notificationManagementDescription:
+    'Lacak pengiriman notifikasi dan lihat templat yang terdaftar beserta pratinjau konten sintetis.',
+  notificationTemplates: 'Templat notifikasi',
+  notificationManagement: 'Manajemen notifikasi',
   listChanged: 'Daftar telah berubah. Coba lagi.',
   setup: {
     title: 'Prasyarat fitur',
@@ -105,6 +109,19 @@ const settings: LocaleResource<typeof settingsEnUS> = {
 
   reload: 'Muat ulang peran',
   title: 'Pengaturan sistem',
+  home: {
+    description:
+      'Akun, izin, konfigurasi bisnis, dan kemampuan sistem semuanya ada di sini.',
+    empty: 'Belum ada pengaturan yang tersedia untuk Anda.',
+  },
+  categories: {
+    account: 'Akun dan izin',
+    business: 'Konfigurasi bisnis',
+    ai: 'AI',
+    system: 'Sistem',
+  },
+  permissionManagementDescription:
+    'Atur apa yang dapat dibuka dan dilakukan setiap peran, serta data yang dapat dilihatnya.',
   users: 'Pengguna',
   roles: 'Peran dan izin',
   usersDescription: 'Kelola akun, akses, dan sesi aktif.',

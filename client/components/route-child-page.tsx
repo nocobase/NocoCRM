@@ -1,16 +1,21 @@
 import {
+  RouteChildPageHostContext,
+  type RouteChildPageHostValue,
+} from '@nocobase/app-client/route-containers';
+import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
+  useMemo,
   useRef,
+  useState,
   type ReactElement,
   type ReactNode,
   type RefObject,
 } from 'react';
 
 import { cn } from 'cn';
-
-import { PageFrameContext } from './page-frame.js';
 
 export interface RouteChildPageProps {
   readonly children?: ReactNode;
@@ -38,7 +43,58 @@ const EnclosingLayerContext =
  * the tab's outlet — anchors to the outer element: it covers this layer whole instead of scrolling out of sight with
  * the content once the user has scrolled this page.
  */
-export function RouteChildPage({
+export function RouteChildPage(props: RouteChildPageProps): ReactElement {
+  const host = useContext(RouteChildPageHostContext);
+  if (host) return <HostedRouteChildPage host={host} {...props} />;
+  return <RouteChildPageLayer {...props} />;
+}
+
+// Inside the layer the application opened, the page's `RouteChildPage` adds no second layer: its content renders in
+// that layer and its `className` moves onto it, so a migrated page keeps its layout.
+function HostedRouteChildPage({
+  host,
+  children,
+  className,
+}: RouteChildPageProps & {
+  readonly host: RouteChildPageHostValue;
+}): ReactElement {
+  useLayoutEffect(() => {
+    host.configure({ className });
+    return () => host.configure({});
+  }, [host, className]);
+  return (
+    <RouteChildPageHostContext.Provider value={null}>
+      {children}
+    </RouteChildPageHostContext.Provider>
+  );
+}
+
+/**
+ * The layer the application opens for a route that declares a `child-page` presentation, before the page module, its
+ * authorization check or its data are ready. Waiting, denial and failure render inside it; once the page renders, its
+ * own `RouteChildPage` contributes content to this layer. Everything the hosted page renders, including an outlet it
+ * places beside its `RouteChildPage`, is inside the layer, so a deeper child page covers this one whole.
+ */
+export function RouteChildPageHost({
+  children,
+}: {
+  readonly children?: ReactNode;
+}): ReactElement {
+  const [className, setClassName] = useState<string>();
+  const host = useMemo<RouteChildPageHostValue>(
+    () => ({ configure: (config) => setClassName(config.className) }),
+    [],
+  );
+  return (
+    <RouteChildPageLayer className={className}>
+      <RouteChildPageHostContext.Provider value={host}>
+        {children}
+      </RouteChildPageHostContext.Provider>
+    </RouteChildPageLayer>
+  );
+}
+
+function RouteChildPageLayer({
   children,
   className,
 }: RouteChildPageProps): ReactElement {
@@ -115,13 +171,22 @@ export function RouteChildPage({
         ref={scrollerRef}
       >
         <EnclosingLayerContext.Provider value={scrollerRef}>
-          {/* Application change: a covering page draws its own heading, not
-              the tabs of the page it covers (page-frame.ts). */}
-          <PageFrameContext.Provider value={false}>
-            {children}
-          </PageFrameContext.Provider>
+          {children}
         </EnclosingLayerContext.Provider>
       </div>
     </div>
+  );
+}
+
+/** Ends a `RouteChildPageHost`'s reach, so a route rendered inside one that is not hosted builds its own layer. */
+export function RouteChildPageHostBoundary({
+  children,
+}: {
+  readonly children?: ReactNode;
+}): ReactElement {
+  return (
+    <RouteChildPageHostContext.Provider value={null}>
+      {children}
+    </RouteChildPageHostContext.Provider>
   );
 }

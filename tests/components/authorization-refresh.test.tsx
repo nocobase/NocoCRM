@@ -1,5 +1,7 @@
 import { render, renderHook, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
+import { NavigationGuardProvider } from '@nocobase/app-client';
+import { MemoryRouter } from 'react-router';
 import type { AppClientRegisteredRoute } from '@nocobase/app-client/plugins';
 import { useRouteNavigation } from '../../client/routing/route-navigation.js';
 import { ClientRoute } from '../../client/routing/client-route.js';
@@ -63,7 +65,10 @@ it('hides a mounted menu while a new permission revision is checked', async () =
   await waitFor(() => expect(result.current.loading).toBe(false));
   expect(result.current.items).toHaveLength(0);
 });
-it('removes already loaded page content when authorization has no valid result', async () => {
+// Since template 1.0.0-beta.92 a recheck conceals an allowed page with React
+// Activity, keeping its drafts, and only a settled denial removes it; the
+// route's leave guard needs the application's NavigationGuardProvider.
+it('hides loaded page content while authorization rechecks and removes it on denial', async () => {
   const route = {
     id: 'users',
     name: 'users',
@@ -73,13 +78,24 @@ it('removes already loaded page content when authorization has no valid result',
     authz,
     componentLoader: async () => ({ default: () => <p>Protected content</p> }),
   } as unknown as AppClientRegisteredRoute;
-  const { rerender } = render(<ClientRoute route={route} />);
+  // A new element each time, so every rerender reads the mocked decision.
+  const view = () => (
+    <MemoryRouter>
+      <NavigationGuardProvider>
+        <ClientRoute route={route} />
+      </NavigationGuardProvider>
+    </MemoryRouter>
+  );
+  const { rerender } = render(view());
   await screen.findByText('Protected content');
   state.decision = undefined;
   state.revision++;
-  rerender(<ClientRoute route={route} />);
-  expect(screen.queryByText('Protected content')).not.toBeInTheDocument();
+  rerender(view());
+  await waitFor(() =>
+    expect(screen.getByText('Protected content')).not.toBeVisible(),
+  );
   state.decision = false;
-  rerender(<ClientRoute route={route} />);
+  rerender(view());
+  expect(screen.queryByText('Protected content')).not.toBeInTheDocument();
   expect(screen.getByText('Access denied')).toBeInTheDocument();
 });

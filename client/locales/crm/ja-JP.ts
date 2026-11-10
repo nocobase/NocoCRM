@@ -1922,6 +1922,18 @@ export const crmJaJP: CrmWording = {
     skills: 'スキル',
     usage: '使用量',
   },
+  settingsCards: {
+    general:
+      'CRM が使うタイムゾーン、通貨、AI の言語と、CRM が送るリマインダー。',
+    approvalFlow: '承認できるユーザーと、承認がたどるステータス。',
+    demoData:
+      '架空のサンプルデータをインポートして CRM を試し、終わったら削除できます。',
+    demoEnvironment: 'デモサイトの架空データを生成、削除、リセットします。',
+    users: 'アカウント、各ユーザーのロール、招待。',
+    roles: '各ロールが開けるページ、実行できる操作、表示できるレコード。',
+    apiKeys: 'スクリプトや Agent があなたとして CRM を呼び出すためのキー。',
+    scheduledTasks: 'CRM が定期的に実行する処理と、その実行結果。',
+  },
   admin: {
     common: {
       loading: '読み込み中',
@@ -2318,6 +2330,163 @@ export const crmJaJP: CrmWording = {
         cancelled: 'キャンセル済み',
         timed_out: 'タイムアウト',
         triggered: 'トリガー済み',
+      },
+    },
+    notificationTemplates: {
+      intro:
+        'CRM が自動で送る通知です。それぞれいつ送られ、誰が受け取り、各言語でどんな内容になるかを確認できます。ここでは変更できません。',
+      search: '検索',
+      searchPlaceholder: '名前または説明',
+      category: 'カテゴリ',
+      channel: 'チャネル',
+      all: 'すべて',
+      empty: '登録されている通知はありません。',
+      noResults: '検索とフィルターに一致する通知はありません。',
+      what: '通知テンプレート',
+      whatOne: 'この通知テンプレート',
+      when: '送信タイミング',
+      who: '受信者',
+      conditions: '送信条件',
+      language: '言語',
+      source: '提供元',
+      channels: '送信チャネル',
+      channelsHint: '設定済み・有効でも、接続が正常に動作するとは限りません。',
+      channelState: {
+        configured: '設定済み',
+        unconfigured: '未設定',
+        enabled: '有効',
+        disabled: '無効',
+        unknown: '不明',
+      },
+      variables: '変数',
+      preview: 'プレビュー',
+      previewLanguage: 'プレビューの言語',
+      previewAllLanguages:
+        'このメールはすべての言語を1通にまとめており、受信者全員に同じ内容が届きます。',
+      example: '例',
+      definition: 'テンプレート原文',
+      synthetic:
+        '架空のサンプルデータを使用しています。プレビューしても通知は送信されず、設定も変わりません。',
+      html: 'HTML 版',
+      channelTypes: {
+        'in-app': 'アプリ内',
+        email: 'メール',
+      },
+      contributors: {
+        crm: 'NocoCRM',
+        users: 'ユーザー',
+      },
+      categories: {
+        accounts: 'アカウント',
+        records: 'レコード',
+        tasks: 'タスク',
+        comments: 'コメント',
+        signals: '会社のシグナル',
+        approvals: '承認',
+      },
+      switchRule:
+        '設定 › 一般 › リマインダー の「{{switch}}」がオンのときに送信されます（既定はオン）。',
+      always:
+        '変更した本人、削除されたレコード、無効化されたアカウントには送信されません。また、受信者がそのレコードを閲覧できる場合にのみ届きます。',
+      crmLanguage:
+        '各受信者がアカウントメニューで選んだ言語で送信されます。選んでいない場合は英語です。',
+      items: {
+        recordAssigned: {
+          name: 'レコードの割り当て',
+          trigger:
+            'リード、商談、会社、連絡先、タスク、承認の担当者が変わったとき。他の人のために新しく作成したレコードも含みます。',
+          recipients: '新しい担当者。',
+        },
+        taskInvited: {
+          name: 'タスクへの追加',
+          trigger: 'タスクの参加者に追加されたとき。',
+          recipients: '追加された参加者。',
+        },
+        taskRemoved: {
+          name: 'タスクからの削除',
+          trigger: 'タスクの参加者から外されたとき。',
+          recipients: '外された参加者。',
+        },
+        taskCancelled: {
+          name: 'タスクのキャンセル',
+          trigger: 'タスクがキャンセルされたとき。',
+          recipients: 'タスクに残っている参加者（担当者を除く）。',
+        },
+        taskRescheduled: {
+          name: 'タスクの日程変更',
+          trigger:
+            'タスクの時刻が変更されたとき（キャンセル済みのタスクを除く）。',
+          recipients: 'タスクに残っている参加者（担当者を除く）。',
+        },
+        taskStarting: {
+          name: 'タスクの開始前',
+          trigger:
+            '日付だけでなく時刻が設定されたタスクの開始が近づいたとき。どれだけ前に通知するかは 設定 › 一般 › リマインダー で設定します。',
+          recipients: 'タスクの担当者と参加者。',
+          rule: '同じタスク・同じ開始時刻につき、1 人 1 回のみ。',
+        },
+        commentMentioned: {
+          name: 'コメントでのメンション',
+          trigger:
+            'コメントで同僚が @メンションされたとき。コメントの編集で新たにメンションが追加された場合も含みます。',
+          recipients: '新たにメンションされた同僚。',
+          rule: '同じコメントにつき、1 人 1 回のみ。',
+        },
+        commentReplied: {
+          name: 'コメントスレッドへの返信',
+          trigger: 'コメントまたは返信に誰かが返信したとき。',
+          recipients:
+            'スレッドに書き込んだ全員。返信で @メンションされた人には、代わりにメンションの通知が届きます。',
+          rule: '同じ返信につき、1 人 1 回のみ。',
+        },
+        companySignal: {
+          name: '会社のニュース',
+          trigger:
+            '会社のシグナルチェックで、AI のウェブ検索により会社のニュースが見つかったとき。',
+          recipients: '会社の担当者と、その会社の進行中の商談の担当者。',
+          rule: '同じニュースにつき、1 人 1 回のみ。開くと会社の「シグナル」タブが表示されます。',
+        },
+        approvalPending: {
+          name: '承認の申請',
+          trigger: '承認申請が提出されたとき。',
+          recipients: '承認者。',
+        },
+        approvalWithdrawn: {
+          name: '承認申請の取り下げ',
+          trigger: '申請者が提出済みの申請を取り下げたとき。',
+          recipients: '承認者。',
+        },
+        approvalApproved: {
+          name: '承認申請の承認',
+          trigger: '承認者が申請を承認したとき。',
+          recipients: '申請者。',
+        },
+        approvalRejected: {
+          name: '承認申請の却下',
+          trigger: '承認者が申請を却下したとき。',
+          recipients: '申請者。',
+        },
+        usersInvitation: {
+          name: 'ユーザー招待',
+          trigger:
+            '管理者がユーザーを招待するか招待を再送信し、メールでの送信を選んだとき。',
+          recipients: '招待された人のメールアドレス。',
+          rule: 'メールで送る招待には必ず送信されます。オフにするスイッチはありません。',
+          language:
+            '1 通のメールにサポートされているすべての言語が含まれ、件名は英語です。プレビューの言語を切り替えても内容は変わりません。',
+        },
+      },
+      variableText: {
+        entity:
+          'レコードの種類。受信者の言語で表示されます（リード、商談、会社、連絡先、タスク、承認）。',
+        record:
+          '文中で使うレコードの種類（英語の「a lead」など）。必要な言語でのみ使います。',
+        name: 'CRM の画面と同じレコード名。リードと連絡先は「氏名 / 会社」、商談は「会社 / 商談名」です。',
+        app: 'アプリケーションの名前。',
+        inviter: '招待した人。',
+        items: '付与されるロールまたはアクセス権。',
+        date: '招待の有効期限。',
+        url: '1 回限りの招待リンク。プレビューでは架空のリンクを使います。',
       },
     },
   },

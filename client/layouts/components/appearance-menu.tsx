@@ -26,9 +26,12 @@ const COLOR_MODES = [
 // Application change: the colour mode and the theme from the account menu,
 // beside the language, in place of the header's own palette button, which
 // left the header too crowded for the whole brand on a phone. The choices
-// and their words are the template's panel's (theme/theme-settings.tsx),
-// which the pages outside the shell, sign-in among them, still show; a
-// choice keeps the menu open, so the next can be compared at once.
+// and their words are the template's (theme/theme-settings.tsx), which since
+// template 1.0.0-beta.92 is an account-menu sub-menu as well; this one stays
+// because it names the current colour mode beside its trigger and is
+// labelled Appearance (the CRM keeps `appearance.title` so, see its locales),
+// its two choices grouped under their headings. A choice keeps the menu
+// open, so the next can be compared at once.
 export function AppearanceMenu(): ReactElement {
   const { theme, setTheme } = useTheme();
   const { preset, setPreset } = useThemePreset();

@@ -1941,6 +1941,21 @@ export const crmPtBR: CrmWording = {
     skills: 'Habilidades',
     usage: 'Uso',
   },
+  settingsCards: {
+    general:
+      'O fuso horário, a moeda e o idioma da IA com que o CRM trabalha, e os lembretes que ele envia.',
+    approvalFlow:
+      'Quem pode aprovar e os estados pelos quais uma aprovação passa.',
+    demoData:
+      'Importe dados de exemplo fictícios para experimentar o CRM e remova-os quando terminar.',
+    demoEnvironment:
+      'Gere, limpe e redefina os dados fictícios do site de demonstração.',
+    users: 'As contas, as funções de cada pessoa e os convites.',
+    roles: 'O que cada função pode abrir e fazer, e quais registros ela vê.',
+    apiKeys:
+      'Chaves que permitem que scripts e Agents acessem o CRM em seu nome.',
+    scheduledTasks: 'As execuções recorrentes do CRM e como elas foram.',
+  },
   admin: {
     common: {
       loading: 'Carregando',
@@ -2339,6 +2354,167 @@ export const crmPtBR: CrmWording = {
         cancelled: 'Cancelada',
         timed_out: 'Tempo esgotado',
         triggered: 'Disparada',
+      },
+    },
+    notificationTemplates: {
+      intro:
+        'Notificações que o CRM envia por conta própria: quando cada uma é enviada, quem a recebe e o que ela diz em cada idioma. Nada aqui pode ser alterado.',
+      search: 'Pesquisar',
+      searchPlaceholder: 'Nome ou descrição',
+      category: 'Categoria',
+      channel: 'Canal',
+      all: 'Todas',
+      empty: 'Nenhuma notificação registrada.',
+      noResults: 'Nenhuma notificação corresponde à pesquisa e aos filtros.',
+      what: 'os modelos de notificação',
+      whatOne: 'este modelo de notificação',
+      when: 'Quando é enviada',
+      who: 'Quem recebe',
+      conditions: 'Condições',
+      language: 'Idioma',
+      source: 'Fornecido por',
+      channels: 'Canais',
+      channelsHint:
+        'Estar configurado e ativado não garante que a conexão funcione.',
+      channelState: {
+        configured: 'Configurado',
+        unconfigured: 'Não configurado',
+        enabled: 'Ativado',
+        disabled: 'Desativado',
+        unknown: 'Desconhecido',
+      },
+      variables: 'Variáveis',
+      preview: 'Pré-visualização',
+      previewLanguage: 'Idioma da pré-visualização',
+      previewAllLanguages:
+        'Este e-mail inclui todos os idiomas de uma vez; todos os destinatários recebem a mesma mensagem.',
+      example: 'Exemplo',
+      definition: 'Modelo',
+      synthetic:
+        'Dados de exemplo fictícios. A pré-visualização não envia nada nem altera nada.',
+      html: 'Versão HTML',
+      channelTypes: {
+        'in-app': 'No app',
+        email: 'E-mail',
+      },
+      contributors: {
+        crm: 'NocoCRM',
+        users: 'Usuários',
+      },
+      categories: {
+        accounts: 'Contas',
+        records: 'Registros',
+        tasks: 'Tarefas',
+        comments: 'Comentários',
+        signals: 'Sinais de empresas',
+        approvals: 'Aprovações',
+      },
+      switchRule:
+        'Enviada enquanto "{{switch}}" estiver ativado em Configurações › Geral › Lembretes (ativado por padrão).',
+      always:
+        'Nunca é enviada para quem fez a alteração, sobre um registro excluído nem para uma conta desativada, e só enquanto o destinatário ainda puder ver o registro.',
+      crmLanguage:
+        'No idioma de cada destinatário, o que ele escolheu no menu da conta; em inglês quando não escolheu nenhum.',
+      items: {
+        recordAssigned: {
+          name: 'Registro atribuído',
+          trigger:
+            'Um lead, uma oportunidade, uma empresa, um contato, uma tarefa ou uma aprovação ganha um novo responsável, incluindo um registro novo criado para outra pessoa.',
+          recipients: 'O novo responsável.',
+        },
+        taskInvited: {
+          name: 'Adicionado a uma tarefa',
+          trigger: 'Alguém é adicionado aos participantes de uma tarefa.',
+          recipients: 'Cada participante adicionado.',
+        },
+        taskRemoved: {
+          name: 'Removido de uma tarefa',
+          trigger: 'Alguém é removido dos participantes de uma tarefa.',
+          recipients: 'Cada participante removido.',
+        },
+        taskCancelled: {
+          name: 'Tarefa cancelada',
+          trigger: 'Uma tarefa é cancelada.',
+          recipients:
+            'Os participantes que continuam na tarefa (não o responsável).',
+        },
+        taskRescheduled: {
+          name: 'Tarefa reagendada',
+          trigger:
+            'O horário de uma tarefa é alterado, a menos que ela esteja cancelada.',
+          recipients:
+            'Os participantes que continuam na tarefa (não o responsável).',
+        },
+        taskStarting: {
+          name: 'Tarefa prestes a começar',
+          trigger:
+            'Uma tarefa com horário, não só com data, está prestes a começar, dentro da antecedência definida em Configurações › Geral › Lembretes.',
+          recipients: 'O responsável pela tarefa e os participantes.',
+          rule: 'Uma vez por tarefa, horário de início e pessoa.',
+        },
+        commentMentioned: {
+          name: 'Mencionado em um comentário',
+          trigger:
+            'Um comentário menciona um colega com @, ao ser escrito ou quando uma edição adiciona a menção.',
+          recipients: 'Cada colega mencionado pela primeira vez.',
+          rule: 'Uma vez por comentário e pessoa.',
+        },
+        commentReplied: {
+          name: 'Resposta em uma conversa de comentários',
+          trigger: 'Alguém responde a um comentário ou a uma resposta.',
+          recipients:
+            'Todos que escreveram na conversa; quem a resposta menciona com @ recebe o aviso de menção no lugar.',
+          rule: 'Uma vez por resposta e pessoa.',
+        },
+        companySignal: {
+          name: 'Notícias da empresa',
+          trigger:
+            'A verificação de sinais de empresas encontra notícias sobre uma empresa pela pesquisa na web da IA.',
+          recipients:
+            'O responsável pela empresa e os responsáveis pelas oportunidades abertas dela.',
+          rule: 'Uma vez por notícia e pessoa; abre a aba Sinais da empresa.',
+        },
+        approvalPending: {
+          name: 'Aprovação solicitada',
+          trigger: 'Uma solicitação de aprovação é enviada.',
+          recipients: 'O aprovador.',
+        },
+        approvalWithdrawn: {
+          name: 'Solicitação de aprovação retirada',
+          trigger: 'O solicitante retira uma solicitação enviada.',
+          recipients: 'O aprovador.',
+        },
+        approvalApproved: {
+          name: 'Solicitação de aprovação aprovada',
+          trigger: 'O aprovador aprova uma solicitação.',
+          recipients: 'O solicitante.',
+        },
+        approvalRejected: {
+          name: 'Solicitação de aprovação rejeitada',
+          trigger: 'O aprovador rejeita uma solicitação.',
+          recipients: 'O solicitante.',
+        },
+        usersInvitation: {
+          name: 'Convite de usuário',
+          trigger:
+            'Um administrador convida alguém, ou reenvia um convite, escolhendo o envio por e-mail.',
+          recipients: 'O endereço de e-mail da pessoa convidada.',
+          rule: 'Enviado com todo convite enviado por e-mail; não há chave para desativá-lo.',
+          language:
+            'Um único e-mail em todos os idiomas compatíveis, com o assunto em inglês; o idioma da pré-visualização não o altera.',
+        },
+      },
+      variableText: {
+        entity:
+          'O tipo de registro, no idioma do destinatário (lead, oportunidade, empresa, contato, tarefa, aprovação).',
+        record:
+          'O tipo de registro como aparece dentro de uma frase (em inglês, "a lead"), para os idiomas que precisam disso.',
+        name: 'O nome do registro como o CRM o mostra: "nome / empresa" para um lead ou contato, "empresa / nome" para uma oportunidade.',
+        app: 'O nome do aplicativo.',
+        inviter: 'Quem enviou o convite.',
+        items: 'As funções ou acessos concedidos.',
+        date: 'Quando o convite expira.',
+        url: 'O link de convite de uso único; a pré-visualização usa um fictício.',
       },
     },
   },

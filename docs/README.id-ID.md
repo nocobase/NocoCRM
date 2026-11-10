@@ -10,7 +10,7 @@
 <p align="center">CRM penjualan B2B open source · Dibangun di atas NocoBase</p>
 
 <p align="center">
-  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache-2.0"></a>
+  <a href="../LICENSE.txt"><img src="https://img.shields.io/badge/license-NocoBase-blue" alt="NocoBase License"></a>
   <a href="https://github.com/nocobase/NocoCRM/tags"><img src="https://img.shields.io/github/v/tag/nocobase/NocoCRM?label=version&sort=semver&include_prereleases" alt="version"></a>
   <a href="https://www.nocobase.com"><img src="https://img.shields.io/badge/built%20on-NocoBase-1f6feb" alt="Built on NocoBase"></a>
 </p>
@@ -37,7 +37,7 @@ https://github.com/user-attachments/assets/004dc069-299b-43e4-b515-825e9e71de55
 - **Persetujuan tidak lagi macet.** Agen persetujuan memeriksa diskon atau ketentuan terhadap aturan dan keputusan Anda sebelumnya, lalu menyusun rekomendasi dan komentar untuk pemberi persetujuan.
 - **Seluruh siklus penjualan.** Prospek, perusahaan, kontak, peluang, tugas, persetujuan, dan laporan, dengan papan peluang, kalender tugas, pencarian di semua data (⌘K / Ctrl+K), dan peran yang ditegakkan server untuk setiap data.
 - **Bisa disesuaikan.** Tulis harga, batas diskon, dan ritme tindak lanjut sebagai panduan bisnis dalam teks biasa, dan setiap agen mengikutinya; cara kerja setiap agen adalah keahlian yang bisa Anda ubah. Kode sumbernya terbuka, jadi sisanya bisa diubah oleh agen pemrograman.
-- **Di-host sendiri.** Data tetap di server Anda, dengan model pilihan Anda: DeepSeek, OpenAI, Claude, Gemini, Qwen, dan lainnya. Apache-2.0.
+- **Di-host sendiri.** Data tetap di server Anda, dengan model pilihan Anda: DeepSeek, OpenAI, Claude, Gemini, Qwen, dan lainnya.
 
 ## Mulai cepat
 
@@ -79,4 +79,4 @@ Untuk produksi, lihat [Deployment](guide.md#deployment); untuk PostgreSQL dan My
 
 ## Lisensi
 
-NocoCRM dibangun di atas NocoBase dan dirilis dengan lisensi [Apache-2.0](../LICENSE).
+NocoCRM dibangun di atas NocoBase dan dirilis dengan [Lisensi NocoBase](../LICENSE.txt).

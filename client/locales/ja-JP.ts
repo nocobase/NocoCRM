@@ -1,7 +1,9 @@
 import fileUi from '../extensions/nocobase-file-component-ui/locales/ja-JP.js';
+import notificationLogsUi from '../extensions/nocobase-notification-logs-ui/locales/ja-JP.js';
 import type { AppResource } from './en-US.js';
 import { crmJaJP } from './crm/ja-JP.js';
 import settingsJaJP from './settings/ja-JP.js';
+import databaseExplorer from './database-explorer/ja-JP.js';
 
 // The pages in ja-JP: the template's copy (./system/) and the CRM's own
 // (./crm/ja-JP.ts), with the same keys as ./en-US.ts. The template ships no
@@ -9,6 +11,7 @@ import settingsJaJP from './settings/ja-JP.js';
 // fails the type check until they are translated.
 const jaJP: AppResource = {
   ...fileUi,
+  ...notificationLogsUi,
   'auth.passwordResetSuccess':
     'パスワードがリセットされました。新しいパスワードでログインしてください。',
   'auth.requestNewResetLink': 'リセットリンクを再申請',
@@ -16,6 +19,22 @@ const jaJP: AppResource = {
   'auth.connectionFailed': '接続できません',
   'auth.connectionFailedDescription':
     'リアルタイム接続を準備できませんでした。再試行してアプリに入るか、ログアウトしてください。',
+  // The template's Database Explorer copy, translated in ./database-explorer/.
+  databaseExplorer,
+  taskProgress: {
+    queued: '開始待ち',
+    running: '実行中',
+    completed: '完了',
+    failed: '失敗',
+    canceled: 'キャンセル済み',
+    count: '{{total}} 件中 {{processed}} 件',
+    processed: '{{processed}} 件処理済み',
+    background: 'このページを離れても処理は続きます。',
+  },
+  pendingFeedback: {
+    working: '処理中…',
+    longWait: 'いつもより時間がかかっています。このままお待ちいただけます。',
+  },
   listFeedback: {
     loading: '読み込み中',
     empty: 'データがありません',
@@ -131,6 +150,9 @@ const jaJP: AppResource = {
     'ユーザー名またはメールアドレスとパスワードでログインしてください。',
   'auth.registerTitle': 'アカウントを作成',
   'auth.registerDescription': 'アカウントを作成して始めましょう。',
+  'auth.registrationAccepted': '登録リクエストを送信しました',
+  'auth.registrationGuidance':
+    '送信したユーザー名とパスワードでサインインしてみてください。このメールアドレスのアカウントが既にある場合、新しい情報は反映されません。元のアカウントでサインインするか、パスワードを再設定してください。サインインの前に、アプリケーションが示す確認手順に従ってください。',
   'auth.forgotTitle': 'パスワードをお忘れの場合',
   'auth.forgotDescription':
     'メールアドレスを入力してください。アカウントが存在する場合、リセットリンクをお送りします。',
@@ -174,9 +196,9 @@ const jaJP: AppResource = {
   'auth.continueWith': '{provider} で続行',
   'auth.about': 'このアプリケーションについて',
   'auth.platform': 'AI ネイティブなアプリケーションプラットフォーム',
-  'auth.marketingTitleFirst': 'AI は自由に構築し、',
-  'auth.marketingTitleSecond': 'NocoBase が',
-  'auth.marketingTitleThird': '信頼性を支える。',
+  // The template's brand line (its zh-CN keeps it in English too).
+  'auth.marketingTitleFirst': 'AI + NocoBase',
+  'auth.marketingTitleSecond': 'Build reliable business systems',
   'auth.marketingDescription':
     'AI には柔軟なフロントエンドフレームワークで自在に体験を作らせ、その下のデータ、権限、ガバナンスは NocoBase が守ります。',
   'auth.frontend': 'AI ネイティブなフロントエンド',
@@ -190,15 +212,20 @@ const jaJP: AppResource = {
   'status.denied': 'アクセスが拒否されました',
   'status.pageFailed': 'ページを読み込めません',
   'status.retry': '再試行',
+  'status.refreshing': '更新中',
+  'status.reloadPage': 'ページを再読み込み',
+  'status.retryFailedDescription':
+    'まだ読み込めません。ページ全体を再読み込みすると解決する場合がありますが、このページの未保存の変更は失われる可能性があります。',
   'navigation.brandHome': 'NocoCRM ホーム',
   'navigation.brandApps': 'NocoBase アプリケーション',
   'routeOverlay.close': '閉じる',
   'status.deniedDescription': '{{label}} にアクセスする権限がありません。',
   'status.routeFailedDescription':
     '{{packageName}} のルート {{label}} を読み込めませんでした。',
+  // The template's brand line, which its own zh-CN keeps in English too.
   shell: {
-    buildFreely: 'AI は自由に構築する。',
-    reliability: '<brand>NocoBase</brand> が信頼性を支える。',
+    brandPartnership: 'AI + <brand>NocoBase</brand>',
+    buildReliableSystems: 'Build reliable business systems',
   },
   home: {
     platform: 'NocoBase · AI ネイティブなアプリケーションプラットフォーム',
@@ -456,6 +483,7 @@ const jaJP: AppResource = {
   },
   navigation: {
     home: 'ホーム',
+    resources: 'リソース',
     open: 'ナビゲーションを開く',
     close: 'ナビゲーションを閉じる',
     expand: 'ナビゲーションを展開',
@@ -466,6 +494,7 @@ const jaJP: AppResource = {
     breadcrumb: 'パンくずリスト',
     breadcrumbMore: '中間の階層を表示',
     back: '戻る',
+    backTo: '{{label}} に戻る',
   },
   dataTable: {
     noResults: '結果がありません。',
@@ -485,6 +514,7 @@ const jaJP: AppResource = {
   datePicker: {
     placeholder: '日付を選択',
     rangePlaceholder: '期間を選択',
+    clear: 'クリア',
   },
   flowDiagram: {
     controls: '図の操作',
@@ -608,7 +638,13 @@ const jaJP: AppResource = {
     },
   },
   // The template's Settings copy, translated in ./settings/.
-  settings: settingsJaJP,
+  settings: {
+    ...settingsJaJP,
+    // The Notification management module's logs tab, named as the
+    // notification-logs-ui block names it
+    // (client/pages/settings/routes.ts).
+    notificationLogs: '通知ログ',
+  },
   crm: crmJaJP,
 };
 

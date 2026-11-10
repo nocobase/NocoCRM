@@ -2954,9 +2954,11 @@ const wording = {
     integrations: ['Integrations', '集成'],
     mailbox: ['Mailbox', '邮箱'],
     whatsapp: ['WhatsApp', 'WhatsApp'],
-    // The menu's Settings entry and page (client/routes.ts).
+    // The menu's Settings entry and its home page
+    // (client/pages/settings/shell-routes.ts).
     settings: ['Settings', '设置'],
-    // The administration pages (client/pages/settings/).
+    // The administration pages, cards of the settings home
+    // (client/pages/settings/routes.ts).
     users: ['Users', '用户'],
     roles: ['Roles', '角色'],
     apiKeys: ['API keys', 'API 密钥'],
@@ -2967,7 +2969,7 @@ const wording = {
     demoData: ['Demo data', '演示数据'],
     agentWork: ['Agent work', 'Agent 工作'],
     guidance: ['Business guidance', '业务指导'],
-    // The first tab of Settings (pages/settings/index.tsx).
+    // The CRM's general settings (pages/crm-settings.tsx).
     general: ['General', '通用'],
     // How an approval moves (pages/settings/approval-flow/).
     approvalFlow: ['Approval process', '审批流程'],
@@ -2975,6 +2977,43 @@ const wording = {
     models: ['Models', '模型'],
     skills: ['Skills', '技能'],
     usage: ['Usage', '用量'],
+  },
+  // What each card of the settings home is for, under its title
+  // (client/pages/settings/routes.ts).
+  settingsCards: {
+    general: [
+      'The time zone, currency and AI language the CRM works in, and the reminders it sends.',
+      'CRM 使用的时区、币种和 AI 语言，以及它发送的提醒。',
+    ],
+    approvalFlow: [
+      'Who may approve, and the states an approval goes through.',
+      '谁可以审批，以及审批要经过的状态。',
+    ],
+    demoData: [
+      'Import fictional sample data to try the CRM, and remove it when you are done.',
+      '导入虚构的示例数据来试用 CRM，用完后可以清除。',
+    ],
+    // The dedicated demo deployment's page (Demo Mode).
+    demoEnvironment: [
+      "Generate, clear and reset the demo site's fictional data.",
+      '生成、清除和重置演示站的虚构数据。',
+    ],
+    users: [
+      'Accounts, the roles each person holds, and invitations.',
+      '账号、每个人拥有的角色，以及邀请。',
+    ],
+    roles: [
+      'What each role may open and do, and which records it sees.',
+      '每个角色能打开的页面、能做的操作和能看到的记录。',
+    ],
+    apiKeys: [
+      'Keys that let scripts and agents call the CRM as you.',
+      '让脚本和 Agent 以你的身份调用 CRM 的密钥。',
+    ],
+    scheduledTasks: [
+      "The CRM's recurring jobs and how their runs went.",
+      'CRM 的定时任务，以及它们的运行情况。',
+    ],
   },
   admin: adminWording,
   // Settings → Approval process (pages/settings/approval-flow/): the

@@ -37,7 +37,7 @@ import {
   useResolvedPath,
 } from 'react-router';
 // Application change: a role opens in a drawer over the list, as a user
-// does, rather than on a page of its own covering Settings' tabs.
+// does, rather than on a page of its own covering the list.
 import { RouteDrawer } from '#components/route-drawer';
 import { PermissionEditor } from '#components/permission-editor';
 import { Button } from '#components/ui/button';

@@ -713,6 +713,10 @@ describe("a record's WhatsApp tab", () => {
     // The latest to write first, the other a tab away.
     expect(await screen.findByText('Message m1')).toBeTruthy();
     expect(screen.queryByText('Message m2')).toBe(null);
+    // Laid out by its own head, out of the line tabs' shared rule.
+    expect(screen.getByRole('tablist').getAttribute('data-tabs-layout')).toBe(
+      'own',
+    );
     await user.click(screen.getByRole('tab', { name: /Bruno Lima/ }));
     expect(await screen.findByText('Message m2')).toBeTruthy();
     expect(state.api).toHaveBeenCalledWith(

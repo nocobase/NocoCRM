@@ -571,4 +571,247 @@ export const adminWording = {
       triggered: ['Triggered', '已触发'],
     },
   },
+  // Settings → Notification management → Notification templates
+  // (pages/settings/notification-templates.tsx and its drawer): the page's
+  // words, and the registered notifications' own, which the Notification
+  // plugin carries in one language only, by template id (`items`) and
+  // variable name (`variables`); an id or variable not here shows the
+  // registered English.
+  notificationTemplates: {
+    intro: [
+      'Notifications the CRM sends on its own: when each is sent, who receives it, and what it says in each language. Nothing here can be changed.',
+      'CRM 自动发送的通知：每类通知什么时候发、发给谁，以及各语言下的内容。这里只能查看，不能修改。',
+    ],
+    search: ['Search', '搜索'],
+    searchPlaceholder: ['Name or description', '名称或说明'],
+    category: ['Category', '分类'],
+    channel: ['Channel', '渠道'],
+    all: ['All', '全部'],
+    empty: ['No notifications are registered.', '还没有登记的通知。'],
+    noResults: [
+      'No notifications match the search and filters.',
+      '没有符合搜索和筛选条件的通知。',
+    ],
+    what: ['the notification templates', '通知模板'],
+    whatOne: ['this notification template', '这个通知模板'],
+    when: ['When it is sent', '什么时候发'],
+    who: ['Who receives it', '发给谁'],
+    conditions: ['Conditions', '发送条件'],
+    language: ['Language', '语言'],
+    source: ['Provided by', '提供方'],
+    channels: ['Channels', '发送渠道'],
+    channelsHint: [
+      'Set up and on does not prove the connection works.',
+      '已配置、已启用不代表连接一定正常。',
+    ],
+    channelState: {
+      configured: ['Set up', '已配置'],
+      unconfigured: ['Not set up', '未配置'],
+      enabled: ['On', '已启用'],
+      disabled: ['Off', '已停用'],
+      unknown: ['Unknown', '状态未知'],
+    },
+    variables: ['Variables', '可用变量'],
+    preview: ['Preview', '预览'],
+    previewLanguage: ['Preview language', '预览语言'],
+    previewAllLanguages: [
+      'This email carries every language at once; every recipient gets the same message.',
+      '这封邮件一次包含所有语言，每位收件人收到的内容都相同。',
+    ],
+    example: ['Example', '示例'],
+    definition: ['Template', '模板原文'],
+    synthetic: [
+      'Made-up example data. Previewing sends nothing and changes nothing.',
+      '使用虚构的示例数据，预览不会发送通知，也不会改动任何设置。',
+    ],
+    html: ['HTML version', 'HTML 版本'],
+    channelTypes: {
+      'in-app': ['In-app', '站内信'],
+      email: ['Email', '邮件'],
+    },
+    contributors: {
+      crm: ['NocoCRM', 'NocoCRM'],
+      users: ['Users', '用户'],
+    },
+    categories: {
+      accounts: ['Accounts', '账号'],
+      records: ['Records', '记录'],
+      tasks: ['Tasks', '任务'],
+      comments: ['Comments', '评论'],
+      signals: ['Company signals', '公司信号'],
+      approvals: ['Approvals', '审批'],
+    },
+    // A CRM notification's conditions: its switch, any rule of its own,
+    // then what every one of them keeps to.
+    switchRule: [
+      'Sent while “{{switch}}” is on under Settings → General → Reminders (on by default).',
+      '设置 › 通用 › 提醒设置 中的“{{switch}}”开启时发送（默认开启）。',
+    ],
+    always: [
+      'Never sent to the person who made the change, about a deleted record, or to a disabled account, and only while the recipient can still see the record.',
+      '不会发给操作者本人，记录已删除或账号已停用时不发送，并且只在收件人仍能查看该记录时送达。',
+    ],
+    crmLanguage: [
+      "In each recipient's own language, the one they chose in their account menu; English when they have not chosen one.",
+      '按每位收件人在账号菜单里选择的语言发送；没有选择时用英文。',
+    ],
+    items: {
+      recordAssigned: {
+        name: ['Record assigned', '记录分配给你'],
+        trigger: [
+          'A lead, opportunity, company, contact, task or approval gets a new owner, a new record created for someone else included.',
+          '线索、商机、公司、联系人、任务或审批更换了负责人，包括为别人新建的记录。',
+        ],
+        recipients: ['The new owner.', '新负责人。'],
+      },
+      taskInvited: {
+        name: ['Added to a task', '被加入任务'],
+        trigger: [
+          "Someone is added to a task's participants.",
+          '有人被加为任务的参与人。',
+        ],
+        recipients: ['Each participant added.', '被加入的参与人。'],
+      },
+      taskRemoved: {
+        name: ['Removed from a task', '被移出任务'],
+        trigger: [
+          "Someone is removed from a task's participants.",
+          '有人被移出任务的参与人。',
+        ],
+        recipients: ['Each participant removed.', '被移出的参与人。'],
+      },
+      taskCancelled: {
+        name: ['Task cancelled', '任务已取消'],
+        trigger: ['A task is cancelled.', '任务被取消。'],
+        recipients: [
+          'The participants still on the task (not the owner).',
+          '仍在任务中的参与人（不通知负责人）。',
+        ],
+      },
+      taskRescheduled: {
+        name: ['Task rescheduled', '任务改期'],
+        trigger: [
+          "A task's time is changed, unless the task is cancelled.",
+          '任务的时间被修改（已取消的任务除外）。',
+        ],
+        recipients: [
+          'The participants still on the task (not the owner).',
+          '仍在任务中的参与人（不通知负责人）。',
+        ],
+      },
+      taskStarting: {
+        name: ['Task coming up', '任务即将开始'],
+        trigger: [
+          'A task with a time, not just a date, is about to start, within the lead time set under Settings → General → Reminders.',
+          '设了具体时刻（不只是日期）的任务即将开始，提前多久在 设置 › 通用 › 提醒设置 中设定。',
+        ],
+        recipients: [
+          'The task owner and its participants.',
+          '任务负责人和参与人。',
+        ],
+        rule: [
+          'Once per task, start time and person.',
+          '同一任务、同一开始时间，每人只提醒一次。',
+        ],
+      },
+      commentMentioned: {
+        name: ['Mentioned in a comment', '评论中提到你'],
+        trigger: [
+          'A comment @-mentions a colleague, when it is written or when an edit adds the mention.',
+          '评论里 @ 了同事，包括编辑评论时新加的 @。',
+        ],
+        recipients: ['Each colleague newly mentioned.', '新被 @ 到的同事。'],
+        rule: ['Once per comment and person.', '同一条评论，每人只通知一次。'],
+      },
+      commentReplied: {
+        name: ['Reply in a comment thread', '评论有新回复'],
+        trigger: [
+          'Someone replies to a comment or to a reply.',
+          '有人回复了评论或回复。',
+        ],
+        recipients: [
+          'Everyone who has written in the thread; those the reply @-mentions are told of the mention instead.',
+          '参与过该讨论的人；回复里被 @ 到的人改为收到“评论中提到你”。',
+        ],
+        rule: ['Once per reply and person.', '同一条回复，每人只通知一次。'],
+      },
+      companySignal: {
+        name: ['Company news', '公司新动态'],
+        trigger: [
+          "The company signals check finds news about a company through the AI's web search.",
+          '公司信号检查通过 AI 联网搜索发现了某家公司的新动态。',
+        ],
+        recipients: [
+          "The company's owner and the owners of its open opportunities.",
+          '公司负责人，以及该公司进行中商机的负责人。',
+        ],
+        rule: [
+          "Once per news item and person; it opens the company's Signals tab.",
+          '同一条动态，每人只通知一次；点开后进入公司的信号页签。',
+        ],
+      },
+      approvalPending: {
+        name: ['Approval requested', '收到审批申请'],
+        trigger: ['An approval request is submitted.', '有人提交了审批申请。'],
+        recipients: ['The approver.', '审批人。'],
+      },
+      approvalWithdrawn: {
+        name: ['Approval request withdrawn', '审批申请已撤回'],
+        trigger: [
+          'The applicant withdraws a submitted request.',
+          '申请人撤回了已提交的申请。',
+        ],
+        recipients: ['The approver.', '审批人。'],
+      },
+      approvalApproved: {
+        name: ['Approval request approved', '审批已通过'],
+        trigger: ['The approver approves a request.', '审批人通过了申请。'],
+        recipients: ['The applicant.', '申请人。'],
+      },
+      approvalRejected: {
+        name: ['Approval request rejected', '审批被驳回'],
+        trigger: ['The approver rejects a request.', '审批人驳回了申请。'],
+        recipients: ['The applicant.', '申请人。'],
+      },
+      // The Users plugin's invitation mail (`users.invitation`).
+      usersInvitation: {
+        name: ['User invitation', '用户邀请'],
+        trigger: [
+          'An administrator invites someone, or resends an invitation, with email delivery chosen.',
+          '管理员邀请用户或重新发送邀请，并选择了通过邮件发送。',
+        ],
+        recipients: ["The invited person's email address.", '被邀请人的邮箱。'],
+        rule: [
+          'Sent with every invitation sent by email; there is no switch to turn it off.',
+          '通过邮件发送的邀请都会发出，没有关闭的开关。',
+        ],
+        language: [
+          'One email in every supported language, its subject in English; the preview language does not change it.',
+          '一封邮件包含所有支持的语言，标题用英文；切换预览语言不会改变内容。',
+        ],
+      },
+    },
+    variableText: {
+      entity: [
+        "The kind of record, in the recipient's language (lead, opportunity, company, contact, task, approval).",
+        '记录类型，用收件人的语言显示（线索、商机、公司、联系人、任务、审批）。',
+      ],
+      record: [
+        'The kind of record as it reads inside a sentence ("a lead"), for the languages that need it.',
+        '在句中使用的记录类型（如英文的“a lead”），供需要的语言使用。',
+      ],
+      name: [
+        'The record\'s name as the CRM shows it: "name / company" for a lead or contact, "company / name" for an opportunity.',
+        '记录名称，与 CRM 页面上一致：线索和联系人为“姓名 / 公司”，商机为“公司 / 商机名”。',
+      ],
+      app: ["The application's name.", '应用名称。'],
+      inviter: ['Who sent the invitation.', '邀请人。'],
+      items: ['The roles or access granted.', '授予的角色或权限。'],
+      date: ['When the invitation expires.', '邀请的过期时间。'],
+      url: [
+        'The one-time invitation link; the preview uses a made-up one.',
+        '一次性邀请链接；预览中使用虚构的链接。',
+      ],
+    },
+  },
 } as const;

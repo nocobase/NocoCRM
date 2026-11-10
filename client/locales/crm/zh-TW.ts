@@ -1839,6 +1839,16 @@ export const crmZhTW: CrmWording = {
     skills: '技能',
     usage: '用量',
   },
+  settingsCards: {
+    general: 'CRM 使用的時區、幣別和 AI 語言，以及它傳送的提醒。',
+    approvalFlow: '誰可以審批，以及審批要經過的狀態。',
+    demoData: '匯入虛構的範例資料來試用 CRM，用完後可以清除。',
+    demoEnvironment: '產生、清除和重設示範站的虛構資料。',
+    users: '帳號、每個人擁有的角色，以及邀請。',
+    roles: '每個角色能開啟的頁面、能做的操作和能看到的記錄。',
+    apiKeys: '讓指令碼和 Agent 以你的身分呼叫 CRM 的金鑰。',
+    scheduledTasks: 'CRM 的排程任務，以及它們的執行情況。',
+  },
   admin: {
     common: {
       loading: '載入中',
@@ -2210,6 +2220,157 @@ export const crmZhTW: CrmWording = {
         cancelled: '已取消',
         timed_out: '逾時',
         triggered: '已觸發',
+      },
+    },
+    notificationTemplates: {
+      intro:
+        'CRM 自動傳送的通知：每類通知什麼時候發、發給誰，以及各語言下的內容。這裡只能檢視，無法修改。',
+      search: '搜尋',
+      searchPlaceholder: '名稱或說明',
+      category: '分類',
+      channel: '管道',
+      all: '全部',
+      empty: '尚無已登記的通知。',
+      noResults: '沒有符合搜尋和篩選條件的通知。',
+      what: '通知範本',
+      whatOne: '這個通知範本',
+      when: '什麼時候發',
+      who: '發給誰',
+      conditions: '傳送條件',
+      language: '語言',
+      source: '提供者',
+      channels: '傳送管道',
+      channelsHint: '已設定、已啟用不代表連線一定正常。',
+      channelState: {
+        configured: '已設定',
+        unconfigured: '未設定',
+        enabled: '已啟用',
+        disabled: '已停用',
+        unknown: '狀態不明',
+      },
+      variables: '可用變數',
+      preview: '預覽',
+      previewLanguage: '預覽語言',
+      previewAllLanguages:
+        '這封郵件一次包含所有語言，每位收件人收到的內容都相同。',
+      example: '範例',
+      definition: '範本原文',
+      synthetic: '使用虛構的範例資料，預覽不會傳送通知，也不會變更任何設定。',
+      html: 'HTML 版本',
+      channelTypes: {
+        'in-app': '站內信',
+        email: '電子郵件',
+      },
+      contributors: {
+        crm: 'NocoCRM',
+        users: '使用者',
+      },
+      categories: {
+        accounts: '帳號',
+        records: '記錄',
+        tasks: '任務',
+        comments: '評論',
+        signals: '公司訊號',
+        approvals: '審批',
+      },
+      switchRule:
+        '設定 › 一般 › 提醒設定 中的「{{switch}}」開啟時傳送（預設開啟）。',
+      always:
+        '不會發給操作者本人，記錄已刪除或帳號已停用時不傳送，且只在收件人仍能檢視該記錄時送達。',
+      crmLanguage: '依每位收件人在帳號選單中選擇的語言傳送；未選擇時使用英文。',
+      items: {
+        recordAssigned: {
+          name: '記錄指派給你',
+          trigger:
+            '線索、商機、公司、聯絡人、任務或審批更換了負責人，包括為別人新建的記錄。',
+          recipients: '新負責人。',
+        },
+        taskInvited: {
+          name: '被加入任務',
+          trigger: '有人被加為任務的參與人。',
+          recipients: '被加入的參與人。',
+        },
+        taskRemoved: {
+          name: '被移出任務',
+          trigger: '有人被移出任務的參與人。',
+          recipients: '被移出的參與人。',
+        },
+        taskCancelled: {
+          name: '任務已取消',
+          trigger: '任務被取消。',
+          recipients: '仍在任務中的參與人（不通知負責人）。',
+        },
+        taskRescheduled: {
+          name: '任務改期',
+          trigger: '任務的時間被修改（已取消的任務除外）。',
+          recipients: '仍在任務中的參與人（不通知負責人）。',
+        },
+        taskStarting: {
+          name: '任務即將開始',
+          trigger:
+            '設了具體時間（不只是日期）的任務即將開始，提前多久在 設定 › 一般 › 提醒設定 中設定。',
+          recipients: '任務負責人和參與人。',
+          rule: '同一任務、同一開始時間，每人只提醒一次。',
+        },
+        commentMentioned: {
+          name: '評論中提到你',
+          trigger: '評論裡 @ 了同事，包括編輯評論時新加的 @。',
+          recipients: '新被 @ 到的同事。',
+          rule: '同一則評論，每人只通知一次。',
+        },
+        commentReplied: {
+          name: '評論有新回覆',
+          trigger: '有人回覆了評論或回覆。',
+          recipients:
+            '參與過該討論的人；回覆裡被 @ 到的人改為收到「評論中提到你」。',
+          rule: '同一則回覆，每人只通知一次。',
+        },
+        companySignal: {
+          name: '公司新動態',
+          trigger: '公司訊號檢查透過 AI 網路搜尋發現了某家公司的新動態。',
+          recipients: '公司負責人，以及該公司進行中商機的負責人。',
+          rule: '同一則動態，每人只通知一次；點開後進入公司的「訊號」頁籤。',
+        },
+        approvalPending: {
+          name: '收到審批申請',
+          trigger: '有人提交了審批申請。',
+          recipients: '審批人。',
+        },
+        approvalWithdrawn: {
+          name: '審批申請已撤回',
+          trigger: '申請人撤回了已提交的申請。',
+          recipients: '審批人。',
+        },
+        approvalApproved: {
+          name: '審批已通過',
+          trigger: '審批人通過了申請。',
+          recipients: '申請人。',
+        },
+        approvalRejected: {
+          name: '審批被駁回',
+          trigger: '審批人駁回了申請。',
+          recipients: '申請人。',
+        },
+        usersInvitation: {
+          name: '使用者邀請',
+          trigger: '管理員邀請使用者或重新傳送邀請，並選擇以電子郵件寄送。',
+          recipients: '受邀者的電子郵件地址。',
+          rule: '以電子郵件寄送的邀請都會發出，沒有可關閉的開關。',
+          language:
+            '一封郵件包含所有支援的語言，主旨為英文；切換預覽語言不會改變內容。',
+        },
+      },
+      variableText: {
+        entity:
+          '記錄類型，以收件人的語言顯示（線索、商機、公司、聯絡人、任務、審批）。',
+        record:
+          '在句中使用的記錄類型（如英文的「a lead」），供需要的語言使用。',
+        name: '記錄名稱，與 CRM 頁面上一致：線索和聯絡人為「姓名 / 公司」，商機為「公司 / 商機名稱」。',
+        app: '應用程式名稱。',
+        inviter: '邀請人。',
+        items: '授予的角色或權限。',
+        date: '邀請的到期時間。',
+        url: '一次性邀請連結；預覽中使用虛構的連結。',
       },
     },
   },

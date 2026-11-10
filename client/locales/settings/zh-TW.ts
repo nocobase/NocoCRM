@@ -4,6 +4,10 @@ import type settingsEnUS from '../system/settings-en-US.js';
 // The template's Settings copy (client/locales/system/settings-en-US.ts): the
 // prepared Users and Roles pages and the permission editor, in zh-TW.
 const settings: LocaleResource<typeof settingsEnUS> = {
+  notificationManagementDescription:
+    '追蹤通知的傳送情況，查看已登記的通知範本和合成內容預覽。',
+  notificationTemplates: '通知範本',
+  notificationManagement: '通知管理',
   listChanged: '清單已變更，請重試。',
   setup: {
     title: '功能前置條件',
@@ -97,6 +101,18 @@ const settings: LocaleResource<typeof settingsEnUS> = {
 
   reload: '重新載入角色',
   title: '系統設定',
+  home: {
+    description: '帳號、權限、業務設定和系統能力都在這裡。',
+    empty: '暫時沒有你可以管理的設定。',
+  },
+  categories: {
+    account: '帳號與權限',
+    business: '業務設定',
+    ai: 'AI',
+    system: '系統',
+  },
+  permissionManagementDescription:
+    '設定每個角色能開啟的頁面、能執行的操作和能看到的資料。',
   users: '使用者',
   roles: '角色與權限',
   usersDescription: '管理帳號、存取權限和登入工作階段。',

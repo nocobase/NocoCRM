@@ -122,7 +122,7 @@ export function NavigationMenu({
   const runs: (RouteNavigationItem | RouteNavigationItem[])[] = [];
   for (const item of items) {
     if (isSection(item)) runs.push(item);
-    else if (Array.isArray(runs.at(-1)))
+    else if (Array.isArray(runs.at(-1)) && !item.startGroup)
       (runs.at(-1) as RouteNavigationItem[]).push(item);
     else runs.push([item]);
   }

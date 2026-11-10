@@ -10,7 +10,7 @@
 <p align="center">오픈소스 B2B 영업 CRM · NocoBase 기반</p>
 
 <p align="center">
-  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache-2.0"></a>
+  <a href="../LICENSE.txt"><img src="https://img.shields.io/badge/license-NocoBase-blue" alt="NocoBase License"></a>
   <a href="https://github.com/nocobase/NocoCRM/tags"><img src="https://img.shields.io/github/v/tag/nocobase/NocoCRM?label=version&sort=semver&include_prereleases" alt="version"></a>
   <a href="https://www.nocobase.com"><img src="https://img.shields.io/badge/built%20on-NocoBase-1f6feb" alt="Built on NocoBase"></a>
 </p>
@@ -37,7 +37,7 @@ https://github.com/user-attachments/assets/ac3df8c9-dc36-4e0b-9775-ebf6c70c7f3c
 - **승인이 멈추지 않습니다.** 승인 에이전트가 할인이나 조건을 회사 규칙과 과거 결정에 비추어 검토하고, 승인자를 위한 권고와 의견을 작성합니다.
 - **영업의 전 과정.** 리드, 회사, 연락처, 영업 기회, 작업, 승인, 보고서. 영업 기회 보드, 작업 캘린더, 모든 레코드를 찾는 검색(⌘K / Ctrl+K)이 있고, 역할별 권한은 서버가 레코드마다 적용합니다.
 - **원하는 대로 맞춤화.** 가격, 할인 한도, 후속 조치 주기를 비즈니스 가이드에 평범한 문장으로 적으면 모든 에이전트가 따릅니다. 각 에이전트의 작업 방식은 수정할 수 있는 스킬입니다. 소스 코드가 공개되어 있으니 나머지는 코딩 에이전트에게 바꾸게 하면 됩니다.
-- **직접 호스팅.** 데이터는 내 서버에 두고, 모델은 원하는 것으로 고릅니다: DeepSeek, OpenAI, Claude, Gemini, Qwen 등. Apache-2.0.
+- **직접 호스팅.** 데이터는 내 서버에 두고, 모델은 원하는 것으로 고릅니다: DeepSeek, OpenAI, Claude, Gemini, Qwen 등.
 
 ## 빠른 시작
 
@@ -79,4 +79,4 @@ pnpm dev
 
 ## 라이선스
 
-NocoCRM은 NocoBase로 만들어졌으며 [Apache-2.0](../LICENSE) 라이선스로 배포됩니다.
+NocoCRM은 NocoBase로 만들어졌으며 [NocoBase 라이선스](../LICENSE.txt)로 배포됩니다.

@@ -52,14 +52,15 @@ describe('config.example.yml', () => {
         configPath,
         env: { AUTH_SECRET: 'test-auth-secret-at-least-32-characters' },
       });
+      // Named configurations sit under `backends` since @nocobase/jobs 1.0.0-beta.6 (template 1.0.0-beta.92).
       expect(config.get('jobs.default')).toBe('redis');
-      expect(config.get('jobs.redis')).toEqual({
+      expect(config.get('jobs.backends.redis')).toEqual({
         adapter: 'redis',
         connection: { host: '127.0.0.1', port: 6379 },
       });
-      expect(config.get('jobs.crmFollowUps.adapter')).toBe('memory');
-      expect(config.get('queue.redis')).toBeUndefined();
-      expect(config.get('queue.memory.adapter')).toBe('inMemory');
+      expect(config.get('jobs.backends.crmFollowUps.adapter')).toBe('memory');
+      expect(config.get('queue.backends.redis')).toBeUndefined();
+      expect(config.get('queue.backends.memory.adapter')).toBe('inMemory');
     } finally {
       await rm(directory, { recursive: true, force: true });
     }

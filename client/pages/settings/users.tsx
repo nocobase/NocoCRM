@@ -31,11 +31,11 @@ import {
 } from 'react';
 import { Link, Outlet, useLocation, useResolvedPath } from 'react-router';
 import { PlusIcon } from 'lucide-react';
+import { cn } from 'cn';
 import { PageContainer } from '#components/page-container';
 import { PageHeader } from '#components/page-header';
 import { Button } from '#components/ui/button';
 import { StatusBadge } from '#components/status-badge';
-import { Spinner } from '#components/ui/spinner';
 import { type FilterDimension, FilterMenu } from '#components/filter-menu';
 import { ConfirmAction, SettingsError } from './shared.js';
 // Application change: inviting, resetting a password and deleting, which
@@ -46,25 +46,6 @@ import {
   PendingInvitations,
 } from './accounts/user-extras.js';
 import { useUserExtras } from './accounts/user-row-extras.js';
-
-function UsersRefreshing(): ReactElement | null {
-  const { t } = useTranslation();
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    // Fast background reads should not flash feedback on overlay close.
-    const timer = setTimeout(() => setVisible(true), 300);
-    return () => clearTimeout(timer);
-  }, []);
-  return visible ? (
-    <span
-      role='status'
-      className='flex items-center gap-2 text-sm text-muted-foreground'
-    >
-      <Spinner aria-hidden='true' className='size-4' />
-      {t('settings.loading')}
-    </span>
-  ) : null;
-}
 
 function UserName({ user }: { readonly user: ManagedUser }): ReactElement {
   const canUpdate = useUserPermission('update', user.id);
@@ -514,12 +495,6 @@ export default function UsersPage(): ReactElement {
           description={t('settings.usersDescription')}
           actions={
             <>
-              {active &&
-              hasCurrentResponse &&
-              request.loading &&
-              request.data ? (
-                <UsersRefreshing />
-              ) : null}
               <div ref={filtersRef} className='contents'>
                 <FilterMenu
                   dimensions={filterDimensions}
@@ -559,13 +534,23 @@ export default function UsersPage(): ReactElement {
           {...tableState}
           manualSorting
           showSelectedCount={false}
-          loading={request.loading}
+          // A background refresh shows in the table itself (since template
+          // 1.0.0-beta.92), in place of the header's own "Loading" line.
+          loading={active && request.loading}
+          loadingIdentity={requestPath}
           listState={listState}
           onRetry={request.reload}
           onClearFilters={clearFilters}
         />
         {request.data && (
-          <p className='text-sm text-muted-foreground'>
+          // A previous query's total keeps its line but is never shown as the current one.
+          <p
+            className={cn(
+              'text-sm text-muted-foreground',
+              !hasCurrentResponse && 'invisible',
+            )}
+            aria-hidden={!hasCurrentResponse || undefined}
+          >
             {t('settings.total', { count: request.data.meta.total })}
           </p>
         )}

@@ -1,7 +1,9 @@
 import fileUi from '../extensions/nocobase-file-component-ui/locales/fr-FR.js';
+import notificationLogsUi from '../extensions/nocobase-notification-logs-ui/locales/fr-FR.js';
 import type { AppResource } from './en-US.js';
 import { crmFrFR } from './crm/fr-FR.js';
 import settingsFrFR from './settings/fr-FR.js';
+import databaseExplorer from './database-explorer/fr-FR.js';
 
 // The pages in fr-FR: the template's copy (./system/) and the CRM's own
 // (./crm/fr-FR.ts), with the same keys as ./en-US.ts. The template ships no
@@ -9,6 +11,7 @@ import settingsFrFR from './settings/fr-FR.js';
 // fails the type check until they are translated.
 const frFR: AppResource = {
   ...fileUi,
+  ...notificationLogsUi,
   'auth.passwordResetSuccess':
     'Votre mot de passe a été réinitialisé. Connectez-vous avec votre nouveau mot de passe.',
   'auth.requestNewResetLink': 'Demander un nouveau lien de réinitialisation',
@@ -16,6 +19,23 @@ const frFR: AppResource = {
   'auth.connectionFailed': 'Connexion impossible',
   'auth.connectionFailedDescription':
     'La connexion en temps réel n’a pas pu être établie. Réessayez pour accéder à l’application, ou déconnectez-vous.',
+  // The template's Database Explorer copy, translated in ./database-explorer/.
+  databaseExplorer,
+  taskProgress: {
+    queued: 'En attente de démarrage',
+    running: 'En cours',
+    completed: 'Terminé',
+    failed: 'Échec',
+    canceled: 'Annulé',
+    count: '{{processed}} sur {{total}}',
+    processed: '{{processed}} traités',
+    background: 'Cela continue si vous quittez cette page.',
+  },
+  pendingFeedback: {
+    working: 'Traitement…',
+    longWait:
+      'Cela prend plus de temps que d’habitude. Vous pouvez continuer à patienter.',
+  },
   listFeedback: {
     loading: 'Chargement',
     empty: 'Aucune donnée pour l’instant',
@@ -131,6 +151,9 @@ const frFR: AppResource = {
     "Connectez-vous avec votre nom d'utilisateur ou votre e-mail et votre mot de passe.",
   'auth.registerTitle': 'Créer un compte',
   'auth.registerDescription': 'Créez un compte pour commencer.',
+  'auth.registrationAccepted': 'Demande d’inscription envoyée',
+  'auth.registrationGuidance':
+    'Essayez de vous connecter avec le nom d’utilisateur et le mot de passe envoyés. Si un compte existe déjà pour cette adresse e-mail, les nouvelles informations ne seront pas prises en compte. Connectez-vous avec votre compte d’origine ou récupérez votre mot de passe. Suivez les instructions de vérification de l’application avant de vous connecter.',
   'auth.forgotTitle': 'Mot de passe oublié',
   'auth.forgotDescription':
     'Saisissez votre e-mail ; si le compte existe, nous vous enverrons un lien de réinitialisation.',
@@ -176,9 +199,9 @@ const frFR: AppResource = {
   'auth.continueWith': 'Continuer avec {provider}',
   'auth.about': 'À propos de cette application',
   'auth.platform': "Plateforme d'applications native IA",
-  'auth.marketingTitleFirst': "Laissez l'IA construire librement.",
-  'auth.marketingTitleSecond': 'NocoBase en garantit',
-  'auth.marketingTitleThird': 'la fiabilité.',
+  // The template's brand line (its zh-CN keeps it in English too).
+  'auth.marketingTitleFirst': 'AI + NocoBase',
+  'auth.marketingTitleSecond': 'Build reliable business systems',
   'auth.marketingDescription':
     "Offrez à l'IA un framework frontend flexible pour façonner chaque expérience, tandis que NocoBase sécurise en profondeur les données, les autorisations et la gouvernance.",
   'auth.frontend': 'Frontend natif IA',
@@ -193,15 +216,20 @@ const frFR: AppResource = {
   'status.denied': 'Accès refusé',
   'status.pageFailed': 'Impossible de charger la page',
   'status.retry': 'Réessayer',
+  'status.refreshing': 'Actualisation',
+  'status.reloadPage': 'Recharger la page',
+  'status.retryFailedDescription':
+    'Le chargement échoue encore. Recharger toute la page peut aider ; les modifications non enregistrées de cette page pourraient être perdues.',
   'navigation.brandHome': 'Accueil NocoCRM',
   'navigation.brandApps': 'Applications NocoBase',
   'routeOverlay.close': 'Fermer',
   'status.deniedDescription': "Vous n'êtes pas autorisé à accéder à {{label}}.",
   'status.routeFailedDescription':
     "La route {{label}} de {{packageName}} n'a pas pu être chargée.",
+  // The template's brand line, which its own zh-CN keeps in English too.
   shell: {
-    buildFreely: "L'IA construit librement.",
-    reliability: '<brand>NocoBase</brand> en garantit la fiabilité.',
+    brandPartnership: 'AI + <brand>NocoBase</brand>',
+    buildReliableSystems: 'Build reliable business systems',
   },
   home: {
     platform: "NocoBase · Plateforme d'applications native IA",
@@ -459,6 +487,7 @@ const frFR: AppResource = {
   },
   navigation: {
     home: 'Accueil',
+    resources: 'Ressources',
     open: 'Ouvrir la navigation',
     close: 'Fermer la navigation',
     expand: 'Déplier la navigation',
@@ -469,6 +498,7 @@ const frFR: AppResource = {
     breadcrumb: "Fil d'Ariane",
     breadcrumbMore: 'Afficher les niveaux intermédiaires',
     back: 'Retour',
+    backTo: 'Retour à {{label}}',
   },
   dataTable: {
     noResults: 'Aucun résultat.',
@@ -488,6 +518,7 @@ const frFR: AppResource = {
   datePicker: {
     placeholder: 'Choisir une date',
     rangePlaceholder: 'Choisir une période',
+    clear: 'Effacer',
   },
   flowDiagram: {
     controls: 'Commandes du diagramme',
@@ -611,7 +642,13 @@ const frFR: AppResource = {
     },
   },
   // The template's Settings copy, translated in ./settings/.
-  settings: settingsFrFR,
+  settings: {
+    ...settingsFrFR,
+    // The Notification management module's logs tab, named as the
+    // notification-logs-ui block names it
+    // (client/pages/settings/routes.ts).
+    notificationLogs: 'Journaux de notifications',
+  },
   crm: crmFrFR,
 };
 

@@ -10,7 +10,7 @@
 <p align="center">開源 B2B 銷售 CRM · 基於 NocoBase 建構</p>
 
 <p align="center">
-  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache-2.0"></a>
+  <a href="../LICENSE.txt"><img src="https://img.shields.io/badge/license-NocoBase-blue" alt="NocoBase License"></a>
   <a href="https://github.com/nocobase/NocoCRM/tags"><img src="https://img.shields.io/github/v/tag/nocobase/NocoCRM?label=version&sort=semver&include_prereleases" alt="version"></a>
   <a href="https://www.nocobase.com"><img src="https://img.shields.io/badge/built%20on-NocoBase-1f6feb" alt="Built on NocoBase"></a>
 </p>
@@ -37,7 +37,7 @@ https://github.com/user-attachments/assets/4175b47a-484e-4482-a319-e74e04898222
 - **審批不再卡關。** 審批 Agent 對照你的規則和過往同類案例，核算折扣和條款，為審批人起草建議和審批意見。
 - **從線索到成交。** 線索、公司、聯絡人、商機、任務、審批和報表，附商機看板、任務日曆和涵蓋所有記錄的搜尋（⌘K / Ctrl+K），依角色由伺服器逐筆控制記錄權限。
 - **依你的方式客製。** 用幾句話把價格、折扣上限和跟進節奏寫進業務指導，每個 Agent 都照著做；每個 Agent 的工作方法是一個可以修改的技能。原始碼開放，其餘的交給程式設計 Agent 來改。
-- **自行部署。** 資料留在你自己的伺服器上，模型自己選：DeepSeek、OpenAI、Claude、Gemini、通義千問等。Apache-2.0 授權。
+- **自行部署。** 資料留在你自己的伺服器上，模型自己選：DeepSeek、OpenAI、Claude、Gemini、通義千問等。
 
 ## 快速開始
 
@@ -79,4 +79,4 @@ pnpm dev
 
 ## 授權條款
 
-NocoCRM 基於 NocoBase 建構，以 [Apache-2.0](../LICENSE) 授權條款發布。
+NocoCRM 基於 NocoBase 建構，以 [NocoBase 授權協議](../LICENSE.txt)發布。

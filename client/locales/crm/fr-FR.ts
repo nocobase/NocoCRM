@@ -1957,6 +1957,22 @@ export const crmFrFR: CrmWording = {
     skills: 'Compétences',
     usage: 'Utilisation',
   },
+  settingsCards: {
+    general:
+      "Le fuseau horaire, la devise et la langue de l'IA du CRM, et les rappels qu'il envoie.",
+    approvalFlow:
+      'Qui peut approuver, et les états par lesquels passe une approbation.',
+    demoData:
+      "Importez des données d'exemple fictives pour essayer le CRM, puis supprimez-les quand vous avez terminé.",
+    demoEnvironment:
+      'Générez, effacez et réinitialisez les données fictives du site de démonstration.',
+    users: 'Les comptes, les rôles de chacun et les invitations.',
+    roles: 'Ce que chaque rôle peut ouvrir et faire, et les fiches qu’il voit.',
+    apiKeys:
+      "Des clés qui permettent à des scripts et à des Agents d'appeler le CRM en votre nom.",
+    scheduledTasks:
+      'Les traitements récurrents du CRM et le déroulement de leurs exécutions.',
+  },
   admin: {
     common: {
       loading: 'Chargement',
@@ -2360,6 +2376,168 @@ export const crmFrFR: CrmWording = {
         cancelled: 'Annulée',
         timed_out: 'Délai dépassé',
         triggered: 'Déclenchée',
+      },
+    },
+    notificationTemplates: {
+      intro:
+        "Les notifications que le CRM envoie de lui-même : quand chacune est envoyée, qui la reçoit et ce qu'elle dit dans chaque langue. Rien ici ne peut être modifié.",
+      search: 'Rechercher',
+      searchPlaceholder: 'Nom ou description',
+      category: 'Catégorie',
+      channel: 'Canal',
+      all: 'Toutes',
+      empty: "Aucune notification n'est enregistrée.",
+      noResults:
+        'Aucune notification ne correspond à la recherche et aux filtres.',
+      what: 'les modèles de notification',
+      whatOne: 'ce modèle de notification',
+      when: 'Quand elle est envoyée',
+      who: 'Qui la reçoit',
+      conditions: 'Conditions',
+      language: 'Langue',
+      source: 'Fourni par',
+      channels: 'Canaux',
+      channelsHint:
+        'Configuré et activé ne garantit pas que la connexion fonctionne.',
+      channelState: {
+        configured: 'Configuré',
+        unconfigured: 'Non configuré',
+        enabled: 'Activé',
+        disabled: 'Désactivé',
+        unknown: 'Inconnu',
+      },
+      variables: 'Variables',
+      preview: 'Aperçu',
+      previewLanguage: "Langue de l'aperçu",
+      previewAllLanguages:
+        'Cet e-mail contient toutes les langues à la fois ; chaque destinataire reçoit le même message.',
+      example: 'Exemple',
+      definition: 'Modèle',
+      synthetic:
+        "Données d'exemple fictives. L'aperçu n'envoie rien et ne modifie rien.",
+      html: 'Version HTML',
+      channelTypes: {
+        'in-app': "Dans l'application",
+        email: 'E-mail',
+      },
+      contributors: {
+        crm: 'NocoCRM',
+        users: 'Utilisateurs',
+      },
+      categories: {
+        accounts: 'Comptes',
+        records: 'Fiches',
+        tasks: 'Tâches',
+        comments: 'Commentaires',
+        signals: "Signaux d'entreprise",
+        approvals: 'Approbations',
+      },
+      switchRule:
+        'Envoyée tant que « {{switch}} » est activé dans Paramètres › Général › Rappels (activé par défaut).',
+      always:
+        'Jamais envoyée à la personne qui a fait la modification, pour une fiche supprimée ni à un compte désactivé, et seulement tant que le destinataire peut encore voir la fiche.',
+      crmLanguage:
+        "Dans la langue de chaque destinataire, celle qu'il a choisie dans le menu de son compte ; en anglais s'il n'en a choisi aucune.",
+      items: {
+        recordAssigned: {
+          name: 'Fiche attribuée',
+          trigger:
+            "Un prospect, une opportunité, une entreprise, un contact, une tâche ou une approbation change de responsable, y compris une nouvelle fiche créée pour quelqu'un d'autre.",
+          recipients: 'Le nouveau responsable.',
+        },
+        taskInvited: {
+          name: 'Ajouté à une tâche',
+          trigger: "Quelqu'un est ajouté aux participants d'une tâche.",
+          recipients: 'Chaque participant ajouté.',
+        },
+        taskRemoved: {
+          name: "Retiré d'une tâche",
+          trigger: "Quelqu'un est retiré des participants d'une tâche.",
+          recipients: 'Chaque participant retiré.',
+        },
+        taskCancelled: {
+          name: 'Tâche annulée',
+          trigger: 'Une tâche est annulée.',
+          recipients:
+            'Les participants encore sur la tâche (pas le responsable).',
+        },
+        taskRescheduled: {
+          name: 'Tâche replanifiée',
+          trigger:
+            "L'heure d'une tâche est modifiée, sauf si la tâche est annulée.",
+          recipients:
+            'Les participants encore sur la tâche (pas le responsable).',
+        },
+        taskStarting: {
+          name: 'Tâche imminente',
+          trigger:
+            'Une tâche avec une heure, et pas seulement une date, va commencer, dans le délai défini dans Paramètres › Général › Rappels.',
+          recipients: 'Le responsable de la tâche et ses participants.',
+          rule: 'Une fois par tâche, par heure de début et par personne.',
+        },
+        commentMentioned: {
+          name: 'Mentionné dans un commentaire',
+          trigger:
+            "Un commentaire mentionne un collègue avec @, à sa rédaction ou lorsqu'une modification ajoute la mention.",
+          recipients: 'Chaque collègue nouvellement mentionné.',
+          rule: 'Une fois par commentaire et par personne.',
+        },
+        commentReplied: {
+          name: 'Réponse dans un fil de commentaires',
+          trigger: "Quelqu'un répond à un commentaire ou à une réponse.",
+          recipients:
+            'Toutes les personnes ayant écrit dans le fil ; celles que la réponse mentionne avec @ sont plutôt prévenues de la mention.',
+          rule: 'Une fois par réponse et par personne.',
+        },
+        companySignal: {
+          name: "Actualité d'une entreprise",
+          trigger:
+            "La vérification des signaux d'entreprise trouve des actualités sur une entreprise grâce à la recherche web de l'IA.",
+          recipients:
+            "Le responsable de l'entreprise et les responsables de ses opportunités en cours.",
+          rule: "Une fois par actualité et par personne ; elle ouvre l'onglet Signaux de l'entreprise.",
+        },
+        approvalPending: {
+          name: 'Approbation demandée',
+          trigger: "Une demande d'approbation est soumise.",
+          recipients: "L'approbateur.",
+        },
+        approvalWithdrawn: {
+          name: "Demande d'approbation retirée",
+          trigger: 'Le demandeur retire une demande soumise.',
+          recipients: "L'approbateur.",
+        },
+        approvalApproved: {
+          name: "Demande d'approbation approuvée",
+          trigger: "L'approbateur approuve une demande.",
+          recipients: 'Le demandeur.',
+        },
+        approvalRejected: {
+          name: "Demande d'approbation refusée",
+          trigger: "L'approbateur refuse une demande.",
+          recipients: 'Le demandeur.',
+        },
+        usersInvitation: {
+          name: "Invitation d'utilisateur",
+          trigger:
+            "Un administrateur invite quelqu'un, ou renvoie une invitation, en choisissant l'envoi par e-mail.",
+          recipients: "L'adresse e-mail de la personne invitée.",
+          rule: 'Envoyée avec chaque invitation envoyée par e-mail ; aucun interrupteur ne permet de la désactiver.',
+          language:
+            "Un seul e-mail dans toutes les langues prises en charge, avec l'objet en anglais ; la langue de l'aperçu n'y change rien.",
+        },
+      },
+      variableText: {
+        entity:
+          'Le type de fiche, dans la langue du destinataire (prospect, opportunité, entreprise, contact, tâche, approbation).',
+        record:
+          "Le type de fiche tel qu'il s'écrit dans une phrase (en anglais « a lead »), pour les langues qui en ont besoin.",
+        name: "Le nom de la fiche tel que le CRM l'affiche : « nom / entreprise » pour un prospect ou un contact, « entreprise / nom » pour une opportunité.",
+        app: "Le nom de l'application.",
+        inviter: "La personne qui a envoyé l'invitation.",
+        items: 'Les rôles ou accès accordés.',
+        date: "La date d'expiration de l'invitation.",
+        url: "Le lien d'invitation à usage unique ; l'aperçu en utilise un fictif.",
       },
     },
   },

@@ -1906,6 +1906,19 @@ export const crmKoKR: CrmWording = {
     skills: '스킬',
     usage: '사용량',
   },
+  settingsCards: {
+    general: 'CRM이 사용하는 시간대, 통화, AI 언어와 CRM이 보내는 알림입니다.',
+    approvalFlow: '누가 승인할 수 있는지, 그리고 승인이 거치는 상태입니다.',
+    demoData:
+      '가상의 샘플 데이터를 가져와 CRM을 사용해 보고, 끝나면 삭제합니다.',
+    demoEnvironment: '데모 사이트의 가상 데이터를 생성, 삭제, 초기화합니다.',
+    users: '계정, 각 사용자가 가진 역할, 초대입니다.',
+    roles:
+      '각 역할이 열 수 있는 페이지, 할 수 있는 작업, 볼 수 있는 레코드입니다.',
+    apiKeys:
+      '스크립트와 Agent가 나를 대신해 CRM을 호출할 수 있게 하는 키입니다.',
+    scheduledTasks: 'CRM에서 반복 실행되는 작업과 실행 결과입니다.',
+  },
   admin: {
     common: {
       loading: '불러오는 중',
@@ -2298,6 +2311,163 @@ export const crmKoKR: CrmWording = {
         cancelled: '취소됨',
         timed_out: '시간 초과',
         triggered: '트리거됨',
+      },
+    },
+    notificationTemplates: {
+      intro:
+        'CRM이 자동으로 보내는 알림입니다. 알림마다 언제 보내는지, 누가 받는지, 언어별로 어떤 내용인지 볼 수 있습니다. 여기서는 변경할 수 없습니다.',
+      search: '검색',
+      searchPlaceholder: '이름 또는 설명',
+      category: '분류',
+      channel: '채널',
+      all: '전체',
+      empty: '등록된 알림이 없습니다.',
+      noResults: '검색 및 필터 조건에 맞는 알림이 없습니다.',
+      what: '알림 템플릿',
+      whatOne: '이 알림 템플릿',
+      when: '보내는 시점',
+      who: '받는 사람',
+      conditions: '발송 조건',
+      language: '언어',
+      source: '제공처',
+      channels: '발송 채널',
+      channelsHint:
+        '설정되어 있고 켜져 있어도 연결이 정상이라는 뜻은 아닙니다.',
+      channelState: {
+        configured: '설정됨',
+        unconfigured: '설정 안 됨',
+        enabled: '켜짐',
+        disabled: '꺼짐',
+        unknown: '알 수 없음',
+      },
+      variables: '변수',
+      preview: '미리보기',
+      previewLanguage: '미리보기 언어',
+      previewAllLanguages:
+        '이 메일은 모든 언어를 한 통에 담고 있어 모든 수신자가 같은 내용을 받습니다.',
+      example: '예시',
+      definition: '템플릿 원문',
+      synthetic:
+        '가상의 예시 데이터입니다. 미리보기는 아무것도 보내거나 바꾸지 않습니다.',
+      html: 'HTML 버전',
+      channelTypes: {
+        'in-app': '앱 내',
+        email: '이메일',
+      },
+      contributors: {
+        crm: 'NocoCRM',
+        users: '사용자',
+      },
+      categories: {
+        accounts: '계정',
+        records: '레코드',
+        tasks: '작업',
+        comments: '댓글',
+        signals: '회사 시그널',
+        approvals: '승인',
+      },
+      switchRule:
+        '설정 › 일반 › 알림에서 "{{switch}}"이(가) 켜져 있을 때 보냅니다(기본값: 켜짐).',
+      always:
+        '변경한 본인, 삭제된 레코드, 비활성화된 계정에는 보내지 않으며, 받는 사람이 아직 해당 레코드를 볼 수 있을 때만 전달됩니다.',
+      crmLanguage:
+        '받는 사람마다 계정 메뉴에서 고른 언어로 보냅니다. 고르지 않았으면 영어로 보냅니다.',
+      items: {
+        recordAssigned: {
+          name: '레코드 배정',
+          trigger:
+            '리드, 영업 기회, 회사, 연락처, 작업 또는 승인의 담당자가 바뀝니다. 다른 사람을 위해 새로 만든 레코드도 포함됩니다.',
+          recipients: '새 담당자.',
+        },
+        taskInvited: {
+          name: '작업에 추가됨',
+          trigger: '누군가 작업 참여자로 추가됩니다.',
+          recipients: '추가된 각 참여자.',
+        },
+        taskRemoved: {
+          name: '작업에서 제외됨',
+          trigger: '누군가 작업 참여자에서 제외됩니다.',
+          recipients: '제외된 각 참여자.',
+        },
+        taskCancelled: {
+          name: '작업 취소됨',
+          trigger: '작업이 취소됩니다.',
+          recipients: '작업에 남아 있는 참여자(담당자 제외).',
+        },
+        taskRescheduled: {
+          name: '작업 일정 변경',
+          trigger: '작업 시간이 변경됩니다(취소된 작업 제외).',
+          recipients: '작업에 남아 있는 참여자(담당자 제외).',
+        },
+        taskStarting: {
+          name: '작업 시작 임박',
+          trigger:
+            '날짜만이 아니라 시간이 지정된 작업이 곧 시작됩니다. 얼마나 미리 알릴지는 설정 › 일반 › 알림에서 정합니다.',
+          recipients: '작업 담당자와 참여자.',
+          rule: '같은 작업, 같은 시작 시간에 대해 한 사람당 한 번만 알립니다.',
+        },
+        commentMentioned: {
+          name: '댓글에서 멘션됨',
+          trigger:
+            '댓글에서 동료를 @멘션합니다. 댓글을 수정하면서 새로 멘션을 추가한 경우도 포함됩니다.',
+          recipients: '새로 멘션된 각 동료.',
+          rule: '같은 댓글에 대해 한 사람당 한 번만 알립니다.',
+        },
+        commentReplied: {
+          name: '댓글 스레드의 답글',
+          trigger: '누군가 댓글이나 답글에 답글을 답니다.',
+          recipients:
+            '스레드에 글을 쓴 모든 사람. 답글에서 @멘션된 사람은 대신 멘션 알림을 받습니다.',
+          rule: '같은 답글에 대해 한 사람당 한 번만 알립니다.',
+        },
+        companySignal: {
+          name: '회사 소식',
+          trigger:
+            '회사 시그널 확인에서 AI 웹 검색으로 회사의 소식을 찾습니다.',
+          recipients: '회사 담당자와 그 회사의 진행 중인 영업 기회 담당자.',
+          rule: '같은 소식에 대해 한 사람당 한 번만 알리며, 열면 회사의 시그널 탭으로 이동합니다.',
+        },
+        approvalPending: {
+          name: '승인 요청',
+          trigger: '승인 요청이 제출됩니다.',
+          recipients: '승인자.',
+        },
+        approvalWithdrawn: {
+          name: '승인 요청 철회',
+          trigger: '신청자가 제출한 요청을 철회합니다.',
+          recipients: '승인자.',
+        },
+        approvalApproved: {
+          name: '승인 요청 승인됨',
+          trigger: '승인자가 요청을 승인합니다.',
+          recipients: '신청자.',
+        },
+        approvalRejected: {
+          name: '승인 요청 반려됨',
+          trigger: '승인자가 요청을 반려합니다.',
+          recipients: '신청자.',
+        },
+        usersInvitation: {
+          name: '사용자 초대',
+          trigger:
+            '관리자가 이메일 발송을 선택해 사용자를 초대하거나 초대를 다시 보냅니다.',
+          recipients: '초대받은 사람의 이메일 주소.',
+          rule: '이메일로 보내는 모든 초대에 발송되며, 끌 수 있는 스위치는 없습니다.',
+          language:
+            '지원하는 모든 언어가 한 통의 이메일에 담기고 제목은 영어입니다. 미리보기 언어를 바꿔도 내용은 달라지지 않습니다.',
+        },
+      },
+      variableText: {
+        entity:
+          '레코드 유형으로, 받는 사람의 언어로 표시됩니다(리드, 영업 기회, 회사, 연락처, 작업, 승인).',
+        record:
+          '문장 안에서 쓰는 레코드 유형(영어의 "a lead" 등)으로, 필요한 언어에서만 씁니다.',
+        name: 'CRM 화면과 같은 레코드 이름: 리드와 연락처는 "이름 / 회사", 영업 기회는 "회사 / 이름".',
+        app: '애플리케이션 이름.',
+        inviter: '초대를 보낸 사람.',
+        items: '부여되는 역할 또는 권한.',
+        date: '초대 만료 시각.',
+        url: '일회용 초대 링크로, 미리보기에서는 가상의 링크를 씁니다.',
       },
     },
   },

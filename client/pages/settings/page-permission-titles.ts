@@ -30,4 +30,6 @@ export const pagePermissionTitles: PagePermissionTitles = {
   'crm-agents-tab': 'crm.authz.pages.agents',
   'skills-new': 'crm.navigation.skills',
   'skills-detail': 'crm.navigation.skills',
+  // A notification template's drawer, under the templates page's grant.
+  notificationTemplate: 'settings.notificationTemplates',
 };

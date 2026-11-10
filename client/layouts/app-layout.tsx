@@ -1,5 +1,5 @@
 import { useSyncServerLocale } from '@nocobase/app-plugin-i18n/client';
-import type { ReactElement } from 'react';
+import { useMemo, type ReactElement } from 'react';
 import type { AppClientRegisteredRoute } from '@nocobase/app-client/plugins';
 import { Outlet, useLocation } from 'react-router';
 
@@ -7,6 +7,7 @@ import { BrandWatermark } from '#components/brand-watermark';
 import { Breadcrumbs } from '#components/breadcrumbs';
 
 import { RouteTreeProvider } from '../routing/route-context.js';
+import { RouteLeaveBoundary } from '../routing/route-leave-boundary.js';
 
 import { PageBreadcrumbProvider } from '@nocobase/app-client';
 import { useTranslation } from '@nocobase/i18n/client';
@@ -55,7 +56,8 @@ export function AppLayout({ routes }: AppLayoutProps): ReactElement {
   useSyncServerLocale();
 
   const { t } = useTranslation();
-  const { items: menuItems, denied } = useRouteNavigation(routes);
+  const { items: menuItems, denied, loading } = useRouteNavigation(routes);
+  const access = useMemo(() => ({ denied, loading }), [denied, loading]);
   const { pathname } = useLocation();
   const selectedKey = selectedNavigationId(routes, pathname, denied);
   // Application change: the template's brand tint and watermark on the
@@ -91,7 +93,7 @@ export function AppLayout({ routes }: AppLayoutProps): ReactElement {
 
   return (
     // The shell owns the business route tree used by its pages and navigation.
-    <RouteTreeProvider routes={routes}>
+    <RouteTreeProvider routes={routes} access={access}>
       <PageBreadcrumbProvider>
         <AppSidebarProvider>
           <AppSidebar
@@ -128,7 +130,8 @@ export function AppLayout({ routes }: AppLayoutProps): ReactElement {
                   enough. */}
               <div className='flex min-w-0 items-center gap-1.5 sm:gap-3'>
                 <AppSidebarToggle />
-                {/* Application change: on a phone the header shows the
+                {/* Application change, kept where template 1.0.0-beta.92
+                    dropped the phone header's brand: on a phone the header shows the
                     brand, a size smaller below sm, and no page trail, which with the
                     demo entry and the actions beside it is wider than the
                     screen; the brand draws smaller still when even it is
@@ -161,7 +164,9 @@ export function AppLayout({ routes }: AppLayoutProps): ReactElement {
               {/* main only positions; the page scrolls in here, so a child page layer laid over main is neither
             moved by the page's scrolling nor stretched by its height. */}
               <div className='h-full overflow-y-auto'>
-                <Outlet />
+                <RouteLeaveBoundary hidden={loading}>
+                  <Outlet />
+                </RouteLeaveBoundary>
               </div>
               {/* Application change: the assistant's entry, floating over the
                   bottom of this column (assistant-dock.tsx). */}

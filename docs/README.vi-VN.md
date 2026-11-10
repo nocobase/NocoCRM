@@ -10,7 +10,7 @@
 <p align="center">CRM bán hàng B2B mã nguồn mở · Xây dựng trên NocoBase</p>
 
 <p align="center">
-  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache-2.0"></a>
+  <a href="../LICENSE.txt"><img src="https://img.shields.io/badge/license-NocoBase-blue" alt="NocoBase License"></a>
   <a href="https://github.com/nocobase/NocoCRM/tags"><img src="https://img.shields.io/github/v/tag/nocobase/NocoCRM?label=version&sort=semver&include_prereleases" alt="version"></a>
   <a href="https://www.nocobase.com"><img src="https://img.shields.io/badge/built%20on-NocoBase-1f6feb" alt="Built on NocoBase"></a>
 </p>
@@ -37,7 +37,7 @@ https://github.com/user-attachments/assets/f79d109f-ce33-47ac-b08e-b6a55373ef5f
 - **Phê duyệt không còn bị tắc.** Agent phê duyệt đối chiếu mức chiết khấu hay điều khoản với quy tắc và các quyết định trước đây của bạn, rồi soạn đề xuất và ý kiến cho người phê duyệt.
 - **Trọn chu trình bán hàng.** Khách hàng tiềm năng, công ty, liên hệ, cơ hội, công việc, phê duyệt và báo cáo, có bảng cơ hội, lịch công việc, tìm kiếm trên mọi bản ghi (⌘K / Ctrl+K), với vai trò được máy chủ áp dụng cho từng bản ghi.
 - **Tùy biến theo ý bạn.** Viết giá, hạn mức chiết khấu và nhịp theo dõi thành hướng dẫn nghiệp vụ bằng văn bản thường, mọi agent đều làm theo; cách làm việc của mỗi agent là một kỹ năng bạn có thể chỉnh sửa. Mã nguồn mở, phần còn lại cứ để agent lập trình sửa.
-- **Tự lưu trữ.** Dữ liệu nằm trên máy chủ của bạn, với mô hình do bạn chọn: DeepSeek, OpenAI, Claude, Gemini, Qwen và nhiều mô hình khác. Apache-2.0.
+- **Tự lưu trữ.** Dữ liệu nằm trên máy chủ của bạn, với mô hình do bạn chọn: DeepSeek, OpenAI, Claude, Gemini, Qwen và nhiều mô hình khác.
 
 ## Bắt đầu nhanh
 
@@ -79,4 +79,4 @@ Triển khai thực tế, xem [Triển khai](guide.md#deployment); dùng Postgre
 
 ## Giấy phép
 
-NocoCRM được xây dựng trên NocoBase và phát hành theo giấy phép [Apache-2.0](../LICENSE).
+NocoCRM được xây dựng trên NocoBase và phát hành theo [Giấy phép NocoBase](../LICENSE.txt).

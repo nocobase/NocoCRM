@@ -10,7 +10,7 @@
 <p align="center">CRM для B2B-продаж с открытым кодом · Построена на NocoBase</p>
 
 <p align="center">
-  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache-2.0"></a>
+  <a href="../LICENSE.txt"><img src="https://img.shields.io/badge/license-NocoBase-blue" alt="NocoBase License"></a>
   <a href="https://github.com/nocobase/NocoCRM/tags"><img src="https://img.shields.io/github/v/tag/nocobase/NocoCRM?label=version&sort=semver&include_prereleases" alt="version"></a>
   <a href="https://www.nocobase.com"><img src="https://img.shields.io/badge/built%20on-NocoBase-1f6feb" alt="Built on NocoBase"></a>
 </p>
@@ -37,7 +37,7 @@ https://github.com/user-attachments/assets/2d3e9f21-78b3-464d-8f6a-8268fcf2370f
 - **Согласования больше не буксуют.** Агент согласований сверяет скидку или условие с вашими правилами и прошлыми решениями и готовит для согласующего рекомендацию и комментарий.
 - **Весь цикл продаж.** Лиды, компании, контакты, сделки, задачи, согласования и отчёты, а также доска сделок, календарь задач и поиск по всем записям (⌘K / Ctrl+K); права по ролям сервер применяет к каждой записи.
 - **Настраивается под вас.** Опишите цены, пределы скидок и ритм работы с клиентами простым текстом в бизнес-инструкциях — и каждый агент будет им следовать; метод работы каждого агента — это навык, который можно править. Исходный код открыт, так что остальное изменит агент для программирования.
-- **Собственный хостинг.** Данные остаются на ваших серверах, модели — на ваш выбор: DeepSeek, OpenAI, Claude, Gemini, Qwen и другие. Apache-2.0.
+- **Собственный хостинг.** Данные остаются на ваших серверах, модели — на ваш выбор: DeepSeek, OpenAI, Claude, Gemini, Qwen и другие.
 
 ## Быстрый старт
 
@@ -79,4 +79,4 @@ pnpm dev
 
 ## Лицензия
 
-NocoCRM построена на NocoBase и распространяется по лицензии [Apache-2.0](../LICENSE).
+NocoCRM построена на NocoBase и распространяется по [лицензии NocoBase](../LICENSE.txt).

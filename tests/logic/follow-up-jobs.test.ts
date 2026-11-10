@@ -13,12 +13,15 @@ import {
 describe('AI follow-ups as tasks of the jobs service', () => {
   it('runs each queued follow-up, two at a time, and keeps one queued across a restart', async () => {
     const folder = await mkdtemp(resolve(tmpdir(), 'crm-jobs-'));
+    // Named configurations sit under `backends` since @nocobase/jobs 1.0.0-beta.6.
     const config = {
-      [FOLLOW_UP_JOBS]: {
-        adapter: 'memory' as const,
-        concurrency: 2,
-        attempts: 1,
-        persistence: { path: folder },
+      backends: {
+        [FOLLOW_UP_JOBS]: {
+          adapter: 'memory' as const,
+          concurrency: 2,
+          attempts: 1,
+          persistence: { path: folder },
+        },
       },
     };
     try {

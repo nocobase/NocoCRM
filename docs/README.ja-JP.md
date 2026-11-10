@@ -10,7 +10,7 @@
 <p align="center">オープンソースの B2B 営業 CRM · NocoBase で構築</p>
 
 <p align="center">
-  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache-2.0"></a>
+  <a href="../LICENSE.txt"><img src="https://img.shields.io/badge/license-NocoBase-blue" alt="NocoBase License"></a>
   <a href="https://github.com/nocobase/NocoCRM/tags"><img src="https://img.shields.io/github/v/tag/nocobase/NocoCRM?label=version&sort=semver&include_prereleases" alt="version"></a>
   <a href="https://www.nocobase.com"><img src="https://img.shields.io/badge/built%20on-NocoBase-1f6feb" alt="Built on NocoBase"></a>
 </p>
@@ -37,7 +37,7 @@ https://github.com/user-attachments/assets/575c9b19-4437-47a8-9c59-d428f90efa5a
 - **承認が止まらない。** 承認エージェントが値引きや条件をあなたのルールや過去の判断と照らし合わせ、承認者のために推奨とコメントを下書きします。
 - **営業サイクル全体を。** リード、会社、連絡先、商談、タスク、承認、レポート。商談ボード、タスクカレンダー、すべてのレコードを横断する検索（⌘K / Ctrl+K）を備え、ロールに応じた権限はサーバーがレコードごとに適用します。
 - **自由にカスタマイズ。** 価格、値引きの上限、フォローの頻度を業務ガイダンスに平易な文章で書けば、すべてのエージェントがそれに従います。各エージェントの進め方は編集できるスキルです。ソースコードは公開されているので、それ以外はコーディングエージェントに変更させられます。
-- **セルフホスト。** データは自社のサーバーに置いたまま、モデルも自由に選べます：DeepSeek、OpenAI、Claude、Gemini、Qwen など。Apache-2.0。
+- **セルフホスト。** データは自社のサーバーに置いたまま、モデルも自由に選べます：DeepSeek、OpenAI、Claude、Gemini、Qwen など。
 
 ## クイックスタート
 
@@ -79,4 +79,4 @@ pnpm dev
 
 ## ライセンス
 
-NocoCRM は NocoBase で構築され、[Apache-2.0](../LICENSE) ライセンスで公開されています。
+NocoCRM は NocoBase で構築され、[NocoBase ライセンス](../LICENSE.txt)で公開されています。

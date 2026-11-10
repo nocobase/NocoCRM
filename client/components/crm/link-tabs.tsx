@@ -4,7 +4,7 @@ import type { LucideIcon } from 'lucide-react';
 import { TabRow } from './tab-row.js';
 import { tabClass } from './tab-class.js';
 
-// Tabs that are addresses (Auto follow-up's agents, the settings' pages),
+// Tabs that are addresses (Auto follow-up's agents),
 // drawn as a record page's tabs (DetailTabBar in pages/crm-detail.tsx):
 // underlined on a thin rule, the open one in the foreground over a 2px line
 // of it, the others muted until hovered, each led by its icon (or what it

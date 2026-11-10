@@ -288,8 +288,8 @@ describe('the settings page', () => {
   });
 });
 
-describe('the General settings tab', () => {
-  it('no longer carries the demo dataset, which has a tab of its own', () => {
+describe('the General settings page', () => {
+  it('no longer carries the demo dataset, which has a page of its own', () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <MemoryRouter initialEntries={['/settings/crm']}>

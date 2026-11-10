@@ -144,6 +144,9 @@ export function RecordWhatsAppPanel({
           >
             <TabsList
               variant='line'
+              // Laid out by this head, not by the line tabs' shared rule
+              // (client/styles.css).
+              data-tabs-layout='own'
               className='h-14 gap-4 p-0'
               aria-label={toText(text('whatsapp.tabPeopleLabel'))}
             >

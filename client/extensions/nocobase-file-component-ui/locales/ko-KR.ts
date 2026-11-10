@@ -26,6 +26,7 @@ const resource: FileUiResource = {
     'files.retry': '다시 시도',
     'files.done': '완료',
     'files.uploading': '업로드 중',
+    'files.longWait': '아직 업로드 중입니다. 계속 기다리거나 취소하세요.',
     'files.failed': '실패',
     'files.pending': '대기 중',
     'files.previous': '이전 파일',

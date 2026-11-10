@@ -30,6 +30,8 @@ const auth: AppConfigFactory<AuthConfig> = defineAuthConfig({
     // Application change: accounts are created by an administrator on the
     // Users page; nobody registers themselves, so the sign-up endpoint is off
     // (the /register page and the login page's link to it are removed too).
+    // The template signs new accounts in since 1.0.0-beta.92 (`autoSignIn:
+    // true`); with sign-up off that has nothing to act on, so it stays false.
     emailAndPassword: { enabled: true, autoSignIn: false, disableSignUp: true },
     // Application change: a forgotten password is reset by mail, which the
     // plugin sends from its own sender, `auth.email` (config.yml, or the
@@ -38,7 +40,9 @@ const auth: AppConfigFactory<AuthConfig> = defineAuthConfig({
     // page offers no "Forgot password" link. With no auth.email the plugin
     // still falls back to the `system-email` notification channel, logging it
     // as deprecated; that channel stays configured anyway, since the Users
-    // plugin sends invitations through it (SMTP_PASSWORD).
+    // plugin sends invitations through it (SMTP_PASSWORD). A named sender
+    // from `mailers` (server/config/mailers.ts, template 1.0.0-beta.92) can
+    // be selected instead with `passwordReset.mailer` in config.yml.
     passwordReset: { enabled: true },
     session: { storeSessionInDatabase: true },
     account: { encryptOAuthTokens: true },

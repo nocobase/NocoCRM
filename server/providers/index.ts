@@ -4,6 +4,7 @@ import CrmProvider from './crm/index.js';
 import CrmAgentsProvider from './crm-agents/index.js';
 import LifecycleProvider from './lifecycles.js';
 import DemoModeProvider from './demo-mode.js';
+import NotificationManagementProvider from './notification-management.js';
 import SubmissionProvider from './submission.js';
 
 // Application change: the template's user-roles provider is replaced by the
@@ -16,6 +17,10 @@ const serviceProviders: readonly ApplicationServiceProviderConstructor[] = [
   LifecycleProvider,
   CrmProvider,
   CrmAgentsProvider,
+  // The template's (1.0.0-beta.92): publishes only whether the invitation
+  // mailer is configured. The CRM's own notification templates are
+  // registered by CrmProvider (crm/notification-templates.ts).
+  NotificationManagementProvider,
 ];
 
 export default serviceProviders;

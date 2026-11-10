@@ -10,7 +10,7 @@
 <p align="center">Open-source B2B sales CRM · Built on NocoBase</p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache-2.0"></a>
+  <a href="LICENSE.txt"><img src="https://img.shields.io/badge/license-NocoBase-blue" alt="NocoBase License"></a>
   <a href="https://github.com/nocobase/NocoCRM/tags"><img src="https://img.shields.io/github/v/tag/nocobase/NocoCRM?label=version&sort=semver&include_prereleases" alt="version"></a>
   <a href="https://www.nocobase.com"><img src="https://img.shields.io/badge/built%20on-NocoBase-1f6feb" alt="Built on NocoBase"></a>
 </p>
@@ -37,7 +37,7 @@ https://github.com/user-attachments/assets/b251f2d2-ed55-43e8-8526-507c1130eb5c
 - **Approvals stop stalling.** The approval agent checks a discount or a term against your rules and past decisions, and drafts a recommendation and a comment for the approver.
 - **The full sales cycle.** Leads, companies, contacts, opportunities, tasks, approvals and reports, with a pipeline board, a task calendar, search across every record (⌘K / Ctrl+K) and roles enforced per record by the server.
 - **Customizable.** Write your prices, discount limits and follow-up cadence as business guidance in plain text, and every agent follows it; each agent's method is a skill you can edit. The source is open, so a coding agent can change the rest.
-- **Self-hosted.** Your data stays on your servers, with the models of your choice: DeepSeek, OpenAI, Claude, Gemini, Qwen and more. Apache-2.0.
+- **Self-hosted.** Your data stays on your servers, with the models of your choice: DeepSeek, OpenAI, Claude, Gemini, Qwen and more.
 
 ## Quick start
 
@@ -79,4 +79,4 @@ For production, see [Deployment](docs/guide.md#deployment); to run on PostgreSQL
 
 ## License
 
-NocoCRM is built on NocoBase and released under the [Apache-2.0](LICENSE) license.
+NocoCRM is built on NocoBase and released under the [NocoBase License](LICENSE.txt).

@@ -1,7 +1,9 @@
 import fileUi from '../extensions/nocobase-file-component-ui/locales/ru-RU.js';
+import notificationLogsUi from '../extensions/nocobase-notification-logs-ui/locales/ru-RU.js';
 import type { AppResource } from './en-US.js';
 import { crmRuRU } from './crm/ru-RU.js';
 import settingsRuRU from './settings/ru-RU.js';
+import databaseExplorer from './database-explorer/ru-RU.js';
 
 // The pages in ru-RU: the template's copy (./system/) and the CRM's own
 // (./crm/ru-RU.ts), with the same keys as ./en-US.ts. The template ships no
@@ -9,12 +11,29 @@ import settingsRuRU from './settings/ru-RU.js';
 // fails the type check until they are translated.
 const ruRU: AppResource = {
   ...fileUi,
+  ...notificationLogsUi,
   'auth.passwordResetSuccess': 'Ваш пароль сброшен. Войдите с новым паролем.',
   'auth.requestNewResetLink': 'Запросить новую ссылку для сброса',
   'auth.preparingSession': 'Подготовка сеанса…',
   'auth.connectionFailed': 'Не удалось подключиться',
   'auth.connectionFailedDescription':
     'Не удалось установить соединение в реальном времени. Повторите попытку, чтобы войти в приложение, или выйдите из системы.',
+  // The template's Database Explorer copy, translated in ./database-explorer/.
+  databaseExplorer,
+  taskProgress: {
+    queued: 'Ожидает запуска',
+    running: 'Выполняется',
+    completed: 'Завершено',
+    failed: 'Ошибка',
+    canceled: 'Отменено',
+    count: '{{processed}} из {{total}}',
+    processed: 'Обработано: {{processed}}',
+    background: 'Работа продолжится, если вы покинете эту страницу.',
+  },
+  pendingFeedback: {
+    working: 'Выполняется…',
+    longWait: 'Это занимает больше времени, чем обычно. Можно подождать ещё.',
+  },
   listFeedback: {
     loading: 'Загрузка',
     empty: 'Данных пока нет',
@@ -130,6 +149,9 @@ const ruRU: AppResource = {
     'Войдите с именем пользователя или эл. почтой и паролем.',
   'auth.registerTitle': 'Создание учётной записи',
   'auth.registerDescription': 'Создайте учётную запись, чтобы начать работу.',
+  'auth.registrationAccepted': 'Запрос на регистрацию отправлен',
+  'auth.registrationGuidance':
+    'Попробуйте войти с отправленными именем пользователя и паролем. Если для этого адреса уже есть учётная запись, новые данные не вступят в силу. Войдите в исходную учётную запись или восстановите пароль. Перед входом выполните инструкции по подтверждению, которые даёт приложение.',
   'auth.forgotTitle': 'Забыли пароль',
   'auth.forgotDescription':
     'Введите адрес эл. почты, и мы отправим ссылку для сброса, если такая учётная запись существует.',
@@ -174,9 +196,9 @@ const ruRU: AppResource = {
   'auth.continueWith': 'Продолжить через {provider}',
   'auth.about': 'Об этом приложении',
   'auth.platform': 'ИИ-нативная платформа приложений',
-  'auth.marketingTitleFirst': 'Пусть ИИ создаёт свободно.',
-  'auth.marketingTitleSecond': 'NocoBase обеспечивает',
-  'auth.marketingTitleThird': 'надёжность.',
+  // The template's brand line (its zh-CN keeps it in English too).
+  'auth.marketingTitleFirst': 'AI + NocoBase',
+  'auth.marketingTitleSecond': 'Build reliable business systems',
   'auth.marketingDescription':
     'Дайте ИИ гибкий фронтенд-фреймворк, чтобы формировать любой интерфейс, а NocoBase защитит данные, разрешения и управление под ним.',
   'auth.frontend': 'ИИ-нативный фронтенд',
@@ -191,15 +213,20 @@ const ruRU: AppResource = {
   'status.denied': 'Доступ запрещён',
   'status.pageFailed': 'Не удалось загрузить страницу',
   'status.retry': 'Повторить',
+  'status.refreshing': 'Обновление',
+  'status.reloadPage': 'Перезагрузить страницу',
+  'status.retryFailedDescription':
+    'Загрузить по-прежнему не удаётся. Может помочь перезагрузка всей страницы; несохранённые изменения на этой странице могут быть потеряны.',
   'navigation.brandHome': 'Главная NocoCRM',
   'navigation.brandApps': 'Приложения NocoBase',
   'routeOverlay.close': 'Закрыть',
   'status.deniedDescription': 'У вас нет разрешения на доступ: {{label}}.',
   'status.routeFailedDescription':
     'Не удалось загрузить маршрут {{label}} из {{packageName}}.',
+  // The template's brand line, which its own zh-CN keeps in English too.
   shell: {
-    buildFreely: 'ИИ создаёт свободно.',
-    reliability: '<brand>NocoBase</brand> обеспечивает надёжность.',
+    brandPartnership: 'AI + <brand>NocoBase</brand>',
+    buildReliableSystems: 'Build reliable business systems',
   },
   home: {
     platform: 'NocoBase · ИИ-нативная платформа приложений',
@@ -456,6 +483,7 @@ const ruRU: AppResource = {
   },
   navigation: {
     home: 'Обзор',
+    resources: 'Ресурсы',
     open: 'Открыть навигацию',
     close: 'Закрыть навигацию',
     expand: 'Развернуть навигацию',
@@ -466,6 +494,7 @@ const ruRU: AppResource = {
     breadcrumb: 'Навигационная цепочка',
     breadcrumbMore: 'Показать промежуточные уровни',
     back: 'Назад',
+    backTo: 'Назад: {{label}}',
   },
   dataTable: {
     noResults: 'Нет результатов.',
@@ -485,6 +514,7 @@ const ruRU: AppResource = {
   datePicker: {
     placeholder: 'Выберите дату',
     rangePlaceholder: 'Выберите период',
+    clear: 'Очистить',
   },
   flowDiagram: {
     controls: 'Управление схемой',
@@ -608,7 +638,13 @@ const ruRU: AppResource = {
     },
   },
   // The template's Settings copy, translated in ./settings/.
-  settings: settingsRuRU,
+  settings: {
+    ...settingsRuRU,
+    // The Notification management module's logs tab, named as the
+    // notification-logs-ui block names it
+    // (client/pages/settings/routes.ts).
+    notificationLogs: 'Журнал уведомлений',
+  },
   crm: crmRuRU,
 };
 

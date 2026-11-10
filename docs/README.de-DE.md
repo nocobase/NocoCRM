@@ -10,7 +10,7 @@
 <p align="center">Open-Source-CRM für den B2B-Vertrieb · Gebaut auf NocoBase</p>
 
 <p align="center">
-  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache-2.0"></a>
+  <a href="../LICENSE.txt"><img src="https://img.shields.io/badge/license-NocoBase-blue" alt="NocoBase License"></a>
   <a href="https://github.com/nocobase/NocoCRM/tags"><img src="https://img.shields.io/github/v/tag/nocobase/NocoCRM?label=version&sort=semver&include_prereleases" alt="version"></a>
   <a href="https://www.nocobase.com"><img src="https://img.shields.io/badge/built%20on-NocoBase-1f6feb" alt="Built on NocoBase"></a>
 </p>
@@ -37,7 +37,7 @@ https://github.com/user-attachments/assets/64f9cc69-f126-469d-9f81-bfb1116f2cca
 - **Freigaben stocken nicht mehr.** Der Freigabe-Agent prüft einen Rabatt oder eine Bedingung gegen Ihre Regeln und frühere Entscheidungen und formuliert eine Empfehlung und einen Kommentar für die genehmigende Person.
 - **Der ganze Vertriebszyklus.** Leads, Unternehmen, Kontakte, Verkaufschancen, Aufgaben, Freigaben und Berichte, mit Pipeline-Board, Aufgabenkalender, Suche über alle Datensätze (⌘K / Strg+K) und Rollen, die der Server für jeden Datensatz durchsetzt.
 - **Anpassbar.** Schreiben Sie Preise, Rabattgrenzen und Nachfassrhythmus als Geschäftsrichtlinien in Klartext, und jeder Agent hält sich daran; wie ein Agent vorgeht, ist ein Skill, den Sie bearbeiten können. Der Quellcode ist offen, den Rest ändert ein Coding-Agent.
-- **Selbst gehostet.** Ihre Daten bleiben auf Ihren Servern, mit den Modellen Ihrer Wahl: DeepSeek, OpenAI, Claude, Gemini, Qwen und weitere. Apache-2.0.
+- **Selbst gehostet.** Ihre Daten bleiben auf Ihren Servern, mit den Modellen Ihrer Wahl: DeepSeek, OpenAI, Claude, Gemini, Qwen und weitere.
 
 ## Schnellstart
 
@@ -79,4 +79,4 @@ Für den Produktivbetrieb siehe [Deployment](guide.md#deployment); für PostgreS
 
 ## Lizenz
 
-NocoCRM ist auf NocoBase gebaut und unter der Lizenz [Apache-2.0](../LICENSE) veröffentlicht.
+NocoCRM ist auf NocoBase gebaut und unter der [NocoBase-Lizenz](../LICENSE.txt) veröffentlicht.

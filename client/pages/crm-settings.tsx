@@ -190,7 +190,7 @@ function SettingsForm({
       <ErrorNotice error={error} />
       {/* One page, its parts one under another: the business defaults and
           the reminders each saved by their own card's Save. The demo
-          dataset has a tab of its own (settings/demo-data.tsx). */}
+          dataset has a settings page of its own (settings/demo-data.tsx). */}
       <Card
         id='settings-business'
         className='max-w-4xl scroll-mt-16 border border-border shadow-xs ring-0'
