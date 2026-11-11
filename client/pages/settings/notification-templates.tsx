@@ -52,6 +52,7 @@ import { useAdminText } from './common/hooks.js';
 import { SettingsModulePage } from './settings-module-page.js';
 import {
   NOTIFICATION_TEMPLATES_KEY,
+  textKey,
   useTemplateText,
   type TemplateText,
 } from './notification-template-text.js';
@@ -82,7 +83,11 @@ export default function NotificationTemplatesPage(): ReactElement {
   const templates = useMemo(() => query.data ?? [], [query.data]);
 
   const categories = useMemo(
-    () => [...new Set(templates.map((view) => view.category))],
+    () => [
+      ...new Map(
+        templates.map((view) => [textKey(view.category), view.category]),
+      ).values(),
+    ],
     [templates],
   );
   const channelTypes = useMemo(
@@ -97,7 +102,7 @@ export default function NotificationTemplatesPage(): ReactElement {
     const needle = search.trim().toLowerCase();
     return templates.filter(
       (view) =>
-        (category === ALL || view.category === category) &&
+        (category === ALL || textKey(view.category) === category) &&
         (channel === ALL ||
           view.channels.some((entry) => entry.type === channel)) &&
         (!needle ||
@@ -152,15 +157,17 @@ export default function NotificationTemplatesPage(): ReactElement {
     content = (
       <div className='flex flex-col gap-6'>
         {categories
-          .filter((name) => visible.some((view) => view.category === name))
+          .filter((name) =>
+            visible.some((view) => textKey(view.category) === textKey(name)),
+          )
           .map((name) => (
-            <section key={name} aria-label={words.category(name)}>
+            <section key={textKey(name)} aria-label={words.category(name)}>
               <h2 className='mb-3 text-sm font-medium text-muted-foreground'>
                 {words.category(name)}
               </h2>
               <ul className='grid gap-3 md:grid-cols-2 xl:grid-cols-3'>
                 {visible
-                  .filter((view) => view.category === name)
+                  .filter((view) => textKey(view.category) === textKey(name))
                   .map((view) => (
                     <li key={view.id} className='min-w-0'>
                       <TemplateCard
@@ -204,7 +211,7 @@ export default function NotificationTemplatesPage(): ReactElement {
             value={category}
             onChange={setCategory}
             options={categories.map((value) => ({
-              value,
+              value: textKey(value),
               label: words.category(value),
             }))}
           />

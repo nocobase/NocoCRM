@@ -27,7 +27,7 @@ test('plugin preferences follow each visitor across account switches without cha
   };
   const defaults = await preferences(context);
   const chosen = {
-    locale: defaults.locale === 'en-US' ? 'zh-CN' : 'en-US',
+    'i18n.locale': defaults['i18n.locale'] === 'en-US' ? 'zh-CN' : 'en-US',
     'theme.mode': 'dark',
     'theme.preset': 'compact',
   };

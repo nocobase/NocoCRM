@@ -5,22 +5,40 @@ through `server/config/demo-mode.ts` and `NOCOBASE_DEMO_MODE`. Follow the
 [Demo Mode Skill](../skills/nocobase-app-plugin-demo-mode/SKILL.md) for deployment
 configuration, quick sign-in and daily reset.
 
-Demo Mode `0.2.0-beta.9` uses Agents `2.0.0-beta.5`, Users
-`2.0.0-beta.15`, Authorization `1.0.0-beta.36`, Authentication
-`2.0.0-beta.19`, App Client `4.0.0-beta.8`, App Server `5.0.0-beta.1`,
-App CLI `1.0.0-beta.32`, DB `1.0.0-beta.25` and Jobs `1.0.0-beta.5`. App Server
+Demo Mode `0.2.0-beta.11` uses Agents `2.0.0-beta.11`, Users
+`2.0.0-beta.19`, Authorization `1.0.0-beta.37`, Authentication
+`2.0.0-beta.20`, App Client `4.0.0-beta.10`, App Server `5.0.0-beta.4`,
+App CLI `1.0.0-beta.33`, DB `1.0.0-beta.28` and Jobs `1.0.0-beta.6`. App Server
 5 needs Caching `1.0.0-beta.4`, and every other `@nocobase/app-plugin-*` the
-CRM registers moves to its release that accepts App Server 5. App Server 5
+CRM registers moves to its release that accepts App Server 5 (Notification
+`2.0.0-beta.8`, Notification In-app `2.0.0-beta.4` and File `1.0.0-beta.31`
+with this one). App Server 5
 removed the deprecated `@nocobase/app-server/mailer` entry; the CRM never
 imported it, its notification channels come from
 `@nocobase/app-plugin-notification-providers/config` and the reset mail from
 `auth.email` (the `mailers` section the template now offers is not adopted).
+Authentication `2.0.0-beta.20` takes a named reset sender only as
+`auth.passwordReset.mailer` and refuses `auth.email.mailer`; the inline
+`auth.email` and the `AUTH_EMAIL_*` variables the CRM uses remain accepted.
 Review the Agents migration notes and preview both pending tasks and
 checksum drift before upgrading an existing deployment. Agents 2 fails startup
 on an active `agents.vectors` setting (the CRM uses none), and Redis Jobs,
 Queue and realtime need the commercial `@nocobase/app-plugin-jobs-redis`,
 `@nocobase/app-plugin-queue-redis` and `@nocobase/app-plugin-realtime-redis`
-plugins with `adapter: redis` declared.
+plugins with `adapter: redis` declared. Since App Server `5.0.0-beta.2`
+Concurrency, Jobs and Queue name their configurations under `backends`
+(`default` naming one) and realtime selects its broker under
+`realtime.broker`; startup refuses the former top-level fields, in
+`config.yml` too. The CRM's factories (`server/config/jobs.ts`, `queue.ts`,
+`concurrency.ts`, `realtime.ts`) and `config.example.yml` already have that
+shape. Agents `2.0.0-beta.11` checks a conversation attachment against the
+default Drive disk's `maxFileSizeMb` (20 MiB unless configured) and answers
+`FILE_TOO_LARGE`; the ask boxes check the same limit before uploading.
+
+The Demo Mode `0.2.0-beta.11` client still matches registered routes as
+absolute nested paths, so `patches/@nocobase__app-plugin-demo-mode@0.2.0-beta.11.patch`
+(`patchedDependencies` in `pnpm-workspace.yaml`) carries the fix forward from
+`0.2.0-beta.9`; move or drop it with the next Demo Mode release.
 
 Keep the required peer minimums explicit in the application manifest and
 lock their compatible versions. This upgrade covers Demo Mode and its required
@@ -46,10 +64,15 @@ checks and form draft recovery, which the request guard does not replace, and
 refusal is the application's and the plugin's client exports no reason check.
 
 The plugin also owns HTTPS partitioned authentication cookies and visitor
-session preferences through the Users API (locale, theme mode and preset).
-Do not duplicate these policies in application configuration or grant
-preference-table writes. The existing theme controls use localStorage and
-language switching uses the I18n client; the plugin does not replace those
+session preferences through the Users API (`i18n.locale`, `theme.mode` and
+`theme.preset`; since `0.2.0-beta.11` the language is `i18n.locale`, which
+replaced the unused `locale` key). Do not duplicate these policies in
+application configuration or grant preference-table writes. The header's
+language switcher (`useAppLocale` of the I18n client, saving through the
+Users client's locale preference) writes `i18n.locale`, so on a demo site a
+visitor's language stays in their browser session instead of following the
+shared account; `tests/playwright/demo-mode-preferences.test.ts` checks it.
+The theme controls use localStorage; the plugin does not replace those
 controls or their ordinary application behavior.
 
 The CRM registers its existing story as the `crm` dataset in
