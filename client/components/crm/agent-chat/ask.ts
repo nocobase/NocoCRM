@@ -18,10 +18,11 @@ import type {
   MessageAttachment,
   PageContext,
 } from '@nocobase/app-plugin-agents/shared/conversations';
+import { CHAT_ATTACHMENTS_PER_MESSAGE_MAX } from '@nocobase/app-plugin-agents/shared/conversations';
 import {
-  CHAT_ATTACHMENT_SIZE_MAX,
-  CHAT_ATTACHMENTS_PER_MESSAGE_MAX,
-} from '@nocobase/app-plugin-agents/shared/conversations';
+  limitBytes,
+  useFileUploadLimit,
+} from '@nocobase/app-plugin-file/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 import { toText, useCrmApi, useCrmText, type Entity } from '../api.js';
@@ -315,7 +316,9 @@ export interface AskFile {
 
 // The files of a question, uploaded through the plugin as soon as they are
 // picked, within its limits (size, count); the plugin's own error toasts
-// tell why one is refused.
+// tell why one is refused. The size limit is the default Drive disk's
+// (`drive.disks.<name>.maxFileSizeMb`, 20 MiB unless configured), which the
+// plugin checks its conversation uploads against since Agents 2.0.0-beta.11.
 export function useAskFiles(): {
   files: readonly AskFile[];
   uploading: boolean;
@@ -327,6 +330,7 @@ export function useAskFiles(): {
   const { text } = useCrmText();
   const toaster = useToaster();
   const uploads = useChatAttachments();
+  const maxBytes = limitBytes(useFileUploadLimit());
   const [files, setFiles] = useState<readonly AskFile[]>([]);
   const upload = useCallback(
     (picked: readonly File[]): void => {
@@ -341,7 +345,7 @@ export function useAskFiles(): {
           ),
         });
       const accepted = picked.slice(0, Math.max(0, room)).filter((file) => {
-        if (file.size <= CHAT_ATTACHMENT_SIZE_MAX) return true;
+        if (file.size <= maxBytes) return true;
         toaster.show({
           type: 'error',
           title: toText(text('agentPanel.fileTooLarge', { name: file.name })),
@@ -382,7 +386,7 @@ export function useAskFiles(): {
           },
         );
     },
-    [files.length, text, toaster, uploads],
+    [files.length, maxBytes, text, toaster, uploads],
   );
   const remove = useCallback(
     (uid: string) => {

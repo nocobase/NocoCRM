@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Upgrade Demo Mode to 0.2.0-beta.11 with the packages it requires, among them
+  App Server 5.0.0-beta.4, Agents 2.0.0-beta.11, Users 2.0.0-beta.19,
+  Notification 2.0.0-beta.8 and File 1.0.0-beta.31: on a demo site, a
+  visitor's language choice stays in their own browser session instead of
+  changing the shared demo account's, and Demo Mode's own notices and
+  settings page read in Russian and Korean too. The assistant's ask boxes take
+  a file up to the size the default file disk allows
+  (`drive.disks.<name>.maxFileSizeMb`, 20 MiB unless configured), the limit
+  the server applies. Notification templates registered
+  with translatable text show it in the reader's language. A named password
+  reset sender is selected with `auth.passwordReset.mailer`;
+  `auth.email.mailer` is refused at startup, while the inline `auth.email` and
+  `AUTH_EMAIL_*` the CRM documents keep working.
 - Upgrade Demo Mode to 0.2.0-beta.9 with the packages it requires, among them
   App Server 5.0.0-beta.1, Agents 2.0.0-beta.5, Users 2.0.0-beta.15 and
   Caching 1.0.0-beta.4: on a demo site, a visitor opening a link to any
