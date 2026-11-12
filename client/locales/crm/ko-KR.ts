@@ -2344,7 +2344,7 @@ export const crmKoKR: CrmWording = {
       preview: '미리보기',
       previewLanguage: '미리보기 언어',
       previewAllLanguages:
-        '이 메일은 모든 언어를 한 통에 담고 있어 모든 수신자가 같은 내용을 받습니다.',
+        '이 메시지는 모든 언어를 한 번에 담고 있어 모든 수신자가 같은 내용을 받습니다.',
       example: '예시',
       definition: '템플릿 원문',
       synthetic:
@@ -2356,7 +2356,6 @@ export const crmKoKR: CrmWording = {
       },
       contributors: {
         crm: 'NocoCRM',
-        users: '사용자',
       },
       categories: {
         accounts: '계정',
@@ -2447,15 +2446,6 @@ export const crmKoKR: CrmWording = {
           trigger: '승인자가 요청을 반려합니다.',
           recipients: '신청자.',
         },
-        usersInvitation: {
-          name: '사용자 초대',
-          trigger:
-            '관리자가 이메일 발송을 선택해 사용자를 초대하거나 초대를 다시 보냅니다.',
-          recipients: '초대받은 사람의 이메일 주소.',
-          rule: '이메일로 보내는 모든 초대에 발송되며, 끌 수 있는 스위치는 없습니다.',
-          language:
-            '지원하는 모든 언어가 한 통의 이메일에 담기고 제목은 영어입니다. 미리보기 언어를 바꿔도 내용은 달라지지 않습니다.',
-        },
       },
       variableText: {
         entity:
@@ -2463,11 +2453,6 @@ export const crmKoKR: CrmWording = {
         record:
           '문장 안에서 쓰는 레코드 유형(영어의 "a lead" 등)으로, 필요한 언어에서만 씁니다.',
         name: 'CRM 화면과 같은 레코드 이름: 리드와 연락처는 "이름 / 회사", 영업 기회는 "회사 / 이름".',
-        app: '애플리케이션 이름.',
-        inviter: '초대를 보낸 사람.',
-        items: '부여되는 역할 또는 권한.',
-        date: '초대 만료 시각.',
-        url: '일회용 초대 링크로, 미리보기에서는 가상의 링크를 씁니다.',
       },
     },
   },

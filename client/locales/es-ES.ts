@@ -220,6 +220,11 @@ const esES: AppResource = {
   'navigation.brandHome': 'Inicio de NocoCRM',
   'navigation.brandApps': 'Aplicaciones de NocoBase',
   'routeOverlay.close': 'Cerrar',
+  'routeOverlay.discardTitle': '¿Descartar los cambios?',
+  'routeOverlay.discardDescription':
+    'Tus cambios no se han guardado y se perderán.',
+  'routeOverlay.keepEditing': 'Seguir editando',
+  'routeOverlay.discard': 'Descartar',
   'status.deniedDescription': 'No tienes permiso para acceder a {{label}}.',
   'status.routeFailedDescription':
     'No se ha podido cargar la ruta {{label}} de {{packageName}}.',
@@ -501,6 +506,11 @@ const esES: AppResource = {
     noResults: 'No hay resultados.',
     sortAscending: 'Ascendente',
     sortDescending: 'Descendente',
+    sort: 'Ordenar',
+    sortBy: 'Ordenar por',
+    filters: 'Filtros',
+    filtersApplied: 'Filtros · {{count}}',
+    selectPage: 'Seleccionar todo en esta página',
     hideColumn: 'Ocultar',
     view: 'Vista',
     toggleColumns: 'Mostrar u ocultar columnas',

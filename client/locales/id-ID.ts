@@ -218,6 +218,11 @@ const idID: AppResource = {
   'navigation.brandHome': 'Beranda NocoCRM',
   'navigation.brandApps': 'Aplikasi NocoBase',
   'routeOverlay.close': 'Tutup',
+  'routeOverlay.discardTitle': 'Buang perubahan?',
+  'routeOverlay.discardDescription':
+    'Perubahan Anda belum disimpan dan akan hilang.',
+  'routeOverlay.keepEditing': 'Lanjutkan mengedit',
+  'routeOverlay.discard': 'Buang',
   'status.deniedDescription':
     'Anda tidak memiliki izin untuk mengakses {{label}}.',
   'status.routeFailedDescription':
@@ -500,6 +505,11 @@ const idID: AppResource = {
     noResults: 'Tidak ada hasil.',
     sortAscending: 'Naik',
     sortDescending: 'Turun',
+    sort: 'Urutkan',
+    sortBy: 'Urutkan menurut',
+    filters: 'Filter',
+    filtersApplied: 'Filter · {{count}}',
+    selectPage: 'Pilih semua di halaman ini',
     hideColumn: 'Sembunyikan',
     view: 'Tampilan',
     toggleColumns: 'Tampilkan/sembunyikan kolom',

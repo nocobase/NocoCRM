@@ -19,7 +19,7 @@ vi.mock('../../client/pages/settings/accounts/user-extras.js', () => ({
   PendingInvitations: () => null,
 }));
 vi.mock('../../client/pages/settings/accounts/user-row-extras.js', () => ({
-  useUserExtras: () => ({ items: null, dialogs: null, offered: false }),
+  useUserExtras: () => ({ actions: [], dialogs: null }),
 }));
 
 const namespace = '@nocobase/idle-list-test';

@@ -615,8 +615,8 @@ export const adminWording = {
     preview: ['Preview', '预览'],
     previewLanguage: ['Preview language', '预览语言'],
     previewAllLanguages: [
-      'This email carries every language at once; every recipient gets the same message.',
-      '这封邮件一次包含所有语言，每位收件人收到的内容都相同。',
+      'This message carries every language at once; every recipient gets the same content.',
+      '这条通知一次包含所有语言，每位收件人收到的内容都相同。',
     ],
     example: ['Example', '示例'],
     definition: ['Template', '模板原文'],
@@ -631,7 +631,6 @@ export const adminWording = {
     },
     contributors: {
       crm: ['NocoCRM', 'NocoCRM'],
-      users: ['Users', '用户'],
     },
     categories: {
       accounts: ['Accounts', '账号'],
@@ -774,22 +773,6 @@ export const adminWording = {
         recipients: ['The applicant.', '申请人。'],
       },
       // The Users plugin's invitation mail (`users.invitation`).
-      usersInvitation: {
-        name: ['User invitation', '用户邀请'],
-        trigger: [
-          'An administrator invites someone, or resends an invitation, with email delivery chosen.',
-          '管理员邀请用户或重新发送邀请，并选择了通过邮件发送。',
-        ],
-        recipients: ["The invited person's email address.", '被邀请人的邮箱。'],
-        rule: [
-          'Sent with every invitation sent by email; there is no switch to turn it off.',
-          '通过邮件发送的邀请都会发出，没有关闭的开关。',
-        ],
-        language: [
-          'One email in every supported language, its subject in English; the preview language does not change it.',
-          '一封邮件包含所有支持的语言，标题用英文；切换预览语言不会改变内容。',
-        ],
-      },
     },
     variableText: {
       entity: [
@@ -803,14 +786,6 @@ export const adminWording = {
       name: [
         'The record\'s name as the CRM shows it: "name / company" for a lead or contact, "company / name" for an opportunity.',
         '记录名称，与 CRM 页面上一致：线索和联系人为“姓名 / 公司”，商机为“公司 / 商机名”。',
-      ],
-      app: ["The application's name.", '应用名称。'],
-      inviter: ['Who sent the invitation.', '邀请人。'],
-      items: ['The roles or access granted.', '授予的角色或权限。'],
-      date: ['When the invitation expires.', '邀请的过期时间。'],
-      url: [
-        'The one-time invitation link; the preview uses a made-up one.',
-        '一次性邀请链接；预览中使用虚构的链接。',
       ],
     },
   },

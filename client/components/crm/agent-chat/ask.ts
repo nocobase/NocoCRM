@@ -18,10 +18,11 @@ import type {
   MessageAttachment,
   PageContext,
 } from '@nocobase/app-plugin-agents/shared/conversations';
+import { CHAT_ATTACHMENTS_PER_MESSAGE_MAX } from '@nocobase/app-plugin-agents/shared/conversations';
 import {
-  CHAT_ATTACHMENT_SIZE_MAX,
-  CHAT_ATTACHMENTS_PER_MESSAGE_MAX,
-} from '@nocobase/app-plugin-agents/shared/conversations';
+  limitBytes,
+  useFileUploadLimit,
+} from '@nocobase/app-plugin-file/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 import { toText, useCrmApi, useCrmText, type Entity } from '../api.js';
@@ -327,6 +328,10 @@ export function useAskFiles(): {
   const { text } = useCrmText();
   const toaster = useToaster();
   const uploads = useChatAttachments();
+  // The chat's files go to the default disk, whose size limit the File
+  // plugin reports (the Agents plugin has no limit of its own since
+  // 2.0.0-beta.11).
+  const sizeMax = limitBytes(useFileUploadLimit());
   const [files, setFiles] = useState<readonly AskFile[]>([]);
   const upload = useCallback(
     (picked: readonly File[]): void => {
@@ -341,7 +346,7 @@ export function useAskFiles(): {
           ),
         });
       const accepted = picked.slice(0, Math.max(0, room)).filter((file) => {
-        if (file.size <= CHAT_ATTACHMENT_SIZE_MAX) return true;
+        if (file.size <= sizeMax) return true;
         toaster.show({
           type: 'error',
           title: toText(text('agentPanel.fileTooLarge', { name: file.name })),
@@ -382,7 +387,7 @@ export function useAskFiles(): {
           },
         );
     },
-    [files.length, text, toaster, uploads],
+    [files.length, sizeMax, text, toaster, uploads],
   );
   const remove = useCallback(
     (uid: string) => {

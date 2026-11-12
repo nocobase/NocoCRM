@@ -2407,7 +2407,7 @@ export const crmEsES: CrmWording = {
       preview: 'Vista previa',
       previewLanguage: 'Idioma de la vista previa',
       previewAllLanguages:
-        'Este correo incluye todos los idiomas a la vez; todos los destinatarios reciben el mismo mensaje.',
+        'Este mensaje incluye todos los idiomas a la vez; todos los destinatarios reciben el mismo contenido.',
       example: 'Ejemplo',
       definition: 'Plantilla',
       synthetic:
@@ -2419,7 +2419,6 @@ export const crmEsES: CrmWording = {
       },
       contributors: {
         crm: 'NocoCRM',
-        users: 'Usuarios',
       },
       categories: {
         accounts: 'Cuentas',
@@ -2513,15 +2512,6 @@ export const crmEsES: CrmWording = {
           trigger: 'El aprobador rechaza una solicitud.',
           recipients: 'El solicitante.',
         },
-        usersInvitation: {
-          name: 'Invitación de usuario',
-          trigger:
-            'Un administrador invita a alguien, o reenvía una invitación, y elige el envío por correo.',
-          recipients: 'La dirección de correo de la persona invitada.',
-          rule: 'Se envía con cada invitación enviada por correo; no hay ningún interruptor para desactivarla.',
-          language:
-            'Un solo correo en todos los idiomas admitidos, con el asunto en inglés; el idioma de la vista previa no lo cambia.',
-        },
       },
       variableText: {
         entity:
@@ -2529,11 +2519,6 @@ export const crmEsES: CrmWording = {
         record:
           'El tipo de registro tal como aparece dentro de una frase (en inglés, "a lead"), para los idiomas que lo necesitan.',
         name: 'El nombre del registro tal como lo muestra el CRM: "nombre / empresa" para un lead o un contacto, "empresa / nombre" para una oportunidad.',
-        app: 'El nombre de la aplicación.',
-        inviter: 'Quién envió la invitación.',
-        items: 'Los roles o accesos concedidos.',
-        date: 'Cuándo caduca la invitación.',
-        url: 'El enlace de invitación de un solo uso; la vista previa usa uno inventado.',
       },
     },
   },

@@ -2410,7 +2410,7 @@ export const crmFrFR: CrmWording = {
       preview: 'Aperçu',
       previewLanguage: "Langue de l'aperçu",
       previewAllLanguages:
-        'Cet e-mail contient toutes les langues à la fois ; chaque destinataire reçoit le même message.',
+        'Ce message contient toutes les langues à la fois ; chaque destinataire reçoit le même contenu.',
       example: 'Exemple',
       definition: 'Modèle',
       synthetic:
@@ -2422,7 +2422,6 @@ export const crmFrFR: CrmWording = {
       },
       contributors: {
         crm: 'NocoCRM',
-        users: 'Utilisateurs',
       },
       categories: {
         accounts: 'Comptes',
@@ -2517,15 +2516,6 @@ export const crmFrFR: CrmWording = {
           trigger: "L'approbateur refuse une demande.",
           recipients: 'Le demandeur.',
         },
-        usersInvitation: {
-          name: "Invitation d'utilisateur",
-          trigger:
-            "Un administrateur invite quelqu'un, ou renvoie une invitation, en choisissant l'envoi par e-mail.",
-          recipients: "L'adresse e-mail de la personne invitée.",
-          rule: 'Envoyée avec chaque invitation envoyée par e-mail ; aucun interrupteur ne permet de la désactiver.',
-          language:
-            "Un seul e-mail dans toutes les langues prises en charge, avec l'objet en anglais ; la langue de l'aperçu n'y change rien.",
-        },
       },
       variableText: {
         entity:
@@ -2533,11 +2523,6 @@ export const crmFrFR: CrmWording = {
         record:
           "Le type de fiche tel qu'il s'écrit dans une phrase (en anglais « a lead »), pour les langues qui en ont besoin.",
         name: "Le nom de la fiche tel que le CRM l'affiche : « nom / entreprise » pour un prospect ou un contact, « entreprise / nom » pour une opportunité.",
-        app: "Le nom de l'application.",
-        inviter: "La personne qui a envoyé l'invitation.",
-        items: 'Les rôles ou accès accordés.',
-        date: "La date d'expiration de l'invitation.",
-        url: "Le lien d'invitation à usage unique ; l'aperçu en utilise un fictif.",
       },
     },
   },

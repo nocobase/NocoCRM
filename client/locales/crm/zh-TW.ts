@@ -2252,7 +2252,7 @@ export const crmZhTW: CrmWording = {
       preview: '預覽',
       previewLanguage: '預覽語言',
       previewAllLanguages:
-        '這封郵件一次包含所有語言，每位收件人收到的內容都相同。',
+        '這則通知一次包含所有語言，每位收件人收到的內容都相同。',
       example: '範例',
       definition: '範本原文',
       synthetic: '使用虛構的範例資料，預覽不會傳送通知，也不會變更任何設定。',
@@ -2263,7 +2263,6 @@ export const crmZhTW: CrmWording = {
       },
       contributors: {
         crm: 'NocoCRM',
-        users: '使用者',
       },
       categories: {
         accounts: '帳號',
@@ -2351,14 +2350,6 @@ export const crmZhTW: CrmWording = {
           trigger: '審批人駁回了申請。',
           recipients: '申請人。',
         },
-        usersInvitation: {
-          name: '使用者邀請',
-          trigger: '管理員邀請使用者或重新傳送邀請，並選擇以電子郵件寄送。',
-          recipients: '受邀者的電子郵件地址。',
-          rule: '以電子郵件寄送的邀請都會發出，沒有可關閉的開關。',
-          language:
-            '一封郵件包含所有支援的語言，主旨為英文；切換預覽語言不會改變內容。',
-        },
       },
       variableText: {
         entity:
@@ -2366,11 +2357,6 @@ export const crmZhTW: CrmWording = {
         record:
           '在句中使用的記錄類型（如英文的「a lead」），供需要的語言使用。',
         name: '記錄名稱，與 CRM 頁面上一致：線索和聯絡人為「姓名 / 公司」，商機為「公司 / 商機名稱」。',
-        app: '應用程式名稱。',
-        inviter: '邀請人。',
-        items: '授予的角色或權限。',
-        date: '邀請的到期時間。',
-        url: '一次性邀請連結；預覽中使用虛構的連結。',
       },
     },
   },

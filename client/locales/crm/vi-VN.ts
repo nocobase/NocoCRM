@@ -2373,7 +2373,7 @@ export const crmViVN: CrmWording = {
       preview: 'Xem trước',
       previewLanguage: 'Ngôn ngữ xem trước',
       previewAllLanguages:
-        'Email này gồm tất cả các ngôn ngữ cùng lúc; mọi người nhận đều nhận cùng một nội dung.',
+        'Thông báo này gồm tất cả các ngôn ngữ cùng lúc; mọi người nhận đều nhận cùng một nội dung.',
       example: 'Ví dụ',
       definition: 'Mẫu gốc',
       synthetic:
@@ -2385,7 +2385,6 @@ export const crmViVN: CrmWording = {
       },
       contributors: {
         crm: 'NocoCRM',
-        users: 'Người dùng',
       },
       categories: {
         accounts: 'Tài khoản',
@@ -2481,15 +2480,6 @@ export const crmViVN: CrmWording = {
           trigger: 'Người phê duyệt từ chối một yêu cầu.',
           recipients: 'Người yêu cầu.',
         },
-        usersInvitation: {
-          name: 'Lời mời người dùng',
-          trigger:
-            'Quản trị viên mời ai đó hoặc gửi lại lời mời, và chọn gửi qua email.',
-          recipients: 'Địa chỉ email của người được mời.',
-          rule: 'Được gửi với mọi lời mời gửi qua email; không có công tắc để tắt.',
-          language:
-            'Một email gồm tất cả ngôn ngữ được hỗ trợ, tiêu đề bằng tiếng Anh; đổi ngôn ngữ xem trước không làm thay đổi nội dung.',
-        },
       },
       variableText: {
         entity:
@@ -2497,11 +2487,6 @@ export const crmViVN: CrmWording = {
         record:
           'Loại bản ghi như khi đứng trong câu (như “a lead” trong tiếng Anh), dành cho các ngôn ngữ cần đến.',
         name: 'Tên bản ghi như CRM hiển thị: “tên / công ty” với khách hàng tiềm năng hoặc liên hệ, “công ty / tên” với cơ hội.',
-        app: 'Tên ứng dụng.',
-        inviter: 'Người gửi lời mời.',
-        items: 'Vai trò hoặc quyền truy cập được cấp.',
-        date: 'Thời điểm lời mời hết hạn.',
-        url: 'Liên kết mời dùng một lần; bản xem trước dùng liên kết hư cấu.',
       },
     },
   },

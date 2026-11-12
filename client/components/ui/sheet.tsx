@@ -54,7 +54,12 @@ function SheetContent({
   const { t } = useTranslation();
   return (
     <SheetPortal>
-      {showOverlay ? <SheetOverlay className={overlayClassName} /> : null}
+      {/* Base UI leaves out the backdrop of a dialog opened inside another one; render it anyway, so the layer below
+          takes no taps or clicks while this one is open (mobile.md M7.2). Application change: a sheet may show no
+          overlay (`showOverlay`) or style it (`overlayClassName`). */}
+      {showOverlay ? (
+        <SheetOverlay forceRender className={overlayClassName} />
+      ) : null}
       <SheetPrimitive.Popup
         data-slot='sheet-content'
         data-side={side}

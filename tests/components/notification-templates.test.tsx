@@ -21,12 +21,33 @@ import { RouteTreeProvider } from '../../client/routing/route-context.js';
 // Notification plugin's API, in the reader's language, grouped by category,
 // a template opening in a drawer with its preview in the interface language.
 
+// The Users plugin's own words for its invitation, which the page shows as
+// registered (translation keys in the plugin's namespace).
+const USERS = '@nocobase/app-plugin-users';
+const usersZh = {
+  notificationTemplates: {
+    invitation: {
+      category: '账号',
+      name: '用户邀请',
+      businessRule: '每次邀请都会发送。',
+    },
+  },
+};
 const namespaces = {
   [metadata.name]: {
     'en-US': async () => ({ default: enUS }),
     'zh-CN': async () => ({ default: zhCN }),
   },
+  [USERS]: {
+    'en-US': async () => ({ default: {} }),
+    'zh-CN': async () => ({ default: usersZh }),
+  },
 };
+const usersText = (key: string, defaultValue: string) => ({
+  ns: USERS,
+  key: `notificationTemplates.invitation.${key}`,
+  defaultValue,
+});
 
 const { routes } = resolveAppClientContributions([
   {
@@ -47,6 +68,7 @@ const view = (
   id: string,
   category: string,
   type = 'in-app',
+  localeMode: NotificationTemplateView['localeMode'] = 'separate',
 ): NotificationTemplateView => ({
   id,
   contributor: id.startsWith('crm.') ? 'crm' : '@nocobase/app-plugin-users',
@@ -56,15 +78,21 @@ const view = (
   recipients: 'Registered recipients',
   businessRule: 'Registered rule',
   locales: LOCALES,
+  localeMode,
   languagePolicy: 'Registered language policy',
   variables: [{ name: 'name', description: 'Registered variable' }],
   channels: [channel(type, type === 'email' ? 'system-email' : 'inbox')],
 });
 const TEMPLATES = [
-  view('users.invitation', 'Accounts', 'email'),
+  {
+    ...view('users.invitation', 'Accounts', 'email'),
+    category: usersText('category', 'Accounts'),
+    name: usersText('name', 'User invitation'),
+    businessRule: usersText('businessRule', 'Sent with every invitation.'),
+  },
   view('crm.record-assigned', 'Records'),
   view('crm.approval-pending', 'Approvals'),
-  view('acme.unknown', 'Elsewhere'),
+  view('acme.unknown', 'Elsewhere', 'in-app', 'combined'),
 ];
 
 function Where() {
@@ -173,19 +201,31 @@ it('opens a template from anywhere on its card in a drawer, its preview in the i
   expect(within(drawer).getByText('NocoCRM')).toBeTruthy();
 });
 
-it('opens the drawer from a link of the plugin’s, ?template=<id>', async () => {
+it('opens the drawer from a link of the plugin’s, ?template=<id>, in the words its contributor registered', async () => {
   await mount('/settings/notifications/templates?template=users.invitation');
   const drawer = await screen.findByRole('dialog');
   expect(
     await within(drawer).findByRole('heading', { name: '用户邀请' }),
   ).toBeTruthy();
+  expect(within(drawer).getByText('每次邀请都会发送。')).toBeTruthy();
+  // One email per language: the preview language can be picked.
   expect(
-    within(drawer).getByText('通过邮件发送的邀请都会发出，没有关闭的开关。'),
+    await within(drawer).findByRole('combobox', { name: '预览语言' }),
   ).toBeTruthy();
-  // One email in every language: no preview language to pick.
+});
+
+it('offers no preview language for a message that carries every language at once', async () => {
+  await mount('/settings/notifications/templates/acme.unknown');
+  const drawer = await screen.findByRole('dialog');
+  expect(
+    await within(drawer).findByRole('heading', {
+      name: 'Registered acme.unknown',
+    }),
+  ).toBeTruthy();
+  // One message in every language: no preview language to pick.
   expect(
     await within(drawer).findByText(
-      '这封邮件一次包含所有语言，每位收件人收到的内容都相同。',
+      '这条通知一次包含所有语言，每位收件人收到的内容都相同。',
     ),
   ).toBeTruthy();
   expect(

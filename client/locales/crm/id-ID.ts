@@ -2385,7 +2385,7 @@ export const crmIdID: CrmWording = {
       preview: 'Pratinjau',
       previewLanguage: 'Bahasa pratinjau',
       previewAllLanguages:
-        'Email ini memuat semua bahasa sekaligus; setiap penerima mendapat pesan yang sama.',
+        'Pesan ini memuat semua bahasa sekaligus; setiap penerima mendapat isi yang sama.',
       example: 'Contoh',
       definition: 'Templat',
       synthetic:
@@ -2397,7 +2397,6 @@ export const crmIdID: CrmWording = {
       },
       contributors: {
         crm: 'NocoCRM',
-        users: 'Pengguna',
       },
       categories: {
         accounts: 'Akun',
@@ -2491,15 +2490,6 @@ export const crmIdID: CrmWording = {
           trigger: 'Pemberi persetujuan menolak permintaan.',
           recipients: 'Pemohon.',
         },
-        usersInvitation: {
-          name: 'Undangan pengguna',
-          trigger:
-            'Administrator mengundang seseorang, atau mengirim ulang undangan, dengan memilih pengiriman lewat email.',
-          recipients: 'Alamat email orang yang diundang.',
-          rule: 'Dikirim untuk setiap undangan lewat email; tidak ada sakelar untuk mematikannya.',
-          language:
-            'Satu email dalam semua bahasa yang didukung, dengan subjek dalam bahasa Inggris; bahasa pratinjau tidak mengubahnya.',
-        },
       },
       variableText: {
         entity:
@@ -2507,11 +2497,6 @@ export const crmIdID: CrmWording = {
         record:
           'Jenis data sebagaimana tertulis dalam kalimat (dalam bahasa Inggris "a lead"), untuk bahasa yang memerlukannya.',
         name: 'Nama data seperti yang ditampilkan CRM: "nama / perusahaan" untuk prospek atau kontak, "perusahaan / nama" untuk peluang.',
-        app: 'Nama aplikasi.',
-        inviter: 'Pengirim undangan.',
-        items: 'Peran atau akses yang diberikan.',
-        date: 'Kapan undangan kedaluwarsa.',
-        url: 'Tautan undangan sekali pakai; pratinjau memakai tautan rekaan.',
       },
     },
   },

@@ -57,7 +57,7 @@ export default function NotificationTemplateDrawer(): ReactElement {
         view
           ? [
               words.category(view.category),
-              ...view.channels.map((entry) => words.channelType(entry.type)),
+              ...view.channels.map((entry) => words.channelType(entry)),
             ].join(' · ')
           : undefined
       }
@@ -127,7 +127,7 @@ function Particulars({
           {view.channels.map((entry) => (
             <li key={entry.name} className='flex flex-wrap items-center gap-2'>
               <span className='text-foreground'>
-                {words.channelType(entry.type)}
+                {words.channelType(entry)}
               </span>
               <Badge variant={entry.configured ? 'secondary' : 'outline'}>
                 {state(entry.configured ? 'configured' : 'unconfigured')}
@@ -154,14 +154,14 @@ function Particulars({
             {view.variables.map((variable) => (
               <div key={variable.name}>
                 <dt className='font-mono text-xs text-foreground'>{`{{${variable.name}}}`}</dt>
-                <dd>{words.variable(variable.name, variable.description)}</dd>
+                <dd>{words.variable(view, variable)}</dd>
               </div>
             ))}
           </dl>
         </Section>
       ) : null}
       <Section title={text('notificationTemplates.source')}>
-        {words.contributor(view.contributor)}
+        {words.contributor(view)}
       </Section>
     </div>
   );

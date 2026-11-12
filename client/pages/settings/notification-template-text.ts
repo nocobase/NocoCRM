@@ -1,16 +1,22 @@
-import type { NotificationTemplateView } from '@nocobase/app-plugin-notification/client';
+import type {
+  NotificationTemplateChannel,
+  NotificationTemplateText,
+  NotificationTemplateView,
+} from '@nocobase/app-plugin-notification/client';
+import { useTranslation } from '@nocobase/i18n/client';
 import { useCallback, useMemo } from 'react';
 
 import { useCrmText } from '../../components/crm/api.js';
 
 // The registered notification templates in the reader's language. The
 // Notification plugin carries a template's name, trigger, recipients,
-// conditions, language rule, category and variables as one English string
-// each (NotificationTemplateView); the CRM's own templates
-// (server/providers/crm/notification-templates.ts) and the Users plugin's
-// invitation are worded again in every language under
-// `admin.notificationTemplates`, by template id. A template the CRM does not
-// know keeps the registered English.
+// conditions, language rule, category and variables each as a string or a
+// translation key (NotificationTemplateText); the CRM's own templates
+// (server/providers/crm/notification-templates.ts) register English strings
+// and are worded again in every language under `admin.notificationTemplates`,
+// by template id. Any other template, the Users plugin's invitation among
+// them, shows what it registered: its translation key in the interface
+// language, or its string as written.
 
 type ItemKey =
   | 'recordAssigned'
@@ -25,8 +31,7 @@ type ItemKey =
   | 'approvalPending'
   | 'approvalWithdrawn'
   | 'approvalApproved'
-  | 'approvalRejected'
-  | 'usersInvitation';
+  | 'approvalRejected';
 
 // The General settings' Reminders switch each CRM template is sent under
 // (`crm.notifications.*`, the settings' own labels).
@@ -38,13 +43,9 @@ type Switch =
 
 interface Known {
   readonly key: ItemKey;
-  // Absent for a template outside the CRM's switches (the invitation).
-  readonly switch?: Switch;
+  readonly switch: Switch;
   // Whether the item has a rule of its own (`items.<key>.rule`).
   readonly rule?: boolean;
-  // Whether one message carries every language it lists, so that the preview
-  // reads the same whichever language is asked for (the invitation).
-  readonly allLanguages?: boolean;
 }
 
 const KNOWN: Readonly<Record<string, Known>> = {
@@ -95,15 +96,11 @@ const KNOWN: Readonly<Record<string, Known>> = {
     key: 'approvalRejected',
     switch: 'notifyApprovals',
   },
-  'users.invitation': {
-    key: 'usersInvitation',
-    rule: true,
-    allLanguages: true,
-  },
 };
 
-// The registered categories, channel types, contributors and variables the
-// CRM words again; anything else shows as registered.
+// The registered categories (by their default text), channel types,
+// contributors and the CRM templates' variables the CRM words again; anything
+// else shows as registered.
 const CATEGORIES: Readonly<Record<string, string>> = {
   Accounts: 'accounts',
   Records: 'records',
@@ -115,18 +112,13 @@ const CATEGORIES: Readonly<Record<string, string>> = {
 const CHANNEL_TYPES = new Set(['in-app', 'email']);
 const CONTRIBUTORS: Readonly<Record<string, string>> = {
   crm: 'crm',
-  '@nocobase/app-plugin-users': 'users',
 };
-const VARIABLES = new Set([
-  'entity',
-  'record',
-  'name',
-  'app',
-  'inviter',
-  'items',
-  'date',
-  'url',
-]);
+const VARIABLES = new Set(['entity', 'record', 'name']);
+
+/** A registered text as authored, for grouping and as the fallback. */
+export function templateDefaultText(text: NotificationTemplateText): string {
+  return typeof text === 'string' ? text : text.defaultValue;
+}
 
 // The directory's queries: the list, a template, a template's preview.
 export const NOTIFICATION_TEMPLATES_KEY = ['crm', 'notificationTemplates'];
@@ -140,68 +132,89 @@ export interface TemplateText {
   readonly language: (view: NotificationTemplateView) => string;
   /** Whether one message carries every language: no preview language to pick. */
   readonly allLanguages: (view: NotificationTemplateView) => boolean;
-  readonly category: (category: string) => string;
-  readonly channelType: (type: string) => string;
-  readonly contributor: (contributor: string) => string;
-  readonly variable: (name: string, registered: string) => string;
+  /** A category, by its registered text. */
+  readonly category: (category: NotificationTemplateText) => string;
+  readonly channelType: (channel: NotificationTemplateChannel) => string;
+  readonly contributor: (view: NotificationTemplateView) => string;
+  readonly variable: (
+    view: NotificationTemplateView,
+    variable: NotificationTemplateView['variables'][number],
+  ) => string;
 }
 
 export function useTemplateText(): TemplateText {
   const { text } = useCrmText();
+  const { t } = useTranslation();
   const word = useCallback(
     (key: string, options?: Record<string, unknown>) =>
       text(`admin.notificationTemplates.${key}`, options),
     [text],
+  );
+  // A registered text in the interface language: a translation key from its
+  // own namespace, its default when that has none; a string as written.
+  const registered = useCallback(
+    (value: NotificationTemplateText): string =>
+      typeof value === 'string'
+        ? value
+        : t(value.key, { ns: value.ns, defaultValue: value.defaultValue }),
+    [t],
   );
   return useMemo(() => {
     const item = (view: NotificationTemplateView) => KNOWN[view.id];
     return {
       name: (view) => {
         const known = item(view);
-        return known ? word(`items.${known.key}.name`) : view.name;
+        return known ? word(`items.${known.key}.name`) : registered(view.name);
       },
       trigger: (view) => {
         const known = item(view);
-        return known ? word(`items.${known.key}.trigger`) : view.trigger;
+        return known
+          ? word(`items.${known.key}.trigger`)
+          : registered(view.trigger);
       },
       recipients: (view) => {
         const known = item(view);
-        return known ? word(`items.${known.key}.recipients`) : view.recipients;
+        return known
+          ? word(`items.${known.key}.recipients`)
+          : registered(view.recipients);
       },
       conditions: (view) => {
         const known = item(view);
-        if (!known) return [view.businessRule];
+        if (!known) return [registered(view.businessRule)];
         const own = known.rule ? [word(`items.${known.key}.rule`)] : [];
-        return known.switch
-          ? [
-              word('switchRule', {
-                switch: text(`notifications.${known.switch}`),
-              }),
-              ...own,
-              word('always'),
-            ]
-          : own;
+        return [
+          word('switchRule', {
+            switch: text(`notifications.${known.switch}`),
+          }),
+          ...own,
+          word('always'),
+        ];
       },
-      language: (view) => {
-        const known = item(view);
-        if (!known) return view.languagePolicy;
-        return known.switch
-          ? word('crmLanguage')
-          : word(`items.${known.key}.language`);
-      },
-      allLanguages: (view) => item(view)?.allLanguages === true,
+      language: (view) =>
+        item(view) ? word('crmLanguage') : registered(view.languagePolicy),
+      allLanguages: (view) => view.localeMode === 'combined',
       category: (category) => {
-        const key = CATEGORIES[category];
-        return key ? word(`categories.${key}`) : category;
+        const key = CATEGORIES[templateDefaultText(category)];
+        return key ? word(`categories.${key}`) : registered(category);
       },
-      channelType: (type) =>
-        CHANNEL_TYPES.has(type) ? word(`channelTypes.${type}`) : type,
-      contributor: (contributor) => {
-        const key = CONTRIBUTORS[contributor];
-        return key ? word(`contributors.${key}`) : contributor;
+      channelType: (channel) =>
+        CHANNEL_TYPES.has(channel.type)
+          ? word(`channelTypes.${channel.type}`)
+          : channel.typeLabel
+            ? registered(channel.typeLabel)
+            : channel.type,
+      contributor: (view) => {
+        const key = CONTRIBUTORS[view.contributor];
+        return key
+          ? word(`contributors.${key}`)
+          : view.contributorLabel
+            ? registered(view.contributorLabel)
+            : view.contributor;
       },
-      variable: (name, registered) =>
-        VARIABLES.has(name) ? word(`variableText.${name}`) : registered,
+      variable: (view, variable) =>
+        item(view) && VARIABLES.has(variable.name)
+          ? word(`variableText.${variable.name}`)
+          : registered(variable.description),
     };
-  }, [word, text]);
+  }, [word, text, registered]);
 }

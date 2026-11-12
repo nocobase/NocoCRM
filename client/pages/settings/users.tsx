@@ -37,6 +37,7 @@ import { PageHeader } from '#components/page-header';
 import { Button } from '#components/ui/button';
 import { StatusBadge } from '#components/status-badge';
 import { type FilterDimension, FilterMenu } from '#components/filter-menu';
+import { RowActions } from '#components/row-actions';
 import { ConfirmAction, SettingsError } from './shared.js';
 // Application change: inviting, resetting a password and deleting, which
 // this prepared page leaves out (accounts/user-extras.tsx,
@@ -105,38 +106,33 @@ function UserActions({
       setRequestBusy(false);
     }
   };
-  if (
-    !canRevoke &&
-    !(user.disabledAt ? canEnable : canDisable) &&
-    !extras.offered
-  )
-    return <></>;
   return (
-    <div className='flex items-center justify-end gap-2 whitespace-nowrap'>
-      {!user.disabledAt && canDisable && (
-        <Button
-          variant='outline'
-          size='xs'
-          onClick={() => setAction('disable')}
-        >
-          {t('settings.disable')}
-        </Button>
-      )}
-      {user.disabledAt && canEnable && (
-        <Button variant='outline' size='xs' onClick={() => setAction('enable')}>
-          {t('settings.enable')}
-        </Button>
-      )}
-      {canRevoke && (
-        <Button
-          variant='outline'
-          size='xs'
-          onClick={() => setAction('revokeSessions')}
-        >
-          {t('settings.revokeSessions')}
-        </Button>
-      )}
-      {extras.items}
+    <>
+      <RowActions
+        label={t('settings.actionsFor', { name: user.name })}
+        actions={[
+          !user.disabledAt &&
+            canDisable && {
+              key: 'disable',
+              label: t('settings.disable'),
+              onClick: () => setAction('disable'),
+            },
+          Boolean(user.disabledAt) &&
+            canEnable && {
+              key: 'enable',
+              label: t('settings.enable'),
+              onClick: () => setAction('enable'),
+            },
+          canRevoke && {
+            key: 'revokeSessions',
+            label: t('settings.revokeSessions'),
+            onClick: () => setAction('revokeSessions'),
+          },
+          // Application change: Reset password and Delete
+          // (accounts/user-row-extras.tsx), Delete last as destructive.
+          ...extras.actions,
+        ]}
+      />
       {extras.dialogs}
       <ConfirmAction
         open={Boolean(action)}
@@ -163,7 +159,7 @@ function UserActions({
         onCancel={() => setAction(undefined)}
         onConfirm={() => void run()}
       />
-    </div>
+    </>
   );
 }
 

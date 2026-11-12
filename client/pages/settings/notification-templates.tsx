@@ -52,11 +52,25 @@ import { useAdminText } from './common/hooks.js';
 import { SettingsModulePage } from './settings-module-page.js';
 import {
   NOTIFICATION_TEMPLATES_KEY,
+  templateDefaultText,
   useTemplateText,
   type TemplateText,
 } from './notification-template-text.js';
 
 const ALL = 'all';
+
+/** Each key's first item, in the order the keys first appear. */
+function firstOf<T>(
+  items: readonly T[],
+  keyOf: (item: T) => string,
+): Map<string, T> {
+  const first = new Map<string, T>();
+  for (const item of items) {
+    const key = keyOf(item);
+    if (!first.has(key)) first.set(key, item);
+  }
+  return first;
+}
 
 export default function NotificationTemplatesPage(): ReactElement {
   const { t } = useTranslation();
@@ -81,23 +95,29 @@ export default function NotificationTemplatesPage(): ReactElement {
   });
   const templates = useMemo(() => query.data ?? [], [query.data]);
 
+  // Categories by their registered default text, channels by type, each with
+  // the first registration's words, in the order the directory lists them.
   const categories = useMemo(
-    () => [...new Set(templates.map((view) => view.category))],
+    () =>
+      firstOf(
+        templates.map((view) => view.category),
+        templateDefaultText,
+      ),
     [templates],
   );
   const channelTypes = useMemo(
-    () => [
-      ...new Set(
-        templates.flatMap((view) => view.channels.map((entry) => entry.type)),
+    () =>
+      firstOf(
+        templates.flatMap((view) => view.channels),
+        (entry) => entry.type,
       ),
-    ],
     [templates],
   );
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return templates.filter(
       (view) =>
-        (category === ALL || view.category === category) &&
+        (category === ALL || templateDefaultText(view.category) === category) &&
         (channel === ALL ||
           view.channels.some((entry) => entry.type === channel)) &&
         (!needle ||
@@ -151,16 +171,18 @@ export default function NotificationTemplatesPage(): ReactElement {
   } else {
     content = (
       <div className='flex flex-col gap-6'>
-        {categories
-          .filter((name) => visible.some((view) => view.category === name))
-          .map((name) => (
-            <section key={name} aria-label={words.category(name)}>
+        {[...categories]
+          .filter(([name]) =>
+            visible.some((view) => templateDefaultText(view.category) === name),
+          )
+          .map(([name, registered]) => (
+            <section key={name} aria-label={words.category(registered)}>
               <h2 className='mb-3 text-sm font-medium text-muted-foreground'>
-                {words.category(name)}
+                {words.category(registered)}
               </h2>
               <ul className='grid gap-3 md:grid-cols-2 xl:grid-cols-3'>
                 {visible
-                  .filter((view) => view.category === name)
+                  .filter((view) => templateDefaultText(view.category) === name)
                   .map((view) => (
                     <li key={view.id} className='min-w-0'>
                       <TemplateCard
@@ -203,9 +225,9 @@ export default function NotificationTemplatesPage(): ReactElement {
             all={text('notificationTemplates.all')}
             value={category}
             onChange={setCategory}
-            options={categories.map((value) => ({
+            options={[...categories].map(([value, registered]) => ({
               value,
-              label: words.category(value),
+              label: words.category(registered),
             }))}
           />
           <Filter
@@ -213,9 +235,9 @@ export default function NotificationTemplatesPage(): ReactElement {
             all={text('notificationTemplates.all')}
             value={channel}
             onChange={setChannel}
-            options={channelTypes.map((value) => ({
+            options={[...channelTypes].map(([value, entry]) => ({
               value,
-              label: words.channelType(value),
+              label: words.channelType(entry),
             }))}
           />
         </div>
@@ -245,7 +267,7 @@ function TemplateCard({
         <div className='flex shrink-0 flex-wrap justify-end gap-1'>
           {view.channels.map((entry) => (
             <Badge key={entry.name} variant='outline'>
-              {words.channelType(entry.type)}
+              {words.channelType(entry)}
             </Badge>
           ))}
         </div>

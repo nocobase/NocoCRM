@@ -2387,7 +2387,7 @@ export const crmPtBR: CrmWording = {
       preview: 'Pré-visualização',
       previewLanguage: 'Idioma da pré-visualização',
       previewAllLanguages:
-        'Este e-mail inclui todos os idiomas de uma vez; todos os destinatários recebem a mesma mensagem.',
+        'Esta mensagem inclui todos os idiomas de uma vez; todos os destinatários recebem o mesmo conteúdo.',
       example: 'Exemplo',
       definition: 'Modelo',
       synthetic:
@@ -2399,7 +2399,6 @@ export const crmPtBR: CrmWording = {
       },
       contributors: {
         crm: 'NocoCRM',
-        users: 'Usuários',
       },
       categories: {
         accounts: 'Contas',
@@ -2494,15 +2493,6 @@ export const crmPtBR: CrmWording = {
           trigger: 'O aprovador rejeita uma solicitação.',
           recipients: 'O solicitante.',
         },
-        usersInvitation: {
-          name: 'Convite de usuário',
-          trigger:
-            'Um administrador convida alguém, ou reenvia um convite, escolhendo o envio por e-mail.',
-          recipients: 'O endereço de e-mail da pessoa convidada.',
-          rule: 'Enviado com todo convite enviado por e-mail; não há chave para desativá-lo.',
-          language:
-            'Um único e-mail em todos os idiomas compatíveis, com o assunto em inglês; o idioma da pré-visualização não o altera.',
-        },
       },
       variableText: {
         entity:
@@ -2510,11 +2500,6 @@ export const crmPtBR: CrmWording = {
         record:
           'O tipo de registro como aparece dentro de uma frase (em inglês, "a lead"), para os idiomas que precisam disso.',
         name: 'O nome do registro como o CRM o mostra: "nome / empresa" para um lead ou contato, "empresa / nome" para uma oportunidade.',
-        app: 'O nome do aplicativo.',
-        inviter: 'Quem enviou o convite.',
-        items: 'As funções ou acessos concedidos.',
-        date: 'Quando o convite expira.',
-        url: 'O link de convite de uso único; a pré-visualização usa um fictício.',
       },
     },
   },

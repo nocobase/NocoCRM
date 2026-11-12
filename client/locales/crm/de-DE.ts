@@ -2421,7 +2421,7 @@ export const crmDeDE: CrmWording = {
       preview: 'Vorschau',
       previewLanguage: 'Vorschausprache',
       previewAllLanguages:
-        'Diese E-Mail enthält alle Sprachen auf einmal; jeder Empfänger erhält dieselbe Nachricht.',
+        'Diese Nachricht enthält alle Sprachen auf einmal; jeder Empfänger erhält dieselbe Nachricht.',
       example: 'Beispiel',
       definition: 'Vorlage',
       synthetic:
@@ -2433,7 +2433,6 @@ export const crmDeDE: CrmWording = {
       },
       contributors: {
         crm: 'NocoCRM',
-        users: 'Benutzer',
       },
       categories: {
         accounts: 'Konten',
@@ -2528,15 +2527,6 @@ export const crmDeDE: CrmWording = {
           trigger: 'Der Genehmiger lehnt einen Antrag ab.',
           recipients: 'Der Antragsteller.',
         },
-        usersInvitation: {
-          name: 'Benutzereinladung',
-          trigger:
-            'Ein Administrator lädt jemanden ein oder sendet eine Einladung erneut und wählt dabei die Zustellung per E-Mail.',
-          recipients: 'Die E-Mail-Adresse der eingeladenen Person.',
-          rule: 'Wird bei jeder per E-Mail gesendeten Einladung verschickt; es gibt keinen Schalter, um sie abzuschalten.',
-          language:
-            'Eine E-Mail in allen unterstützten Sprachen, der Betreff auf Englisch; die Vorschausprache ändert daran nichts.',
-        },
       },
       variableText: {
         entity:
@@ -2544,11 +2534,6 @@ export const crmDeDE: CrmWording = {
         record:
           'Die Art des Datensatzes, wie sie im Satz steht (im Englischen „a lead“), für die Sprachen, die das brauchen.',
         name: 'Der Name des Datensatzes wie im CRM: „Name / Unternehmen“ bei einem Lead oder Kontakt, „Unternehmen / Name“ bei einer Verkaufschance.',
-        app: 'Der Name der Anwendung.',
-        inviter: 'Wer die Einladung gesendet hat.',
-        items: 'Die gewährten Rollen oder Zugriffe.',
-        date: 'Wann die Einladung abläuft.',
-        url: 'Der einmalige Einladungslink; die Vorschau verwendet einen erfundenen.',
       },
     },
   },

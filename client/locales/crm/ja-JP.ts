@@ -2362,7 +2362,7 @@ export const crmJaJP: CrmWording = {
       preview: 'プレビュー',
       previewLanguage: 'プレビューの言語',
       previewAllLanguages:
-        'このメールはすべての言語を1通にまとめており、受信者全員に同じ内容が届きます。',
+        'このメッセージはすべての言語を1通にまとめており、受信者全員に同じ内容が届きます。',
       example: '例',
       definition: 'テンプレート原文',
       synthetic:
@@ -2374,7 +2374,6 @@ export const crmJaJP: CrmWording = {
       },
       contributors: {
         crm: 'NocoCRM',
-        users: 'ユーザー',
       },
       categories: {
         accounts: 'アカウント',
@@ -2466,15 +2465,6 @@ export const crmJaJP: CrmWording = {
           trigger: '承認者が申請を却下したとき。',
           recipients: '申請者。',
         },
-        usersInvitation: {
-          name: 'ユーザー招待',
-          trigger:
-            '管理者がユーザーを招待するか招待を再送信し、メールでの送信を選んだとき。',
-          recipients: '招待された人のメールアドレス。',
-          rule: 'メールで送る招待には必ず送信されます。オフにするスイッチはありません。',
-          language:
-            '1 通のメールにサポートされているすべての言語が含まれ、件名は英語です。プレビューの言語を切り替えても内容は変わりません。',
-        },
       },
       variableText: {
         entity:
@@ -2482,11 +2472,6 @@ export const crmJaJP: CrmWording = {
         record:
           '文中で使うレコードの種類（英語の「a lead」など）。必要な言語でのみ使います。',
         name: 'CRM の画面と同じレコード名。リードと連絡先は「氏名 / 会社」、商談は「会社 / 商談名」です。',
-        app: 'アプリケーションの名前。',
-        inviter: '招待した人。',
-        items: '付与されるロールまたはアクセス権。',
-        date: '招待の有効期限。',
-        url: '1 回限りの招待リンク。プレビューでは架空のリンクを使います。',
       },
     },
   },
