@@ -149,7 +149,12 @@ export function ApprovalActions({
               </DialogTitle>
               <DialogDescription>
                 {text(`decisionHint.${decision}`, {
+                  // The approver by name, from the CRM's users: `names`
+                  // holds the titles of records the page links to, not
+                  // people. The bare word only for someone not listed.
                   approver:
+                    meta.users.find((u) => u.id === approval.approverId)
+                      ?.name ??
                     names[toText(approval.approverId)] ??
                     text('fields.approverId'),
                 })}
