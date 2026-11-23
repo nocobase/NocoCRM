@@ -2397,6 +2397,13 @@ describe('CRM API security and domain rules', () => {
       approverId: 'manager',
     });
     await service.approvalAction(actor('rep'), toText(earlier.id), 'submit');
+    // A draft, which freezes the rule in force when it is created.
+    const draft = await service.save(actor('rep'), 'approvals', {
+      name: 'Drafted under the default',
+      opportunityId: opportunity.id,
+      topic: 'discount',
+      approverId: 'manager',
+    });
     try {
       const response = await request('/approverRule', 'admin', 'PUT', {
         roles: [],
@@ -2441,6 +2448,20 @@ describe('CRM API security and domain rules', () => {
           )
         ).status,
       ).toBe('approved');
+      // The draft keeps the rule it was created under: still submitted to
+      // the manager, and the administrator the new rule names is not its to
+      // choose.
+      await expect(
+        service.checkApprover(
+          { ...actor('rep'), users: await service.users(actor('rep')) },
+          'admin',
+          draft,
+        ),
+      ).rejects.toMatchObject({ code: 'invalidApprover' });
+      expect(
+        (await service.approvalAction(actor('rep'), toText(draft.id), 'submit'))
+          .status,
+      ).toBe('pending');
       // A submission under the new rule is logged with the version it ran
       // under.
       const later = await service.save(actor('rep'), 'approvals', {

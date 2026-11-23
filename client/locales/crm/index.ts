@@ -3029,8 +3029,8 @@ const wording = {
       // The diagram's button for the rule, on its submit step.
       configure: ['Approvers', '审批人'],
       hint: [
-        'An applicant chooses the approver from these roles and people; any one of them is enough. A change applies to the next submissions; requests already submitted keep their approver.',
-        '申请人从这些角色和人员中选择审批人，满足其中一项即可。修改只影响之后的提交，已提交的申请保留原审批人。',
+        'An applicant chooses the approver from these roles and people; any one of them is enough. A change applies to approvals created after it; existing ones, drafts included, keep the rule they were created under.',
+        '申请人从这些角色和人员中选择审批人，满足其中一项即可。修改只影响之后新建的审批，已有的审批（包括草稿）仍按创建时的规则。',
       ],
       roles: ['Roles', '角色'],
       people: ['People', '人员'],

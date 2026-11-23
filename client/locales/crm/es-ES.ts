@@ -2529,7 +2529,7 @@ export const crmEsES: CrmWording = {
     approvers: {
       title: 'Quién puede aprobar',
       configure: 'Aprobadores',
-      hint: 'El solicitante elige al aprobador entre estos roles y personas; basta con uno de ellos. Un cambio se aplica a los siguientes envíos; las solicitudes ya enviadas conservan su aprobador.',
+      hint: 'El solicitante elige al aprobador entre estos roles y personas; basta con uno de ellos. Un cambio se aplica a las aprobaciones creadas después; las existentes, incluidos los borradores, conservan la regla con la que se crearon.',
       roles: 'Roles',
       people: 'Personas',
       now: 'Aprobadores actuales: {{names}}. Cada uno debe estar activo y tener el permiso Decidir aprobaciones.',

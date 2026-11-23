@@ -2533,7 +2533,7 @@ export const crmFrFR: CrmWording = {
     approvers: {
       title: 'Qui peut approuver',
       configure: 'Approbateurs',
-      hint: "Le demandeur choisit l'approbateur parmi ces rôles et ces personnes ; un seul suffit. Une modification s'applique aux prochaines soumissions ; les demandes déjà soumises conservent leur approbateur.",
+      hint: "Le demandeur choisit l'approbateur parmi ces rôles et ces personnes ; un seul suffit. Une modification s'applique aux approbations créées ensuite ; celles qui existent, brouillons compris, gardent la règle sous laquelle elles ont été créées.",
       roles: 'Rôles',
       people: 'Personnes',
       now: "Approbateurs actuels : {{names}}. Chacun doit être actif et disposer de l'autorisation Décider des approbations.",

@@ -2497,7 +2497,7 @@ export const crmViVN: CrmWording = {
     approvers: {
       title: 'Ai được phê duyệt',
       configure: 'Người phê duyệt',
-      hint: 'Người đề nghị chọn người phê duyệt từ các vai trò và người dưới đây; chỉ cần một người là đủ. Thay đổi áp dụng cho các lần gửi tiếp theo; các yêu cầu đã gửi giữ nguyên người phê duyệt.',
+      hint: 'Người đề nghị chọn người phê duyệt từ các vai trò và người dưới đây; chỉ cần một người là đủ. Thay đổi áp dụng cho các phê duyệt được tạo sau đó; các phê duyệt hiện có, kể cả bản nháp, giữ quy tắc lúc được tạo.',
       roles: 'Vai trò',
       people: 'Người dùng',
       now: 'Người phê duyệt hiện tại: {{names}}. Mỗi người phải đang hoạt động và có quyền Quyết định phê duyệt.',

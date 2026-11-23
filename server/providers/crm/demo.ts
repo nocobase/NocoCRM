@@ -1,5 +1,7 @@
 import type { QueryAdapter, Row } from '@nocobase/db';
+import { parameterIdentity } from '@nocobase/lifecycle';
 import { randomUUID } from 'node:crypto';
+import { LIFECYCLE_PARAMETER_SCOPE } from '../lifecycles.js';
 import { eventKey } from './signal-reading.js';
 import type { AppAuthorization } from '@nocobase/app-plugin-authorization/server';
 import { convertLead } from './conversion.js';
@@ -2740,9 +2742,30 @@ async function deleteRecords(
         .where('companyId', 'in', companies)
         .execute();
     // The approvals' lifecycle log (server/lifecycles/approvals.ts) goes
-    // with them.
+    // with them, and so do the rule each froze and the rule each move ran
+    // under (keyed by the library's identities, under the CRM's scope).
     const approvals = byEntity.get('approvals') ?? [];
     if (approvals.length) {
+      await q
+        .deleteFrom('lifecycleParameterSnapshots')
+        .where(
+          'id',
+          'in',
+          approvals.map((id) =>
+            parameterIdentity(LIFECYCLE_PARAMETER_SCOPE, 'approvals', id),
+          ),
+        )
+        .execute();
+      await q
+        .deleteFrom('lifecycleParameterUsages')
+        .where(
+          'recordKey',
+          'in',
+          approvals.map((id) =>
+            parameterIdentity(LIFECYCLE_PARAMETER_SCOPE, 'approvals', id),
+          ),
+        )
+        .execute();
       await q
         .deleteFrom('lifecycleEffectRuns')
         .where('lifecycle', '=', 'approvals')

@@ -2510,7 +2510,7 @@ export const crmPtBR: CrmWording = {
     approvers: {
       title: 'Quem pode aprovar',
       configure: 'Aprovadores',
-      hint: 'O solicitante escolhe o aprovador entre estas funções e pessoas; basta qualquer um deles. Uma alteração vale para os próximos envios; solicitações já enviadas mantêm seu aprovador.',
+      hint: 'O solicitante escolhe o aprovador entre estas funções e pessoas; basta qualquer um deles. Uma alteração vale para as aprovações criadas depois; as existentes, incluindo rascunhos, mantêm a regra com que foram criadas.',
       roles: 'Funções',
       people: 'Pessoas',
       now: 'Aprovadores atuais: {{names}}. Cada um deve estar ativo e ter a permissão Decidir aprovações.',

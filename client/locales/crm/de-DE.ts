@@ -2544,7 +2544,7 @@ export const crmDeDE: CrmWording = {
     approvers: {
       title: 'Wer genehmigen darf',
       configure: 'Genehmiger',
-      hint: 'Der Antragsteller wählt den Genehmiger aus diesen Rollen und Personen; eine Person genügt. Eine Änderung gilt für die nächsten Einreichungen; bereits eingereichte Anträge behalten ihren Genehmiger.',
+      hint: 'Der Antragsteller wählt den Genehmiger aus diesen Rollen und Personen; eine Person genügt. Eine Änderung gilt für danach erstellte Genehmigungen; bestehende, auch Entwürfe, behalten die Regel, unter der sie erstellt wurden.',
       roles: 'Rollen',
       people: 'Personen',
       now: 'Aktuelle Genehmiger: {{names}}. Jeder muss aktiv sein und die Berechtigung „Genehmigungen entscheiden“ haben.',

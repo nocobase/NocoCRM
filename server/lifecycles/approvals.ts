@@ -26,8 +26,12 @@ import {
 // Who may be chosen as approver is the approver rule, a parameter an
 // administrator sets on Settings → Approval process: roles and people,
 // each matching on its own. The runtime keeps its versions
-// (server/providers/lifecycles.ts), reads it live, and logs which version
-// each submission ran under. CrmService resolves it into people before its
+// (server/providers/lifecycles.ts) and freezes the rule in force into each
+// approval when it is created, a draft included (its parameter snapshot):
+// a later change of the rule reaches only approvals created after it.
+// Approvals from before @nocobase/lifecycle 0.1.0-beta.6, when the rule was
+// read live, were given theirs by 202611230001_crm_approval_definition.
+// CrmService resolves it into people before its
 // transaction opens (CrmService.users, server/providers/crm/approvers.ts),
 // since who holds a role and a capability is not read inside SQLite's one
 // transaction, and checks the chosen approver against it before a draft is
@@ -41,6 +45,8 @@ export interface ApprovalRecord extends LifecycleRecord {
   readonly status: ApprovalState;
   readonly ownerId: string;
   readonly approverId: string | null;
+  // The definition that created the approval (`definitionField`).
+  readonly lifecycleDefinition?: string | null;
 }
 
 export interface ApprovalParameters {
@@ -53,8 +59,15 @@ export interface ApprovalTypes {
   parameters: ApprovalParameters;
 }
 
-// The name the runtime keys every entry by: never rename it.
+// The name the runtime keys every entry by: never rename it. It is also the
+// process's key, and this definition its version 1: a change to how an
+// approval moves is a new definition beside it (`approvals-v2`, version 2),
+// never an edit of this one (the synced Skill's
+// references/lifecycle-versions.md).
 export const APPROVAL_LIFECYCLE = 'approvals';
+export const APPROVAL_LIFECYCLE_VERSION = 1;
+// The approval's field naming the definition that created it.
+export const APPROVAL_DEFINITION_FIELD = 'lifecycleDefinition';
 
 // What an approver rule may name: a CRM role (`sales-manager`), or a user
 // by id. Each selection is a group of its own, so the rule is their union.
@@ -66,8 +79,10 @@ export const DEFAULT_APPROVER_RULE: readonly ReviewerSelection[] = [
   { group: 1, type: 'role', referenceId: 'sales-manager' },
 ];
 
-// The configuration group the rule is stored under: never rename its key,
-// and raise `schemaVersion` only with a migration of the stored versions.
+// The rule's group: never rename its key, and raise `schemaVersion` only
+// with a new definition version. A snapshot's sources name it; the
+// administrator's versions are stored under the definition's name
+// (`configurationGroup(APPROVAL_LIFECYCLE, …)`), as the runtime reads them.
 export const approverParameterGroup: ParameterGroup = {
   key: 'approvers',
   title: 'Approvers',
@@ -114,7 +129,10 @@ const decided = ({ input, now }: TransitionContext<ApprovalTypes>) => ({
 export const approvalLifecycle: Lifecycle<ApprovalTypes> =
   defineLifecycle<ApprovalTypes>({
     name: APPROVAL_LIFECYCLE,
+    key: APPROVAL_LIFECYCLE,
+    version: APPROVAL_LIFECYCLE_VERSION,
     collection: 'crmApprovals',
+    definitionField: APPROVAL_DEFINITION_FIELD,
     initial: 'draft',
     states: [
       'draft',
@@ -125,7 +143,6 @@ export const approvalLifecycle: Lifecycle<ApprovalTypes> =
     ],
     parameters: { approverRule: DEFAULT_APPROVER_RULE },
     parameterConfiguration: {
-      readMode: 'live',
       groups: [approverParameterGroup],
     },
     transitions: {

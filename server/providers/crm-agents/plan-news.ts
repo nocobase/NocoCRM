@@ -41,11 +41,14 @@ export function deliverPlanOutcome(
           title: plan.title,
           params: { planId: plan.id, decision },
         },
+        // A custom input: the Agents plugin retired its own operation plans,
+        // and with them the `planDecided` input type, in 2.0.0-beta.17; the
+        // payload says what it is.
         input: {
-          type: 'planDecided',
+          type: 'custom',
           actor: { kind: 'user', id: decider, name: toText(user?.name ?? '') },
           text,
-          payload: { planId: plan.id, decision, failure },
+          payload: { kind: 'planDecided', planId: plan.id, decision, failure },
         },
       }),
     );

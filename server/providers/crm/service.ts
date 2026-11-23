@@ -23,6 +23,7 @@ import { asEntity, toText } from './schema.js';
 import { isCountry, isSubdivision, subdivisionCode } from './geography.js';
 import { randomUUID } from 'node:crypto';
 import {
+  configurationGroup,
   LifecycleError,
   ParameterConfigurationError,
   type JsonValue,
@@ -490,14 +491,27 @@ export class CrmService {
     // process; the sales managers until an administrator sets it), active
     // and holding the approve capability. Administrators hold it for the
     // system's sake, but are offered only when the rule names them.
-    const approvers = await this.approvers(listed);
-    return listed.map((user) => ({
+    const capable = new Set<string>();
+    for (const user of listed)
+      if (await capability(crmActor(this.authz, { id: user.id }), 'approve'))
+        capable.add(toText(user.id));
+    const approvers = await this.approvers(listed, capable);
+    const result = listed.map((user) => ({
       ...user,
       canApprove: approvers.has(user.id),
     }));
+    this.approveCapable.set(result, capable);
+    return result;
   }
+  // Who of a list `users` returned holds `approve`, whatever the rule names:
+  // read with the list, before a transaction opens, so an approval's own
+  // rule can be applied inside one (checkApprover).
+  private readonly approveCapable = new WeakMap<
+    readonly Row[],
+    ReadonlySet<string>
+  >();
   // The approver rule as it stands: the administrator's latest version, or
-  // the lifecycle's default.
+  // the lifecycle's default. A new approval freezes it when it is created.
   private async currentApproverRule(): Promise<readonly ReviewerSelection[]> {
     const values = (await this.lifecycles.resolveParameters(
       APPROVAL_LIFECYCLE,
@@ -505,14 +519,31 @@ export class CrmService {
     )) as ApprovalParameters;
     return values.approverRule;
   }
+  // The rule an existing approval was created under (its parameter
+  // snapshot), read in the transaction it is checked in.
+  private async approvalApproverRule(
+    record: CrmRecord,
+    transaction: unknown,
+  ): Promise<readonly ReviewerSelection[]> {
+    const values = (await this.lifecycles.resolveParameters(
+      APPROVAL_LIFECYCLE,
+      {
+        record: { ...record, id: toText(record.id) },
+        purpose: 'preview',
+        transactionHandle: transaction,
+      },
+    )) as ApprovalParameters;
+    return values.approverRule;
+  }
   private async approvers(
     users: readonly { id: string; roles: string[]; disabled: boolean }[],
+    capable: ReadonlySet<string>,
     rule?: readonly ReviewerSelection[],
   ): Promise<ReadonlySet<string>> {
     return resolveApprovers(
       rule ?? (await this.currentApproverRule()),
       users,
-      (id) => capability(crmActor(this.authz, { id }), 'approve'),
+      async (id) => capable.has(id),
     );
   }
   // Settings → Approval process: who may approve, with the version it is at,
@@ -520,9 +551,9 @@ export class CrmService {
   async approverRuleView(actor: Actor): Promise<ApproverRuleView> {
     await requireCapability(actor, 'manage', 'settings');
     const [version, users] = await Promise.all([
-      this.parameters.read(
+      this.parameters.readConfiguration(
         LIFECYCLE_PARAMETER_SCOPE,
-        approverParameterGroup.key,
+        APPROVAL_LIFECYCLE,
       ),
       this.users(actor),
     ]);
@@ -547,23 +578,14 @@ export class CrmService {
     await requireCapability(actor, 'manage', 'settings');
     const users = await this.users(actor);
     const rule = approverRule(input, new Set(users.map((u) => toText(u.id))));
-    if (
-      !(
-        await this.approvers(
-          users.map((u) => ({
-            id: toText(u.id),
-            roles: u.roles as string[],
-            disabled: u.disabled === true,
-          })),
-          rule,
-        )
-      ).size
-    )
+    if (!(await this.approverIds(users, rule)).size)
       throw new CrmError('noApprovers', 400, 'roles');
     try {
+      // One revision for the whole definition, under its name, as the
+      // runtime reads it when an approval is created.
       await this.parameters.save({
         scope: LIFECYCLE_PARAMETER_SCOPE,
-        group: approverParameterGroup,
+        group: configurationGroup(APPROVAL_LIFECYCLE, [approverParameterGroup]),
         values: { approverRule: rule as unknown as JsonValue },
         expectedRevision: input.revision,
         requestId: input.requestId,
@@ -1934,7 +1956,11 @@ export class CrmService {
         throw new CrmError('approvalOpportunity', 403, 'opportunityId');
       }
       if (input.approverId)
-        await this.checkApprover(actor, toText(input.approverId));
+        await this.checkApprover(
+          actor,
+          toText(input.approverId),
+          id ? previous : undefined,
+        );
     }
     for (const fileId of array(input.attachments))
       if (
@@ -2773,12 +2799,56 @@ export class CrmService {
     if (comment.actorId !== actor.id) throw new CrmError('forbidden', 403);
     return comment;
   }
-  async checkApprover(actor: Actor, id: string): Promise<void> {
+  // Who of `users` (a list `users` returned) the rule names, active and
+  // holding `approve`.
+  private async approverIds(
+    users: readonly Row[],
+    rule: readonly ReviewerSelection[],
+  ): Promise<ReadonlySet<string>> {
+    let capable = this.approveCapable.get(users);
+    if (!capable) {
+      const holders = new Set<string>();
+      for (const user of users)
+        if (
+          await capability(
+            crmActor(this.authz, { id: toText(user.id) }),
+            'approve',
+          )
+        )
+          holders.add(toText(user.id));
+      capable = holders;
+    }
+    return this.approvers(
+      users.map((u) => ({
+        id: toText(u.id),
+        roles: u.roles as string[],
+        disabled: u.disabled === true,
+      })),
+      capable,
+      rule,
+    );
+  }
+  async checkApprover(
+    actor: Actor,
+    id: string,
+    approval?: CrmRecord,
+  ): Promise<void> {
     // The same rule the pickers apply (approverChoices in
     // client/components/crm/approver-choices.ts): an active user the approver
     // rule names who holds `approve`, and oneself only when no one else is.
+    // A new approval is checked against the rule in force, which its
+    // creation freezes; an existing one against the rule it was created
+    // under (its parameter snapshot).
     const users = await this.users(actor);
-    const approvers = users.filter((u) => !u.disabled && u.canApprove);
+    const named = approval
+      ? await this.approverIds(
+          users,
+          await this.approvalApproverRule(approval, actor.transaction),
+        )
+      : new Set(users.filter((u) => u.canApprove).map((u) => toText(u.id)));
+    const approvers = users.filter(
+      (u) => !u.disabled && named.has(toText(u.id)),
+    );
     if (!approvers.some((u) => u.id === id))
       throw new CrmError('invalidApprover');
     if (id === actor.id && approvers.some((u) => u.id !== actor.id))
@@ -2812,7 +2882,7 @@ export class CrmService {
         'update',
       );
       if (!record.approverId) throw new CrmError('required', 400, 'approverId');
-      await this.checkApprover(actor, toText(record.approverId));
+      await this.checkApprover(actor, toText(record.approverId), record);
       status = 'pending';
     } else if (action === 'withdraw') {
       if (record.ownerId !== actor.id || record.status !== 'pending')

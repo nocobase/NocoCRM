@@ -2507,7 +2507,7 @@ export const crmIdID: CrmWording = {
     approvers: {
       title: 'Siapa yang boleh menyetujui',
       configure: 'Pemberi persetujuan',
-      hint: 'Pemohon memilih pemberi persetujuan dari peran dan orang berikut; salah satu saja sudah cukup. Perubahan berlaku untuk pengajuan berikutnya; permintaan yang sudah diajukan tetap dengan pemberi persetujuannya.',
+      hint: 'Pemohon memilih pemberi persetujuan dari peran dan orang berikut; salah satu saja sudah cukup. Perubahan berlaku untuk persetujuan yang dibuat setelahnya; yang sudah ada, termasuk draf, tetap memakai aturan saat dibuat.',
       roles: 'Peran',
       people: 'Orang',
       now: 'Pemberi persetujuan saat ini: {{names}}. Masing-masing harus aktif dan memiliki izin Memutuskan persetujuan.',
