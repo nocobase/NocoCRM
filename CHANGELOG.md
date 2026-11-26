@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Upgrade Demo Mode from 0.2.0-beta.9 to 0.2.0-beta.13: on a demo site, the
+  language a visitor chooses now stays in that visitor's own browser instead
+  of being saved to the shared demo account, where it changed the language for
+  everyone using that account. The route patch the CRM carried for 0.2.0-beta.9
+  is removed, since the plugin now includes that fix.
 - Upgrade Demo Mode to 0.2.0-beta.9 with the packages it requires, among them
   App Server 5.0.0-beta.1, Agents 2.0.0-beta.5, Users 2.0.0-beta.15 and
   Caching 1.0.0-beta.4: on a demo site, a visitor opening a link to any
