@@ -5,10 +5,15 @@ through `server/config/demo-mode.ts` and `NOCOBASE_DEMO_MODE`. Follow the
 [Demo Mode Skill](../skills/nocobase-app-plugin-demo-mode/SKILL.md) for deployment
 configuration, quick sign-in and daily reset.
 
-Demo Mode `0.2.0-beta.9` uses Agents `2.0.0-beta.5`, Users
-`2.0.0-beta.15`, Authorization `1.0.0-beta.36`, Authentication
-`2.0.0-beta.19`, App Client `4.0.0-beta.8`, App Server `5.0.0-beta.1`,
-App CLI `1.0.0-beta.32`, DB `1.0.0-beta.25` and Jobs `1.0.0-beta.5`. App Server
+Demo Mode `0.2.0-beta.13` needs at least Agents `2.0.0-beta.16`, Users
+`2.0.0-beta.21`, Authorization `1.0.0-beta.38`, Authentication
+`2.0.0-beta.23`, App Client `4.0.0-beta.11`, App Server `5.0.0-beta.7`,
+App CLI `1.0.0-beta.36`, DB `1.0.0-beta.28` and Jobs `1.0.0-beta.6`, which the
+CRM's pinned versions satisfy. Since `0.2.0-beta.11` it keeps a visitor's
+language (`i18n.locale`, the key the language switcher saves) in that
+visitor's own browser cookies, as it does the theme, instead of the shared
+demo account: do not pin an older version, under which one visitor's language
+changed everyone's. App Server
 5 needs Caching `1.0.0-beta.4`, and every other `@nocobase/app-plugin-*` the
 CRM registers moves to its release that accepts App Server 5. App Server 5
 removed the deprecated `@nocobase/app-server/mailer` entry; the CRM never
